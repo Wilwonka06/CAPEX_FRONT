@@ -20,6 +20,7 @@ import Citas from '../features/dashboard/pages/quotes/quotes';
 import Pedidos from '../features/dashboard/pages/orders/orders';
 import VentasProductos from '../features/dashboard/pages/sale_products/sales_products';/* 
 import Configuracion from '../pages/Configuracion'; */
+import RolesPage from '../features/dashboard/pages/roles/RolesPage';
 
 const router = createBrowserRouter([
   {
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
       {
         path: 'dashboard',
         element: <Dashboard />
+      },
+      {
+        path: 'roles',
+        element: <RolesPage />
       },
       {
         path: 'usuarios',

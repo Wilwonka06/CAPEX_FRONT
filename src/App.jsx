@@ -1,5 +1,7 @@
 import React from 'react'
-import './shared/styles/App.css'
+// o la ruta correcta según tu estructura
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 import { RouterProvider } from 'react-router-dom';
 import router from './routes/routes';
 
