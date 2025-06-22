@@ -3,7 +3,7 @@ import React from 'react'
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 import { RouterProvider } from 'react-router-dom';
-import router from './routes/routes';
+import router from './routes/Routes';
 
 
  function App() {
