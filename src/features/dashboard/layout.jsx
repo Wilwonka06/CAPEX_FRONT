@@ -1,11 +1,11 @@
 // components/Layout.jsx
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './components/sidebar';
+import Sidebar from './components/Sidebar';
 
 const Layout = () => {
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-accent-light/20">
       {/* Sidebar */}
       <Sidebar />
       
@@ -14,7 +14,7 @@ const Layout = () => {
         
         
         {/* Content Area */}
-        <main className="flex-1 p-6 bg-gray-50 overflow-auto">
+        <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>
