@@ -1,12 +1,27 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import CreateRole from "./components/CreateRole";
+import Paginator from "../../components/roles/Paginator";
 
 const RolesPage = () => {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = 5; // Esto debería venir de tu backend
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Aquí deberías hacer la llamada a tu API para obtener los datos de la página seleccionada
+  };
+
   return (
     <div className="min-h-screen w-full bg-white dark:bg-white">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-black dark:text-black">Gestión de Roles</h1>
-          <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+          >
             Crear Nuevo Rol
           </button>
         </div>
@@ -35,16 +50,16 @@ const RolesPage = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                   <button className="text-gray-600 hover:text-gray-900" title="Visualizar">
-                    <i className="material-icons text-xl">visibility</i>
+                    <span className="material-icons">visibility</span>
                   </button>
                   <button className="text-blue-600 hover:text-blue-900" title="Editar">
-                    <i className="material-icons text-xl">edit</i>
+                    <span className="material-icons">edit</span>
                   </button>
                   <button className="text-green-600 hover:text-green-900" title="Cambiar Estado">
-                    <i className="material-icons text-xl">toggle_on</i>
+                    <span className="material-icons">toggle_on</span>
                   </button>
                   <button className="text-red-600 hover:text-red-900" title="Eliminar">
-                    <i className="material-icons text-xl">delete</i>
+                    <span className="material-icons">delete</span>
                   </button>
                 </td>
               </tr>
@@ -61,22 +76,33 @@ const RolesPage = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                   <button className="text-gray-600 hover:text-gray-900" title="Visualizar">
-                    <i className="material-icons text-xl">visibility</i>
+                    <span className="material-icons">visibility</span>
                   </button>
                   <button className="text-blue-600 hover:text-blue-900" title="Editar">
-                    <i className="material-icons text-xl">edit</i>
+                    <span className="material-icons">edit</span>
                   </button>
                   <button className="text-red-600 hover:text-red-900" title="Cambiar Estado">
-                    <i className="material-icons text-xl">toggle_off</i>
+                    <span className="material-icons">toggle_off</span>
                   </button>
                   <button className="text-red-600 hover:text-red-900" title="Eliminar">
-                    <i className="material-icons text-xl">delete</i>
+                    <span className="material-icons">delete</span>
                   </button>
                 </td>
               </tr>
             </tbody>
           </table>
+          
+          <Paginator
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </div>
+
+        <CreateRole 
+          isOpen={isCreateModalOpen} 
+          onClose={() => setIsCreateModalOpen(false)} 
+        />
       </div>
     </div>
   );
