@@ -1,10 +1,43 @@
 import React from "react";
 
 const CatServicesPage = () => (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-4 text-gray-800">Categorías de Servicios</h1>
-      <p className="text-gray-700">Contenido para las categorías de servicios.</p>
+  <div className="container mx-auto mt-8 px-4">
+    <div className="flex justify-between items-center mb-4">
+      <h1 className="text-xl font-semibold text-text-main">Categoria de Servicios</h1>
     </div>
-  );
+    <div className="flex justify-between mb-4">
+      <input
+        type="text"
+        placeholder="Buscar categoría..."
+        className="border border-primary-dark px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+      />
 
-  export default CatServicesPage;
+      <a
+        href="#"
+        className="bg-primary-dark text-white px-4 py-2 rounded hover:bg-primary transition"
+      >
+        Añadir Categoria
+      </a>
+    </div>
+
+
+    <div className="overflow-x-auto border border-background rounded-lg shadow-sm">
+      <table className="min-w-full text-sm text-left border-collapse">
+        <thead className="bg-primary-dark text-white">
+          <tr>
+            <th className="py-2 px-3 border-b border-background">Id</th>
+            <th className="py-2 px-3 border-b border-background">Categoria</th>
+            <th className="py-2 px-3 border-b border-background">Descripcion</th>
+            <th className="py-2 px-3 border-b border-background">Estado</th>
+            <th className="py-2 px-3 border-b border-background">Acciones</th>
+          </tr>
+        </thead>
+        <tbody className="bg-background text-text-main">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+);
+
+export default CatServicesPage;
