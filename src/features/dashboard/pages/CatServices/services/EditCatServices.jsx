@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 
 
-const AddCatServices = ({ onClose }) => {
+const EditCatServices = ({ onClose }) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
@@ -62,4 +62,4 @@ const AddCatServices = ({ onClose }) => {
     )
 }
 
-export default AddCatServices
+export default EditCatServices
