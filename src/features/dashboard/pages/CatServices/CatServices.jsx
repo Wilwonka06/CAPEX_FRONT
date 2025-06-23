@@ -1,7 +1,11 @@
-import React from "react";
+import React from 'react'
+import AddCatServices from './services/AddCatServices'
 
-const CatServicesPage = () => (
-  <div className="container mx-auto mt-8 px-4">
+const CatServices = () => {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  return (
+    <div className="container mx-auto mt-8 px-4">
     <div className="flex justify-between items-center mb-4">
       <h1 className="text-xl font-semibold text-text-main">Categoria de Servicios</h1>
     </div>
@@ -12,12 +16,13 @@ const CatServicesPage = () => (
         className="border border-primary-dark px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-primary"
       />
 
-      <a
-        href="#"
+      <button
+        onClick={() => setIsAddModalOpen(true)}
         className="bg-primary-dark text-white px-4 py-2 rounded hover:bg-primary transition"
       >
         Añadir Categoria
-      </a>
+      </button>
+
     </div>
 
 
@@ -33,11 +38,26 @@ const CatServicesPage = () => (
           </tr>
         </thead>
         <tbody className="bg-background text-text-main">
+          <td className="py-2 px-3 border-b border-background">1</td>
+          <td className="py-2 px-3 border-b border-background">Servicio de Corte</td>
+          <td className="py-2 px-3 border-b border-background">Corte de cabello para hombres y mujeres</td>
+          <td className="py-2 px-3 border-b border-background text-green-600 font-medium">Activo</td>
+          <td className="py-2 px-3 border-b border-background flex gap-2">
+            <button className="bg-primary-dark text-white px-2 py-1 rounded hover:bg-primary transition text-sm">
+              Editar
+            </button>
+            <button className="bg-accent text-white px-2 py-1 rounded hover:bg-accent-light transition text-sm">
+              Eliminar
+            </button>
+          </td>
+
         </tbody>
       </table>
     </div>
+    {isAddModalOpen && <ModalAddCategoria onClose={() => setIsAddModalOpen(false)} />}
+
   </div>
+  )
+}
 
-);
-
-export default CatServicesPage;
+export default CatServices
