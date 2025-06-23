@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import CategoryTable from "./components/CategoryTable";
 import SearchCategory from "./components/SearchCategory";
 import Paginator from "../Paginator";
@@ -91,7 +91,17 @@ const CatProductsPage = () => {
             {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchCategory searchTerm={searchTerm} handleSearch={handleSearch} />
-              <CreateCategory />
+              <CreateCategory onCreate={(newCat) => {
+                setCategories([
+                  ...categories,
+                  {
+                    id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1,
+                    name: newCat.name,
+                    description: newCat.description,
+                    isActive: true
+                  }
+                ]);
+              }} />
             </div>
 
             {/* Tabla de categorías */}
