@@ -4,7 +4,14 @@ import { useLocation, Link } from 'react-router-dom';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState({});
+  const [expandedGroups, setExpandedGroups] = useState({
+    main: true,
+    users: true,
+    contacts: true,
+    products: true,
+    services: true,
+    sales: true
+  });
   const [isLocked, setIsLocked] = useState(false);
   const location = useLocation();
 
@@ -102,21 +109,21 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`bg-white shadow-lg transition-all duration-300 ease-in-out ${
+      className={`bg-background shadow-lg transition-all duration-300 ease-in-out ${
         isExpanded || isLocked ? 'w-64' : 'w-16'
       } flex flex-col h-full`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="p-4 border-b border-accent/50 flex items-center justify-between">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <i className="bi bi-asterisk text-white text-sm"></i>
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <i className="bi bi-asterisk text-background text-sm"></i>
           </div>
           {(isExpanded || isLocked) && (
-            <span className="ml-3 font-semibold text-gray-800 whitespace-nowrap">
-              Mi Sistema
+            <span className="ml-3 font-semibold text-text-main whitespace-nowrap">
+              CAPEX
             </span>
           )}
         </div>
@@ -125,8 +132,8 @@ const Sidebar = () => {
             onClick={toggleLock}
             className={`p-1 rounded transition-colors ${
               isLocked 
-                ? 'text-orange-500 hover:text-orange-600' 
-                : 'text-gray-400 hover:text-gray-600'
+                ? 'text-primary hover:text-primary-dark' 
+                : 'text-accent hover:text-primary'
             }`}
             title={isLocked ? 'Desbloquear sidebar' : 'Bloquear sidebar'}
           >
@@ -135,13 +142,13 @@ const Sidebar = () => {
         )}
       </div>
 
-      {/* Menu */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      {/* Menu con scroll */}
+      <nav className="flex-1 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent">
         {menuGroups.map((group) => (
           <div key={group.id} className="mb-2">
             {/* Group Header */}
             <div
-              className={`flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 cursor-pointer transition-colors ${
+              className={`flex items-center px-4 py-2 text-text-main/80 hover:bg-accent-light/30 cursor-pointer transition-colors ${
                 (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
               }`}
               onClick={() => toggleGroup(group.id)}
@@ -170,8 +177,8 @@ const Sidebar = () => {
                       (isExpanded || isLocked) ? '' : 'justify-center'
                     } ${
                       isActiveRoute(item.path)
-                        ? 'bg-blue-100 text-blue-600 border-r-2 border-blue-600'
-                        : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                        ? 'bg-accent-light/50 text-primary-dark border-r-2 border-primary'
+                        : 'text-text-main/90 hover:bg-accent-light/40 hover:text-primary-dark'
                     }`}
                     title={!(isExpanded || isLocked) ? item.name : ''}
                   >
@@ -188,21 +195,6 @@ const Sidebar = () => {
           </div>
         ))}
       </nav>
-
-      {/* Footer */}
-      <div className="border-t border-gray-200 p-4">
-        <Link
-          to="/configuracion"
-          className={`flex items-center text-gray-600 hover:bg-gray-50 p-2 rounded cursor-pointer transition-colors no-underline ${
-            (isExpanded || isLocked) ? '' : 'justify-center'
-          }`}
-        >
-          <i className="bi bi-gear text-lg"></i>
-          {(isExpanded || isLocked) && (
-            <span className="ml-3 text-sm whitespace-nowrap">Configuración</span>
-          )}
-        </Link>
-      </div>
     </div>
   );
 };
