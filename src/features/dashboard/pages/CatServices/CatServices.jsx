@@ -6,6 +6,7 @@ import React, { useState } from "react";
 
 const CatServices = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   return (
     <div className="container mx-auto mt-8 px-4">
@@ -46,7 +47,7 @@ const CatServices = () => {
           <td className="py-2 px-3 border-b border-background">Corte de cabello para hombres y mujeres</td>
           <td className="py-2 px-3 border-b border-background text-green-600 font-medium">Activo</td>
           <td className="py-2 px-3 border-b border-background flex gap-2">
-            <button onClick={() => setIsAddModalOpen(true)} className="bg-primary-dark text-white px-2 py-1 rounded hover:bg-primary transition text-sm">
+            <button onClick={() => setIsEditModalOpen(true)} className="bg-primary-dark text-white px-2 py-1 rounded hover:bg-primary transition text-sm">
               Editar
             </button>
             <button className="bg-accent text-white px-2 py-1 rounded hover:bg-accent-light transition text-sm">
@@ -58,7 +59,7 @@ const CatServices = () => {
       </table>
     </div>
     {isAddModalOpen && <AddCatServices onClose={() => setIsAddModalOpen(false)} />}
-    {isAddModalOpen && <EditCatServices onClose={() => setIsAddModalOpen(false)} />}
+    {isEditModalOpen && <EditCatServices onClose={() => setIsEditModalOpen(false)} />}
 
   </div>
   )
