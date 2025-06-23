@@ -1,4 +1,5 @@
 // routes/Routes.jsx
+// routes/Routes.jsx
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 
@@ -23,7 +24,12 @@ import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProdu
 import Configuracion from '../pages/Configuracion'; */
 import RolesPage from '../features/dashboard/pages/Roles/RolesPage';
 
-//Pages Landing
+// Pages Landing
+import Home from '../features/landing/components/Home';
+import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
+import Products from '../features/landing/pages/products/Products';
+import Orders from '../features/landing/pages/orders/Orders';
+import Quotes from '../features/landing/pages/quotes/Quotes';
 
 
 const router = createBrowserRouter([
@@ -91,10 +97,32 @@ const router = createBrowserRouter([
         path: 'ventas-productos',
         element: <VentasProductos />
       },
-      /* {
-        path: 'configuracion',
-        element: <Configuracion />
-      } */
+    ]
+  },
+  {
+    path: '/landing',
+    element: <Landing />,
+    children: [
+      {
+        index: true,
+        element: <Home />
+      },
+      {
+        path: 'servicios',
+        element: <ServicesPage />
+      },
+      {
+        path: 'productos',
+        element: <Products />
+      },
+      {
+        path: 'pedidos',
+        element: <Orders />
+      },
+      {
+        path: 'citas',
+        element: <Quotes />
+      }
     ]
   }
 ]);
