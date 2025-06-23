@@ -1,6 +1,6 @@
 
-import AddCatServices from './services/AddCatServices'
-import EditCatServices from './services/EditCatServices'
+import AddCatServices from './components/AddCatServices'
+import EditCatServices from './components/EditCatServices'
 import React, { useState } from "react";
 
 
