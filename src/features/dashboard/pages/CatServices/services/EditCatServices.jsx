@@ -6,7 +6,7 @@ const EditCatServices = ({ onClose }) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-xl font-semibold mb-4">Añadir Categoria</h2>
+                <h2 className="text-xl font-semibold mb-4">Editar Categoria</h2>
                 <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mx-auto">
                     <form action="#" method="post" className="space-y-4">
                         <div>
