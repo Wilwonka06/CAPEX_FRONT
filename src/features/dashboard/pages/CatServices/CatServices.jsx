@@ -56,7 +56,7 @@ const CatServices = () => {
         </tbody>
       </table>
     </div>
-    {isAddModalOpen && <ModalAddCategoria onClose={() => setIsAddModalOpen(false)} />}
+    {isAddModalOpen && <AddCatServices onClose={() => setIsAddModalOpen(false)} />}
 
   </div>
   )
