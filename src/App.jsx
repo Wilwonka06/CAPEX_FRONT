@@ -1,19 +1,17 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './shared/styles/App.css'
-import './features/dashboard/sidebar.jsx'
-import './features/dashboard/dashboard.jsx'
+import React from 'react'
+// o la ruta correcta según tu estructura
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
-function App() {
+import { RouterProvider } from 'react-router-dom';
+import router from './routes/Routes';
+
+
+ function App() {
+  console.log('hoal')
   return (
-    <Router>
-      <Layout>
-        <Routes>
-        </Routes>
-      </Layout>
-    </Router>
+    <div className="App">
+      <RouterProvider router={router} />
+    </div>
   );
 }
-
 export default App;
