@@ -1,46 +1,47 @@
 import React, { useState } from "react";
 import CategoryTable from "./components/CategoryTable";
 import SearchCategory from "./components/SearchCategory";
-import Paginator from "./components/Paginator";
+import Paginator from "../Paginator";
 import CreateCategory from "./components/CreateCategory";
 
-const categories = [
+const initialCategories = [
   {
     id: 1,
-    name: "Electrónicos",
-    description: "Dispositivos electrónicos y gadgets tecnológicos",
-    status: "active",
+    name: "Shampoo",
+    description: "Productos para limpiar y nutrir el cabello.",
+    isActive: true,
   },
   {
     id: 2,
-    name: "Ropa y Accesorios",
-    description: "Prendas de vestir y complementos de moda",
-    status: "active",
+    name: "Acondicionador",
+    description: "Productos para suavizar y desenredar el cabello.",
+    isActive: true,
   },
   {
     id: 3,
-    name: "Hogar y Jardín",
-    description: "Artículos para el hogar y jardinería",
-    status: "inactive",
+    name: "Mascarilla",
+    description: "Tratamientos intensivos para reparar y fortalecer el cabello.",
+    isActive: true,
   },
   {
     id: 4,
-    name: "Deportes",
-    description: "Equipamiento deportivo y actividades físicas",
-    status: "active",
+    name: "Gel y Estilizado",
+    description: "Productos para peinar y dar forma al cabello.",
+    isActive: true,
   },
   {
     id: 5,
-    name: "Libros",
-    description: "Literatura, educación y material de lectura",
-    status: "inactive",
+    name: "Aceites y Sueros",
+    description: "Aceites y sueros para dar brillo y suavidad al cabello.",
+    isActive: true,
   },
 ];
 
 const CatProductsPage = () => {
+  const [categories, setCategories] = useState(initialCategories);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // Función para manejar el cambio de página
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -53,10 +54,20 @@ const CatProductsPage = () => {
   };
 
   // Filtrar categorías según término de búsqueda
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCategories = categories.filter(
+    (category) =>
+      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      category.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Función para cambiar el estado de una categoría
+  const toggleCategoryStatus = (id) => {
+    setCategories(
+      categories.map((category) =>
+        category.id === id ? { ...category, isActive: !category.isActive } : category
+      )
+    );
+  };
 
   // Paginación simple
   const itemsPerPage = 5;
@@ -65,39 +76,47 @@ const CatProductsPage = () => {
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Gestión de Categorías
-        </h1>
-        
-      </div>
-      
-      <p className="text-gray-600 mb-6">Administra las categorías de productos de tu tienda</p>
-      
-      {/* Barra de búsqueda y botón de crear */}
-      <div className="flex justify-between items-center mb-6">
-        <SearchCategory searchTerm={searchTerm} handleSearch={handleSearch} />
-        <CreateCategory />
-      </div>
-     
-     
-      
-      {/* Tabla de categorías */}
-      <CategoryTable categories={paginatedCategories} />
-      
-      {/* Paginación */}
-      {totalPages > 1 && (
-        <Paginator 
-          currentPage={currentPage} 
-          totalPages={totalPages} 
-          onPageChange={handlePageChange} 
-        />
-      )}
-      
-      {/* Mostrar información de paginación */}
-      <div className="text-sm text-gray-500 mt-4 text-center">
-        Mostrando {Math.min(filteredCategories.length, startIndex + 1)} a {Math.min(filteredCategories.length, startIndex + itemsPerPage)} de {filteredCategories.length} categorías
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+          {/* Header con gradiente */}
+          <div className=" p-6">
+            <h1 className="text-2xl font-bold">Gestión de Categorías</h1>
+            <p className=" mt-1">
+              Administra las categorías de productos de tu tienda
+            </p>
+          </div>
+          
+          <div className="p-6">
+            {/* Barra de búsqueda y botón de crear */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <SearchCategory searchTerm={searchTerm} handleSearch={handleSearch} />
+              <CreateCategory />
+            </div>
+
+            {/* Tabla de categorías */}
+            <CategoryTable 
+              categories={paginatedCategories} 
+              onToggleStatus={toggleCategoryStatus}
+            />
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <Paginator 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={handlePageChange} 
+              />
+            )}
+
+            {/* Mostrar información de paginación */}
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">
+                Mostrando {Math.min(filteredCategories.length, startIndex + 1)} a {Math.min(filteredCategories.length, startIndex + itemsPerPage)} de {filteredCategories.length} categorías
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
