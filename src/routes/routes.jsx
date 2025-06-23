@@ -4,8 +4,9 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 // Layouts
 import Layout from '../features/dashboard/Layout';
+import Landing from '../features/landing/Landing';
 
-// Pages
+// Pages Dashboard
 import Dashboard from '../features/dashboard/components/Dashboard';
 import Usuarios from '../features/dashboard/pages/Users/Users';
 import Empleados from '../features/dashboard/pages/Employees/Employees';
@@ -21,6 +22,9 @@ import Pedidos from '../features/dashboard/pages/Orders/Orders';
 import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProducts';/* 
 import Configuracion from '../pages/Configuracion'; */
 import RolesPage from '../features/dashboard/pages/Roles/RolesPage';
+
+//Pages Landing
+
 
 const router = createBrowserRouter([
   {
