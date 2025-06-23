@@ -19,24 +19,53 @@ import CategoriasServicios from '../features/dashboard/pages/CatServices/CatServ
 import Servicios from '../features/dashboard/pages/Services/Services';
 import Citas from '../features/dashboard/pages/Quotes/Quotes';
 import Pedidos from '../features/dashboard/pages/Orders/Orders';
-import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProducts';/* 
-import Configuracion from '../pages/Configuracion'; */
+import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProducts';
 import RolesPage from '../features/dashboard/pages/Roles/RolesPage';
 
-//Pages Landing
-
+// Pages Landing
+import Home from '../features/landing/components/Home';
+import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
+import Products from '../features/landing/pages/products/Products';
+import Orders from '../features/landing/pages/orders/Orders';
+import Quotes from '../features/landing/pages/quotes/Quotes';
 
 const router = createBrowserRouter([
   {
     path: '/',
+    element: <Landing />,
+    children: [
+      {
+        index: true,
+        element: <Home />
+      },
+      {
+        path: 'servicios',
+        element: <ServicesPage />
+      },
+      {
+        path: 'productos',
+        element: <Products />
+      },
+      {
+        path: 'pedidos',
+        element: <Orders />
+      },
+      {
+        path: 'citas',
+        element: <Quotes />
+      }
+    ]
+  },
+  {
+    path: '/dashboard',
     element: <Layout />,
     children: [
       {
         index: true,
-        element: <Navigate to="/dashboard" replace />
+        element: <Navigate to="/dashboard/main" replace />
       },
       {
-        path: 'dashboard',
+        path: 'main',
         element: <Dashboard />
       },
       {
@@ -90,11 +119,7 @@ const router = createBrowserRouter([
       {
         path: 'ventas-productos',
         element: <VentasProductos />
-      },
-      /* {
-        path: 'configuracion',
-        element: <Configuracion />
-      } */
+      }
     ]
   }
 ]);

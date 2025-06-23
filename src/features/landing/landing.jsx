@@ -1,17 +1,19 @@
-import React, {useState} from 'react'
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import Navbar from './components/Navbar';
 
-function Landing() {
-    console.log('landing')
-    return(
-        <>
-        <main className='landing-head'>
-            <h1>Transforma tu <strong>Belleza</strong> Natural</h1>
-            <p>Especialistas en extensiones de cabello 100% humano, para complementar la belleza de la mujer.</p>
-            <p>Más de 8 años creando looks únicos y cuidando tu cabello.</p>
-        </main>
-
-        </>
-    );
-}
+const Landing = () => {
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Navbar */}
+      <Navbar />
+      
+      {/* Main Content */}
+      <main className="flex-1">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
 
 export default Landing;
