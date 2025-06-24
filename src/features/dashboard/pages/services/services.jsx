@@ -1,7 +1,7 @@
 
-import AddServices from './services/AddServices'
-import EditServices from './services/EditServices'
-import SeeServices from './services/SeeServices';
+import AddServices from './components/AddServices';
+import EditServices from './components/EditServices'
+import SeeServices from './components/SeeServices';
 import React, { useState } from "react";
 
 
