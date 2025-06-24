@@ -119,7 +119,7 @@ const Sidebar = () => {
       <div className="p-4 border-b border-accent/50 flex items-center justify-between">
         <div className="flex items-center">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <i className="bi bi-asterisk text-background text-sm"></i>
+            <i className="bi bi-shop text-background text-sm"></i>
           </div>
           {(isExpanded || isLocked) && (
             <span className="ml-3 font-semibold text-text-main whitespace-nowrap">

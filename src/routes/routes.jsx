@@ -1,11 +1,13 @@
 // routes/Routes.jsx
+// routes/Routes.jsx
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 // Layouts
 import Layout from '../features/dashboard/Layout';
+import Landing from '../features/landing/Landing';
 
-// Pages
+// Pages Dashboard
 import Dashboard from '../features/dashboard/components/Dashboard';
 import Usuarios from '../features/dashboard/pages/Users/Users';
 import Empleados from '../features/dashboard/pages/Employees/Employees';
@@ -21,6 +23,14 @@ import Pedidos from '../features/dashboard/pages/Orders/Orders';
 import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProducts';/* 
 import Configuracion from '../pages/Configuracion'; */
 import RolesPage from '../features/dashboard/pages/Roles/RolesPage';
+
+// Pages Landing
+import Home from '../features/landing/components/Home';
+import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
+import Products from '../features/landing/pages/products/Products';
+import Orders from '../features/landing/pages/orders/Orders';
+import Quotes from '../features/landing/pages/quotes/Quotes';
+
 
 const router = createBrowserRouter([
   {
@@ -87,10 +97,32 @@ const router = createBrowserRouter([
         path: 'ventas-productos',
         element: <VentasProductos />
       },
-      /* {
-        path: 'configuracion',
-        element: <Configuracion />
-      } */
+    ]
+  },
+  {
+    path: '/landing',
+    element: <Landing />,
+    children: [
+      {
+        index: true,
+        element: <Home />
+      },
+      {
+        path: 'servicios',
+        element: <ServicesPage />
+      },
+      {
+        path: 'productos',
+        element: <Products />
+      },
+      {
+        path: 'pedidos',
+        element: <Orders />
+      },
+      {
+        path: 'citas',
+        element: <Quotes />
+      }
     ]
   }
 ]);

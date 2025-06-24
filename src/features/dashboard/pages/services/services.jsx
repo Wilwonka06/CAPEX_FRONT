@@ -1,10 +1,79 @@
-import React from "react";
 
-const ServicesPage = () => (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-4 text-gray-800">Servicios</h1>
-      <p className="text-gray-700">Contenido para la gestión de servicios.</p>
+import AddServices from './components/AddServices';
+import EditServices from './components/EditServices'
+import SeeServices from './components/SeeServices';
+import React, { useState } from "react";
+
+
+const Services = () => {
+  
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSeeModalOpen, setIsSeeModalOpen] = useState(false);
+
+  return (
+    <div className="container mx-auto mt-8 px-4">
+    <div className="flex justify-between items-center mb-4">
+      <h1 className="text-xl font-semibold text-text-main">Servicios</h1>
     </div>
-  );
+    <div className="flex justify-between mb-4">
+      <input
+        type="text"
+        placeholder="Buscar servicio..."
+        className="border border-primary-dark px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-primary"
+      />
 
-  export default ServicesPage;
+      <button
+        onClick={() => setIsAddModalOpen(true)}
+        className="bg-primary-dark text-white px-4 py-2 rounded hover:bg-primary transition"
+      >
+        Añadir Servicio
+      </button>
+
+    </div>
+
+
+    <div className="overflow-x-auto border border-background rounded-lg shadow-sm">
+      <table className="min-w-full text-sm text-left border-collapse">
+        <thead className="bg-primary-dark text-white">
+          <tr>
+            <th className="py-2 px-3 border-b border-background">Id</th>
+            <th className="py-2 px-3 border-b border-background">Servicio</th>
+            <th className="py-2 px-3 border-b border-background">Categoria</th>
+            <th className="py-2 px-3 border-b border-background">Duracion</th>
+            <th className="py-2 px-3 border-b border-background">Precio</th>
+            <th className="py-2 px-3 border-b border-background">Estado</th>
+            <th className="py-2 px-3 border-b border-background">Acciones</th>
+          </tr>
+        </thead>
+        <tbody className="bg-background text-text-main">
+          <td className="py-2 px-3 border-b border-background">1</td>
+          <td className="py-2 px-3 border-b border-background">Corte de cabello</td>
+          <td className="py-2 px-3 border-b border-background">Servicio de corte</td>
+          <td className="py-2 px-3 border-b border-background">20 min</td>
+          <td className="py-2 px-3 border-b border-background">20.000</td>
+          <td className="py-2 px-3 border-b border-background text-green-600 font-medium">Activo</td>
+          <td className="py-2 px-3 border-b border-background flex gap-2">
+            <button onClick={() => setIsSeeModalOpen(true)} className="bg-primary-dark text-white px-2 py-1 rounded hover:bg-primary transition text-sm">
+              Ver
+            </button>
+            <button onClick={() => setIsEditModalOpen(true)} className="bg-primary-dark text-white px-2 py-1 rounded hover:bg-primary transition text-sm">
+              Editar
+            </button>
+            <button className="bg-accent text-white px-2 py-1 rounded hover:bg-accent-light transition text-sm">
+              Eliminar
+            </button>
+          </td>
+
+        </tbody>
+      </table>
+    </div>
+    {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} />}
+    {isEditModalOpen && <EditServices onClose={() => setIsEditModalOpen(false)} />}
+    {isSeeModalOpen && <SeeServices onClose={() => setIsSeeModalOpen(false)} />}
+
+  </div>
+  )
+}
+
+export default Services
