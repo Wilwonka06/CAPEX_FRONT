@@ -4,7 +4,7 @@ import SearchCategory from "./components/SearchCategory";
 import Paginator from "../Paginator";
 import CreateCategory from "./components/CreateCategory";
 
-const initialCategories = [
+export const initialCategories = [
   {
     id: 1,
     name: "Shampoo",
@@ -95,7 +95,7 @@ const CatProductsPage = () => {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
           <div className=" p-6">
-            <h1 className="text-2xl font-bold">Gestión de Categorías</h1>
+            <h1 className="text-2xl font-bold">Gestión de Categorías de Productos</h1>
             <p className=" mt-1">
               Administra las categorías de productos de tu tienda
             </p>

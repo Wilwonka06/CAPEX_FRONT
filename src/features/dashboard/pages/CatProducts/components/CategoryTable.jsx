@@ -97,7 +97,7 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
                       className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleViewDetail(category)}
                     >
-                      <i className="bi bi-eye text-amber-500 text-sm"></i>
+                      <i className="bi bi-eye text-blue-500 text-sm"></i>
                     </button>
                     <button 
                       className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
