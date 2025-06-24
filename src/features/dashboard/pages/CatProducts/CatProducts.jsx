@@ -69,6 +69,20 @@ const CatProductsPage = () => {
     );
   };
 
+  // Función para editar una categoría
+  const handleEditCategory = (updatedCategory) => {
+    setCategories(
+      categories.map((category) =>
+        category.id === updatedCategory.id ? updatedCategory : category
+      )
+    );
+  };
+
+  // Función para eliminar una categoría
+  const handleDeleteCategory = (categoryId) => {
+    setCategories(categories.filter((category) => category.id !== categoryId));
+  };
+
   // Paginación simple
   const itemsPerPage = 5;
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
@@ -108,6 +122,8 @@ const CatProductsPage = () => {
             <CategoryTable 
               categories={paginatedCategories} 
               onToggleStatus={toggleCategoryStatus}
+              onEditCategory={handleEditCategory}
+              onDeleteCategory={handleDeleteCategory}
             />
 
             {/* Paginación */}
