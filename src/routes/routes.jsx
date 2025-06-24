@@ -108,7 +108,7 @@ const router = createBrowserRouter([
         element: <Home />
       },
       {
-        path: 'servicios',
+        path: 'serviciospage',
         element: <ServicesPage />
       },
       {
