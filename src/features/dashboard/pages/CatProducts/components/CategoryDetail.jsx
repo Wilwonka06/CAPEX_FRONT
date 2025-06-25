@@ -5,7 +5,7 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl border-2 border-primary w-full max-w-md p-8 relative animate-fade-in">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8 relative animate-fade-in">
         <button
           className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
           onClick={onClose}
@@ -13,12 +13,19 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
         >
           ×
         </button>
-        
+
         <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16  rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="bi bi-tag text-white text-2xl"></i>
           </div>
           <h2 className="text-xl font-bold text-primary">Detalles de Categoría</h2>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-main mb-2">ID de Categoría</label>
+          <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main font-mono text-sm">
+            #{category.id}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -40,32 +47,22 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
             <label className="block text-sm font-medium text-text-main mb-2">Estado</label>
             <div className="flex items-center space-x-3">
               <div
-                className={`relative inline-flex h-6 w-11 items-center rounded-full ${
-                  category.isActive ? 'bg-primary' : 'bg-gray-300'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full ${category.isActive ? 'bg-primary' : 'bg-gray-300'
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    category.isActive ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${category.isActive ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </div>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  category.isActive
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${category.isActive
                     ? 'bg-amber-100 text-amber-800 border border-amber-200'
                     : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}
+                  }`}
               >
                 {category.isActive ? "Activo" : "Inactivo"}
               </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-2">ID de Categoría</label>
-            <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main font-mono text-sm">
-              #{category.id}
             </div>
           </div>
         </div>

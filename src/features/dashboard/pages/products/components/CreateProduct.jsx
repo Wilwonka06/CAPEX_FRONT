@@ -12,6 +12,7 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
     color: "",
     foto: "",
   });
+  const [preview, setPreview] = useState("");
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -36,6 +37,14 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
     }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData((prev) => ({ ...prev, foto: file }));
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (
@@ -56,19 +65,19 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
     }
   };
 
-    return (
+  return (
     <>
       <button
         className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
         onClick={handleOpen}
       >
-          <i className="bi bi-plus-circle mr-2"></i>
-          Nuevo Producto
-        </button>
+        <i className="bi bi-plus-circle mr-2"></i>
+        Nuevo Producto
+      </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-xl border-2 w-full max-w-2xl p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto">
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
               onClick={handleClose}
@@ -80,6 +89,13 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
               Crear nuevo producto
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-text-main mb-1">Foto del Producto</label>
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hover:cursor-pointer" />
+                {preview && (
+                  <img src={preview} alt="Vista previa" className="mt-2 w-24 h-24 object-cover rounded" />
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-main mb-1">
@@ -188,19 +204,6 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
                   onChange={handleChange}
                   required
                   rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-main mb-1">
-                  URL de la Foto
-                </label>
-                <input
-                  type="url"
-                  name="foto"
-                  className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
-                  value={formData.foto}
-                  onChange={handleChange}
-                  placeholder="https://via.placeholder.com/80x80.png?text=Producto"
                 />
               </div>
               <div className="flex justify-end gap-2 mt-6">

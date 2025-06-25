@@ -72,7 +72,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, categories = [] }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl border-2 border-primary w-full max-w-2xl p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto">
         <button
           className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
           onClick={handleClose}
@@ -86,7 +86,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, categories = [] }) => {
             <i className="bi bi-pencil-square text-white text-2xl"></i>
           </div>
           <h2 className="text-xl font-bold text-primary">Editar Producto</h2>
-          <p className="text-sm text-gray-600 mt-1">Modifica los datos del producto</p>
+          
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

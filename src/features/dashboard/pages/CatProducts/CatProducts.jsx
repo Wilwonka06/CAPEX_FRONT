@@ -15,7 +15,7 @@ export const initialCategories = [
     id: 2,
     name: "Acondicionador",
     description: "Productos para suavizar y desenredar el cabello.",
-    isActive: true,
+    isActive: false,
   },
   {
     id: 3,
@@ -57,7 +57,8 @@ const CatProductsPage = () => {
   const filteredCategories = categories.filter(
     (category) =>
       category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category.description.toLowerCase().includes(searchTerm.toLowerCase())
+      category.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (category.isActive ? 'activo' : 'inactivo').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Función para cambiar el estado de una categoría
@@ -137,9 +138,9 @@ const CatProductsPage = () => {
 
             {/* Mostrar información de paginación */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
+              {/* <p className="text-sm text-gray-600">
                 Mostrando {Math.min(filteredCategories.length, startIndex + 1)} a {Math.min(filteredCategories.length, startIndex + itemsPerPage)} de {filteredCategories.length} categorías
-              </p>
+              </p> */}
             </div>
           </div>
         </div>

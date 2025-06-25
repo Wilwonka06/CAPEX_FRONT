@@ -33,7 +33,7 @@ const EditCategory = ({ category, isOpen, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl border-2 border-primary w-full max-w-md p-8 relative animate-fade-in">
+      <div className="bg-white rounded-lg shadow-xl  w-full max-w-md p-8 relative animate-fade-in">
         <button
           className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
           onClick={handleClose}
@@ -47,7 +47,6 @@ const EditCategory = ({ category, isOpen, onClose, onSave }) => {
             <i className="bi bi-pencil-square text-white text-2xl"></i>
           </div>
           <h2 className="text-xl font-bold text-primary">Editar Categoría</h2>
-          <p className="text-sm text-gray-600 mt-1">Modifica los datos de la categoría</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

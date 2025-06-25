@@ -47,13 +47,13 @@ export default function ProductsTable({ products, onEdit, onDelete, categories =
         <table className="min-w-full">
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100">
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">#</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">COLOR</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">STOCK</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PRECIO</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">FECHA</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">FECHA - REGISTRO</th>
               <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
             </tr>
           </thead>
@@ -86,7 +86,7 @@ export default function ProductsTable({ products, onEdit, onDelete, categories =
                       onClick={() => handleViewDetail(product)}
                       title="Ver detalles"
                     >
-                      <i className="bi bi-eye text-blue-500 text-sm"></i>
+                      <i className="bi bi-eye text-primary text-sm"></i>
                     </button>
                     <button 
                       className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"

@@ -53,7 +53,7 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
         <table className="min-w-full">
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100">
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">#</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DESCRIPCIÓN</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ESTADO</th>
@@ -83,8 +83,8 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         category.isActive
-                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                          : 'bg-gray-100 text-gray-600 border border-gray-200'
+                          ? ' text-gray-800'
+                          : ' text-gray-600 '
                       }`}
                     >
                       {category.isActive ? "Activo" : "Inactivo"}
@@ -94,10 +94,10 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
                 <td className="py-4 px-4 text-sm font-medium text-right">
                   <div className="flex justify-end space-x-2">
                     <button 
-                      className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
+                      className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-primary rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleViewDetail(category)}
                     >
-                      <i className="bi bi-eye text-blue-500 text-sm"></i>
+                      <i className="bi bi-eye text-primary text-sm"></i>
                     </button>
                     <button 
                       className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"

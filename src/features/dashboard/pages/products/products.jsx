@@ -88,8 +88,11 @@ const ProductsPage = () => {
   const filteredProducts = products.filter(
     (product) =>
       product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.color.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.cantidad.toString().includes(searchTerm) ||
       product.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.precio.toString().includes(searchTerm) ||
+      product.fechaRegistro.includes(searchTerm) ||
       product.tipoProducto.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -156,9 +159,9 @@ const ProductsPage = () => {
 
             {/* Mostrar información de paginación */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
+              {/* <p className="text-sm text-gray-600">
                 Mostrando {Math.min(filteredProducts.length, startIndex + 1)} a {Math.min(filteredProducts.length, startIndex + itemsPerPage)} de {filteredProducts.length} productos.
-              </p>
+              </p> */}
             </div>
           </div>
         </div>
