@@ -1,4 +1,5 @@
-import React from 'react';
+import DetailServices from './components/DetailServices';
+import React, { useState } from "react";
 
 const ServicesPage = () => {
   const servicios = [
@@ -7,6 +8,7 @@ const ServicesPage = () => {
     { id: 3, nombre: "Servicio 3", precio: "30.000$", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTcoEYCK8Au51Vw3ElRJiZeiXyA6n6zKb2vfQ&s" },
 
   ];
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   return (
     <div className="container mx-auto mt-8 px-4">
       <div className="flex justify-between mb-4 items-center">
@@ -37,17 +39,21 @@ const ServicesPage = () => {
                 <h2 className="text-text-main font-medium text-base">{servicio.nombre}</h2>
                 <span className="text-text-main font-bold text-base">{servicio.precio}</span>
               </div>
-              <a href="#" className="text-accent text-sm hover:underline mb-2">
+              <button
+                onClick={() => setIsDetailModalOpen(true)}
+                className="text-accent text-base hover:underline mb-2 text-left py-2"
+              >
                 Detalles
-              </a>
-              <button className="bg-primary-dark text-white w-full py-2 rounded hover:bg-primary transition text-sm mt-auto">
+              </button>
+              
+              <button className="bg-primary-dark text-white w-full py-4 rounded text-lg hover:bg-primary transition mt-auto">
                 Agendar
               </button>
             </div>
           </div>
         ))}
       </div>
-
+      {isDetailModalOpen && <DetailServices onClose={() => setIsDetailModalOpen(false)} />}
 
     </div>
   );
