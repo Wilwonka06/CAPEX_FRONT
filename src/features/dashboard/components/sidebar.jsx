@@ -60,7 +60,8 @@ const Sidebar = () => {
       items: [
         { name: 'Clientes', icon: 'bi-person-heart', path: '/clientes' },
         { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/pedidos' },
-        { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/ventas-productos' }
+        { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/ventas-productos' },
+        { name: 'Venta de Servicios', icon: '', path: '/ventas-servicios' }
       ]
     },
     {
