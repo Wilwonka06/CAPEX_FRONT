@@ -65,18 +65,19 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) =>
 
 const Services = () => {
   const [services, setServices] = useState([
-    { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true },
-    { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true },
-    { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: false },
-    { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true },
-    { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true },
-    { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: false },
+    { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
+    { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
+    { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: false, description: 'Masaje corporal relajante', estado: 'Inactivo' },
+    { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
+    { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
+    { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: false, description: 'Tratamiento nutritivo para el cabello', estado: 'Inactivo' },
   ]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSeeModalOpen, setIsSeeModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -90,9 +91,37 @@ const Services = () => {
   const toggleServiceStatus = (id) => {
     setServices(
       services.map((service) =>
-        service.id === id ? { ...service, active: !service.active } : service
+        service.id === id ? { ...service, active: !service.active, estado: service.active ? 'Inactivo' : 'Activo' } : service
       )
     );
+  };
+
+  const handleAddService = (newService) => {
+    setServices([
+      ...services,
+      { ...newService, id: Date.now(), active: newService.estado === 'Activo' }
+    ]);
+    setIsAddModalOpen(false);
+  };
+
+  const handleEditService = (editedService) => {
+    setServices(
+      services.map((service) =>
+        service.id === editedService.id ? { ...editedService, active: editedService.estado === 'Activo' } : service
+      )
+    );
+    setIsEditModalOpen(false);
+    setSelectedService(null);
+  };
+
+  const handleSeeService = (service) => {
+    setSelectedService(service);
+    setIsSeeModalOpen(true);
+  };
+
+  const handleEditClick = (service) => {
+    setSelectedService(service);
+    setIsEditModalOpen(true);
   };
 
   const filteredServices = services.filter(
@@ -139,8 +168,8 @@ const Services = () => {
             <ServicesTable 
               services={paginatedServices} 
               onToggleStatus={toggleServiceStatus}
-              onSee={() => setIsSeeModalOpen(true)}
-              onEdit={() => setIsEditModalOpen(true)}
+              onSee={handleSeeService}
+              onEdit={handleEditClick}
               onDelete={(service) => alert(`Eliminar ${service.name}`)}
             />
 
@@ -162,9 +191,9 @@ const Services = () => {
         </div>
       </div>
       {/* Modales */}
-      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} />}
-      {isEditModalOpen && <EditServices onClose={() => setIsEditModalOpen(false)} />}
-      {isSeeModalOpen && <SeeServices onClose={() => setIsSeeModalOpen(false)} />}
+      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} />}
+      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} />}
+      {isSeeModalOpen && selectedService && <SeeServices onClose={() => { setIsSeeModalOpen(false); setSelectedService(null); }} service={selectedService} />}
     </div>
   );
 }
