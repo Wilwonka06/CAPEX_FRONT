@@ -73,6 +73,7 @@ const CatServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -89,6 +90,29 @@ const CatServices = () => {
         cat.id === id ? { ...cat, isActive: !cat.isActive } : cat
       )
     );
+  };
+
+  const handleAddCategory = (newCategory) => {
+    setCategories([
+      ...categories,
+      { ...newCategory, id: Date.now(), isActive: newCategory.estado === 'Activo' }
+    ]);
+    setIsAddModalOpen(false);
+  };
+
+  const handleEditCategory = (editedCategory) => {
+    setCategories(
+      categories.map((cat) =>
+        cat.id === editedCategory.id ? { ...editedCategory, isActive: editedCategory.estado === 'Activo' } : cat
+      )
+    );
+    setIsEditModalOpen(false);
+    setSelectedCategory(null);
+  };
+
+  const handleEditClick = (category) => {
+    setSelectedCategory(category);
+    setIsEditModalOpen(true);
   };
 
   const filteredCategories = categories.filter(
@@ -135,7 +159,7 @@ const CatServices = () => {
             <CategoryTable
               categories={paginatedCategories} 
               onToggleStatus={toggleCategoryStatus}
-              onEdit={() => setIsEditModalOpen(true)}
+              onEdit={handleEditClick}
               onDelete={(category) => alert(`Eliminar ${category.name}`)}
             />
 
@@ -158,10 +182,11 @@ const CatServices = () => {
       </div>
       
       {/* Modales */}
-      {isAddModalOpen && <AddCatServices onClose={() => setIsAddModalOpen(false)} />}
-      {isEditModalOpen && <EditCatServices onClose={() => setIsEditModalOpen(false)} />}
+      {isAddModalOpen && <AddCatServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddCategory} />}
+      {isEditModalOpen && selectedCategory && <EditCatServices onClose={() => { setIsEditModalOpen(false); setSelectedCategory(null); }} category={selectedCategory} onEdit={handleEditCategory} />}
     </div>
   );
 };
 
 export default CatServices;
+export { initialCategories };

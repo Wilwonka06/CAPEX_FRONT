@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 
-const EditServices = ({ onClose, service, onEdit }) => {
+const EditServices = ({ onClose, service, onEdit, categories = [] }) => {
+    const activeCategories = categories.filter(cat => cat.isActive);
     const [form, setForm] = useState({
         id: service?.id || null,
         Servicio: service?.name || "",
-        Categoria: service?.category || "",
+        Categoria: service?.category || activeCategories[0]?.name || "",
         Descripcion: service?.description || "",
         duracion: service?.duration ? service.duration.replace(" min", "") : "",
         precio: service?.price ? service.price.replace(/[^\d]/g, "") : "",
@@ -16,14 +17,15 @@ const EditServices = ({ onClose, service, onEdit }) => {
         setForm({
             id: service?.id || null,
             Servicio: service?.name || "",
-            Categoria: service?.category || "",
+            Categoria: service?.category || activeCategories[0]?.name || "",
             Descripcion: service?.description || "",
             duracion: service?.duration ? service.duration.replace(" min", "") : "",
             precio: service?.price ? service.price.replace(/[^\d]/g, "") : "",
             estado: service?.estado || "Activo",
             imagen: service?.imagen || null
         });
-    }, [service]);
+        // eslint-disable-next-line
+    }, [service, categories]);
 
     const handleChange = (e) => {
         const { name, value, type, files } = e.target;
@@ -82,15 +84,21 @@ const EditServices = ({ onClose, service, onEdit }) => {
                         </div>
                         <div>
                             <label htmlFor="categoria" className="block text-sm font-medium text-text-main mb-1">Categoría</label>
-                            <input
-                                type="text"
+                            <select
                                 name="Categoria"
                                 id="categoria"
                                 value={form.Categoria}
                                 onChange={handleChange}
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
-                            />
+                            >
+                                {activeCategories.length === 0 && (
+                                    <option value="" disabled>No hay categorías activas</option>
+                                )}
+                                {activeCategories.map(cat => (
+                                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción</label>

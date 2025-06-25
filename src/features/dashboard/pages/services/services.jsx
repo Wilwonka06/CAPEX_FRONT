@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import AddServices from './components/AddServices'
-import EditServices from './components/EditServices';
+import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../Paginator";
+import { initialCategories } from '../CatServices/CatServices';
 
 // Componente para el interruptor de estado
 const StatusToggle = ({ isActive, onToggle }) => (
@@ -78,6 +79,7 @@ const Services = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSeeModalOpen, setIsSeeModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [categories, setCategories] = useState(initialCategories);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -191,8 +193,8 @@ const Services = () => {
         </div>
       </div>
       {/* Modales */}
-      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} />}
-      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} />}
+      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} />}
+      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} />}
       {isSeeModalOpen && selectedService && <SeeServices onClose={() => { setIsSeeModalOpen(false); setSelectedService(null); }} service={selectedService} />}
     </div>
   );

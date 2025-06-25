@@ -1,15 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-const AddServices = ({ onClose, onAdd }) => {
+const AddServices = ({ onClose, onAdd, categories = [] }) => {
+    const activeCategories = categories.filter(cat => cat.isActive);
     const [form, setForm] = useState({
         Servicio: "",
-        Categoria: "",
+        Categoria: activeCategories[0]?.name || "",
         Descripcion: "",
         duracion: "",
         precio: "",
         estado: "Activo",
         imagen: null
     });
+
+    useEffect(() => {
+        setForm(prev => ({
+            ...prev,
+            Categoria: activeCategories[0]?.name || ""
+        }));
+        // eslint-disable-next-line
+    }, [categories]);
 
     const handleChange = (e) => {
         const { name, value, type, files } = e.target;
@@ -67,15 +76,21 @@ const AddServices = ({ onClose, onAdd }) => {
                         </div>
                         <div>
                             <label htmlFor="categoria" className="block text-sm font-medium text-text-main mb-1">Categoría</label>
-                            <input
-                                type="text"
+                            <select
                                 name="Categoria"
                                 id="categoria"
                                 value={form.Categoria}
                                 onChange={handleChange}
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
-                            />
+                            >
+                                {activeCategories.length === 0 && (
+                                    <option value="" disabled>No hay categorías activas</option>
+                                )}
+                                {activeCategories.map(cat => (
+                                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción</label>
