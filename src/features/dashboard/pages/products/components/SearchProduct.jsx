@@ -8,7 +8,7 @@ export default function SearchProduct({ searchTerm, handleSearch }) {
           </div>
           <input 
             type="text" 
-            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full pl-10 p-2.5 shadow-sm" 
+            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 shadow-sm" 
             placeholder="Buscar productos..." 
             value={searchTerm}
             onChange={handleSearch}

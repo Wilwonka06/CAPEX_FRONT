@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import CategoryTable from "./components/CategoryTable";
 import SearchCategory from "./components/SearchCategory";
 import Paginator from "../Paginator";
 import CreateCategory from "./components/CreateCategory";
 
-const initialCategories = [
+export const initialCategories = [
   {
     id: 1,
     name: "Shampoo",
@@ -15,7 +15,7 @@ const initialCategories = [
     id: 2,
     name: "Acondicionador",
     description: "Productos para suavizar y desenredar el cabello.",
-    isActive: true,
+    isActive: false,
   },
   {
     id: 3,
@@ -57,7 +57,8 @@ const CatProductsPage = () => {
   const filteredCategories = categories.filter(
     (category) =>
       category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category.description.toLowerCase().includes(searchTerm.toLowerCase())
+      category.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (category.isActive ? 'activo' : 'inactivo').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Función para cambiar el estado de una categoría
@@ -67,6 +68,20 @@ const CatProductsPage = () => {
         category.id === id ? { ...category, isActive: !category.isActive } : category
       )
     );
+  };
+
+  // Función para editar una categoría
+  const handleEditCategory = (updatedCategory) => {
+    setCategories(
+      categories.map((category) =>
+        category.id === updatedCategory.id ? updatedCategory : category
+      )
+    );
+  };
+
+  // Función para eliminar una categoría
+  const handleDeleteCategory = (categoryId) => {
+    setCategories(categories.filter((category) => category.id !== categoryId));
   };
 
   // Paginación simple
@@ -81,7 +96,7 @@ const CatProductsPage = () => {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
           <div className=" p-6">
-            <h1 className="text-2xl font-bold">Gestión de Categorías</h1>
+            <h1 className="text-2xl font-bold">Gestión de Categorías de Productos</h1>
             <p className=" mt-1">
               Administra las categorías de productos de tu tienda
             </p>
@@ -91,13 +106,25 @@ const CatProductsPage = () => {
             {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchCategory searchTerm={searchTerm} handleSearch={handleSearch} />
-              <CreateCategory />
+              <CreateCategory onCreate={(newCat) => {
+                setCategories([
+                  ...categories,
+                  {
+                    id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1,
+                    name: newCat.name,
+                    description: newCat.description,
+                    isActive: true
+                  }
+                ]);
+              }} />
             </div>
 
             {/* Tabla de categorías */}
             <CategoryTable 
               categories={paginatedCategories} 
               onToggleStatus={toggleCategoryStatus}
+              onEditCategory={handleEditCategory}
+              onDeleteCategory={handleDeleteCategory}
             />
 
             {/* Paginación */}
@@ -111,9 +138,9 @@ const CatProductsPage = () => {
 
             {/* Mostrar información de paginación */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
+              {/* <p className="text-sm text-gray-600">
                 Mostrando {Math.min(filteredCategories.length, startIndex + 1)} a {Math.min(filteredCategories.length, startIndex + itemsPerPage)} de {filteredCategories.length} categorías
-              </p>
+              </p> */}
             </div>
           </div>
         </div>
