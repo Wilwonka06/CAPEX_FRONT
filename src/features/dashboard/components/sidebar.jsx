@@ -1,16 +1,16 @@
 // components/Sidebar.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({
-    main: true,
-    users: true,
-    contacts: true,
-    products: true,
-    services: true,
-    sales: true
+    main: false,
+    users: false,
+    contacts: false,
+    products: false,
+    services: false,
+    sales: false
   });
   const [isLocked, setIsLocked] = useState(false);
   const location = useLocation();
@@ -18,11 +18,10 @@ const Sidebar = () => {
   const menuGroups = [
     {
       id: 'main',
-      title: 'Principal',
-      icon: 'bi-speedometer2',
-      items: [
-        { name: 'Dashboard', icon: 'bi-speedometer2', path: '/' }
-      ]
+      name: 'Dashboard', 
+      icon: 'bi-speedometer2', 
+      path: '/'
+      
     },
     {
       id: 'users',
@@ -30,36 +29,27 @@ const Sidebar = () => {
       icon: 'bi-people',
       items: [
         { name: 'Usuarios', icon: 'bi-person', path: '/usuarios' },
-        { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
-        { name: 'Empleados', icon: 'bi-person-badge', path: '/empleados' }
       ]
     },
     {
-      id: 'contacts',
-      title: 'Contactos',
-      icon: 'bi-person-lines-fill',
-      items: [
-        { name: 'Clientes', icon: 'bi-person-heart', path: '/clientes' },
-        { name: 'Proveedores', icon: 'bi-truck', path: '/proveedores' }
-      ]
-    },
-    {
-      id: 'products',
-      title: 'Productos',
+      id: 'shoppings',
+      title: 'Gestión de Compras',
       icon: 'bi-box-seam',
       items: [
         { name: 'Categorías de Productos', icon: 'bi-tags', path: '/categorias-productos' },
         { name: 'Productos', icon: 'bi-box', path: '/productos' },
+        { name: 'Proveedores', icon: 'bi-truck', path: '/proveedores' },
         { name: 'Compras', icon: 'bi-cart-plus', path: '/compras' }
       ]
     },
     {
       id: 'services',
-      title: 'Servicios',
+      title: 'Gestión de Servicios',
       icon: 'bi-gear',
       items: [
         { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/categorias-servicios' },
         { name: 'Servicios', icon: 'bi-tools', path: '/servicios' },
+        { name: 'Empleados', icon: 'bi-person-badge', path: '/empleados' },
         { name: 'Agendamiento de Citas', icon: 'bi-calendar-check', path: '/citas' }
       ]
     },
@@ -68,10 +58,21 @@ const Sidebar = () => {
       title: 'Ventas',
       icon: 'bi-graph-up',
       items: [
+        { name: 'Clientes', icon: 'bi-person-heart', path: '/clientes' },
         { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/pedidos' },
-        { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/ventas-productos' }
+        { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/ventas-productos' },
+        { name: 'Venta de Servicios', icon: '', path: '/ventas-servicios' }
+      ]
+    },
+    {
+      id: 'config',
+      title: 'configuración',
+      icon: 'bi-people',
+      items: [
+        { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
       ]
     }
+
   ];
 
   const handleMouseEnter = () => {
@@ -157,44 +158,72 @@ const Sidebar = () => {
                 <i className={`${group.icon} text-lg`}></i>
                 {(isExpanded || isLocked) && (
                   <span className="ml-3 text-sm font-medium whitespace-nowrap">
-                    {group.title}
+                    {group.title || group.name}
                   </span>
                 )}
               </div>
-              {(isExpanded || isLocked) && (
+              {(isExpanded || isLocked) && group.items && (
                 <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
               )}
             </div>
 
-            {/* Group Items */}
-            {(expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
-              <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
-                {group.items.map((item, index) => (
-                  <Link
-                    key={index}
-                    to={item.path}
-                    className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
-                      (isExpanded || isLocked) ? '' : 'justify-center'
-                    } ${
-                      isActiveRoute(item.path)
-                        ? 'bg-accent-light/50 text-primary-dark border-r-2 border-primary'
-                        : 'text-text-main/90 hover:bg-accent-light/40 hover:text-primary-dark'
-                    }`}
-                    title={!(isExpanded || isLocked) ? item.name : ''}
-                  >
-                    <i className={`${item.icon} text-base`}></i>
-                    {(isExpanded || isLocked) && (
-                      <span className="ml-3 text-sm whitespace-nowrap">
-                        {item.name}
-                      </span>
-                    )}
-                  </Link>
-                ))}
-              </div>
+            {/* Group Items o Link directo */}
+            {group.items ? (
+              (expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
+                <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
+                  {Array.isArray(group.items) && group.items.map((item, index) => (
+                    <Link
+                      key={index}
+                      to={item.path}
+                      className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                        (isExpanded || isLocked) ? '' : 'justify-center'
+                      } ${
+                        isActiveRoute(item.path)
+                          ? 'bg-accent-light/50 text-primary-dark border-r-2 border-primary'
+                          : 'text-text-main/90 hover:bg-accent-light/40 hover:text-primary-dark'
+                      }`}
+                      title={!(isExpanded || isLocked) ? item.name : ''}
+                    >
+                      <i className={`${item.icon} text-base`}></i>
+                      {(isExpanded || isLocked) && (
+                        <span className="ml-3 text-sm whitespace-nowrap">
+                          {item.name}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              )
+            ) : (
+              <Link
+                to={group.path}
+                className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                  (isExpanded || isLocked) ? '' : 'justify-center'
+                } ${
+                  isActiveRoute(group.path)
+                    ? 'bg-accent-light/50 text-primary-dark border-r-2 border-primary'
+                    : 'text-text-main/90 hover:bg-accent-light/40 hover:text-primary-dark'
+                }`}
+                title={!(isExpanded || isLocked) ? group.name : ''}
+              >
+                <i className={`${group.icon} text-base`}></i>
+                {(isExpanded || isLocked) && (
+                  <span className="ml-3 text-sm whitespace-nowrap">
+                    {group.name}
+                  </span>
+                )}
+              </Link>
             )}
           </div>
         ))}
       </nav>
+      {/* Footer fijo */}
+      <div className="p-4 border-t  flex items-center justify-center">
+        <button className="w-full text-main py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors">
+          <i className="bi bi-box-arrow-right text-base"></i>
+          {(isExpanded || isLocked) && <span>Cerrar sesión</span>}
+        </button>
+      </div>
     </div>
   );
 };
