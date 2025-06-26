@@ -85,7 +85,7 @@ const CatProductsPage = () => {
   };
 
   // Paginación simple
-  const itemsPerPage = 5;
+  const itemsPerPage = 3;
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);

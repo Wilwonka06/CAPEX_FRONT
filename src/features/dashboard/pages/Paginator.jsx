@@ -18,6 +18,7 @@ const Paginator = ({ currentPage, totalPages, onPageChange }) => {
           className={`px-3 py-2 rounded-md transition-colors ${
             currentPage === page
               ? 'bg-primary-dark text-white shadow-md'
+
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
