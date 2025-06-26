@@ -117,6 +117,11 @@ const router = createBrowserRouter([
 
       },
       {
+        path: 'servicespage',
+        element: <ServicesPage />
+
+      },
+      {
         path: 'pedidos',
         element: <Orders />
       },

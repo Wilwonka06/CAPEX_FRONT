@@ -42,12 +42,12 @@ const DetailServices = ({ service, onClose }) => {
             <span className="text-lg font-bold text-text-main">{service.duration}</span>
           </div>
           <div className="flex gap-4">
-            {/* <button
+            <button
               type="button"
               className="bg-primary-dark text-white px-8 py-3 rounded font-semibold text-lg hover:bg-primary transition w-full"
             >
               Agendar Cita
-            </button> */}
+            </button>
           </div>
         </div>
       </div>
