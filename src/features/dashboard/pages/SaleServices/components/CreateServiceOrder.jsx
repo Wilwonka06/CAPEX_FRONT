@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 
-const CreateService = ({ onBack }) => {
+const CreateServiceOrder = ({ onBack }) => {
   const [formData, setFormData] = useState({
     cliente: "",
     dineroProporcionado: 0,
-    devolucion: 0
+    devolucion: 0,
+    status: "En ejecucion"
   });
 
   const [selectedServices, setSelectedServices] = useState([]);
@@ -47,27 +48,41 @@ const CreateService = ({ onBack }) => {
   };
 
   return (
-    <div className="p-6 bg-white">
+    <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center mb-6">
-        <button onClick={onBack} className="mr-3">
+        <button onClick={onBack} className="mr-3 p-2 bg-primary-dark text-white rounded hover:bg-primary transition">
           <i className="bi bi-arrow-left text-xl"></i>
         </button>
-        <h2 className="text-xl font-semibold">Crear Venta de Servicio</h2>
+        <h2 className="text-xl font-semibold text-text-main">Crear Venta de Servicio</h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Cliente */}
         <div className="flex items-center space-x-4">
-          <label className="text-sm font-medium w-20">Cliente:</label>
+          <label className="text-sm font-medium w-20 text-text-main">Cliente:</label>
           <input
             type="text"
             name="cliente"
             value={formData.cliente}
             onChange={handleInputChange}
-            className="flex-1 border rounded px-3 py-1 text-sm"
+            className="flex-1 border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="Buscar cliente..."
           />
+        </div>
+
+        {/* Estado */}
+        <div className="flex items-center space-x-4">
+          <label className="text-sm font-medium w-20 text-text-main">Estado:</label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleInputChange}
+            className="flex-1 border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          >
+            <option value="En ejecucion">En ejecución</option>
+            <option value="Pagado">Pagado</option>
+          </select>
         </div>
 
         {/* Servicios */}
@@ -154,13 +169,13 @@ const CreateService = ({ onBack }) => {
           <button
             type="button"
             onClick={onBack}
-            className="px-6 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
+            className="px-6 py-2 border border-accent text-text-main rounded hover:bg-accent-light transition"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            className="px-6 py-2 bg-primary-dark text-white rounded hover:bg-primary transition"
           >
             Crear Venta de Servicio
           </button>
@@ -170,4 +185,4 @@ const CreateService = ({ onBack }) => {
   );
 };
 
-export default CreateService;
+export default CreateServiceOrder;

@@ -61,12 +61,12 @@ const Sidebar = () => {
         { name: 'Clientes', icon: 'bi-person-heart', path: '/clientes' },
         { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/pedidos' },
         { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/ventas-productos' },
-        { name: 'Venta de Servicios', icon: '', path: '/ventas-servicios' }
+        { name: 'Venta de Servicios', icon: 'bi-bag-check', path: '/ventas-servicios' }
       ]
     },
     {
       id: 'config',
-      title: 'configuración',
+      title: 'Configuración',
       icon: 'bi-people',
       items: [
         { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
