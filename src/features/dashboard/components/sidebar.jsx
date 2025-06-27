@@ -50,7 +50,7 @@ const Sidebar = () => {
         { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/categorias-servicios' },
         { name: 'Servicios', icon: 'bi-tools', path: '/servicios' },
         { name: 'Empleados', icon: 'bi-person-badge', path: '/empleados' },
-        { name: 'Agendamiento de Citas', icon: 'bi-calendar-check', path: '/citas' }
+        { name: 'Agendamiento de Citas', icon: 'bi-calendar-check', path: '/programacion' }
       ]
     },
     {

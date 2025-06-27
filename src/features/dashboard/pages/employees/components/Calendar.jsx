@@ -83,8 +83,8 @@ const Calendar = () => {
                         </div>
                     </div>
                 </div>
-                <div class="border border-accent rounded-none shadow-none">
-                    <div class="grid grid-cols-7 divide-accent border-b border-accent">
+                <div class="border border-accent">
+                    <div class="grid grid-cols-7  divide-accent border-b border-accent">
                         <div class="p-3.5 flex flex-col sm:flex-row items-center justify-between border-r border-accent">
                             <span class="text-sm font-medium text-text-main/70">Sun</span>
                             <span class="text-sm font-medium text-text-main">09</span>
@@ -115,19 +115,19 @@ const Calendar = () => {
                         </div>
                     </div>
                     <div class="grid grid-cols-7 divide-accent">
-                        <div class="p-3.5 bg-white   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
+                        <div class="p-3.5 bg-gray-50   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
                             <span class="text-xs font-semibold text-gray-500 flex items-center justify-center w-7 h-7 rounded-full ">27</span>
                         </div>
-                        <div class="p-3.5 bg-white   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
+                        <div class="p-3.5 bg-gray-50   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
                             <span class="text-xs font-semibold text-gray-500 flex items-center justify-center w-7 h-7 rounded-full ">28</span>
                         </div>
-                        <div class="p-3.5 bg-white   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
+                        <div class="p-3.5 bg-gray-50   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
                             <span class="text-xs font-semibold text-gray-500 flex items-center justify-center w-7 h-7 rounded-full ">29</span>
                         </div>
-                        <div class="p-3.5 bg-white   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
+                        <div class="p-3.5 bg-gray-50   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
                             <span class="text-xs font-semibold text-gray-500 flex items-center justify-center w-7 h-7 rounded-full ">30</span>
                         </div>
-                        <div class="p-3.5 bg-white   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
+                        <div class="p-3.5 bg-gray-50   xl:aspect-auto  lg:h-28 border-b border-r border-accent flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
                             <span class="text-xs font-semibold text-gray-500 flex items-center justify-center w-7 h-7 rounded-full ">31</span>
                         </div>
                         <div class="p-3.5  border-b border-r border-accent   xl:aspect-auto  lg:h-28 flex justify-between flex-col max-lg:items-center min-h-[70px] transition-all duration-300 hover:bg-gray-100">
