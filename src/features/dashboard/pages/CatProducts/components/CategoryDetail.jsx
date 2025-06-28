@@ -5,71 +5,46 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8 relative animate-fade-in">
-        <button
-          className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
-          onClick={onClose}
-          aria-label="Cerrar"
-        >
-          ×
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="w-16 h-16  rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="bi bi-tag text-white text-2xl"></i>
-          </div>
-          <h2 className="text-xl font-bold text-primary">Detalles de Categoría</h2>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-text-main mb-2">ID de Categoría</label>
-          <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main font-mono text-sm">
-            #{category.id}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-2">Nombre</label>
-            <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main font-medium">
-              {category.name}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-2">Descripción</label>
-            <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main min-h-[60px]">
-              {category.description}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-2">Estado</label>
-            <div className="flex items-center space-x-3">
-              <div
-                className={`relative inline-flex h-6 w-11 items-center rounded-full ${category.isActive ? 'bg-primary' : 'bg-gray-300'
-                  }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${category.isActive ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                />
-              </div>
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${category.isActive
-                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                  }`}
-              >
-                {category.isActive ? "Activo" : "Inactivo"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end mt-8">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in max-h-[90vh] flex flex-col">
+        {/* Header fijo */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
+          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">Detalles de Categoría</h2>
           <button
-            className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition"
+            className="text-gray-400 hover:text-primary text-xl font-bold"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+        {/* Contenido con scroll */}
+        <div className="overflow-y-auto p-8 flex-1">
+          <div className="flex flex-col gap-6">
+            <div className="text-lg font-bold text-gray-800 text-center mb-2">{category.name}</div>
+            <div>
+              <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Descripción</span>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[60px]">
+                {category.description}
+              </div>
+            </div>
+            <div>
+              <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+                <div className="flex justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500">ID de Categoría</span>
+                  <span className="font-semibold text-gray-800 text-sm">#{category.id}</span>
+                </div>
+                <div className="flex justify-between px-4 py-2">
+                  <span className="text-xs text-gray-500">Estado</span>
+                  <span className={`font-semibold text-sm px-2 py-0.5 rounded-full ${category.isActive ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>{category.isActive ? 'Activo' : 'Inactivo'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Footer fijo */}
+        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
+          <button
+            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition"
             onClick={onClose}
           >
             Cerrar

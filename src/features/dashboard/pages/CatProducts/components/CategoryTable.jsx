@@ -49,7 +49,7 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
 
   return (
     <>
-      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <table className="min-w-full">
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100">

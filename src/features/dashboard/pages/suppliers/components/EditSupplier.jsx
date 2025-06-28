@@ -74,6 +74,7 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave }) => {
         <h2 className="text-xl font-bold mb-4 text-primary">
           Editar proveedor
         </h2>
+        <p className="text-sm text-gray-600 mb-4">Modifique la información del proveedor</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">NIT</label>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import CategoryTable from "./components/CategoryTable";
-import SearchCategory from "./components/SearchCategory";
-import Paginator from "../Paginator";
+import SearchProduct from '../../../../shared/Search';
+import Paginator from '../../../../shared/Paginator';
 import CreateCategory from "./components/CreateCategory";
 
 export const initialCategories = [
@@ -85,27 +85,24 @@ const CatProductsPage = () => {
   };
 
   // Paginación simple
-  const itemsPerPage = 3;
+  const itemsPerPage = 5;
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen p-6 font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
           <div className=" p-6">
             <h1 className="text-2xl font-bold">Gestión de Categorías de Productos</h1>
-            <p className=" mt-1">
-              Administra las categorías de productos de tu tienda
-            </p>
           </div>
           
           <div className="p-6">
             {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchCategory searchTerm={searchTerm} handleSearch={handleSearch} />
+              <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar categorías..." />
               <CreateCategory onCreate={(newCat) => {
                 setCategories([
                   ...categories,

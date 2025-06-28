@@ -56,6 +56,7 @@ const CreateSupplier = ({ onCreate }) => {
               ×
             </button>
             <h2 className="text-xl font-bold mb-4 text-primary">Registrar proveedor</h2>
+            <p className="text-sm text-gray-600 mb-4">Complete la información del nuevo proveedor</p>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">NIT</label>

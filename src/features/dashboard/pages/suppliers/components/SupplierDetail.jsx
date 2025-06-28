@@ -18,6 +18,7 @@ const SupplierDetail = ({ supplier, isOpen, onClose }) => {
           <h2 className="text-xl font-bold text-primary">
             Detalles del Proveedor
           </h2>
+          <p className="text-sm text-gray-600 mt-1">Información completa del proveedor</p>
         </div>
         <div className="space-y-4">
           <div>

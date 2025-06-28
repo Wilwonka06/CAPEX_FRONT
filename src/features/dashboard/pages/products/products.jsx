@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ProductsTable from "./components/ProductsTable";
-import SearchProduct from "./components/SearchProduct";
-import Paginator from "../Paginator";
+import SearchProduct from '../../../../shared/Search';
+import Paginator from '../../../../shared/Paginator';
 import CreateProduct from "./components/CreateProduct";
 import { initialCategories as categories } from "../CatProducts/CatProducts";
 
@@ -13,7 +13,6 @@ const initialProducts = [
     precio: 120.00,
     cantidad: 40,
     categoria: "Shampoo",
-    tipoProducto: "Shampoo",
     color: "Transparente",
     fechaRegistro: "2024-06-01",
     foto: "https://via.placeholder.com/80x80.png?text=Shampoo",
@@ -25,7 +24,6 @@ const initialProducts = [
     precio: 95.00,
     cantidad: 35,
     categoria: "Acondicionador",
-    tipoProducto: "Acondicionador",
     color: "Blanco",
     fechaRegistro: "2024-05-20",
     foto: "https://via.placeholder.com/80x80.png?text=Acondicionador",
@@ -37,7 +35,6 @@ const initialProducts = [
     precio: 150.00,
     cantidad: 20,
     categoria: "Mascarilla",
-    tipoProducto: "Mascarilla",
     color: "Crema",
     fechaRegistro: "2024-04-15",
     foto: "https://via.placeholder.com/80x80.png?text=Mascarilla",
@@ -49,7 +46,6 @@ const initialProducts = [
     precio: 60.00,
     cantidad: 60,
     categoria: "Gel y Estilizado",
-    tipoProducto: "Gel",
     color: "Transparente",
     fechaRegistro: "2024-03-10",
     foto: "https://via.placeholder.com/80x80.png?text=Gel",
@@ -61,7 +57,6 @@ const initialProducts = [
     precio: 180.00,
     cantidad: 15,
     categoria: "Aceites y Sueros",
-    tipoProducto: "Aceite",
     color: "Ámbar",
     fechaRegistro: "2024-02-05",
     foto: "https://via.placeholder.com/80x80.png?text=Aceite",
@@ -92,8 +87,7 @@ const ProductsPage = () => {
       product.cantidad.toString().includes(searchTerm) ||
       product.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.precio.toString().includes(searchTerm) ||
-      product.fechaRegistro.includes(searchTerm) ||
-      product.tipoProducto.toLowerCase().includes(searchTerm.toLowerCase())
+      product.fechaRegistro.includes(searchTerm)
   );
 
   // Función para crear un nuevo producto
@@ -122,15 +116,12 @@ const ProductsPage = () => {
   const paginatedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen p-6 font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
           <div className="p-6">
             <h1 className="text-2xl font-bold">Gestión de Productos</h1>
-            <p className="mt-1">
-              Administra los productos de tu tienda
-            </p>
           </div>
           
           <div className="p-6">

@@ -47,6 +47,7 @@ const EditCategory = ({ category, isOpen, onClose, onSave }) => {
             <i className="bi bi-pencil-square text-white text-2xl"></i>
           </div>
           <h2 className="text-xl font-bold text-primary">Editar Categoría</h2>
+          <p className="text-sm text-gray-600 mt-1">Modifique la información de la categoría</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

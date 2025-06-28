@@ -20,11 +20,6 @@ export default function ProductsTable({ products, onEdit, onDelete, categories =
     setEditOpen(true);
   };
 
-  const handleDelete = (product) => {
-    setSelectedProduct(product);
-    /* setDeleteOpen(true); */
-  };
-
   const handleSaveEdit = (updatedProduct) => {
     if (onEdit) {
       onEdit(updatedProduct);
@@ -43,29 +38,38 @@ export default function ProductsTable({ products, onEdit, onDelete, categories =
 
   return (
     <>
-      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <table className="min-w-full">
           <thead>
-            <tr className="bg-gray-50 hover:bg-gray-100">
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
+            <tr className="bg-gray-50 hover:bg-gray-100 ">
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">FOTO</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">COLOR</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">STOCK</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PRECIO</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">FECHA - REGISTRO</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">FECHA REGISTRO</th>
               <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {products.map((product) => (
               <tr key={product.id} className="hover:bg-gray-50 transition-colors duration-150">
-                <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                  {product.id}
+                <td className="py-4 px-4">
+                  <div className="flex items-center">
+                    <img 
+                      src={product.foto || 'https://via.placeholder.com/40x40?text=Sin+Imagen'} 
+                      alt={product.nombre}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/40x40?text=Error';
+                      }}
+                    />
+                  </div>
                 </td>
-                <td className="py-4 px-4 text-sm font-medium text-gray-900">{product.nombre}</td>
-                <td className="py-4 px-4 text-sm text-gray-600">{product.color}</td>
-                <td className="py-4 px-4 text-sm text-gray-600">
+                <td className="py-4 px-4 text-xs font-medium text-gray-900">{product.nombre}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{product.color}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     product.cantidad > 10 
                       ? 'bg-green-100 text-green-800' 
@@ -76,27 +80,27 @@ export default function ProductsTable({ products, onEdit, onDelete, categories =
                     {product.cantidad}
                   </span>
                 </td>
-                <td className="py-4 px-4 text-sm text-gray-600">{product.categoria}</td>
-                <td className="py-4 px-4 text-sm text-gray-600 font-semibold">${product.precio.toFixed(2)}</td>
-                <td className="py-4 px-4 text-sm text-gray-600">{product.fechaRegistro}</td>
-                <td className="py-4 px-4 text-sm font-medium text-right">
+                <td className="py-4 px-4 text-xs text-gray-600">{product.categoria}</td>
+                <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${product.precio.toFixed(2)}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{product.fechaRegistro}</td>
+                <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
                     <button 
-                      className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors"
+                      className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleViewDetail(product)}
                       title="Ver detalles"
                     >
                       <i className="bi bi-eye text-primary text-sm"></i>
                     </button>
                     <button 
-                      className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
+                      className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleEdit(product)}
                       title="Editar"
                     >
                       <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
                     </button>
                     <button 
-                      className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
+                      className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => onDelete(product.id)}
                       title="Eliminar"
                     >
@@ -152,7 +156,6 @@ ProductsTable.propTypes = {
       id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
       nombre: PropTypes.string.isRequired,
       descripcion: PropTypes.string.isRequired,
-      tipoProducto: PropTypes.string.isRequired,
       color: PropTypes.string.isRequired,
       cantidad: PropTypes.number.isRequired,
       categoria: PropTypes.string.isRequired,
