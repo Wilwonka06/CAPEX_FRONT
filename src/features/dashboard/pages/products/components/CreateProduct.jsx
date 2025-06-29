@@ -274,14 +274,14 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+                  className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
                   onClick={handleClose}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition"
+                  className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
                 >
                   Guardar
                 </button>

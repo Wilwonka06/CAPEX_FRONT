@@ -4,6 +4,18 @@ export function isDuplicateProductName(nombre, productos) {
   return productos.some(p => normalizar(p.nombre) === normalizar(nombre));
 }
 
+// Verifica si ya existe una categoría con el mismo nombre (insensible a mayúsculas y espacios)
+export function isDuplicateCategoryName(nombre, categorias, categoriaActual = null) {
+  const normalizar = (str) => str.trim().toLowerCase();
+  return categorias.some(c => {
+    // Si estamos editando, excluir la categoría actual
+    if (categoriaActual && c.id === categoriaActual.id) {
+      return false;
+    }
+    return normalizar(c.name) === normalizar(nombre);
+  });
+}
+
 // Previene que se ingrese la letra 'e', 'E', '+', '-' en campos numéricos
 export function isNumberInputValid(e) {
   if (["e", "E", "+", "-", "."].includes(e.key)) {

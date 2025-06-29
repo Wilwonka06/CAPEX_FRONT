@@ -70,7 +70,7 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
         {/* Footer fijo */}
         <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
           <button
-            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition"
+            className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
             onClick={onClose}
           >
             Cerrar

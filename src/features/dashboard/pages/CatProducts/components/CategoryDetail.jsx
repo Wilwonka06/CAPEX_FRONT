@@ -27,24 +27,12 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
                 {category.description}
               </div>
             </div>
-            <div>
-              <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
-                <div className="flex justify-between px-4 py-2">
-                  <span className="text-xs text-gray-500">ID de Categoría</span>
-                  <span className="font-semibold text-gray-800 text-sm">#{category.id}</span>
-                </div>
-                <div className="flex justify-between px-4 py-2">
-                  <span className="text-xs text-gray-500">Estado</span>
-                  <span className={`font-semibold text-sm px-2 py-0.5 rounded-full ${category.isActive ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>{category.isActive ? 'Activo' : 'Inactivo'}</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         {/* Footer fijo */}
-        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
+        <div className="sticky bottom-0 z-10 bg-white  rounded-b-lg flex justify-end px-8 py-4">
           <button
-            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition"
+            className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
             onClick={onClose}
           >
             Cerrar

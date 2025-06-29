@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 import CategoryDetail from "./CategoryDetail";
 import EditCategory from "./EditCategory";
 
@@ -63,19 +64,19 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
           <tbody className="divide-y divide-gray-200">
             {categories.map((category) => (
               <tr key={category.id} className="hover:bg-gray-50 transition-colors duration-150">
-                <td className="py-4 px-4 text-sm font-medium text-gray-900">{category.id}</td>
-                <td className="py-4 px-4 text-sm font-medium text-gray-900">{category.name}</td>
-                <td className="py-4 px-4 text-sm text-gray-600">{category.description}</td>
-                <td className="py-4 px-4 text-sm">
+                <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.id}</td>
+                <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.name}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{category.description}</td>
+                <td className="py-4 px-4 text-xs">
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={() => onToggleStatus(category.id)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-                        category.isActive ? 'bg-primary' : 'bg-gray-300'
+                      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none  ${
+                        category.isActive ? 'bg-text-main' : 'bg-gray-300'
                       }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
                           category.isActive ? 'translate-x-6' : 'translate-x-1'
                         }`}
                       />
@@ -94,19 +95,19 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
                 <td className="py-4 px-4 text-sm font-medium text-right">
                   <div className="flex justify-end space-x-2">
                     <button 
-                      className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-primary rounded-md flex items-center justify-center transition-colors"
+                      className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleViewDetail(category)}
                     >
                       <i className="bi bi-eye text-primary text-sm"></i>
                     </button>
                     <button 
-                      className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
+                      className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleEditFromTable(category)}
                     >
                       <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
                     </button>
                     <button 
-                      className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
+                      className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleDeleteFromTable(category)}
                     >
                       <i className="bi bi-trash text-red-500 text-sm"></i>
@@ -131,9 +132,24 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
         isOpen={isEditOpen}
         onClose={handleCloseEdit}
         onSave={handleSaveEdit}
+        categories={categories}
       />
     </>
   );
+};
+
+CategoryTable.propTypes = {
+  categories: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      name: PropTypes.string.isRequired,
+      description: PropTypes.string.isRequired,
+      isActive: PropTypes.bool.isRequired,
+    })
+  ).isRequired,
+  onToggleStatus: PropTypes.func.isRequired,
+  onEditCategory: PropTypes.func.isRequired,
+  onDeleteCategory: PropTypes.func.isRequired,
 };
 
 export default CategoryTable;

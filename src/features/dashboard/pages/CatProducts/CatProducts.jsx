@@ -103,17 +103,20 @@ const CatProductsPage = () => {
             {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar categorías..." />
-              <CreateCategory onCreate={(newCat) => {
-                setCategories([
-                  ...categories,
-                  {
-                    id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1,
-                    name: newCat.name,
-                    description: newCat.description,
-                    isActive: true
-                  }
-                ]);
-              }} />
+              <CreateCategory 
+                categories={categories}
+                onCreate={(newCat) => {
+                  setCategories([
+                    ...categories,
+                    {
+                      id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1,
+                      name: newCat.name,
+                      description: newCat.description,
+                      isActive: true
+                    }
+                  ]);
+                }} 
+              />
             </div>
 
             {/* Tabla de categorías */}
