@@ -128,7 +128,7 @@ const ProductsPage = () => {
             {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} />
-              <CreateProduct onCreate={handleCreateProduct} categories={categories} />
+              <CreateProduct onCreate={handleCreateProduct} categories={categories} products={products} />
             </div>
 
             {/* Tabla de productos */}

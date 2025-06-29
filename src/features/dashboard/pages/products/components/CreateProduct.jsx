@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { isDuplicateProductName, isNumberInputValid, isValidNumber, isValidDecimal } from '../../../../../shared/validations';
 
-const CreateProduct = ({ onCreate, categories = [] }) => {
+const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
@@ -12,6 +13,7 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
     foto: "",
   });
   const [preview, setPreview] = useState("");
+  const [error, setError] = useState("");
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -29,6 +31,15 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'cantidad' && value && !isValidNumber(value)) {
+      setError('Solo se permiten números enteros positivos en cantidad.');
+      return;
+    }
+    if (name === 'precio' && value && !isValidDecimal(value)) {
+      setError('Solo se permiten números decimales positivos en precio.');
+      return;
+    }
+    setError("");
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -63,11 +74,21 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
+    if (!formData.nombre.trim()) {
+      // Si el campo nombre está vacío, no enviar
+      return;
+    }
+    if (isDuplicateProductName(formData.nombre, products)) {
+      window.alert("Ya existe un producto con ese nombre.");
+      setFormData((prev) => ({ ...prev, nombre: '' }));
+      return;
+    }
     if (
       formData.nombre.trim() &&
-      formData.descripcion.trim() &&
+      formData.categoria.trim() &&
       formData.precio &&
-      formData.cantidad
+      formData.descripcion.trim()
     ) {
       let fotoUrl = formData.foto;
       if (formData.foto instanceof File) {
@@ -77,12 +98,20 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
         ...formData,
         id: Date.now(), // ID temporal
         precio: parseFloat(formData.precio),
-        cantidad: parseInt(formData.cantidad),
+        cantidad: formData.cantidad ? parseInt(formData.cantidad) : 0,
         fechaRegistro: new Date().toISOString().split("T")[0],
         foto: fotoUrl,
       };
       if (onCreate) onCreate(newProduct);
       handleClose();
+    }
+  };
+
+  const handleBlurNombre = (e) => {
+    const value = e.target.value;
+    if (isDuplicateProductName(value, products)) {
+      window.alert('Ya existe un producto con ese nombre.');
+      setFormData((prev) => ({ ...prev, nombre: '' }));
     }
   };
 
@@ -160,7 +189,7 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Nombre
+                    Nombre <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -168,12 +197,13 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main"
                     value={formData.nombre}
                     onChange={handleChange}
+                    onBlur={handleBlurNombre}
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Categoría
+                    Categoría <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="categoria"
@@ -198,12 +228,11 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
                     name="color"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                    value={formData.color}
                     onChange={handleChange}
-                    required
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Precio
+                    Precio <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -213,6 +242,7 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                    value={formData.precio}
                     onChange={handleChange}
                     required
+                    onKeyDown={isNumberInputValid}
                   />
                 </div>
                 <div>
@@ -225,13 +255,13 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
                     min="0"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                    value={formData.cantidad}
                     onChange={handleChange}
-                    required
+                    onKeyDown={isNumberInputValid}
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
-                  Descripción
+                  Descripción <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="descripcion"
@@ -261,6 +291,7 @@ const CreateProduct = ({ onCreate, categories = [] }) => {
           </div>
         </div>
       )}
+      {error && <div className="text-red-500 text-xs mb-2">{error}</div>}
     </>
   );
 };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { isDuplicateProductName } from '../../../../../shared/validations';
 
-const EditProduct = ({ product, isOpen, onClose, onSave, categories = [] }) => {
+const EditProduct = ({ product, isOpen, onClose, onSave, categories = [], products = [] }) => {
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -63,6 +64,17 @@ const EditProduct = ({ product, isOpen, onClose, onSave, categories = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formData.nombre.trim()) {
+      // Si el campo nombre está vacío, no enviar
+      return;
+    }
+    // Validar duplicado excluyendo el producto actual
+    const otrosProductos = products.filter(p => p.id !== product.id);
+    if (isDuplicateProductName(formData.nombre, otrosProductos)) {
+      window.alert('Ya existe un producto con ese nombre.');
+      setFormData((prev) => ({ ...prev, nombre: product.nombre }));
+      return;
+    }
     if (formData.nombre.trim() && formData.descripcion.trim() && formData.precio) {
       let fotoUrl = formData.foto;
       if (formData.foto instanceof File) {
@@ -95,6 +107,16 @@ const EditProduct = ({ product, isOpen, onClose, onSave, categories = [] }) => {
       foto: "",
     });
     setPreview("");
+  };
+
+  const handleBlurNombre = (e) => {
+    const value = e.target.value;
+    // Excluir el producto actual de la validación
+    const otrosProductos = products.filter(p => p.id !== product.id);
+    if (isDuplicateProductName(value, otrosProductos)) {
+      window.alert('Ya existe un producto con ese nombre.');
+      setFormData((prev) => ({ ...prev, nombre: product.nombre }));
+    }
   };
 
   if (!isOpen || !product) return null;
@@ -171,6 +193,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, categories = [] }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
                 value={formData.nombre}
                 onChange={handleChange}
+                onBlur={handleBlurNombre}
                 required
               />
             </div>

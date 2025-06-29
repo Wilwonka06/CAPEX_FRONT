@@ -4,7 +4,12 @@ import EditProduct from "./EditProduct";
 /* import DeleteProduct from "./DeleteProduct"; */
 import { useState } from "react";
 
-export default function ProductsTable({ products, onEdit, onDelete, categories = [] }) {
+export default function ProductsTable({
+  products,
+  onEdit,
+  onDelete,
+  categories = [],
+}) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -42,64 +47,100 @@ export default function ProductsTable({ products, onEdit, onDelete, categories =
         <table className="min-w-full">
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100 ">
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">FOTO</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">COLOR</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">STOCK</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PRECIO</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">FECHA REGISTRO</th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                FOTO
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                NOMBRE
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                COLOR
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                STOCK
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                CATEGORÍA
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                PRECIO
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                FECHA REGISTRO
+              </th>
+              <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                ACCIONES
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {products.map((product) => (
-              <tr key={product.id} className="hover:bg-gray-50 transition-colors duration-150">
+              <tr
+                key={product.id}
+                className="hover:bg-gray-50 transition-colors duration-150"
+              >
                 <td className="py-4 px-4">
                   <div className="flex items-center">
-                    <img 
-                      src={product.foto || 'https://via.placeholder.com/40x40?text=Sin+Imagen'} 
+                    <img
+                      src={
+                        product.foto
+                          ? product.foto
+                          : "https://img.freepik.com/vector-premium/icono-marco-fotos-foto-vacia-blanco-vector-sobre-fondo-transparente-aislado-eps-10_399089-1290.jpg"
+                      }
                       alt={product.nombre}
                       className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/40x40?text=Error';
+                        e.target.src =
+                          "https://img.freepik.com/vector-premium/icono-marco-fotos-foto-vacia-blanco-vector-sobre-fondo-transparente-aislado-eps-10_399089-1290.jpg";
                       }}
                     />
                   </div>
                 </td>
-                <td className="py-4 px-4 text-xs font-medium text-gray-900">{product.nombre}</td>
-                <td className="py-4 px-4 text-xs text-gray-600">{product.color}</td>
+                <td className="py-4 px-4 text-xs font-medium text-gray-900">
+                  {product.nombre}
+                </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    product.cantidad > 10 
-                      ? 'bg-green-100 text-green-800' 
-                      : product.cantidad > 0 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-red-100 text-red-800'
-                  }`}>
+                  {product.color}
+                </td>
+                <td className="py-4 px-4 text-xs text-gray-600">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      product.cantidad > 10
+                        ? " text-green-800"
+                        : product.cantidad > 0
+                        ? " text-yellow-800"
+                        : " text-red-800"
+                    }`}
+                  >
                     {product.cantidad}
                   </span>
                 </td>
-                <td className="py-4 px-4 text-xs text-gray-600">{product.categoria}</td>
-                <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${product.precio.toFixed(2)}</td>
-                <td className="py-4 px-4 text-xs text-gray-600">{product.fechaRegistro}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">
+                  {product.categoria}
+                </td>
+                <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
+                  ${product.precio.toFixed(2)}
+                </td>
+                <td className="py-4 px-4 text-xs text-gray-600">
+                  {product.fechaRegistro}
+                </td>
                 <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleViewDetail(product)}
                       title="Ver detalles"
                     >
                       <i className="bi bi-eye text-primary text-sm"></i>
                     </button>
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleEdit(product)}
                       title="Editar"
                     >
                       <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
                     </button>
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => onDelete(product.id)}
                       title="Eliminar"
@@ -134,6 +175,7 @@ export default function ProductsTable({ products, onEdit, onDelete, categories =
         }}
         onSave={handleSaveEdit}
         categories={categories}
+        products={products}
       />
 
       {/* Modal de Eliminación */}
