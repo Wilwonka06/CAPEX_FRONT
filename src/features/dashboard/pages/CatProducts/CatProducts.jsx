@@ -106,15 +106,15 @@ const CatProductsPage = () => {
               <CreateCategory 
                 categories={categories}
                 onCreate={(newCat) => {
-                  setCategories([
-                    ...categories,
-                    {
-                      id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1,
-                      name: newCat.name,
-                      description: newCat.description,
-                      isActive: true
-                    }
-                  ]);
+                setCategories([
+                  ...categories,
+                  {
+                    id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1,
+                    name: newCat.name,
+                    description: newCat.description,
+                    isActive: true
+                  }
+                ]);
                 }} 
               />
             </div>
