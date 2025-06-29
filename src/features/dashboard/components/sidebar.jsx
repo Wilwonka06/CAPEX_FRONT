@@ -1,9 +1,9 @@
 // components/Sidebar.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 
 const Sidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({
     main: true,
     users: true,
@@ -12,66 +12,68 @@ const Sidebar = () => {
     services: true,
     sales: true
   });
-  const [isLocked, setIsLocked] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
   const location = useLocation();
 
   const menuGroups = [
     {
       id: 'main',
-      title: 'Principal',
-      icon: 'bi-speedometer2',
+      name: 'Dashboard', 
+      icon: 'bi-speedometer2', 
+      path: '/'
+      
+    },
+    {
+      id: 'config',
+      title: 'Configuración',
+      icon: 'bi-gear-fill',
       items: [
-        { name: 'Dashboard', icon: 'bi-speedometer2', path: '/' }
+        { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
       ]
     },
     {
       id: 'users',
       title: 'Gestión de Usuarios',
-      icon: 'bi-people',
+      icon: 'bi-people-fill',
       items: [
-        { name: 'Usuarios', icon: 'bi-person', path: '/usuarios' },
-        { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
-        { name: 'Empleados', icon: 'bi-person-badge', path: '/empleados' }
+        { name: 'Usuarios', icon: 'bi-person-fill', path: '/usuarios' },
       ]
     },
     {
-      id: 'contacts',
-      title: 'Contactos',
-      icon: 'bi-person-lines-fill',
+      id: 'shoppings',
+      title: 'Gestión de Compras',
+      icon: 'bi-cart-check-fill',
       items: [
-        { name: 'Clientes', icon: 'bi-person-heart', path: '/clientes' },
-        { name: 'Proveedores', icon: 'bi-truck', path: '/proveedores' }
-      ]
-    },
-    {
-      id: 'products',
-      title: 'Productos',
-      icon: 'bi-box-seam',
-      items: [
-        { name: 'Categorías de Productos', icon: 'bi-tags', path: '/categorias-productos' },
-        { name: 'Productos', icon: 'bi-box', path: '/productos' },
-        { name: 'Compras', icon: 'bi-cart-plus', path: '/compras' }
+        { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/categorias-productos' },
+        { name: 'Productos', icon: 'bi-box-seam-fill', path: '/productos' },
+        { name: 'Proveedores', icon: 'bi-truck', path: '/proveedores' },
+        { name: 'Compras', icon: 'bi-cart-plus-fill', path: '/compras' }
       ]
     },
     {
       id: 'services',
-      title: 'Servicios',
-      icon: 'bi-gear',
+      title: 'Gestión de Servicios',
+      icon: 'bi-tools',
       items: [
-        { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/categorias-servicios' },
-        { name: 'Servicios', icon: 'bi-tools', path: '/servicios' },
-        { name: 'Agendamiento de Citas', icon: 'bi-calendar-check', path: '/citas' }
+        { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
+        { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
+        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' },
+        { name: 'Venta de Servicios', icon: 'bi-calendar-check-fill', path: '/ventas-servicios' }
+        
       ]
     },
     {
       id: 'sales',
       title: 'Ventas',
-      icon: 'bi-graph-up',
+      icon: 'bi-graph-up-arrow',
       items: [
-        { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/pedidos' },
-        { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/ventas-productos' }
+        { name: 'Clientes', icon: 'bi-person-heart-fill', path: '/clientes' },
+        { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
+        { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
+        { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
+        
       ]
-    }
+    },
   ];
 
   const handleMouseEnter = () => {
@@ -109,7 +111,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`bg-background shadow-lg transition-all duration-300 ease-in-out ${
+      className={`bg-text-main shadow-lg transition-all duration-300 ease-in-out font-inter ${
         isExpanded || isLocked ? 'w-64' : 'w-16'
       } flex flex-col h-full`}
       onMouseEnter={handleMouseEnter}
@@ -118,12 +120,9 @@ const Sidebar = () => {
       {/* Header */}
       <div className="p-4 border-b border-accent/50 flex items-center justify-between">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <i className="bi bi-shop text-background text-sm"></i>
-          </div>
           {(isExpanded || isLocked) && (
-            <span className="ml-3 font-semibold text-text-main whitespace-nowrap">
-              CAPEX
+            <span className="ml-3 font-semibold text-background text-3xl whitespace-nowrap">
+              CAP<span className='text-yellow-700'>EX</span>
             </span>
           )}
         </div>
@@ -132,8 +131,8 @@ const Sidebar = () => {
             onClick={toggleLock}
             className={`p-1 rounded transition-colors ${
               isLocked 
-                ? 'text-primary hover:text-primary-dark' 
-                : 'text-accent hover:text-primary'
+                ? 'text-background/80 hover:text-background' 
+                : 'text-background/80 hover:text-background'
             }`}
             title={isLocked ? 'Desbloquear sidebar' : 'Bloquear sidebar'}
           >
@@ -143,33 +142,62 @@ const Sidebar = () => {
       </div>
 
       {/* Menu con scroll */}
-      <nav className="flex-1 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent">
+      <nav 
+        className="flex-1 py-4 overflow-y-auto"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitScrollbar: { display: 'none' }
+        }}
+      >
         {menuGroups.map((group) => (
           <div key={group.id} className="mb-2">
-            {/* Group Header */}
-            <div
-              className={`flex items-center px-4 py-2 text-text-main/80 hover:bg-accent-light/30 cursor-pointer transition-colors ${
-                (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
-              }`}
-              onClick={() => toggleGroup(group.id)}
-            >
-              <div className="flex items-center">
-                <i className={`${group.icon} text-lg`}></i>
+            {/* Group Header - Solo mostrar si tiene items o si es un link directo */}
+            {group.items ? (
+              <div
+                className={`flex items-center px-4 py-2 text-background/80 hover:bg-white-500 cursor-pointer transition-colors ${
+                  (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
+                }`}
+                onClick={() => toggleGroup(group.id)}
+              >
+                <div className="flex items-center">
+                  <i className={`${group.icon} text-lg`}></i>
+                  {(isExpanded || isLocked) && (
+                    <span className="ml-3 text-sm font-medium whitespace-nowrap">
+                      {group.title}
+                    </span>
+                  )}
+                </div>
                 {(isExpanded || isLocked) && (
-                  <span className="ml-3 text-sm font-medium whitespace-nowrap">
-                    {group.title}
-                  </span>
+                  <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
                 )}
               </div>
-              {(isExpanded || isLocked) && (
-                <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
-              )}
-            </div>
+            ) : (
+              // Para elementos sin subcategorías, mostrar directamente como link
+              <Link
+                to={group.path}
+                className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                  (isExpanded || isLocked) ? '' : 'justify-center'
+                } ${
+                  isActiveRoute(group.path)
+                    ? 'bg-background/20 text-background border-r-2 border-primary'
+                    : 'text-background/90 hover:bg-background/10 hover:text-background'
+                }`}
+                title={!(isExpanded || isLocked) ? group.name : ''}
+              >
+                <i className={`${group.icon} text-base`}></i>
+                {(isExpanded || isLocked) && (
+                  <span className="ml-3 text-xs whitespace-nowrap">
+                    {group.name}
+                  </span>
+                )}
+              </Link>
+            )}
 
-            {/* Group Items */}
-            {(expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
+            {/* Group Items - Solo mostrar si el grupo tiene items */}
+            {group.items && (expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
               <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
-                {group.items.map((item, index) => (
+                {Array.isArray(group.items) && group.items.map((item, index) => (
                   <Link
                     key={index}
                     to={item.path}
@@ -177,8 +205,8 @@ const Sidebar = () => {
                       (isExpanded || isLocked) ? '' : 'justify-center'
                     } ${
                       isActiveRoute(item.path)
-                        ? 'bg-accent-light/50 text-primary-dark border-r-2 border-primary'
-                        : 'text-text-main/90 hover:bg-accent-light/40 hover:text-primary-dark'
+                        ? 'bg-background/20 text-background border-r-2 border-primary'
+                        : 'text-background/90 hover:bg-background/10 hover:text-background'
                     }`}
                     title={!(isExpanded || isLocked) ? item.name : ''}
                   >
