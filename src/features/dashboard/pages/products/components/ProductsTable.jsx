@@ -3,7 +3,6 @@ import ProductDetail from "./ProductDetail";
 import EditProduct from "./EditProduct";
 /* import DeleteProduct from "./DeleteProduct"; */
 import { useState } from "react";
-import TruncatedText from "../../../../../shared/components/TruncatedText";
 
 export default function ProductsTable({
   products,
@@ -98,25 +97,17 @@ export default function ProductsTable({
                   </div>
                 </td>
                 <td className="py-4 px-4 text-xs font-medium text-gray-900">
-                  <TruncatedText 
-                    text={product.nombre} 
-                    maxLength={25} 
-                    maxWidth="max-w-[180px]"
-                  />
+                  {product.nombre}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
-                  <TruncatedText 
-                    text={product.color} 
-                    maxLength={15} 
-                    maxWidth="max-w-[100px]"
-                  />
+                  {product.color}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    product.cantidad > 10 
+                      product.cantidad > 10
                         ? " text-green-800"
-                      : product.cantidad > 0 
+                        : product.cantidad > 0
                         ? " text-yellow-800"
                         : " text-red-800"
                     }`}
@@ -125,11 +116,7 @@ export default function ProductsTable({
                   </span>
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
-                  <TruncatedText 
-                    text={product.categoria} 
-                    maxLength={20} 
-                    maxWidth="max-w-[120px]"
-                  />
+                  {product.categoria}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
                   ${product.precio.toFixed(2)}
@@ -139,21 +126,21 @@ export default function ProductsTable({
                 </td>
                 <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleViewDetail(product)}
                       title="Ver detalles"
                     >
                       <i className="bi bi-eye text-primary text-sm"></i>
                     </button>
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleEdit(product)}
                       title="Editar"
                     >
                       <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
                     </button>
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => onDelete(product.id)}
                       title="Eliminar"

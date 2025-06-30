@@ -332,15 +332,16 @@ export default function Shopping() {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <h1 className="text-2xl font-bold">Gestión de Compras</h1>
+            <p className="mt-1">Administra las compras de tu tienda</p>
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct placeholder="Buscar compras..." />
-              <button className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={() => setIsCreateOpen(true)}>
+              <button className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={() => setIsCreateOpen(true)}>
                 <i className="bi bi-plus-circle mr-2"></i> Registrar compra
               </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={handleDownloadExcel}>
-                <i className="bi bi-file-earmark-excel "></i>
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={handleDownloadExcel}>
+                <i className="bi bi-file-earmark-excel mr-2"></i> Descargar Excel
               </button>
             </div>
             {/* Tabla de compras */}
@@ -360,21 +361,21 @@ export default function Shopping() {
                 <tbody className="divide-y divide-gray-200">
                   {paginatedPurchases.map((p) => (
                     <tr key={p.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="py-4 px-4 text-xs font-medium text-gray-900">{p.id}</td>
-                      <td className="py-4 px-4 text-xs text-gray-600">{p.fechaRegistro}</td>
-                      <td className="py-4 px-4 text-xs text-gray-600">{p.fechaCompra}</td>
-                      <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor}</td>
-                      <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${p.total}</td>
-                      <td className="py-4 px-4 text-xs text-gray-600">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? ' text-green-800' : ' text-red-800'}`}>{p.estado}</span>
+                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{p.id}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{p.fechaRegistro}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{p.fechaCompra}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{p.proveedor}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600 font-semibold">${p.total}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{p.estado}</span>
                       </td>
                       <td className="py-4 px-4 text-sm font-medium text-right">
                         <div className="flex justify-end space-x-2">
-                          <button className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver detalles" onClick={() => setDetailCompra(p)}>
+                          <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver detalles" onClick={() => setDetailCompra(p)}>
                             <i className="bi bi-eye text-primary text-sm"></i>
                           </button>
                           {p.estado !== 'Anulada' && (
-                            <button className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" title="Anular" onClick={() => handleAnularCompra(p.id)}>
+                            <button className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" title="Anular" onClick={() => handleAnularCompra(p.id)}>
                               <i className="bi bi-x-octagon text-red-500 text-sm"></i>
                             </button>
                           )}

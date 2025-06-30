@@ -54,7 +54,6 @@ const SuppliersPage = () => {
       s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.contacto.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.direccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.telefono.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.correo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (s.isActive ? 'activo' : 'inactivo').toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -95,11 +94,12 @@ const SuppliersPage = () => {
   );
 
   return (
-    <div className="min-h-screen p-6 font-inter">
+    <div className="min-h-screen bg-gray-50 p-6 font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <h1 className="text-2xl font-bold">Gestión de Proveedores</h1>
+            <p className="mt-1">Administra los proveedores de tu empresa</p>
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">

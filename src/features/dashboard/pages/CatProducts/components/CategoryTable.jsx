@@ -2,7 +2,6 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import CategoryDetail from "./CategoryDetail";
 import EditCategory from "./EditCategory";
-import TruncatedText from "../../../../../shared/components/TruncatedText";
 
 const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCategory }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -66,20 +65,8 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
             {categories.map((category) => (
               <tr key={category.id} className="hover:bg-gray-50 transition-colors duration-150">
                 <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.id}</td>
-                <td className="py-4 px-4 text-xs font-medium text-gray-900">
-                  <TruncatedText 
-                    text={category.name} 
-                    maxLength={25} 
-                    maxWidth="max-w-[180px]"
-                  />
-                </td>
-                <td className="py-4 px-4 text-xs text-gray-600">
-                  <TruncatedText 
-                    text={category.description} 
-                    maxLength={40} 
-                    maxWidth="max-w-[250px]"
-                  />
-                </td>
+                <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.name}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{category.description}</td>
                 <td className="py-4 px-4 text-xs">
                   <div className="flex items-center space-x-3">
                     <button
@@ -110,21 +97,18 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
                     <button 
                       className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleViewDetail(category)}
-                      title="Ver detalles"
                     >
                       <i className="bi bi-eye text-primary text-sm"></i>
                     </button>
                     <button 
                       className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleEditFromTable(category)}
-                      title="Editar"
                     >
                       <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
                     </button>
                     <button 
                       className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleDeleteFromTable(category)}
-                      title="Eliminar"
                     >
                       <i className="bi bi-trash text-red-500 text-sm"></i>
                     </button>
