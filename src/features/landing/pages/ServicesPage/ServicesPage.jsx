@@ -21,7 +21,12 @@ const ServicesPage = () => {
   const filteredServices = servicios.filter(
     (service) =>
       (service.name && service.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (service.price && service.price.toLowerCase().includes(searchTerm.toLowerCase()))
+      (service.category && service.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (service.duration && service.duration.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (service.price && service.price.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (service.description && service.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (typeof service.active === 'boolean' && (service.active ? 'activo' : 'inactivo').includes(searchTerm.toLowerCase())) ||
+      (service.estado && service.estado.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (

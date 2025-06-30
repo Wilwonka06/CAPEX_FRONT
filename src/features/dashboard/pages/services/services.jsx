@@ -129,7 +129,11 @@ const Services = () => {
   const filteredServices = services.filter(
     (service) =>
       service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.category.toLowerCase().includes(searchTerm.toLowerCase())
+      service.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.duration.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.price.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.active ? 'activo' : 'inactivo').includes(searchTerm.toLowerCase())
   );
 
   const itemsPerPage = 3;

@@ -118,7 +118,8 @@ const CatServices = () => {
   const filteredCategories = categories.filter(
     (cat) =>
       cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cat.description.toLowerCase().includes(searchTerm.toLowerCase())
+      cat.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cat.isActive ? 'activo' : 'inactivo').includes(searchTerm.toLowerCase())
   );
 
   const itemsPerPage = 3;
