@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Paginator from "../Paginator";
 import Calendar from "../../../dashboard/pages/employees/components/Calendar";
 import AddEmployee from "../../../dashboard/pages/employees/components/AddEmployee";
 import EditEmployee from "../../../dashboard/pages/employees/components/EditEmployee";
 import SeeEmployee from "../../../dashboard/pages/employees/components/SeeEmployee";
+import AddScheduling from "../../../dashboard/pages/employees/components/AddScheduling";
 
 const initialEmployees = [
   { id: 1, nombre: "Ana", apellido: "García", documento: "12345678", estado: true },
@@ -12,13 +13,28 @@ const initialEmployees = [
   { id: 4, nombre: "Carlos", apellido: "Ramírez", documento: "99887766", estado: true },
 ];
 
+const EMPLOYEES_KEY = 'capex_employees';
+
 const EmployeesPage = () => {
-  const [employees, setEmployees] = useState(initialEmployees);
+  // Leer empleados de localStorage al iniciar
+  const [employees, setEmployees] = useState(() => {
+    const stored = localStorage.getItem(EMPLOYEES_KEY);
+    return stored ? JSON.parse(stored) : initialEmployees;
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
   const [seeEmployee, setSeeEmployee] = useState(null);
+  const [activeTab, setActiveTab] = useState('empleado'); // 'empleado' o 'programacion'
+  const [employeeForm, setEmployeeForm] = useState(null); // Estado temporal del formulario de empleado
+  const [schedulings, setSchedulings] = useState([]); // Lista de programaciones
+  const [editingScheduling, setEditingScheduling] = useState(null); // Programación en edición
+
+  // Guardar empleados en localStorage cada vez que cambian
+  useEffect(() => {
+    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(employees));
+  }, [employees]);
 
   // Filtrado por nombre, apellido o documento
   const filteredEmployees = employees.filter(emp =>
@@ -99,6 +115,67 @@ const EmployeesPage = () => {
     setSeeEmployee(null);
   };
 
+  // Guardar datos del formulario de empleado sin cerrar
+  const handleEmployeeFormChange = (form) => {
+    setEmployeeForm(form);
+  };
+
+  // Agregar o editar programación
+  const handleAddScheduling = (prog) => {
+    if (editingScheduling) {
+      setSchedulings(schedulings.map(s => s.id === editingScheduling.id ? { ...prog, id: editingScheduling.id } : s));
+      setEditingScheduling(null);
+    } else {
+      setSchedulings([
+        ...schedulings,
+        { ...prog, id: Date.now() },
+      ]);
+    }
+  };
+
+  // Editar programación
+  const handleEditScheduling = (prog) => {
+    setEditingScheduling(prog);
+    setActiveTab('programacion');
+  };
+
+  // Eliminar programación
+  const handleDeleteScheduling = (id) => {
+    setSchedulings(schedulings.filter(s => s.id !== id));
+  };
+
+  // Guardar todo (empleado + programaciones)
+  const handleSaveAll = () => {
+    if (!employeeForm) return;
+    setEmployees([
+      ...employees,
+      {
+        id: Date.now(),
+        nombre: employeeForm.nombre,
+        apellido: employeeForm.apellidos,
+        documento: employeeForm.documento,
+        estado: employeeForm.estado === 'Activo',
+        correo: employeeForm.correo,
+        tipoDocumento: employeeForm.tipoDocumento,
+        schedulings: schedulings,
+      }
+    ]);
+    setShowForm(false);
+    setEmployeeForm(null);
+    setSchedulings([]);
+    setEditingScheduling(null);
+    setActiveTab('empleado');
+  };
+
+  // Cancelar y limpiar
+  const handleCancel = () => {
+    setShowForm(false);
+    setEmployeeForm(null);
+    setSchedulings([]);
+    setEditingScheduling(null);
+    setActiveTab('empleado');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -111,7 +188,22 @@ const EmployeesPage = () => {
           {/* Calendario - Lado izquierdo */}
           <div className="lg:w-2/3">
             <div className="bg-white rounded-lg shadow-md mb-4">
-              <Calendar />
+              <Calendar
+                events={showForm
+                  ? schedulings.map(ev => ({
+                      ...ev,
+                      title: (employeeForm?.nombre ? employeeForm.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
+                    }))
+                  : employees.flatMap(emp =>
+                      (emp.schedulings || []).map(ev => ({
+                        ...ev,
+                        title: emp.nombre + ': ' + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
+                      }))
+                    )
+                }
+                onEditEvent={event => handleEditScheduling(event)}
+                onDeleteEvent={id => handleDeleteScheduling(id)}
+              />
             </div>
           </div>
           {/* Lado derecho: buscador y empleados */}
@@ -138,8 +230,50 @@ const EmployeesPage = () => {
             </div>
             {showForm ? (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-semibold text-text-main mb-4">Nuevo Empleado</h2>
-                <AddEmployee onCancel={() => setShowForm(false)} onSave={handleAddEmployee} />
+                <div className="flex gap-2 mb-4">
+                  <button
+                    className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${activeTab === 'empleado' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'}`}
+                    onClick={() => setActiveTab('empleado')}
+                    type="button"
+                  >
+                    Nuevo Empleado
+                  </button>
+                  <button
+                    className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${activeTab === 'programacion' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'}`}
+                    onClick={() => setActiveTab('programacion')}
+                    type="button"
+                  >
+                    Programación
+                  </button>
+                </div>
+                {activeTab === 'empleado' ? (
+                  <AddEmployee
+                    onCancel={handleCancel}
+                    onSave={handleEmployeeFormChange}
+                    formData={employeeForm}
+                  />
+                ) : (
+                  <AddScheduling
+                    onAdd={handleAddScheduling}
+                    editing={editingScheduling}
+                    onCancelEdit={() => setEditingScheduling(null)}
+                  />
+                )}
+                {/* Botón general para guardar todo */}
+                <div className="flex justify-end gap-2 mt-8">
+                  <button
+                    onClick={handleCancel}
+                    className="bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveAll}
+                    className="bg-primary-dark text-white px-6 py-2 rounded font-semibold hover:bg-primary transition"
+                  >
+                    Guardar todo
+                  </button>
+                </div>
               </div>
             ) : editEmployee ? (
               <div className="bg-white rounded-lg shadow-md p-6">

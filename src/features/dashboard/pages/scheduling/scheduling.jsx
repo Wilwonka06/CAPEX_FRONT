@@ -1,7 +1,17 @@
-import React from 'react'
-import Calendar from '../employees/components/Calendar'
+import React, { useState, useEffect } from 'react';
+import GeneralCalendar from './components/GeneralCalendar';
+// import Calendar from '../employees/components/Calendar';
+
+const EMPLOYEES_KEY = 'capex_employees';
 
 const Scheduling = () => {
+    const [employees, setEmployees] = useState([]);
+
+    useEffect(() => {
+        const stored = localStorage.getItem(EMPLOYEES_KEY);
+        setEmployees(stored ? JSON.parse(stored) : []);
+    }, []);
+
     return (
         <div className="p-6 bg-white rounded-lg shadow-md">
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Agendamiento de Servicios</h1>
@@ -18,7 +28,7 @@ const Scheduling = () => {
                 </div>
             </div>
             <div className="bg-white rounded-lg shadow-md mb-4">
-                <Calendar />
+                <GeneralCalendar employees={employees} />
             </div>
         </div>
     )
