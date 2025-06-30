@@ -1,6 +1,7 @@
 import { useState } from "react";
-import Paginator from "../Paginator";
+import Paginator from '../../../../shared/Paginator';
 import PropTypes from "prop-types";
+import SearchProduct from '../../../../shared/Search';
 
 // Mock de proveedores y productos para selects
 // const mockSuppliers = [ ... ];
@@ -42,28 +43,6 @@ const productsList = [
   { id: 1, descripcion: "Shampoo Nutritivo", iva: 0.12, precioBase: 100, precioVenta: 120 },
   { id: 2, descripcion: "Acondicionador Suavizante", iva: 0.12, precioBase: 80, precioVenta: 95 },
 ];
-
-function SearchPurchase({ searchTerm, handleSearch }) {
-  return (
-    <div className="relative flex-1">
-      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-        <i className="bi bi-search text-gray-400"></i>
-      </div>
-      <input
-        type="text"
-        className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 shadow-sm"
-        placeholder="Buscar compras..."
-        value={searchTerm}
-        onChange={handleSearch}
-      />
-    </div>
-  );
-}
-
-SearchPurchase.propTypes = {
-  searchTerm: PropTypes.string.isRequired,
-  handleSearch: PropTypes.func.isRequired,
-};
 
 export default function Shopping() {
   const [purchases, setPurchases] = useState(mockPurchases);
@@ -348,21 +327,20 @@ export default function Shopping() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <h1 className="text-2xl font-bold">Gestión de Compras</h1>
-            <p className="mt-1">Administra las compras de tu tienda</p>
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchPurchase searchTerm={searchTerm} handleSearch={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
-              <button className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={() => setIsCreateOpen(true)}>
+              <SearchProduct placeholder="Buscar compras..." />
+              <button className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={() => setIsCreateOpen(true)}>
                 <i className="bi bi-plus-circle mr-2"></i> Registrar compra
               </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={handleDownloadExcel}>
-                <i className="bi bi-file-earmark-excel mr-2"></i> Descargar Excel
+              <button className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={handleDownloadExcel}>
+                <i className="bi bi-file-earmark-excel "></i>
               </button>
             </div>
             {/* Tabla de compras */}
@@ -382,21 +360,21 @@ export default function Shopping() {
                 <tbody className="divide-y divide-gray-200">
                   {paginatedPurchases.map((p) => (
                     <tr key={p.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{p.id}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{p.fechaRegistro}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{p.fechaCompra}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{p.proveedor}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600 font-semibold">${p.total}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{p.estado}</span>
+                      <td className="py-4 px-4 text-xs font-medium text-gray-900">{p.id}</td>
+                      <td className="py-4 px-4 text-xs text-gray-600">{p.fechaRegistro}</td>
+                      <td className="py-4 px-4 text-xs text-gray-600">{p.fechaCompra}</td>
+                      <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor}</td>
+                      <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${p.total}</td>
+                      <td className="py-4 px-4 text-xs text-gray-600">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? ' text-green-800' : ' text-red-800'}`}>{p.estado}</span>
                       </td>
                       <td className="py-4 px-4 text-sm font-medium text-right">
                         <div className="flex justify-end space-x-2">
-                          <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver detalles" onClick={() => setDetailCompra(p)}>
+                          <button className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver detalles" onClick={() => setDetailCompra(p)}>
                             <i className="bi bi-eye text-primary text-sm"></i>
                           </button>
                           {p.estado !== 'Anulada' && (
-                            <button className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" title="Anular" onClick={() => handleAnularCompra(p.id)}>
+                            <button className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" title="Anular" onClick={() => handleAnularCompra(p.id)}>
                               <i className="bi bi-x-octagon text-red-500 text-sm"></i>
                             </button>
                           )}

@@ -1,11 +1,10 @@
 // components/Layout.jsx
-import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
+import Sidebar from './components/sidebar';
 
 const Layout = () => {
   return (
-    <div className="flex h-screen bg-accent-light/20">
+    <div className="flex h-screen">
       {/* Sidebar */}
       <Sidebar />
       

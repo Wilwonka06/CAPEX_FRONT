@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import AddServices from './components/AddServices'
 import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
-import Paginator from "../Paginator";
+import Paginator from "../../../../shared/Paginator";
 import { initialCategories } from '../CatServices/CatServices';
+import SearchProduct from '../../../../shared/Search';
 
 // Componente para el interruptor de estado
 const StatusToggle = ({ isActive, onToggle }) => (
@@ -149,14 +150,7 @@ const Services = () => {
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
               <div className="relative w-full max-w-sm">
-                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-                <input
-                  type="text"
-                  placeholder="Buscar servicios..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-                />
+                <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar servicios..." />
               </div>
               <button
                 onClick={() => setIsAddModalOpen(true)}
