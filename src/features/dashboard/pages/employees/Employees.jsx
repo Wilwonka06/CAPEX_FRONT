@@ -15,6 +15,11 @@ const initialEmployees = [
 
 const EMPLOYEES_KEY = 'capex_employees';
 
+// Función para normalizar texto (remover tildes)
+const normalizeText = (text) => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
 const EmployeesPage = () => {
   // Leer empleados de localStorage al iniciar
   const [employees, setEmployees] = useState(() => {
@@ -38,9 +43,12 @@ const EmployeesPage = () => {
 
   // Filtrado por nombre, apellido o documento
   const filteredEmployees = employees.filter(emp =>
-    emp.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.documento.toLowerCase().includes(searchTerm.toLowerCase())
+    normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
+    normalizeText(emp.apellido).includes(normalizeText(searchTerm)) ||
+    normalizeText(emp.documento).includes(normalizeText(searchTerm)) ||
+    (emp.correo && normalizeText(emp.correo).includes(normalizeText(searchTerm))) ||
+    (emp.tipoDocumento && normalizeText(emp.tipoDocumento).includes(normalizeText(searchTerm))) ||
+    normalizeText(emp.estado ? 'activo' : 'inactivo').includes(normalizeText(searchTerm))
   );
 
   // Paginación

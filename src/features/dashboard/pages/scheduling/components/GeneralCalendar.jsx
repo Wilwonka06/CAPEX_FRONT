@@ -7,8 +7,7 @@ import SeeScheduling from '../../scheduling/components/SeeScheduling';
 
 const EMPLOYEES_KEY = 'capex_employees';
 
-const GeneralCalendar = ({ employees: initialEmployees = [] }) => {
-  const [employees, setEmployees] = useState(initialEmployees);
+const GeneralCalendar = ({ employees = [] }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [titleInput, setTitleInput] = useState('');
@@ -41,8 +40,9 @@ const GeneralCalendar = ({ employees: initialEmployees = [] }) => {
         ? { ...emp, schedulings: (emp.schedulings || []).filter(ev => ev.id.toString() !== progId) }
         : emp
     );
-    setEmployees(updatedEmployees);
     localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
+    // Recargar la página para reflejar los cambios
+    window.location.reload();
     setModalOpen(false);
   };
 
@@ -61,13 +61,14 @@ const GeneralCalendar = ({ employees: initialEmployees = [] }) => {
           }
         : emp
     );
-    setEmployees(updatedEmployees);
     localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
+    // Recargar la página para reflejar los cambios
+    window.location.reload();
     setModalOpen(false);
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="w-full p-4">
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -91,23 +92,13 @@ const GeneralCalendar = ({ employees: initialEmployees = [] }) => {
           className="w-full border border-gray-300 rounded px-3 py-2 mt-2"
           placeholder="Título de la programación"
           value={titleInput}
-          onChange={e => setTitleInput(e.target.value)}
+          readOnly
         />
         <div className="mt-4 flex justify-end space-x-2">
           <button
-            onClick={handleDelete}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-            Eliminar
-          </button>
-          <button
             onClick={() => setModalOpen(false)}
-            className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Guardar
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition">
+            Cerrar
           </button>
         </div>
       </SeeScheduling>

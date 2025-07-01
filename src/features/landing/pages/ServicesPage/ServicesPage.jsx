@@ -1,6 +1,11 @@
 import DetailServices from './components/DetailServices';
 import React, { useState } from "react";
 
+// Función para normalizar texto (remover tildes)
+const normalizeText = (text) => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
 const ServicesPage = () => {
   const servicios = [
     { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo', img: "https://media.istockphoto.com/id/1887700422/photo/hairdresser-creating-a-beautiful-finish-with-drying.jpg?b=1&s=612x612&w=0&k=20&c=iFoFnwfX4RjCHVdcYpZJLeyWjHB_mKdaXxZ7dFgqfoQ=" },
@@ -20,13 +25,13 @@ const ServicesPage = () => {
 
   const filteredServices = servicios.filter(
     (service) =>
-      (service.name && service.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (service.category && service.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (service.duration && service.duration.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (service.price && service.price.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (service.description && service.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (typeof service.active === 'boolean' && (service.active ? 'activo' : 'inactivo').includes(searchTerm.toLowerCase())) ||
-      (service.estado && service.estado.toLowerCase().includes(searchTerm.toLowerCase()))
+      (service.name && normalizeText(service.name).includes(normalizeText(searchTerm))) ||
+      (service.category && normalizeText(service.category).includes(normalizeText(searchTerm))) ||
+      (service.duration && normalizeText(service.duration).includes(normalizeText(searchTerm))) ||
+      (service.price && normalizeText(service.price).includes(normalizeText(searchTerm))) ||
+      (service.description && normalizeText(service.description).includes(normalizeText(searchTerm))) ||
+      (typeof service.active === 'boolean' && normalizeText(service.active ? 'activo' : 'inactivo').includes(normalizeText(searchTerm))) ||
+      (service.estado && normalizeText(service.estado).includes(normalizeText(searchTerm)))
   );
 
   return (

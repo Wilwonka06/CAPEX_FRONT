@@ -66,29 +66,19 @@ const Calendar = ({ events = [], onEditEvent, onDeleteEvent }) => {
       <SeeScheduling
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={'Editar programación'}>
+        title={'Detalle de programación'}>
         <input
           type="text"
           className="w-full border border-gray-300 rounded px-3 py-2 mt-2"
           placeholder="Título de la programación"
           value={titleInput}
-          onChange={(e) => setTitleInput(e.target.value)}
+          readOnly
         />
         <div className="mt-4 flex justify-end space-x-2">
           <button
-            onClick={handleDelete}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-            Eliminar
-          </button>
-          <button
             onClick={() => setModalOpen(false)}
-            className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Guardar
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition">
+            Cerrar
           </button>
         </div>
       </SeeScheduling>

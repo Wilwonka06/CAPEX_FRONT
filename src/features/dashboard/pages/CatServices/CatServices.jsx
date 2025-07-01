@@ -66,6 +66,11 @@ const initialCategories = [
   { id: 5, name: 'Depilación', description: 'Servicios de depilación con cera, láser y otros métodos.', isActive: true },
 ];
 
+// Función para normalizar texto (remover tildes)
+const normalizeText = (text) => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
 // --- Componente Principal ---
 const CatServices = () => {
   const [categories, setCategories] = useState(initialCategories);
@@ -117,9 +122,9 @@ const CatServices = () => {
 
   const filteredCategories = categories.filter(
     (cat) =>
-      cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cat.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cat.isActive ? 'activo' : 'inactivo').includes(searchTerm.toLowerCase())
+      normalizeText(cat.name).includes(normalizeText(searchTerm)) ||
+      normalizeText(cat.description).includes(normalizeText(searchTerm)) ||
+      normalizeText(cat.isActive ? 'activo' : 'inactivo').includes(normalizeText(searchTerm))
   );
 
   const itemsPerPage = 3;

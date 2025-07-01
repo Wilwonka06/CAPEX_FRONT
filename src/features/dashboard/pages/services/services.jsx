@@ -5,6 +5,11 @@ import SeeServices from './components/SeeServices';
 import Paginator from "../Paginator";
 import { initialCategories } from '../CatServices/CatServices';
 
+// Función para normalizar texto (remover tildes)
+const normalizeText = (text) => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
 // Componente para el interruptor de estado
 const StatusToggle = ({ isActive, onToggle }) => (
   <label onClick={(e) => { e.stopPropagation(); onToggle(); }} className="flex items-center cursor-pointer">
@@ -128,12 +133,12 @@ const Services = () => {
 
   const filteredServices = services.filter(
     (service) =>
-      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.duration.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.price.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.active ? 'activo' : 'inactivo').includes(searchTerm.toLowerCase())
+      normalizeText(service.name).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.category).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.duration).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.price).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.description).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.active ? 'activo' : 'inactivo').includes(normalizeText(searchTerm))
   );
 
   const itemsPerPage = 3;

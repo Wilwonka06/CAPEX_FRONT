@@ -2,8 +2,15 @@ import React from 'react'
 
 const DetailServices = ({ service, onClose }) => {
   if (!service) return null;
+  
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50" onClick={handleBackdropClick}>
       <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl relative border border-accent flex flex-col md:flex-row overflow-hidden">
         {/* Imagen del servicio */}
         <div className="md:w-1/2 w-full h-44 md:h-auto flex items-center justify-center relative bg-gray-100">
