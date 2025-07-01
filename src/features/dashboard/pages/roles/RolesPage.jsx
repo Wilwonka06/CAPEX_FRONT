@@ -1,17 +1,66 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import CreateRole from "./components/CreateRole";
 import EditRole from "./components/EditRole";
+import ViewRole from "./components/ViewRole";
+import ChangeRoleStatus from "./components/ChangeRoleStatus";
+import DeleteRole from "./components/DeleteRole";
 import Paginator from "./components/Paginator";
+import { createRole } from "./services/CreateRoleService";
+import { editRole } from "./services/EditRoleService";
+import SearchRole from "./components/SearchRole";
 
+const initialRoles = [
+  {
+    id: 1,
+    name: 'Administrador',
+    description: 'Control total del sistema',
+    estado: 'Activo',
+    privileges: {
+      'Dashboard': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
+      'Gestión de Usuarios': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
+      'Gestión de Compras': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
+      'Gestión de Servicios': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
+      'Ventas': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
+      'configuración': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true }
+    }
+  },
+  {
+    id: 2,
+    name: 'Editor',
+    description: 'Gestión de contenido',
+    estado: 'Inactivo',
+    privileges: {
+      'Dashboard': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
+      'Gestión de Usuarios': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
+      'Gestión de Compras': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
+      'Gestión de Servicios': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
+      'Ventas': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
+      'configuración': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false }
+    }
+  }
+];
 
+const itemsPerPage = 5;
 
 const RolesPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 5; // Esto debería venir de tu backend
+  const [roles, setRoles] = useState(initialRoles);
+  const [loading, setLoading] = useState(false);
+  const totalPages = Math.max(1, Math.ceil(roles.length / itemsPerPage));
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Ajusta currentPage si es mayor que totalPages
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [roles, totalPages, currentPage]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -23,140 +72,186 @@ const RolesPage = () => {
     setIsEditModalOpen(true);
   };
 
+  const handleViewClick = (role) => {
+    setSelectedRole(role);
+    setIsViewModalOpen(true);
+  };
+
+  const handleDeleteClick = (role) => {
+    setSelectedRole(role);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteRole = (roleId) => {
+    setRoles(prevRoles => prevRoles.filter(role => role.id !== roleId));
+    setIsDeleteModalOpen(false);
+    setSelectedRole(null);
+  };
+
+  const handleToggleStatus = (roleId) => {
+    setRoles(prevRoles => prevRoles.map(role =>
+      role.id === roleId
+        ? { ...role, estado: role.estado === 'Activo' ? 'Inactivo' : 'Activo' }
+        : role
+    ));
+  };
+
+  // Crear rol usando servicio
+  const handleCreateRole = async (formData, privileges) => {
+    setLoading(true);
+    const newRole = await createRole({
+      name: formData.nombre,
+      description: formData.descripcion,
+      estado: 'Activo',
+      privileges
+    }, roles);
+    setRoles(prev => [...prev, newRole]);
+    setLoading(false);
+    setIsCreateModalOpen(false);
+  };
+
+  // Editar rol usando servicio
+  const handleEditRole = async (formData, privileges) => {
+    setLoading(true);
+    const updatedRole = await editRole({
+      id: selectedRole.id,
+      name: formData.name,
+      description: formData.description,
+      estado: selectedRole.estado,
+      privileges
+    });
+    setRoles(prev => prev.map(role => role.id === updatedRole.id ? updatedRole : role));
+    setLoading(false);
+    setIsEditModalOpen(false);
+    setSelectedRole(null);
+  };
+
+  // Para paginar los roles
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRoles = roles.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
   return (
-    <div className="min-h-screen w-full bg-white dark:bg-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-black dark:text-black">Gestión de Roles</h1>
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Crear Nuevo Rol
-          </button>
-        </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+          {/* Header con gradiente */}
+          <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100">
+            <div>
+              <h1 className="text-2xl font-bold text-text-main">Gestión de Roles</h1>
+              <p className="mt-1 text-text-main/80">Administra los roles y privilegios del sistema</p>
+            </div>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-primary-dark hover:bg-primary text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Crear Nuevo Rol
+            </button>
+          </div>
 
-        <div className="bg-white shadow-md rounded-lg overflow-hidden mb-6">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {/* Fila de ejemplo 1 */}
-              <tr className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Administrador</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Control total del sistema</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Activo
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
-                  <button className="text-gray-600 hover:text-gray-900" title="Visualizar">
-                    <span className="material-icons">visibility</span>
-                  </button>
-                  <button 
-                    className="text-blue-600 hover:text-blue-900" 
-                    title="Editar"
-                    onClick={() => handleEditClick({
-                      id: 1,
-                      name: 'Administrador',
-                      description: 'Control total del sistema'
-                    })}
-                  >
-                    <span className="material-icons">edit</span>
-                  </button>
-                  <button className="text-green-600 hover:text-green-900" title="Cambiar Estado">
-                    <span className="material-icons">toggle_on</span>
-                  </button>
-                  <button className="text-red-600 hover:text-red-900" title="Eliminar">
-                    <span className="material-icons">delete</span>
-                  </button>
-                </td>
-              </tr>
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <SearchRole searchTerm={searchTerm} handleSearch={handleSearch} />
+            </div>
+            <div className="w-full overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="bg-gray-50 hover:bg-gray-100">
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DESCRIPCIÓN</th>
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ESTADO</th>
+                    <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paginatedRoles.map((role) => (
+                    <tr key={role.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{role.id}</td>
+                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{role.name}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{role.description}</td>
+                      <td className="py-4 px-4">
+                        <ChangeRoleStatus status={role.estado} onToggle={() => handleToggleStatus(role.id)} />
+                      </td>
+                      <td className="py-4 px-4 text-sm font-medium text-right">
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors"
+                            title="Visualizar"
+                            onClick={() => handleViewClick(role)}
+                          >
+                            <i className="bi bi-eye text-primary text-sm"></i>
+                          </button>
+                          <button
+                            className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
+                            title="Editar"
+                            onClick={() => handleEditClick(role)}
+                          >
+                            <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
+                          </button>
+                          <button
+                            className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
+                            title="Eliminar"
+                            onClick={() => handleDeleteClick(role)}
+                          >
+                            <i className="bi bi-trash text-red-500 text-sm"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Fila de ejemplo 2 */}
-              <tr className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Editor</td>
-                <td className="px-6 py-4 text-sm text-gray-500">Gestión de contenido</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                    Inactivo
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
-                  <button className="text-gray-600 hover:text-gray-900" title="Visualizar">
-                    <span className="material-icons">visibility</span>
-                  </button>
-                  <button className="text-blue-600 hover:text-blue-900" title="Editar">
-                    <span className="material-icons">edit</span>
-                  </button>
-                  <button className="text-red-600 hover:text-red-900" title="Cambiar Estado">
-                    <span className="material-icons">toggle_off</span>
-                  </button>
-                  <button className="text-red-600 hover:text-red-900" title="Eliminar">
-                    <span className="material-icons">delete</span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div className="flex flex-col items-center justify-center border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-            <div className="mb-4">
-              <p className="text-sm text-gray-700">
-                Mostrando <span className="font-medium">1</span> a{" "}
-                <span className="font-medium">{Math.min(5, totalPages * 5)}</span>{" "}
+            {/* Paginación */}
+            <div className="mt-6">
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+
+            {/* Mostrar información de paginación */}
+            <div className="mt-4 text-center">
+              <p className="text-sm text-text-main">
+                Mostrando <span className="font-medium">1</span> a {" "}
+                <span className="font-medium">{Math.min(5, totalPages * 5)}</span> {" "}
                 de <span className="font-medium">{totalPages * 5}</span> resultados
               </p>
-            </div>
-            <div>
-              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-                >
-                  <span className="material-icons">chevron_left</span>
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === page
-                      ? "bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                      : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                      }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-                >
-                  <span className="material-icons">chevron_right</span>
-                </button>
-              </nav>
             </div>
           </div>
         </div>
 
-        <CreateRole 
-          isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
+        <CreateRole
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={handleCreateRole}
+          loading={loading}
+          roles={roles}
         />
-        <EditRole 
-          isOpen={isEditModalOpen} 
-          onClose={() => setIsEditModalOpen(false)} 
+        <EditRole
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          role={selectedRole}
+          onEdit={handleEditRole}
+          loading={loading}
+          roles={roles}
+        />
+        <ViewRole
+          isOpen={isViewModalOpen}
+          onClose={() => setIsViewModalOpen(false)}
+          role={selectedRole}
+        />
+        <DeleteRole
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onDelete={handleDeleteRole}
           role={selectedRole}
         />
       </div>
