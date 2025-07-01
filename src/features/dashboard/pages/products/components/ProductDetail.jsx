@@ -5,109 +5,79 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto">
-        <button
-          className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
-          onClick={onClose}
-          aria-label="Cerrar"
-        >
-          ×
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="bi bi-box text-white text-2xl"></i>
-          </div>
-          <h2 className="text-xl font-bold text-primary">Detalles del Producto</h2>
-        </div>
-
-        <div className="space-y-6">
-          {/* Imagen del producto */}
-          <div className="text-center">
-            <img
-              src={product.foto}
-              alt={product.nombre}
-              className="w-32 h-32 object-cover rounded-lg mx-auto border-2 border-gray-200"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">ID del Producto</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main font-mono text-sm">
-                #{product.id}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Fecha de Registro</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main">
-                {product.fechaRegistro}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Nombre</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main font-medium">
-                {product.nombre}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Tipo de Producto</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main">
-                {product.tipoProducto}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Categoría</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main">
-                {product.categoria}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Color</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main">
-                {product.color}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Precio</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main font-semibold text-green-600">
-                ${product.precio?.toFixed(2)}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-2">Stock Disponible</label>
-              <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main">
-                {product.cantidad} unidades
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-2">Descripción</label>
-            <div className="px-3 py-2 border border-accent rounded-md bg-background text-text-main min-h-[60px]">
-              {product.descripcion}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end mt-8">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
+        {/* Header fijo */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
+          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">Detalles del Producto</h2>
           <button
-            className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition"
+            className="text-gray-400 hover:text-primary text-xl font-bold"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+        {/* Contenido con scroll */}
+        <div className="overflow-y-auto p-8 flex-1">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Columna Izquierda: Imagen y nombre */}
+            <div className="flex flex-col items-center md:w-1/2 w-full">
+              <div className="w-60 h-60 bg-gray-50 border-2 border-gray-200 rounded-lg flex items-center justify-center mb-4 shadow-sm p-0">
+                <img
+                  src={product.foto}
+                  alt={product.nombre}
+                  className="w-full h-full object-contain rounded-lg m-0"
+                />
+              </div>
+              <div className="text-lg font-bold text-gray-800 text-center mb-2">{product.nombre}</div>
+              
+            </div>
+            {/* Columna Derecha: Descripción y técnica */}
+            <div className="flex flex-col gap-4 md:w-1/2 w-full">
+              <div>
+                <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Descripción del producto</span>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[80px]">
+                  {product.descripcion}
+                </div>
+              </div>
+              <div>
+                <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Categoría</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.categoria}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Color</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.color}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Fecha de Registro</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.fechaRegistro}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Precio</span>
+                    <span className="font-semibold text-gray-800 text-sm">${product.precio?.toFixed(2)} {product.cantidad}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Cantidad en Stock</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.cantidad}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Footer fijo */}
+        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
+          <button
+            className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
             onClick={onClose}
           >
             Cerrar
           </button>
         </div>
       </div>
-    </div >
+    </div>
   );
 };
 
