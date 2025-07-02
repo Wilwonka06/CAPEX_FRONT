@@ -52,8 +52,31 @@ const RolesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [roles, setRoles] = useState(initialRoles);
   const [loading, setLoading] = useState(false);
-  const totalPages = Math.max(1, Math.ceil(roles.length / itemsPerPage));
+  const [message, setMessage] = useState({ text: '', type: '', show: false });
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Función para mostrar mensajes de feedback
+  const showMessage = (text, type = 'success') => {
+    setMessage({ text, type, show: true });
+    setTimeout(() => {
+      setMessage({ text: '', type: '', show: false });
+    }, 3000);
+  };
+
+  // Filtrado de roles por búsqueda
+  const filteredRoles = roles.filter(
+    (role) =>
+      role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      role.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (role.estado === 'Activo' ? 'activo' : 'inactivo').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Cálculo de paginación basado en roles filtrados
+  const totalPages = Math.max(1, Math.ceil(filteredRoles.length / itemsPerPage));
+  
+  // Para paginar los roles
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRoles = filteredRoles.slice(startIndex, startIndex + itemsPerPage);
 
   // Ajusta currentPage si es mayor que totalPages
   useEffect(() => {
@@ -82,53 +105,77 @@ const RolesPage = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDeleteRole = (roleId) => {
-    setRoles(prevRoles => prevRoles.filter(role => role.id !== roleId));
-    setIsDeleteModalOpen(false);
-    setSelectedRole(null);
+  const handleDeleteRole = async (roleId) => {
+    try {
+      // Simulación de eliminación
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setRoles(prevRoles => prevRoles.filter(role => role.id !== roleId));
+      setIsDeleteModalOpen(false);
+      setSelectedRole(null);
+      showMessage('Rol eliminado exitosamente', 'success');
+    } catch (error) {
+      showMessage('Error al eliminar el rol', 'error');
+    }
   };
 
-  const handleToggleStatus = (roleId) => {
-    setRoles(prevRoles => prevRoles.map(role =>
-      role.id === roleId
-        ? { ...role, estado: role.estado === 'Activo' ? 'Inactivo' : 'Activo' }
-        : role
-    ));
+  const handleToggleStatus = async (roleId) => {
+    try {
+      // Simulación de cambio de estado
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setRoles(prevRoles => prevRoles.map(role =>
+        role.id === roleId
+          ? { ...role, estado: role.estado === 'Activo' ? 'Inactivo' : 'Activo' }
+          : role
+      ));
+      const updatedRole = roles.find(r => r.id === roleId);
+      const newStatus = updatedRole.estado === 'Activo' ? 'Inactivo' : 'Activo';
+      showMessage(`Estado del rol cambiado a ${newStatus}`, 'success');
+    } catch (error) {
+      showMessage('Error al cambiar el estado del rol', 'error');
+    }
   };
 
   // Crear rol usando servicio
   const handleCreateRole = async (formData, privileges) => {
     setLoading(true);
-    const newRole = await createRole({
-      name: formData.nombre,
-      description: formData.descripcion,
-      estado: 'Activo',
-      privileges
-    }, roles);
-    setRoles(prev => [...prev, newRole]);
-    setLoading(false);
-    setIsCreateModalOpen(false);
+    try {
+      const newRole = await createRole({
+        name: formData.nombre,
+        description: formData.descripcion,
+        estado: 'Activo',
+        privileges
+      }, roles);
+      setRoles(prev => [...prev, newRole]);
+      setIsCreateModalOpen(false);
+      showMessage('Rol creado exitosamente', 'success');
+    } catch (error) {
+      showMessage(error.message || 'Error al crear el rol', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Editar rol usando servicio
   const handleEditRole = async (formData, privileges) => {
     setLoading(true);
-    const updatedRole = await editRole({
-      id: selectedRole.id,
-      name: formData.name,
-      description: formData.description,
-      estado: selectedRole.estado,
-      privileges
-    });
-    setRoles(prev => prev.map(role => role.id === updatedRole.id ? updatedRole : role));
-    setLoading(false);
-    setIsEditModalOpen(false);
-    setSelectedRole(null);
+    try {
+      const updatedRole = await editRole({
+        id: selectedRole.id,
+        name: formData.name,
+        description: formData.description,
+        estado: selectedRole.estado,
+        privileges
+      }, roles);
+      setRoles(prev => prev.map(role => role.id === updatedRole.id ? updatedRole : role));
+      setIsEditModalOpen(false);
+      setSelectedRole(null);
+      showMessage('Rol actualizado exitosamente', 'success');
+    } catch (error) {
+      showMessage(error.message || 'Error al actualizar el rol', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  // Para paginar los roles
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedRoles = roles.slice(startIndex, startIndex + itemsPerPage);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -137,27 +184,38 @@ const RolesPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {/* Mensaje de feedback */}
+      {message.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          message.type === 'success' 
+            ? 'bg-primary text-white' 
+            : 'bg-primary-dark text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <i className={`bi ${message.type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'}`}></i>
+            <span>{message.text}</span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          {/* Header con gradiente */}
-          <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100">
-            <div>
-              <h1 className="text-2xl font-bold text-text-main">Gestión de Roles</h1>
-              <p className="mt-1 text-text-main/80">Administra los roles y privilegios del sistema</p>
-            </div>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-primary-dark hover:bg-primary text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              Crear Nuevo Rol
-            </button>
+          <div className="p-6">
+            <h1 className="text-2xl font-bold">Gestión de Roles</h1>
+            <p className="mt-1">Administra los roles y privilegios del sistema</p>
           </div>
-
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchRole searchTerm={searchTerm} handleSearch={handleSearch} />
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+              >
+                <i className="bi bi-plus-circle mr-2"></i>
+                Nuevo Rol
+              </button>
             </div>
-            <div className="w-full overflow-x-auto">
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-50 hover:bg-gray-100">
@@ -220,9 +278,9 @@ const RolesPage = () => {
             {/* Mostrar información de paginación */}
             <div className="mt-4 text-center">
               <p className="text-sm text-text-main">
-                Mostrando <span className="font-medium">1</span> a {" "}
-                <span className="font-medium">{Math.min(5, totalPages * 5)}</span> {" "}
-                de <span className="font-medium">{totalPages * 5}</span> resultados
+                Mostrando <span className="font-medium">{filteredRoles.length > 0 ? startIndex + 1 : 0}</span> a {" "}
+                <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredRoles.length)}</span> {" "}
+                de <span className="font-medium">{filteredRoles.length}</span> resultados
               </p>
             </div>
           </div>

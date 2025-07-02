@@ -10,7 +10,7 @@ const Paginator = ({ currentPage, totalPages, onPageChange }) => {
         disabled={currentPage === 1}
         className="px-3 py-1 rounded-md bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
       >
-        <span className="material-icons text-sm">chevron_left</span>
+        <i className="bi bi-chevron-left text-sm"></i>
       </button>
       
       {pages.map(page => (
@@ -31,7 +31,7 @@ const Paginator = ({ currentPage, totalPages, onPageChange }) => {
         disabled={currentPage === totalPages}
         className="px-3 py-1 rounded-md bg-gray-200 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
       >
-        <span className="material-icons text-sm">chevron_right</span>
+        <i className="bi bi-chevron-right text-sm"></i>
       </button>
     </div>
   );

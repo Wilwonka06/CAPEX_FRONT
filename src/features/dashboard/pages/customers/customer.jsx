@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import CreateCustomer from "./components/CreateCustomer.jsx";
 import EditCustomer from "./components/EditCustomer.jsx";
 import ViewCustomer from "./components/ViewCustomer.jsx";
@@ -7,7 +6,8 @@ import DeleteCustomer from "./components/DeleteCustomer.jsx";
 import ChangeCustomerStatus from "./components/ChangeCustomerStatus.jsx";
 import { createCustomer } from "./services/CreateCustomerService.js";
 import { editCustomer } from "./services/EditCustomerService.js";
-import SearchCustomer from "./components/SearchCustomer";
+import SearchCustomer from "./components/SearchCustomer.jsx";
+import Paginator from "../Paginator.jsx";
 
 const initialCustomers = [
   {
@@ -75,30 +75,38 @@ const initialCustomers = [
 const itemsPerPage = 5;
 
 const CustomersPage = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [customers, setCustomers] = useState(initialCustomers);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [customers, setCustomers] = useState(initialCustomers);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '', show: false });
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const navigate = useNavigate();
+  // Función para mostrar mensajes de feedback
+  const showMessage = (text, type = 'success') => {
+    setMessage({ text, type, show: true });
+    setTimeout(() => {
+      setMessage({ text: '', type: '', show: false });
+    }, 3000);
+  };
 
-  // Filtrar clientes basado en la búsqueda
+  // Filtrado de clientes por búsqueda
   const filteredCustomers = customers.filter((customer) =>
     Object.values(customer).some((value) =>
       value.toString().toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
 
-  // Calcular páginas
+  // Cálculo de paginación basado en clientes filtrados
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / itemsPerPage));
+  
+  // Para paginar los clientes
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentCustomers = filteredCustomers.slice(startIndex, endIndex);
+  const paginatedCustomers = filteredCustomers.slice(startIndex, startIndex + itemsPerPage);
 
   // Ajusta currentPage si es mayor que totalPages
   useEffect(() => {
@@ -126,18 +134,34 @@ const CustomersPage = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDeleteCustomer = (customerId) => {
-    setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== customerId));
-    setIsDeleteModalOpen(false);
-    setSelectedCustomer(null);
+  const handleDeleteCustomer = async (customerId) => {
+    try {
+      // Simulación de eliminación
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== customerId));
+      setIsDeleteModalOpen(false);
+      setSelectedCustomer(null);
+      showMessage('Cliente eliminado exitosamente', 'success');
+    } catch (error) {
+      showMessage('Error al eliminar el cliente', 'error');
+    }
   };
 
-  const toggleStatus = (customerId) => {
-    setCustomers(prevCustomers => prevCustomers.map(customer =>
-      customer.id === customerId
-        ? { ...customer, status: customer.status === 'Activo' ? 'Inactivo' : 'Activo' }
-        : customer
-    ));
+  const handleToggleStatus = async (customerId) => {
+    try {
+      // Simulación de cambio de estado
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setCustomers(prevCustomers => prevCustomers.map(customer =>
+        customer.id === customerId
+          ? { ...customer, status: customer.status === 'Activo' ? 'Inactivo' : 'Activo' }
+          : customer
+      ));
+      const updatedCustomer = customers.find(c => c.id === customerId);
+      const newStatus = updatedCustomer.status === 'Activo' ? 'Inactivo' : 'Activo';
+      showMessage(`Estado del cliente cambiado a ${newStatus}`, 'success');
+    } catch (error) {
+      showMessage('Error al cambiar el estado del cliente', 'error');
+    }
   };
 
   // Crear cliente usando servicio
@@ -146,10 +170,10 @@ const CustomersPage = () => {
     try {
       const newCustomer = await createCustomer(formData, customers);
       setCustomers(prev => [...prev, newCustomer]);
-      setShowCreateForm(false);
+      setIsCreateModalOpen(false);
+      showMessage('Cliente creado exitosamente', 'success');
     } catch (error) {
-      console.error('Error al crear cliente:', error);
-      // Aquí podrías mostrar un toast o notificación de error
+      showMessage(error.message || 'Error al crear el cliente', 'error');
     } finally {
       setLoading(false);
     }
@@ -163,13 +187,13 @@ const CustomersPage = () => {
         id: selectedCustomer.id,
         ...formData,
         status: selectedCustomer.status
-      });
+      }, customers);
       setCustomers(prev => prev.map(customer => customer.id === updatedCustomer.id ? updatedCustomer : customer));
       setIsEditModalOpen(false);
       setSelectedCustomer(null);
+      showMessage('Cliente actualizado exitosamente', 'success');
     } catch (error) {
-      console.error('Error al editar cliente:', error);
-      // Aquí podrías mostrar un toast o notificación de error
+      showMessage(error.message || 'Error al actualizar el cliente', 'error');
     } finally {
       setLoading(false);
     }
@@ -180,32 +204,40 @@ const CustomersPage = () => {
     setCurrentPage(1);
   };
 
-  if (showCreateForm) {
-    return <CreateCustomer onBack={() => setShowCreateForm(false)} onCreate={handleCreateCustomer} />;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {/* Mensaje de feedback */}
+      {message.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          message.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <i className={`bi ${message.type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'}`}></i>
+            <span>{message.text}</span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100">
-            <div>
-              <h1 className="text-2xl font-bold text-text-main">Gestión de Clientes</h1>
-              <p className="mt-1 text-text-main/80">Administra los clientes registrados en el sistema</p>
-            </div>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-primary-dark hover:bg-primary text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              Crear Cliente
-            </button>
+          <div className="p-6">
+            <h1 className="text-2xl font-bold">Gestión de Clientes</h1>
+            <p className="mt-1">Administra los clientes registrados en el sistema</p>
           </div>
-
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchCustomer searchTerm={searchTerm} handleSearch={handleSearch} />
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+              >
+                <i className="bi bi-plus-circle mr-2"></i>
+                Nuevo Cliente
+              </button>
             </div>
-            <div className="w-full overflow-x-auto">
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-50 hover:bg-gray-100">
@@ -220,7 +252,7 @@ const CustomersPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {currentCustomers.map((customer) => (
+                  {paginatedCustomers.map((customer) => (
                     <tr key={customer.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="py-4 px-4 text-sm text-gray-900">{customer.documentType}</td>
                       <td className="py-4 px-4 text-sm text-gray-900">{customer.documentNumber}</td>
@@ -229,7 +261,7 @@ const CustomersPage = () => {
                       <td className="py-4 px-4 text-sm text-gray-900">{customer.email}</td>
                       <td className="py-4 px-4 text-sm text-gray-900">{customer.phone}</td>
                       <td className="py-4 px-4">
-                        <ChangeCustomerStatus status={customer.status} onToggle={() => toggleStatus(customer.id)} />
+                        <ChangeCustomerStatus status={customer.status} onToggle={() => handleToggleStatus(customer.id)} />
                       </td>
                       <td className="py-4 px-4 text-sm font-medium text-right">
                         <div className="flex justify-end space-x-2">
@@ -261,52 +293,41 @@ const CustomersPage = () => {
                 </tbody>
               </table>
             </div>
-            <div className="mt-6 flex flex-col items-center justify-center">
-              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-primary-dark hover:bg-accent-light focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-                >
-                  <span className="material-icons">chevron_left</span>
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === page
-                      ? "bg-primary-dark text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-dark"
-                      : "text-text-main ring-1 ring-inset ring-primary-dark hover:bg-accent-light focus:z-20 focus:outline-offset-0"
-                      }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-primary-dark hover:bg-accent-light focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-                >
-                  <span className="material-icons">chevron_right</span>
-                </button>
-              </nav>
-              <div className="mt-4 text-center">
-                <p className="text-sm text-text-main">
-                  Mostrando <span className="font-medium">{startIndex + 1}</span> a {" "}
-                  <span className="font-medium">{Math.min(endIndex, filteredCustomers.length)}</span> {" "}
-                  de <span className="font-medium">{filteredCustomers.length}</span> resultados
-                </p>
-              </div>
+
+            {/* Paginación */}
+            <div className="mt-6">
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+
+            {/* Mostrar información de paginación */}
+            <div className="mt-4 text-center">
+              <p className="text-sm text-text-main">
+                Mostrando <span className="font-medium">{filteredCustomers.length > 0 ? startIndex + 1 : 0}</span> a {" "}
+                <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredCustomers.length)}</span> {" "}
+                de <span className="font-medium">{filteredCustomers.length}</span> resultados
+              </p>
             </div>
           </div>
         </div>
 
+        <CreateCustomer
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={handleCreateCustomer}
+          loading={loading}
+          customers={customers}
+        />
         <EditCustomer
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           customer={selectedCustomer}
           onEdit={handleEditCustomer}
           loading={loading}
+          customers={customers}
         />
         <ViewCustomer
           isOpen={isViewModalOpen}

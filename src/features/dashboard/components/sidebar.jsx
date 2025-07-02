@@ -1,78 +1,78 @@
 // components/Sidebar.jsx
 import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import Logo from '../../../shared/images/Logo(sin fondo).png';
 
 const Sidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({
-    main: false,
-    users: false,
-    contacts: false,
-    products: false,
-    services: false,
-    sales: false
+    main: true,
+    config: true, // Agregado para que 'Configuración' inicie expandido si es un grupo
+    users: true,
+    shoppings: true,
+    services: true,
+    sales: true // Asegurarse de que 'Sales' inicie expandido
   });
-  const [isLocked, setIsLocked] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
   const location = useLocation();
 
   const menuGroups = [
     {
       id: 'main',
-      name: 'Dashboard', 
-      icon: 'bi-speedometer2', 
+      name: 'Dashboard',
+      icon: 'bi-speedometer2',
       path: '/'
-      
+    },
+    {
+      id: 'config',
+      title: 'Configuración',
+      icon: 'bi-gear-fill',
+      items: [
+        { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
+      ]
     },
     {
       id: 'users',
       title: 'Gestión de Usuarios',
-      icon: 'bi-people',
+      icon: 'bi-people-fill',
       items: [
-        { name: 'Usuarios', icon: 'bi-person', path: '/usuarios' },
+        { name: 'Usuarios', icon: 'bi-person-fill', path: '/usuarios' },
       ]
     },
     {
-      id: 'shoppings',
-      title: 'Gestión de Compras',
-      icon: 'bi-box-seam',
+      id: 'shoppings', // Cambiado de 'products' a 'shoppings' para consistencia con tu segundo ejemplo y la sección
+      title: 'Gestión de Compras', // Título de 'shoppings'
+      icon: 'bi-cart-check-fill', // Icono para 'shoppings'
       items: [
-        { name: 'Categorías de Productos', icon: 'bi-tags', path: '/categorias-productos' },
-        { name: 'Productos', icon: 'bi-box', path: '/productos' },
+        { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/categorias-productos' },
+        { name: 'Productos', icon: 'bi-box-seam-fill', path: '/productos' },
         { name: 'Proveedores', icon: 'bi-truck', path: '/proveedores' },
-        { name: 'Compras', icon: 'bi-cart-plus', path: '/compras' }
+        { name: 'Compras', icon: 'bi-cart-plus-fill', path: '/compras' }
       ]
     },
     {
       id: 'services',
       title: 'Gestión de Servicios',
-      icon: 'bi-gear',
+      icon: 'bi-tools',
       items: [
-        { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/categorias-servicios' },
-        { name: 'Servicios', icon: 'bi-tools', path: '/servicios' },
-        { name: 'Empleados', icon: 'bi-person-badge', path: '/empleados' },
-        { name: 'Agendamiento de Citas', icon: 'bi-calendar-check', path: '/citas' }
+        { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
+        { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
+        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' },
+        { name: 'Venta de Servicios', icon: 'bi-calendar-check-fill', path: '/ventas-servicios' } // Este era el elemento que querías importar
       ]
     },
     {
       id: 'sales',
       title: 'Ventas',
-      icon: 'bi-graph-up',
+      icon: 'bi-graph-up-arrow',
       items: [
-        { name: 'Clientes', icon: 'bi-person-heart', path: '/clientes' },
-        { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/pedidos' },
-        { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/ventas-productos' },
-        { name: 'Venta de Servicios', icon: 'bi-bag-check', path: '/ventas-servicios' }
+        { name: 'Clientes', icon: 'bi-people', path: '/clientes' },
+        { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
+        { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
+        { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
+        { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }, // Agregado aquí como lo pediste
       ]
     },
-    {
-      id: 'config',
-      title: 'Configuración',
-      icon: 'bi-people',
-      items: [
-        { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
-      ]
-    }
-
   ];
 
   const handleMouseEnter = () => {
@@ -110,7 +110,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`bg-background shadow-lg transition-all duration-300 ease-in-out ${
+      className={`bg-text-main shadow-lg transition-all duration-300 ease-in-out font-inter ${
         isExpanded || isLocked ? 'w-64' : 'w-16'
       } flex flex-col h-full`}
       onMouseEnter={handleMouseEnter}
@@ -119,12 +119,10 @@ const Sidebar = () => {
       {/* Header */}
       <div className="p-4 border-b border-accent/50 flex items-center justify-between">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <i className="bi bi-shop text-background text-sm"></i>
-          </div>
+          <img src={Logo} alt="Logo" className="h-12 w-12 object-contain" />
           {(isExpanded || isLocked) && (
-            <span className="ml-3 font-semibold text-text-main whitespace-nowrap">
-              CAPEX
+            <span className="ml-2 font-semibold text-background text-3xl whitespace-nowrap">
+              CAP<span className='text-yellow-700'>EX</span>
             </span>
           )}
         </div>
@@ -132,9 +130,9 @@ const Sidebar = () => {
           <button
             onClick={toggleLock}
             className={`p-1 rounded transition-colors ${
-              isLocked 
-                ? 'text-primary hover:text-primary-dark' 
-                : 'text-accent hover:text-primary'
+              isLocked
+                ? 'text-background/80 hover:text-background'
+                : 'text-background/80 hover:text-background'
             }`}
             title={isLocked ? 'Desbloquear sidebar' : 'Bloquear sidebar'}
           >
@@ -144,85 +142,90 @@ const Sidebar = () => {
       </div>
 
       {/* Menu con scroll */}
-      <nav className="flex-1 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-accent scrollbar-track-transparent">
+      <nav
+        className="flex-1 py-4 overflow-y-auto"
+        style={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          WebkitScrollbar: { display: 'none' }
+        }}
+      >
         {menuGroups.map((group) => (
           <div key={group.id} className="mb-2">
-            {/* Group Header */}
-            <div
-              className={`flex items-center px-4 py-2 text-text-main/80 hover:bg-accent-light/30 cursor-pointer transition-colors ${
-                (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
-              }`}
-              onClick={() => toggleGroup(group.id)}
-            >
-              <div className="flex items-center">
-                <i className={`${group.icon} text-lg`}></i>
+            {/* Group Header - Solo mostrar si tiene items o si es un link directo */}
+            {group.items ? (
+              <div
+                className={`flex items-center px-4 py-2 text-background/80 hover:bg-white-500 cursor-pointer transition-colors ${
+                  (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
+                }`}
+                onClick={() => toggleGroup(group.id)}
+              >
+                <div className="flex items-center">
+                  <i className={`${group.icon} text-lg`}></i>
+                  {(isExpanded || isLocked) && (
+                    <span className="ml-3 text-sm font-medium whitespace-nowrap">
+                      {group.title}
+                    </span>
+                  )}
+                </div>
                 {(isExpanded || isLocked) && (
-                  <span className="ml-3 text-sm font-medium whitespace-nowrap">
-                    {group.title || group.name}
-                  </span>
+                  <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
                 )}
               </div>
-              {(isExpanded || isLocked) && group.items && (
-                <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
-              )}
-            </div>
-
-            {/* Group Items o Link directo */}
-            {group.items ? (
-              (expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
-                <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
-                  {Array.isArray(group.items) && group.items.map((item, index) => (
-                    <Link
-                      key={index}
-                      to={item.path}
-                      className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
-                        (isExpanded || isLocked) ? '' : 'justify-center'
-                      } ${
-                        isActiveRoute(item.path)
-                          ? 'bg-accent-light/50 text-primary-dark border-r-2 border-primary'
-                          : 'text-text-main/90 hover:bg-accent-light/40 hover:text-primary-dark'
-                      }`}
-                      title={!(isExpanded || isLocked) ? item.name : ''}
-                    >
-                      <i className={`${item.icon} text-base`}></i>
-                      {(isExpanded || isLocked) && (
-                        <span className="ml-3 text-sm whitespace-nowrap">
-                          {item.name}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              )
             ) : (
+              // Para elementos sin subcategorías, mostrar directamente como link
               <Link
                 to={group.path}
                 className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
                   (isExpanded || isLocked) ? '' : 'justify-center'
                 } ${
                   isActiveRoute(group.path)
-                    ? 'bg-accent-light/50 text-primary-dark border-r-2 border-primary'
-                    : 'text-text-main/90 hover:bg-accent-light/40 hover:text-primary-dark'
+                    ? 'bg-background/20 text-background border-r-2 border-primary'
+                    : 'text-background/90 hover:bg-background/10 hover:text-background'
                 }`}
                 title={!(isExpanded || isLocked) ? group.name : ''}
               >
                 <i className={`${group.icon} text-base`}></i>
                 {(isExpanded || isLocked) && (
-                  <span className="ml-3 text-sm whitespace-nowrap">
+                  <span className="ml-3 text-xs whitespace-nowrap">
                     {group.name}
                   </span>
                 )}
               </Link>
             )}
+
+            {/* Group Items - Solo mostrar si el grupo tiene items */}
+            {group.items && (expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
+              <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
+                {Array.isArray(group.items) && group.items.map((item, index) => (
+                  <Link
+                    key={index}
+                    to={item.path}
+                    className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                      (isExpanded || isLocked) ? '' : 'justify-center'
+                    } ${
+                      isActiveRoute(item.path)
+                        ? 'bg-background/20 text-background border-r-2 border-primary'
+                        : 'text-background/90 hover:bg-background/10 hover:text-background'
+                    }`}
+                    title={!(isExpanded || isLocked) ? item.name : ''}
+                  >
+                    <i className={`${item.icon} text-base`}></i>
+                    {(isExpanded || isLocked) && (
+                      <span className="ml-3 text-sm whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </nav>
-      {/* Footer fijo */}
-      <div className="p-4 border-t  flex items-center justify-center">
-        <button className="w-full text-main py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors">
-          <i className="bi bi-box-arrow-right text-base"></i>
-          {(isExpanded || isLocked) && <span>Cerrar sesión</span>}
-        </button>
+      {/* Footer fijo (mantengo el footer vacío ya que en el primer código no había) */}
+      <div className="p-4 border-t flex items-center justify-center">
+        {/* Puedes añadir contenido aquí si lo deseas, por ejemplo, un botón de cerrar sesión */}
       </div>
     </div>
   );
