@@ -18,13 +18,13 @@ const SupplierDetail = ({ supplier, isOpen, onClose }) => {
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-[#9C5B2B] m-0">Detalles del Proveedor</h2>
-          <button
+        <button
             className="text-gray-400 hover:text-primary text-xl font-bold"
-            onClick={onClose}
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+          onClick={onClose}
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
         </div>
         {/* Contenido con scroll */}
         <div className="overflow-y-auto p-8 flex-1">
@@ -40,19 +40,19 @@ const SupplierDetail = ({ supplier, isOpen, onClose }) => {
                       <i className="bi bi-person text-primary mr-2"></i>
                       <span className="font-medium">Contacto:</span>
                       <span className="ml-2">{supplier.contacto}</span>
-                    </div>
+              </div>
                     <div className="flex items-center">
                       <i className="bi bi-envelope text-primary mr-2"></i>
                       <span className="font-medium">Correo:</span>
                       <span className="ml-2">{supplier.correo}</span>
-                    </div>
+            </div>
                     <div className="flex items-center">
                       <i className="bi bi-telephone text-primary mr-2"></i>
                       <span className="font-medium">Teléfono:</span>
                       <span className="ml-2">{supplier.telefono}</span>
-                    </div>
-                  </div>
-                </div>
+              </div>
+            </div>
+          </div>
               </div>
             <div className="flex flex-col gap-4 md:w-1/2 w-full">
               {/* Información técnica */}
@@ -62,24 +62,24 @@ const SupplierDetail = ({ supplier, isOpen, onClose }) => {
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">NIT</span>
                     <span className="font-semibold text-gray-800 text-sm">{supplier.nit}</span>
-                  </div>
+            </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Tipo</span>
                     <span className="font-semibold text-gray-800 text-sm">{getTipoText(supplier.tipo)}</span>
-                  </div>
+            </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Dirección</span>
                     <span className="font-semibold text-gray-800 text-sm max-w-[200px] text-right">
                       {supplier.direccion}
                     </span>
-                  </div>
-                </div>
+          </div>
+          </div>
               </div>
             </div>
           </div>
         </div>
         {/* Footer fijo */}
-        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
+        <div className="rounded-b-lg flex justify-end px-8 py-4">
           <button
             className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
             onClick={onClose}
