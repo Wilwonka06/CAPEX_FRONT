@@ -1,79 +1,197 @@
-
-import AddServices from './components/AddServices';
-import EditServices from './components/EditServices'
-import SeeServices from './components/SeeServices';
 import React, { useState } from "react";
+import AddServices from './components/AddServices'
+import EditServices from "./components/EditServices";
+import SeeServices from './components/SeeServices';
+import Paginator from "../../../../shared/Paginator";
+import { initialCategories } from '../CatServices/CatServices';
+import SearchProduct from '../../../../shared/Search';
 
+// Componente para el interruptor de estado
+const StatusToggle = ({ isActive, onToggle }) => (
+  <label onClick={(e) => { e.stopPropagation(); onToggle(); }} className="flex items-center cursor-pointer">
+    <div className="relative">
+      <input type="checkbox" className="sr-only" checked={isActive} readOnly />
+      <div className={`block w-11 h-6 rounded-full ${isActive ? 'bg-primary' : 'bg-gray-300'}`}></div>
+      <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'translate-x-full' : ''}`}></div>
+    </div>
+    <div className="ml-3 text-text-main/80 font-medium">{isActive ? 'Activo' : 'Inactivo'}</div>
+  </label>
+);
+
+// Componente para la tabla de servicios
+const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) => (
+  <div className="overflow-x-auto">
+    <table className="min-w-full text-sm text-left">
+      <thead className="bg-gray-50 text-text-main/80 uppercase">
+        <tr>
+          <th className="py-3 px-4 font-semibold">Servicio</th>
+          <th className="py-3 px-4 font-semibold">Categoría</th>
+          <th className="py-3 px-4 font-semibold">Duración</th>
+          <th className="py-3 px-4 font-semibold">Precio</th>
+          <th className="py-3 px-4 font-semibold">Estado</th>
+          <th className="py-3 px-4 font-semibold text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody className="bg-white text-text-main">
+        {services.map((service) => (
+          <tr key={service.id} className="border-b border-gray-200 hover:bg-gray-50">
+            <td className="py-3 px-4">{service.name}</td>
+            <td className="py-3 px-4 text-text-main/80">{service.category}</td>
+            <td className="py-3 px-4 text-text-main/80">{service.duration}</td>
+            <td className="py-3 px-4 text-text-main/80">{service.price}</td>
+            <td className="py-3 px-4">
+              <StatusToggle 
+                isActive={service.active} 
+                onToggle={() => onToggleStatus(service.id)}
+              />
+            </td>
+            <td className="py-4 px-4 text-sm font-medium text-right">
+              <div className="flex justify-end space-x-2">
+                <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" onClick={() => onSee(service)} title="Visualizar">
+                  <i className="bi bi-eye text-amber-500 text-sm"></i>
+                </button>
+                <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" onClick={() => onEdit(service)} title="Editar">
+                  <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
+                </button>
+                <button className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" onClick={() => onDelete(service)} title="Eliminar">
+                  <i className="bi bi-trash text-red-500 text-sm"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
 
 const Services = () => {
-  
+  const [services, setServices] = useState([
+    { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
+    { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
+    { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: false, description: 'Masaje corporal relajante', estado: 'Inactivo' },
+    { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
+    { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
+    { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: false, description: 'Tratamiento nutritivo para el cabello', estado: 'Inactivo' },
+  ]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSeeModalOpen, setIsSeeModalOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
+  const [categories, setCategories] = useState(initialCategories);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const toggleServiceStatus = (id) => {
+    setServices(
+      services.map((service) =>
+        service.id === id ? { ...service, active: !service.active, estado: service.active ? 'Inactivo' : 'Activo' } : service
+      )
+    );
+  };
+
+  const handleAddService = (newService) => {
+    setServices([
+      ...services,
+      { ...newService, id: Date.now(), active: newService.estado === 'Activo' }
+    ]);
+    setIsAddModalOpen(false);
+  };
+
+  const handleEditService = (editedService) => {
+    setServices(
+      services.map((service) =>
+        service.id === editedService.id ? { ...editedService, active: editedService.estado === 'Activo' } : service
+      )
+    );
+    setIsEditModalOpen(false);
+    setSelectedService(null);
+  };
+
+  const handleSeeService = (service) => {
+    setSelectedService(service);
+    setIsSeeModalOpen(true);
+  };
+
+  const handleEditClick = (service) => {
+    setSelectedService(service);
+    setIsEditModalOpen(true);
+  };
+
+  const filteredServices = services.filter(
+    (service) =>
+      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const itemsPerPage = 3;
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="container mx-auto mt-8 px-4">
-    <div className="flex justify-between items-center mb-4">
-      <h1 className="text-xl font-semibold text-text-main">Servicios</h1>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+          <div className="p-6">
+            <h1 className="text-2xl font-bold text-text-main">Gestión de Servicios</h1>
+            <p className="text-text-main/60 mt-1">Administra los servicios que ofreces en tu tienda.</p>
+          </div>
+          
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div className="relative w-full max-w-sm">
+                <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar servicios..." />
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors"
+              >
+                <i className="bi bi-plus-lg text-lg"></i>
+                Nuevo Servicio
+              </button>
+            </div>
+
+            <ServicesTable 
+              services={paginatedServices} 
+              onToggleStatus={toggleServiceStatus}
+              onSee={handleSeeService}
+              onEdit={handleEditClick}
+              onDelete={(service) => alert(`Eliminar ${service.name}`)}
+            />
+
+            {totalPages > 1 && (
+              <>
+                <Paginator
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+                <div className="text-center mt-4">
+                  <p className="text-sm text-text-main/70">
+                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, filteredServices.length)} de {filteredServices.length} servicios
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      {/* Modales */}
+      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} />}
+      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} />}
+      {isSeeModalOpen && selectedService && <SeeServices onClose={() => { setIsSeeModalOpen(false); setSelectedService(null); }} service={selectedService} />}
     </div>
-    <div className="flex justify-between mb-4">
-      <input
-        type="text"
-        placeholder="Buscar servicio..."
-        className="border border-primary-dark px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-      />
-
-      <button
-        onClick={() => setIsAddModalOpen(true)}
-        className="bg-primary-dark text-white px-4 py-2 rounded hover:bg-primary transition"
-      >
-        Añadir Servicio
-      </button>
-
-    </div>
-
-
-    <div className="overflow-x-auto border border-background rounded-lg shadow-sm">
-      <table className="min-w-full text-sm text-left border-collapse">
-        <thead className="bg-primary-dark text-white">
-          <tr>
-            <th className="py-2 px-3 border-b border-background">Id</th>
-            <th className="py-2 px-3 border-b border-background">Servicio</th>
-            <th className="py-2 px-3 border-b border-background">Categoria</th>
-            <th className="py-2 px-3 border-b border-background">Duracion</th>
-            <th className="py-2 px-3 border-b border-background">Precio</th>
-            <th className="py-2 px-3 border-b border-background">Estado</th>
-            <th className="py-2 px-3 border-b border-background">Acciones</th>
-          </tr>
-        </thead>
-        <tbody className="bg-background text-text-main">
-          <td className="py-2 px-3 border-b border-background">1</td>
-          <td className="py-2 px-3 border-b border-background">Corte de cabello</td>
-          <td className="py-2 px-3 border-b border-background">Servicio de corte</td>
-          <td className="py-2 px-3 border-b border-background">20 min</td>
-          <td className="py-2 px-3 border-b border-background">20.000</td>
-          <td className="py-2 px-3 border-b border-background text-green-600 font-medium">Activo</td>
-          <td className="py-2 px-3 border-b border-background flex gap-2">
-            <button onClick={() => setIsSeeModalOpen(true)} className="bg-primary-dark text-white px-2 py-1 rounded hover:bg-primary transition text-sm">
-              Ver
-            </button>
-            <button onClick={() => setIsEditModalOpen(true)} className="bg-primary-dark text-white px-2 py-1 rounded hover:bg-primary transition text-sm">
-              Editar
-            </button>
-            <button className="bg-accent text-white px-2 py-1 rounded hover:bg-accent-light transition text-sm">
-              Eliminar
-            </button>
-          </td>
-
-        </tbody>
-      </table>
-    </div>
-    {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} />}
-    {isEditModalOpen && <EditServices onClose={() => setIsEditModalOpen(false)} />}
-    {isSeeModalOpen && <SeeServices onClose={() => setIsSeeModalOpen(false)} />}
-
-  </div>
-  )
+  );
 }
 
-export default Services
+export default Services;

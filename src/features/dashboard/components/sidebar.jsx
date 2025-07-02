@@ -7,11 +7,11 @@ const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({
     main: true,
-    config: true, // Agregado para que 'Configuración' inicie expandido si es un grupo
+    config: true,
     users: true,
     shoppings: true,
     services: true,
-    sales: true // Asegurarse de que 'Sales' inicie expandido
+    sales: true
   });
   const [isLocked, setIsLocked] = useState(true);
   const location = useLocation();
@@ -40,9 +40,9 @@ const Sidebar = () => {
       ]
     },
     {
-      id: 'shoppings', // Cambiado de 'products' a 'shoppings' para consistencia con tu segundo ejemplo y la sección
-      title: 'Gestión de Compras', // Título de 'shoppings'
-      icon: 'bi-cart-check-fill', // Icono para 'shoppings'
+      id: 'shoppings',
+      title: 'Gestión de Compras',
+      icon: 'bi-cart-check-fill',
       items: [
         { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/categorias-productos' },
         { name: 'Productos', icon: 'bi-box-seam-fill', path: '/productos' },
@@ -58,7 +58,7 @@ const Sidebar = () => {
         { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
         { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
         { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' },
-        { name: 'Venta de Servicios', icon: 'bi-calendar-check-fill', path: '/ventas-servicios' } // Este era el elemento que querías importar
+        { name: 'Venta de Servicios', icon: 'bi-calendar-check-fill', path: '/ventas-servicios' }
       ]
     },
     {
@@ -70,7 +70,7 @@ const Sidebar = () => {
         { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
         { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
         { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
-        { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }, // Agregado aquí como lo pediste
+        { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
       ]
     },
   ];
@@ -223,10 +223,6 @@ const Sidebar = () => {
           </div>
         ))}
       </nav>
-      {/* Footer fijo (mantengo el footer vacío ya que en el primer código no había) */}
-      <div className="p-4 border-t flex items-center justify-center">
-        {/* Puedes añadir contenido aquí si lo deseas, por ejemplo, un botón de cerrar sesión */}
-      </div>
     </div>
   );
 };

@@ -114,6 +114,7 @@ const router = createBrowserRouter([
       {
         path: 'citas',
         element: <Quotes />
+
       },
       {
         path: 'pedidos',
