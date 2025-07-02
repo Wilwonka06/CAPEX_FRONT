@@ -9,37 +9,7 @@ import Paginator from "./components/Paginator";
 import { createRole } from "./services/CreateRoleService";
 import { editRole } from "./services/EditRoleService";
 import SearchRole from "./components/SearchRole";
-
-const initialRoles = [
-  {
-    id: 1,
-    name: 'Administrador',
-    description: 'Control total del sistema',
-    estado: 'Activo',
-    privileges: {
-      'Dashboard': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-      'Gestión de Usuarios': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-      'Gestión de Compras': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-      'Gestión de Servicios': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-      'Ventas': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-      'configuración': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true }
-    }
-  },
-  {
-    id: 2,
-    name: 'Editor',
-    description: 'Gestión de contenido',
-    estado: 'Inactivo',
-    privileges: {
-      'Dashboard': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
-      'Gestión de Usuarios': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
-      'Gestión de Compras': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
-      'Gestión de Servicios': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
-      'Ventas': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false },
-      'configuración': { 'Crear': false, 'Visualizar': true, 'Editar': false, 'Eliminar': false }
-    }
-  }
-];
+import { getRoles } from '../../../../shared/services/ModuleDataService';
 
 const itemsPerPage = 5;
 
@@ -50,10 +20,27 @@ const RolesPage = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [roles, setRoles] = useState(initialRoles);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '', show: false });
   const [searchTerm, setSearchTerm] = useState("");
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      setLoadingData(true);
+      try {
+        const fetchedRoles = await getRoles();
+        setRoles(fetchedRoles);
+      } catch (error) {
+        console.error("Error al cargar roles:", error);
+        // Opcional: mostrar un mensaje de error al usuario
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    fetchRoles();
+  }, []);
 
   // Función para mostrar mensajes de feedback
   const showMessage = (text, type = 'success') => {
