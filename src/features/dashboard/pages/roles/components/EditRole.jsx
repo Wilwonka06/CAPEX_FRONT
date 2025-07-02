@@ -1,10 +1,28 @@
 import { useState, useEffect } from 'react';
+import PrivilegesTable from './PrivilegesTable';
+import { validateRole } from '../services/ValidateRoleService';
 
-const EditRole = ({ isOpen, onClose, role }) => {
+const EditProductCard = ({ children, title, onClose }) => (
+  <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
+    <button
+      className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
+      onClick={onClose}
+      aria-label="Cerrar"
+    >
+      ×
+    </button>
+    <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>
+    {children}
+  </div>
+);
+
+const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: ''
   });
+  const [privileges, setPrivileges] = useState({});
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (role) {
@@ -12,8 +30,15 @@ const EditRole = ({ isOpen, onClose, role }) => {
         name: role.name,
         description: role.description
       });
+      if (role.privileges) setPrivileges(role.privileges);
     }
   }, [role]);
+
+  useEffect(() => {
+    // Excluye el rol actual de la validación de nombre único
+    const otherRoles = roles.filter(r => r.id !== role?.id);
+    setErrors(validateRole({ nombre: formData.name }, privileges, otherRoles));
+  }, [formData, privileges, roles, role]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,76 +48,75 @@ const EditRole = ({ isOpen, onClose, role }) => {
     }));
   };
 
+  const handlePrivilegeChange = (modulo, accion, checked) => {
+    setPrivileges(prev => ({
+      ...prev,
+      [modulo]: {
+        ...prev[modulo],
+        [accion]: checked
+      }
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Aquí irá la lógica para actualizar el rol
-    console.log('Rol actualizado:', formData);
-    onClose();
+    if (Object.keys(errors).length === 0 && onEdit) onEdit(formData, privileges);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Editar Rol</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <span className="material-icons">close</span>
-          </button>
-        </div>
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <EditProductCard title="Editar rol" onClose={onClose}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre del Rol
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Nombre</label>
+              <input
+                type="text"
+                name="name"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+              {errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Descripción (opcional)</label>
+              <input
+                type="text"
+                name="description"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                value={formData.description}
+                onChange={handleChange}
+              />
+            </div>
           </div>
-
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Descripción
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows="3"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-              required
-            ></textarea>
+            <label className="block text-text-main text-sm font-bold mb-2">Privilegios</label>
+            <PrivilegesTable value={privileges} onChange={handlePrivilegeChange} />
+            {errors.privilegios && <p className="text-red-600 text-xs mt-1">{errors.privilegios}</p>}
           </div>
-
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              className="border border-gray-300 hover:bg-gray-50 text-gray-800 font-bold py-2 px-4 rounded"
+              disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600"
+              className="bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded shadow-md"
+              disabled={loading || Object.keys(errors).length > 0}
             >
-              Guardar Cambios
+              {loading ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
         </form>
-      </div>
+      </EditProductCard>
     </div>
   );
 };

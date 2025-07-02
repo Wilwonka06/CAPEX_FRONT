@@ -83,7 +83,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            className="w-full border rounded px-3 py-1 text-sm"
+            className="w-full border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="Buscar servicios..."
           />
           <i className="bi bi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -92,7 +92,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
       {/* Dropdown de servicios */}
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-accent rounded shadow-lg max-h-40 overflow-y-auto">
           {filteredServices.map(service => (
             <div
               key={service.id}
@@ -145,7 +145,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-8 h-8 border rounded flex items-center justify-center hover:bg-gray-100"
+                    className="w-8 h-8 border border-accent rounded flex items-center justify-center hover:bg-accent-light"
                   >
                     -
                   </button>
@@ -158,7 +158,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                   />
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="w-8 h-8 border rounded flex items-center justify-center hover:bg-gray-100"
+                    className="w-8 h-8 border border-accent rounded flex items-center justify-center hover:bg-accent-light"
                   >
                     +
                   </button>
@@ -170,7 +170,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 <select
                   value={selectedEmployeeForService}
                   onChange={(e) => setSelectedEmployeeForService(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm"
+                  className="w-full border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   required
                 >
                   <option value="">Seleccionar empleado</option>
@@ -202,7 +202,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 disabled={!isFormValid}
                 className={`px-4 py-2 rounded text-sm ${
                   isFormValid 
-                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    ? 'bg-primary-dark text-white hover:bg-primary transition' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >

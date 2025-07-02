@@ -3,6 +3,7 @@ import AddCatServices from './components/AddCatServices';
 import EditCatServices from './components/EditCatServices';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
+
 // --- Componentes Locales ---
 
 // Interruptor de Estado
@@ -16,6 +17,7 @@ const StatusToggle = ({ isActive, onToggle }) => (
     <div className="ml-3 text-text-main/80 font-medium">{isActive ? 'Activo' : 'Inactivo'}</div>
   </label>
 );
+
 
 // Tabla de Categorías
 const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete }) => (

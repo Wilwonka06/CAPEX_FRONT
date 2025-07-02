@@ -71,6 +71,7 @@ const Sidebar = () => {
         { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
         { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
         { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
+        { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
         
       ]
     },
