@@ -91,7 +91,7 @@ const CatProductsPage = () => {
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="min-h-screen p-6 font-inter">
+    <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}

@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { isDuplicateProductName, isNumberInputValid, isValidNumber, isValidDecimal } from '../../../../../shared/validations';
+import {
+  isDuplicateProductName,
+  isNumberInputValid,
+  isValidNumber,
+  isValidDecimal,
+} from "../../../../../shared/validations";
 
 const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
   const [open, setOpen] = useState(false);
@@ -31,12 +36,12 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'cantidad' && value && !isValidNumber(value)) {
-      setError('Solo se permiten números enteros positivos en cantidad.');
+    if (name === "cantidad" && value && !isValidNumber(value)) {
+      setError("Solo se permiten números enteros positivos en cantidad.");
       return;
     }
-    if (name === 'precio' && value && !isValidDecimal(value)) {
-      setError('Solo se permiten números decimales positivos en precio.');
+    if (name === "precio" && value && !isValidDecimal(value)) {
+      setError("Solo se permiten números decimales positivos en precio.");
       return;
     }
     setError("");
@@ -61,7 +66,7 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
   const handleDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && file.type.startsWith("image/")) {
       setFormData((prev) => ({ ...prev, foto: file }));
       setPreview(URL.createObjectURL(file));
     }
@@ -81,7 +86,7 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
     }
     if (isDuplicateProductName(formData.nombre, products)) {
       window.alert("Ya existe un producto con ese nombre.");
-      setFormData((prev) => ({ ...prev, nombre: '' }));
+      setFormData((prev) => ({ ...prev, nombre: "" }));
       return;
     }
     if (
@@ -110,8 +115,8 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
   const handleBlurNombre = (e) => {
     const value = e.target.value;
     if (isDuplicateProductName(value, products)) {
-      window.alert('Ya existe un producto con ese nombre.');
-      setFormData((prev) => ({ ...prev, nombre: '' }));
+      window.alert("Ya existe un producto con ese nombre.");
+      setFormData((prev) => ({ ...prev, nombre: "" }));
     }
   };
 
@@ -130,7 +135,9 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
             {/* Header fijo */}
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-md flex items-center justify-between px-8 py-4">
-              <h2 className="text-xl font-bold text-primary m-0">Crear nuevo producto</h2>
+              <h2 className="text-xl font-bold text-primary m-0">
+                Crear nuevo producto
+              </h2>
             <button
                 className="text-gray-400 hover:text-primary text-xl font-bold"
               onClick={handleClose}
@@ -142,21 +149,25 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
             {/* Contenido con scroll */}
             <div className="overflow-y-auto p-8 flex-1">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Foto del Producto</label>
+                <div>
+                  <label className="block text-xs font-medium text-text-main mb-1">
+                    Foto del Producto
+                  </label>
                   <div className="space-y-3">
                     <div
                       className="relative w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
-                      onClick={() => document.getElementById('file-input').click()}
+                      onClick={() =>
+                        document.getElementById("file-input").click()
+                      }
                     >
                       {preview ? (
                         <div className="relative w-full h-full flex items-center justify-center">
-                          <img 
-                            src={preview} 
-                            alt="Vista previa" 
-                            className="max-h-28 max-w-full object-contain rounded-lg mx-auto" 
+                          <img
+                            src={preview}
+                            alt="Vista previa"
+                            className="max-h-28 max-w-full object-contain rounded-lg mx-auto"
                           />
                           <button
                             type="button"
@@ -172,10 +183,14 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
                       ) : (
                         <div className="text-center">
                           <i className="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
-                          <p className="text-sm text-gray-500 mb-1">Arrastra y suelta una imagen aquí</p>
-                          <p className="text-xs text-gray-400">o haz clic para seleccionar</p>
+                          <p className="text-sm text-gray-500 mb-1">
+                            Arrastra y suelta una imagen aquí
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            o haz clic para seleccionar
+                          </p>
                         </div>
-                )}
+                      )}
                     </div>
                     <input
                       id="file-input"
@@ -185,29 +200,30 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
                       className="hidden"
                     />
                   </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    Nombre <span className="text-red-500">*</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Nombre <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="nombre"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
                     value={formData.nombre}
                     onChange={handleChange}
-                    onBlur={handleBlurNombre}
+                      onBlur={handleBlurNombre}
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Categoría <span className="text-red-500">*</span>
+                      Categoría <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="categoria"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                    value={formData.categoria}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
+                      value={formData.categoria}
                     onChange={handleChange}
                     required
                   >
@@ -226,23 +242,25 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
                   <input
                     type="text"
                     name="color"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                    value={formData.color}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
+                      value={formData.color}
                     onChange={handleChange}
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Precio <span className="text-red-500">*</span>
+                      Precio <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     name="precio"
                     step="0.01"
                     min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                    value={formData.precio}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
+                      value={formData.precio}
                     onChange={handleChange}
                     required
-                    onKeyDown={isNumberInputValid}
+                      onKeyDown={isNumberInputValid}
                   />
                 </div>
                 <div>
@@ -253,19 +271,21 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
                     type="number"
                     name="cantidad"
                     min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                    value={formData.cantidad}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
+                      value={formData.cantidad}
                     onChange={handleChange}
-                    onKeyDown={isNumberInputValid}
+                      onKeyDown={isNumberInputValid}
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
-                  Descripción <span className="text-red-500">*</span>
+                    Descripción <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="descripcion"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"                  value={formData.descripcion}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
+                    value={formData.descripcion}
                   onChange={handleChange}
                   required
                   rows={3}
@@ -274,14 +294,14 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   type="button"
-                  className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
+                    className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
                   onClick={handleClose}
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
+                    className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
                 >
                   Guardar
                 </button>
