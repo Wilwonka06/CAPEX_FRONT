@@ -63,7 +63,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            className="w-full border rounded px-3 py-1 text-sm"
+            className="w-full border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="Buscar productos..."
           />
           <i className="bi bi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -72,7 +72,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
       {/* Dropdown de productos */}
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-accent rounded shadow-lg max-h-40 overflow-y-auto">
           {filteredProducts.map(product => (
             <div key={product.id} className="border-b last:border-b-0">
               <div className="px-3 py-2 hover:bg-gray-100">
@@ -101,7 +101,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                   </div>
                   <button
                     onClick={() => handleProductSelect(product)}
-                    className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700"
+                    className="bg-primary-dark text-white px-3 py-1 rounded text-xs hover:bg-primary transition"
                   >
                     Agregar
                   </button>
@@ -147,14 +147,14 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                       <div className="flex items-center justify-center space-x-1">
                         <button
                           onClick={() => updateQuantity(product.uniqueId, product.quantity - 1)}
-                          className="w-5 h-5 border rounded flex items-center justify-center hover:bg-gray-100 text-xs"
+                          className="w-5 h-5 border border-accent rounded flex items-center justify-center hover:bg-accent-light text-xs"
                         >
                           -
                         </button>
                         <span className="mx-2">{product.quantity}</span>
                         <button
                           onClick={() => updateQuantity(product.uniqueId, product.quantity + 1)}
-                          className="w-5 h-5 border rounded flex items-center justify-center hover:bg-gray-100 text-xs"
+                          className="w-5 h-5 border border-accent rounded flex items-center justify-center hover:bg-accent-light text-xs"
                         >
                           +
                         </button>

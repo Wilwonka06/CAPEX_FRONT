@@ -1,5 +1,5 @@
 // components/Sidebar.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 
 const Sidebar = () => {
@@ -67,23 +67,24 @@ const Sidebar = () => {
       title: 'Ventas',
       icon: 'bi-graph-up-arrow',
       items: [
-        { name: 'Clientes', icon: 'bi-person-heart-fill', path: '/clientes' },
+        { name: 'Clientes', icon: 'bi-person-fill', path: '/clientes' },
         { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
         { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
         { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
+        { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
         
       ]
     },
   ];
 
   const handleMouseEnter = () => {
-    if (!isLocked) {
+    if (!isLocked && !isExpanded) {
       setIsExpanded(true);
     }
   };
 
   const handleMouseLeave = () => {
-    if (!isLocked) {
+    if (!isLocked && isExpanded) {
       setIsExpanded(false);
       setExpandedGroups({});
     }
@@ -92,16 +93,60 @@ const Sidebar = () => {
   const toggleLock = () => {
     setIsLocked(!isLocked);
     if (!isLocked) {
-      setIsExpanded(true);
+      setIsExpanded(false);
     }
   };
 
+  const getGroupIdByPath = (pathname) => {
+    for (const group of menuGroups) {
+      if (group.items) {
+        for (const item of group.items) {
+          if (item.path === pathname) return group.id;
+        }
+      } else if (group.path === pathname) {
+        return group.id;
+      }
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    // Al cargar, abrir solo el grupo correspondiente a la ruta actual
+    const currentGroup = getGroupIdByPath(location.pathname);
+    setExpandedGroups(currentGroup ? { [currentGroup]: true } : {});
+  }, [location.pathname]);
+
+  // Guardar el grupo abierto al cerrar el sidebar
+  useEffect(() => {
+    if (!isExpanded && isLocked) {
+      // Guardar en localStorage el grupo abierto
+      const openGroup = Object.keys(expandedGroups).find(k => expandedGroups[k]);
+      if (openGroup) {
+        localStorage.setItem('sidebarOpenGroup', openGroup);
+      }
+    }
+  }, [isExpanded, isLocked, expandedGroups]);
+
+  // Al abrir el sidebar, restaurar el grupo abierto
+  useEffect(() => {
+    if ((isExpanded || isLocked) && Object.keys(expandedGroups).length === 0) {
+      const lastOpen = localStorage.getItem('sidebarOpenGroup');
+      if (lastOpen) {
+        setExpandedGroups({ [lastOpen]: true });
+      }
+    }
+  }, [isExpanded, isLocked]);
+
   const toggleGroup = (groupId) => {
     if (isExpanded || isLocked) {
-      setExpandedGroups(prev => ({
-        ...prev,
-        [groupId]: !prev[groupId]
-      }));
+      setExpandedGroups(prev => {
+        // Si ya está abierto, ciérralo; si no, abre solo ese
+        if (prev[groupId]) {
+          return { ...prev, [groupId]: false };
+        } else {
+          return { [groupId]: true };
+        }
+      });
     }
   };
 

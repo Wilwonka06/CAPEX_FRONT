@@ -1,0 +1,55 @@
+import React from "react";
+
+const MODULES = [
+  "Dashboard",
+  "Gestión de Usuarios",
+  "Gestión de Compras",
+  "Gestión de Servicios",
+  "Ventas",
+  "configuración"
+];
+
+const ACTIONS = ["Crear", "Visualizar", "Editar", "Eliminar"];
+
+/**
+ * props:
+ *  value: { [modulo]: { [accion]: boolean } }
+ *  onChange: (modulo, accion, checked) => void
+ *  disabled: boolean (opcional)
+ */
+const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
+  return (
+    <div className="overflow-x-auto w-full">
+      <table className="min-w-full rounded-lg border border-gray-200 shadow-sm text-sm">
+        <thead>
+          <tr className="bg-gray-50 hover:bg-gray-100">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">&nbsp;</th>
+            {MODULES.map((mod) => (
+              <th key={mod} className="py-3 px-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">{mod}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {ACTIONS.map((action, rowIdx) => (
+            <tr key={action} className={rowIdx % 2 === 1 ? "bg-gray-50" : ""}>
+              <td className="py-3 px-4 font-medium text-gray-900 whitespace-nowrap">{action}</td>
+              {MODULES.map((mod) => (
+                <td key={mod} className="py-3 px-4 text-center">
+                  <input
+                    type="checkbox"
+                    checked={!!(value[mod] && value[mod][action])}
+                    onChange={e => onChange(mod, action, e.target.checked)}
+                    disabled={disabled}
+                    className="accent-primary-dark w-4 h-4"
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export default PrivilegesTable; 
