@@ -7,7 +7,7 @@ import ChangeCustomerStatus from "./components/ChangeCustomerStatus.jsx";
 import { createCustomer } from "./services/CreateCustomerService.js";
 import { editCustomer } from "./services/EditCustomerService.js";
 import SearchCustomer from "./components/SearchCustomer.jsx";
-import Paginator from "../Paginator.jsx";
+import Paginator from "./components/Paginator.jsx";
 
 const initialCustomers = [
   {

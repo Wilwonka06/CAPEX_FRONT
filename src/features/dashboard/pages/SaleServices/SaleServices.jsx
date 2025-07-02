@@ -5,7 +5,7 @@ import ViewServiceSaleDetail from "./components/ViewServiceSaleDetail";
 import EditServiceOrder from "./components/EditServiceOrder";
 import AnularServiceOrder from "./components/AnularServiceOrder";
 import SearchServiceOrder from "./components/SearchServiceOrder";
-import Paginator from "../Paginator";
+import Paginator from "./components/Paginator.jsx";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
 
 const SaleServices = () => {
