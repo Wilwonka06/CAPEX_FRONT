@@ -1,17 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import CreateServiceOrder from "./components/CreateServiceOrder";
 import ServiceSalesTabs from "./components/ServiceSalesTabs";
-import ChangeServiceStatus from "./components/ChangeServiceStatus";
-import ViewServiceOrder from "./components/ViewServiceOrder";
+import ViewServiceSaleDetail from "./components/ViewServiceSaleDetail";
 import EditServiceOrder from "./components/EditServiceOrder";
-import DeleteServiceOrder from "./components/DeleteServiceOrder";
+import AnularServiceOrder from "./components/AnularServiceOrder";
 import SearchServiceOrder from "./components/SearchServiceOrder";
-import { createServiceOrder, editServiceOrder, deleteServiceOrder } from "./services/ServiceOrderService";
+import Paginator from "./components/Paginator.jsx";
+import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
 
 const SaleServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isAnularModalOpen, setIsAnularModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '', show: false });
   const [services, setServices] = useState([
     {
       id: 1,
@@ -117,43 +123,66 @@ const SaleServices = () => {
       totalServices: 50000,
       totalProducts: 30000,
       totalGeneral: 80000
+    },
+    {
+      id: 7,
+      clientName: "Carlos",
+      status: "Anulado",
+      date: "15/11/2025",
+      time: "9:30 AM",
+      dineroProporcionado: 40000,
+      devolucion: 0,
+      servicios: [
+        { id: 7, name: "Corte de Cabello", quantity: 1, price: 40000, subtotal: 40000, employee: { name: "Juan" } }
+      ],
+      productos: [],
+      totalServices: 40000,
+      totalProducts: 0,
+      totalGeneral: 40000
     }
   ]);
 
   const itemsPerPage = 5;
-
   const [tab, setTab] = useState("En ejecucion");
 
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [editLoading, setEditLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Función para mostrar mensajes de feedback
+  const showMessage = (text, type = 'success') => {
+    setMessage({ text, type, show: true });
+    setTimeout(() => {
+      setMessage({ text: '', type: '', show: false });
+    }, 3000);
+  };
 
   // Filtrar servicios basado en la búsqueda y el tab
   const filteredServices = services.filter((service) => {
     const matchesSearch = Object.values(service).some((value) =>
       value.toString().toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
+    // Mostrar todas las órdenes en ambas pestañas, incluyendo las anuladas
     const matchesTab = tab === "En ejecucion"
-      ? service.status.toLowerCase() === "en ejecucion"
-      : service.status.toLowerCase() === "pagado";
+      ? service.status.toLowerCase() === "en ejecucion" || service.status.toLowerCase() === "anulado"
+      : service.status.toLowerCase() === "pagado" || service.status.toLowerCase() === "anulado";
+    
     return matchesSearch && matchesTab;
   });
 
-  // Calcular páginas
-  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  // Cálculo de paginación basado en servicios filtrados
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / itemsPerPage));
+  
+  // Para paginar los servicios
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentServices = filteredServices.slice(startIndex, endIndex);
+  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
-  const toggleServiceStatus = (id) => {
-    setServices(prev => prev.map(service =>
-      service.id === id
-        ? { ...service, status: service.status.toLowerCase() === 'en ejecucion' ? 'Pagado' : 'En ejecucion' }
-        : service
-    ));
+  // Ajusta currentPage si es mayor que totalPages
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [services, totalPages, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const handleViewClick = (order) => {
@@ -166,52 +195,61 @@ const SaleServices = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleDeleteClick = (order) => {
+  const handleAnularClick = (order) => {
     setSelectedOrder(order);
-    setIsDeleteModalOpen(true);
+    setIsAnularModalOpen(true);
   };
 
+
+
+  // Crear orden usando servicio
   const handleCreateOrder = async (orderData) => {
-    setError("");
-    setEditLoading(true);
+    setLoading(true);
     try {
       const newOrder = await createServiceOrder(orderData, services);
       setServices(prev => [...prev, newOrder]);
-      setShowCreateForm(false);
-    } catch (err) {
-      setError(err.message || "Error al crear la orden");
+      setIsCreateModalOpen(false);
+      showMessage('Orden de servicio creada exitosamente', 'success');
+    } catch (error) {
+      showMessage(error.message || 'Error al crear la orden de servicio', 'error');
     } finally {
-      setEditLoading(false);
+      setLoading(false);
     }
   };
 
+  // Editar orden usando servicio
   const handleEditOrder = async (formData) => {
-    setEditLoading(true);
-    setError("");
+    setLoading(true);
     try {
-      const updatedOrder = await editServiceOrder({ ...selectedOrder, ...formData }, services);
-      setServices(prev => prev.map(order => order.id === selectedOrder.id ? updatedOrder : order));
+      const updatedOrder = await editServiceOrder({
+        id: selectedOrder.id,
+        ...formData,
+        status: selectedOrder.status
+      }, services);
+      setServices(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
       setIsEditModalOpen(false);
       setSelectedOrder(null);
-    } catch (err) {
-      setError(err.message || "Error al editar la orden");
+      showMessage('Orden de servicio actualizada exitosamente', 'success');
+    } catch (error) {
+      showMessage(error.message || 'Error al actualizar la orden de servicio', 'error');
     } finally {
-      setEditLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleDeleteOrder = async (orderId) => {
-    setEditLoading(true);
-    setError("");
+  // Anular orden usando servicio
+  const handleAnularOrder = async (orderId) => {
+    setLoading(true);
     try {
-      const updatedOrders = await deleteServiceOrder(orderId, services);
-      setServices(updatedOrders);
-      setIsDeleteModalOpen(false);
+      const updatedServices = await anularServiceOrder(orderId, services);
+      setServices(updatedServices);
+      setIsAnularModalOpen(false);
       setSelectedOrder(null);
-    } catch (err) {
-      setError(err.message || "Error al eliminar la orden");
+      showMessage('Orden de servicio anulada exitosamente', 'success');
+    } catch (error) {
+      showMessage(error.message || 'Error al anular la orden de servicio', 'error');
     } finally {
-      setEditLoading(false);
+      setLoading(false);
     }
   };
 
@@ -220,31 +258,41 @@ const SaleServices = () => {
     setCurrentPage(1);
   };
 
-  if (showCreateForm) {
-    return <CreateServiceOrder onBack={() => setShowCreateForm(false)} onCreate={handleCreateOrder} error={error} loading={editLoading} />;
-  }
-
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Mensaje de feedback */}
+      {message.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          message.type === 'success' 
+            ? 'bg-primary text-white' 
+            : 'bg-primary-dark text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <i className={`bi ${message.type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'}`}></i>
+            <span>{message.text}</span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-100">
-            <div>
-              <h1 className="text-2xl font-bold text-text-main">Venta de servicios</h1>
-              <ServiceSalesTabs tab={tab} setTab={setTab} />
-            </div>
-            <button 
-              onClick={() => setShowCreateForm(true)}
-              className="bg-primary-dark hover:bg-primary text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              Crear Orden de Servicio
-            </button>
+          <div className="p-6">
+            <h1 className="text-2xl font-bold">Venta de Servicios</h1>
+            <p className="mt-1">Administra las órdenes de servicio del sistema</p>
+            <ServiceSalesTabs tab={tab} setTab={setTab} />
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchServiceOrder searchTerm={searchTerm} handleSearch={handleSearch} />
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+              >
+                <i className="bi bi-plus-circle mr-2"></i>
+                Nueva Orden
+              </button>
             </div>
-            <div className="w-full overflow-x-auto">
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-50 hover:bg-gray-100">
@@ -259,7 +307,7 @@ const SaleServices = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {currentServices.map((service) => (
+                  {paginatedServices.map((service) => (
                     <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="py-4 px-4 text-sm text-gray-900">{service.id}</td>
                       <td className="py-4 px-4 text-sm text-gray-900">{service.clientName}</td>
@@ -268,21 +316,41 @@ const SaleServices = () => {
                       <td className="py-4 px-4 text-sm text-gray-900">{service.time}</td>
                       <td className="py-4 px-4 text-sm text-gray-900">${service.totalGeneral?.toLocaleString() || 0}</td>
                       <td className="py-4 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${service.status === "Pagado" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>{service.status}</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          service.status === "Pagado" 
+                            ? "bg-green-100 text-green-800" 
+                            : service.status === "Anulado"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}>{service.status}</span>
                       </td>
                       <td className="py-4 px-4 text-sm font-medium text-right">
                         <div className="flex justify-end space-x-2">
-                          <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver" onClick={() => handleViewClick(service)}>
+                          <button 
+                            className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" 
+                            title="Ver"
+                            onClick={() => handleViewClick(service)}
+                          >
                             <i className="bi bi-eye text-primary text-sm"></i>
                           </button>
                           {service.status.toLowerCase() === "en ejecucion" && (
-                            <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" title="Editar" onClick={() => handleEditClick(service)}>
+                            <button 
+                              className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" 
+                              title="Editar"
+                              onClick={() => handleEditClick(service)}
+                            >
                               <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
                             </button>
                           )}
-                          <button className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" title="Eliminar" onClick={() => handleDeleteClick(service)}>
-                            <i className="bi bi-trash text-red-500 text-sm"></i>
-                          </button>
+                          {service.status.toLowerCase() !== "anulado" && (
+                            <button
+                              className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
+                              title="Anular"
+                              onClick={() => handleAnularClick(service)}
+                            >
+                              <i className="bi bi-x-circle text-red-500 text-sm"></i>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -290,51 +358,55 @@ const SaleServices = () => {
                 </tbody>
               </table>
             </div>
-            {/* Paginador */}
-            <div className="mt-6 flex flex-col items-center justify-center">
-              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-primary-dark hover:bg-accent-light focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-                >
-                  <span className="material-icons">chevron_left</span>
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === page
-                      ? "bg-primary-dark text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-dark"
-                      : "text-text-main ring-1 ring-inset ring-primary-dark hover:bg-accent-light focus:z-20 focus:outline-offset-0"
-                      }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-primary-dark hover:bg-accent-light focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-                >
-                  <span className="material-icons">chevron_right</span>
-                </button>
-              </nav>
-              <div className="mt-4 text-center">
-                <p className="text-sm text-text-main">
-                  Mostrando <span className="font-medium">{startIndex + 1}</span> a {" "}
-                  <span className="font-medium">{Math.min(endIndex, filteredServices.length)}</span> {" "}
-                  de <span className="font-medium">{filteredServices.length}</span> resultados
-                </p>
-              </div>
+
+            {/* Paginación */}
+            <div className="mt-6">
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+
+            {/* Mostrar información de paginación */}
+            <div className="mt-4 text-center">
+              <p className="text-sm text-text-main">
+                Mostrando <span className="font-medium">{filteredServices.length > 0 ? startIndex + 1 : 0}</span> a {" "}
+                <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredServices.length)}</span> {" "}
+                de <span className="font-medium">{filteredServices.length}</span> resultados
+              </p>
             </div>
           </div>
         </div>
+
+        <CreateServiceOrder
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={handleCreateOrder}
+          loading={loading}
+          services={services}
+        />
+        <EditServiceOrder
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          order={selectedOrder}
+          onEdit={handleEditOrder}
+          loading={loading}
+          services={services}
+        />
+        <ViewServiceSaleDetail
+          isOpen={isViewModalOpen}
+          onClose={() => setIsViewModalOpen(false)}
+          order={selectedOrder}
+        />
+        <AnularServiceOrder
+          isOpen={isAnularModalOpen}
+          onClose={() => setIsAnularModalOpen(false)}
+          onAnular={handleAnularOrder}
+          order={selectedOrder}
+          loading={loading}
+        />
       </div>
-      <ViewServiceOrder isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} order={selectedOrder} />
-      <EditServiceOrder isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} order={selectedOrder} onEdit={handleEditOrder} loading={editLoading} error={error} />
-      <DeleteServiceOrder isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onDelete={handleDeleteOrder} order={selectedOrder} loading={editLoading} error={error} />
-      {error && <div className="text-red-600 text-center mt-2">{error}</div>}
     </div>
   );
 };

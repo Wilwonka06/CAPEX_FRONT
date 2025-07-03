@@ -1,26 +1,42 @@
-import React from "react";
+import { useState } from "react";
 
 const ChangeRoleStatus = ({ status = 'Activo', onToggle }) => {
+  const [isChanging, setIsChanging] = useState(false);
   const isActive = status === 'Activo';
+
+  const handleToggle = async () => {
+    setIsChanging(true);
+    try {
+      if (onToggle) await onToggle();
+    } catch (error) {
+      console.error("Error al cambiar el estado del rol:", error);
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`flex items-center gap-3 focus:outline-none px-2 py-1 rounded-full transition-colors duration-200 ${isActive ? 'bg-green-50' : 'bg-red-50'}`}
-      title={isActive ? 'Desactivar rol' : 'Activar rol'}
-      aria-pressed={isActive}
-    >
-      <div
-        className={`relative inline-block w-10 h-6 rounded-full transition-colors duration-200 ${isActive ? 'bg-primary' : 'bg-gray-300'}`}
+    <div className="flex items-center space-x-2">
+      <button
+        onClick={handleToggle}
+        disabled={isChanging}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          isActive ? 'bg-primary' : 'bg-gray-300'
+        } ${isChanging ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
-        <div
-          className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${isActive ? 'translate-x-4' : ''}`}
-        ></div>
-      </div>
-      <span className="text-base font-medium text-text-main select-none">
-        {isActive ? 'Activo' : 'Inactivo'}
-      </span>
-    </button>
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+            isActive ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+        {isChanging && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+      </button>
+      <span className={`text-sm font-semibold ${isActive ? 'text-green-600' : 'text-gray-500'}`}>{isActive ? 'Activo' : 'Inactivo'}</span>
+    </div>
   );
 };
 

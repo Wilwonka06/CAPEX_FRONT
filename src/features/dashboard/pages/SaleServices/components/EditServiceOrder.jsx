@@ -1,194 +1,268 @@
 import React, { useState, useEffect } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
+import { validateServiceOrder } from "../services/ServiceOrderService";
 
-const EditServiceOrder = ({ isOpen, onClose, order, onEdit, loading }) => {
+const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services }) => {
   const [formData, setFormData] = useState({
     clientName: "",
-    dineroProporcionado: 0,
-    devolucion: 0,
+    dineroProporcionado: "",
     status: "En ejecucion"
   });
+
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [errors, setErrors] = useState({});
-
-  // Cargar datos de la orden al abrir
-  useEffect(() => {
-    if (order) {
-      setFormData({
-        clientName: order.clientName || "",
-        dineroProporcionado: order.dineroProporcionado || 0,
-        devolucion: order.devolucion || 0,
-        status: order.status || "En ejecucion"
-      });
-      setSelectedServices(order.servicios || []);
-      setSelectedProducts(order.productos || []);
-      setErrors({});
-    }
-  }, [order]);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
   const totalProducts = selectedProducts.reduce((total, product) => total + (product.subtotal || 0), 0);
   const totalGeneral = totalServices + totalProducts;
 
-  // Calcular devolución automáticamente
+  // Cargar datos del order cuando se abre el modal
   useEffect(() => {
-    const devolucion = Math.max(0, formData.dineroProporcionado - totalGeneral);
-    setFormData(prev => ({
-      ...prev,
-      devolucion: devolucion
-    }));
-  }, [formData.dineroProporcionado, totalGeneral]);
+    if (isOpen && order) {
+      setFormData({
+        clientName: order.clientName || "",
+        dineroProporcionado: order.dineroProporcionado?.toString() || "",
+        status: order.status || "En ejecucion"
+      });
+      setSelectedServices(order.servicios || []);
+      setSelectedProducts(order.productos || []);
+    }
+  }, [isOpen, order]);
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.clientName.trim()) newErrors.clientName = "El nombre del cliente es requerido";
-    if (selectedServices.length === 0 && selectedProducts.length === 0) newErrors.items = "Debe agregar al menos un servicio o producto";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Validación en tiempo real
+  useEffect(() => {
+    if (isOpen) {
+      const orderData = {
+        ...formData,
+        servicios: selectedServices,
+        productos: selectedProducts
+      };
+      
+      const validation = validateServiceOrder(orderData, services, totalGeneral, formData.status);
+      setErrors(validation.errors);
+    }
+  }, [formData, selectedServices, selectedProducts, totalGeneral, formData.status, services, isOpen]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'dineroProporcionado' ? parseFloat(value) || 0 : value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
-  };
+  // Reset form cuando se cierra el modal
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        clientName: "",
+        dineroProporcionado: "",
+        status: "En ejecucion"
+      });
+      setSelectedServices([]);
+      setSelectedProducts([]);
+      setErrors({});
+    }
+  }, [isOpen]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-    await onEdit({
-      clientName: formData.clientName,
-      dineroProporcionado: formData.dineroProporcionado,
-      devolucion: formData.devolucion,
-      status: formData.status,
+    
+    if (Object.keys(errors).length > 0 || loading) {
+      return;
+    }
+
+    const orderData = {
+      ...formData,
       servicios: selectedServices,
       productos: selectedProducts,
       totalServices,
       totalProducts,
       totalGeneral
-    });
+    };
+
+    onEdit(orderData);
   };
 
-  if (!isOpen) return null;
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleClose = () => {
+    if (!loading) {
+      onClose();
+    }
+  };
+
+  if (!isOpen || !order) return null;
+
+  const EditOrderCard = ({ children }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl border border-gray-200 relative max-h-[90vh] overflow-y-auto w-full max-w-4xl">
+        <button
+          onClick={handleClose}
+          disabled={loading}
+          className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold disabled:opacity-50"
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">Editar Orden de Servicio</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-            <i className="bi bi-x-lg text-xl"></i>
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+    <EditOrderCard>
+      <div className="p-6">
+        <h2 className="text-xl font-bold text-text-main mb-6">Editar Orden de Servicio</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Cliente */}
-          <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium w-20 text-text-main">Cliente:</label>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Nombre del Cliente *
+            </label>
             <input
               type="text"
               name="clientName"
               value={formData.clientName}
-              onChange={handleChange}
-              className="flex-1 border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-              placeholder="Nombre del cliente"
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                errors.clientName ? 'border-red-500' : 'border-accent'
+              }`}
+              placeholder="Ingrese el nombre del cliente..."
             />
+            {errors.clientName && (
+              <p className="text-red-500 text-sm mt-1">{errors.clientName}</p>
+            )}
           </div>
+
           {/* Estado */}
-          <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium w-20 text-text-main">Estado:</label>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Estado
+            </label>
             <select
               name="status"
               value={formData.status}
-              onChange={handleChange}
-              className="flex-1 border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             >
               <option value="En ejecucion">En ejecución</option>
               <option value="Pagado">Pagado</option>
             </select>
           </div>
+
           {/* Servicios */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium w-20">Servicios:</label>
-              <div className="flex-1">
-                <ServiceSelector
-                  selectedServices={selectedServices}
-                  onServicesChange={setSelectedServices}
-                />
-              </div>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Servicios
+            </label>
+            <ServiceSelector 
+              selectedServices={selectedServices}
+              onServicesChange={setSelectedServices}
+            />
           </div>
+
           {/* Productos */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium w-20">Productos:</label>
-              <div className="flex-1">
-                <ProductSelector
-                  selectedProducts={selectedProducts}
-                  onProductsChange={setSelectedProducts}
-                />
-              </div>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Productos
+            </label>
+            <ProductSelector 
+              selectedProducts={selectedProducts}
+              onProductsChange={setSelectedProducts}
+            />
           </div>
+
+          {errors.items && (
+            <p className="text-red-500 text-sm">{errors.items}</p>
+          )}
+
           {/* Resumen de totales */}
-          <div className="border rounded p-4 bg-gray-50">
-            <h3 className="text-lg font-semibold mb-4">Resumen de Venta</h3>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="border border-accent rounded-lg p-4 bg-gray-50">
+            <h3 className="text-lg font-semibold mb-4 text-text-main">Resumen de Venta</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="font-medium">Total Servicios:</span>
+                  <span className="font-medium text-text-main">Total Servicios:</span>
                   <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
                 </div>
+                
                 <div className="flex justify-between">
-                  <span className="font-medium">Total Productos:</span>
+                  <span className="font-medium text-text-main">Total Productos:</span>
                   <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
                 </div>
+                
                 <div className="flex justify-between border-t pt-2">
-                  <span className="font-bold text-lg">TOTAL GENERAL:</span>
+                  <span className="font-bold text-lg text-text-main">TOTAL GENERAL:</span>
                   <span className="text-purple-600 font-bold text-lg">${totalGeneral.toLocaleString()}</span>
                 </div>
               </div>
+              
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Dinero proporcionado por el cliente:</label>
+                  <label className="block text-sm font-medium mb-1 text-text-main">
+                    Dinero proporcionado:
+                  </label>
                   <input
                     type="number"
                     name="dineroProporcionado"
                     value={formData.dineroProporcionado}
-                    onChange={handleChange}
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                      errors.dineroProporcionado ? 'border-red-500' : 'border-accent'
+                    }`}
                     placeholder="0"
                     min="0"
                     step="0.01"
                   />
+                  {errors.dineroProporcionado && (
+                    <p className="text-red-500 text-sm mt-1">{errors.dineroProporcionado}</p>
+                  )}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium mb-1">Devolución:</label>
-                  <div className="w-full border rounded px-3 py-2 text-sm bg-gray-100 font-bold">
-                    ${formData.devolucion.toLocaleString()}
+                  <label className="block text-sm font-medium mb-1 text-text-main">Devolución:</label>
+                  <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main font-bold">
+                    ${Math.max(0, (formData.dineroProporcionado ? parseFloat(formData.dineroProporcionado) : 0) - totalGeneral).toLocaleString()}
                   </div>
                 </div>
-                {formData.dineroProporcionado < totalGeneral && totalGeneral > 0 && (
-                  <div className="text-red-600 text-sm font-medium">
-                    Falta: ${(totalGeneral - formData.dineroProporcionado).toLocaleString()}
-                  </div>
-                )}
               </div>
             </div>
           </div>
-          {/* Errores */}
-          {errors.items && <div className="text-red-600 text-center text-sm">{errors.items}</div>}
+
           {/* Botones */}
-          <div className="flex justify-center space-x-4 pt-4">
-            <button type="button" onClick={onClose} className="px-6 py-2 border border-accent text-text-main rounded hover:bg-accent-light transition">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-6 py-2 bg-primary-dark text-white rounded hover:bg-primary transition disabled:opacity-50">{loading ? "Guardando..." : "Guardar Cambios"}</button>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={loading}
+              className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading || Object.keys(errors).length > 0}
+              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center"
+            >
+              {loading ? (
+                <>
+                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check-circle mr-2"></i>
+                  Guardar Cambios
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>
-    </div>
+    </EditOrderCard>
   );
 };
 

@@ -1,3 +1,17 @@
+const ViewProductCard = ({ children, title, onClose }) => (
+  <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
+    <button
+      className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
+      onClick={onClose}
+      aria-label="Cerrar"
+    >
+      ×
+    </button>
+    <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>
+    {children}
+  </div>
+);
+
 const ViewCustomer = ({ isOpen, onClose, customer }) => {
   if (!isOpen || !customer) return null;
 
@@ -11,88 +25,57 @@ const ViewCustomer = ({ isOpen, onClose, customer }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Detalles del Cliente</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <i className="bi bi-x-lg text-xl"></i>
-            </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <ViewProductCard title="Detalle del cliente" onClose={onClose}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">ID</label>
+            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{customer.id}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">Estado</label>
+            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">
+              <span
+                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                  customer.status === "Activo"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                {customer.status}
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">Nombre</label>
+            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{customer.firstName} {customer.lastName}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">Tipo de Documento</label>
+            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{getDocumentTypeLabel(customer.documentType)}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">Número de Documento</label>
+            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{customer.documentNumber}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">Correo Electrónico</label>
+            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{customer.email}</div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">Teléfono</label>
+            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{customer.phone}</div>
           </div>
         </div>
-
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              ID
-            </label>
-            <p className="text-sm text-gray-900">{customer.id}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Nombre Completo
-            </label>
-            <p className="text-sm text-gray-900">{customer.firstName} {customer.lastName}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Tipo de Documento
-            </label>
-            <p className="text-sm text-gray-900">{getDocumentTypeLabel(customer.documentType)}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Número de Documento
-            </label>
-            <p className="text-sm text-gray-900">{customer.documentNumber}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Correo Electrónico
-            </label>
-            <p className="text-sm text-gray-900">{customer.email}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Teléfono
-            </label>
-            <p className="text-sm text-gray-900">{customer.phone}</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Estado
-            </label>
-            <span
-              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                customer.status === "Activo"
-                  ? "bg-green-100 text-green-800"
-                  : "bg-red-100 text-red-800"
-              }`}
-            >
-              {customer.status}
-            </span>
-          </div>
-
-          <div className="flex justify-end pt-4">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              Cerrar
-            </button>
-          </div>
+        <div className="flex justify-end pt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
+          >
+            Cerrar
+          </button>
         </div>
-      </div>
+      </ViewProductCard>
     </div>
   );
 };

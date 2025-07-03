@@ -1,14 +1,15 @@
 // components/Sidebar.jsx
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import Logo from '../../../shared/images/Logo(sin fondo).png';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({
     main: true,
+    config: true,
     users: true,
-    contacts: true,
-    products: true,
+    shoppings: true,
     services: true,
     sales: true
   });
@@ -18,10 +19,9 @@ const Sidebar = () => {
   const menuGroups = [
     {
       id: 'main',
-      name: 'Dashboard', 
-      icon: 'bi-speedometer2', 
+      name: 'Dashboard',
+      icon: 'bi-speedometer2',
       path: '/'
-      
     },
     {
       id: 'config',
@@ -57,24 +57,22 @@ const Sidebar = () => {
       items: [
         { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
         { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
-        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' },
-        { name: 'Venta de Servicios', icon: 'bi-calendar-check-fill', path: '/ventas-servicios' }
-        
+        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' }
       ]
     },
-    {
-      id: 'sales',
-      title: 'Ventas',
-      icon: 'bi-graph-up-arrow',
-      items: [
-        { name: 'Clientes', icon: 'bi-person-fill', path: '/clientes' },
-        { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
-        { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
-        { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
-        { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
-        
-      ]
-    },
+   {
+  id: 'sales',
+  title: 'Ventas',
+  icon: 'bi-graph-up-arrow',
+  items: [
+    { name: 'Clientes', icon: 'bi-person-fill', path: '/clientes' },
+    { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
+    { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
+    { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
+    { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
+  ]
+}
+
   ];
 
   const handleMouseEnter = () => {
@@ -165,8 +163,9 @@ const Sidebar = () => {
       {/* Header */}
       <div className="p-4 border-b border-accent/50 flex items-center justify-between">
         <div className="flex items-center">
+          <img src={Logo} alt="Logo" className="h-12 w-12 object-contain" />
           {(isExpanded || isLocked) && (
-            <span className="ml-3 font-semibold text-background text-3xl whitespace-nowrap">
+            <span className="ml-2 font-semibold text-background text-3xl whitespace-nowrap">
               CAP<span className='text-yellow-700'>EX</span>
             </span>
           )}
@@ -175,8 +174,8 @@ const Sidebar = () => {
           <button
             onClick={toggleLock}
             className={`p-1 rounded transition-colors ${
-              isLocked 
-                ? 'text-background/80 hover:text-background' 
+              isLocked
+                ? 'text-background/80 hover:text-background'
                 : 'text-background/80 hover:text-background'
             }`}
             title={isLocked ? 'Desbloquear sidebar' : 'Bloquear sidebar'}
@@ -187,7 +186,7 @@ const Sidebar = () => {
       </div>
 
       {/* Menu con scroll */}
-      <nav 
+      <nav
         className="flex-1 py-4 overflow-y-auto"
         style={{
           scrollbarWidth: 'none',
