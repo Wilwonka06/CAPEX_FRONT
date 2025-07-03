@@ -1,37 +1,12 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-
-// Asumiendo que estos datos vienen de props o un contexto
-const suppliersList = [
-  { id: 1, nombre: "Proveedor A", nit: "A1234567" },
-  { id: 2, nombre: "Proveedor B", nit: "B7654321" },
-];
-
-const productsList = [
-  {
-    id: 101,
-    codigo: "P001",
-    nombre: "Producto Alpha",
-    costo: 100,
-    precioVenta: 150,
-  },
-  {
-    id: 102,
-    codigo: "P002",
-    nombre: "Producto Beta",
-    costo: 200,
-    precioVenta: 280,
-  },
-  {
-    id: 103,
-    codigo: "P003",
-    nombre: "Producto Gamma",
-    costo: 50,
-    precioVenta: 90,
-  },
-];
+import { useProducts } from "../../products/hooks/useProducts";
+import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
+  const { products: productsList, editProduct } = useProducts();
+  const { suppliers: suppliersList } = useSuppliers();
+  
   // Estado del formulario principal
   const [proveedorId, setProveedorId] = useState("");
   const [nit, setNit] = useState("");
@@ -68,13 +43,13 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   useEffect(() => {
     const producto = productsList.find(p => p.id === Number(productoSeleccionado));
     if (producto) {
-      setCosto(producto.costo?.toString() || "");
-      setPrecioVenta(producto.precioVenta?.toString() || "");
+      setCosto(producto.precio?.toString() || "");
+      setPrecioVenta(producto.precio?.toString() || "");
     } else {
       setCosto("");
       setPrecioVenta("");
     }
-  }, [productoSeleccionado]);
+  }, [productoSeleccionado, productsList]);
 
   // Efecto para recalcular totales cuando cambia la lista de items o el IVA general
   useEffect(() => {
@@ -137,6 +112,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     const precioConIva = (Number(costo) * (1 + ivaGeneral)).toFixed(2);
     const newItem = {
       ...producto,
+      codigo: `P${producto.id.toString().padStart(3, '0')}`,
       cantidad: Number(cantidad),
       costo: Number(costo),
       precioVenta: Number(precioVenta),
@@ -181,6 +157,18 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       return;
     }
     const proveedor = suppliersList.find((s) => s.id === Number(proveedorId));
+
+    // Actualizar la cantidad de los productos
+    itemsCompra.forEach(item => {
+      const productoOriginal = productsList.find(p => p.id === item.id);
+      if (productoOriginal) {
+        const productoActualizado = {
+          ...productoOriginal,
+          cantidad: productoOriginal.cantidad + item.cantidad
+        };
+        editProduct(productoActualizado);
+      }
+    });
 
     const nuevaCompra = {
       id: Date.now(),
@@ -233,6 +221,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     value={fechaCompra}
                     onChange={(e) => setFechaCompra(e.target.value)}
                     required
+                    max={new Date().toISOString().slice(0, 10)}
                   />
                 </div>
                 <div>
@@ -262,7 +251,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     required
                   >
                     <option value="">Seleccione proveedor</option>
-                    {suppliersList.map((s) => (
+                    {suppliersList.filter(s => s.isActive).map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.nombre}
                       </option>

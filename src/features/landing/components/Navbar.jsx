@@ -58,7 +58,7 @@ const Navbar = () => {
                         Servicios
                     </Link>
                     
-                    <Link to="/productos" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
+                    <Link to="/landing/productos" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
                         Productos
                     </Link>
                     

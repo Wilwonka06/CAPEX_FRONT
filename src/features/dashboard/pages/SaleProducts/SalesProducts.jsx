@@ -3,6 +3,7 @@ import CreateSaleModal from "./components/CreateSaleModal";
 import SaleDetailModal from "./components/SaleDetailModal";
 import SalesTable from './components/SalesTable';
 import { useSales } from "./context/SalesContext";
+import { useProducts } from '../products/hooks/useProducts';
 
 // Mock de clientes (idéntico a customers)
 const customersMock = [
@@ -14,19 +15,13 @@ const customersMock = [
   { id: 6, documentType: "CE", documentNumber: "2345678901", firstName: "Laura", lastName: "López", email: "laura.lopez@email.com", phone: "3167890123", address: "Av. 16 #17-18", status: "Inactivo" },
 ];
 
-// Mock de productos
-const productsMock = [
-  { id: 101, codigo: "P001", nombre: "Producto Alpha", precio: 150 },
-  { id: 102, codigo: "P002", nombre: "Producto Beta", precio: 280 },
-  { id: 103, codigo: "P003", nombre: "Producto Gamma", precio: 90 },
-];
-
 export default function SalesProductPage() {
   const { sales, setSales } = useSales();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailSale, setDetailSale] = useState(null);
+  const { products } = useProducts();
 
   // Búsqueda
   const filteredSales = sales.filter((sale) => {
@@ -118,7 +113,7 @@ export default function SalesProductPage() {
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreateSale}
         customers={customersMock}
-        products={productsMock}
+        products={products}
       />
       {/* Modal de detalle */}
       <SaleDetailModal
