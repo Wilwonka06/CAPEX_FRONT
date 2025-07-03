@@ -278,7 +278,7 @@ const CreateSupplier = ({ onCreate, suppliers = [] }) => {
             </form>
             </div>
             {/* Footer fijo */}
-            <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
+            <div className="rounded-b-lg flex justify-end px-8 py-4">
               <button
                 type="button"
                 className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"

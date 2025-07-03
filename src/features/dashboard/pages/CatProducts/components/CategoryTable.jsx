@@ -112,21 +112,21 @@ const CategoryTable = ({ categories, onToggleStatus, onEditCategory, onDeleteCat
                       onClick={() => handleViewDetail(category)}
                       title="Ver detalles"
                     >
-                      <i className="bi bi-eye text-primary text-sm"></i>
+                      <i className="bi bi-eye text-primary text-lg"></i>
                     </button>
                     <button 
                       className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleEditFromTable(category)}
                       title="Editar"
                     >
-                      <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
+                      <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
                     </button>
                     <button 
                       className="h-8 w-8 p-0 flex items-center justify-center"
                       onClick={() => handleDeleteFromTable(category)}
                       title="Eliminar"
                     >
-                      <i className="bi bi-trash text-red-500 text-sm"></i>
+                      <i className="bi bi-trash text-red-500 text-lg"></i>
                     </button>
                   </div>
                 </td>
