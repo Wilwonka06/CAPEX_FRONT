@@ -1,5 +1,6 @@
 import DetailServices from './components/DetailServices';
 import React, { useState } from "react";
+import Paginator from '../../../dashboard/pages/Paginator';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -18,6 +19,8 @@ const ServicesPage = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -33,6 +36,10 @@ const ServicesPage = () => {
       (typeof service.active === 'boolean' && normalizeText(service.active ? 'activo' : 'inactivo').includes(normalizeText(searchTerm))) ||
       (service.estado && normalizeText(service.estado).includes(normalizeText(searchTerm)))
   );
+
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="container mx-auto mt-8 px-8 gap-8">
@@ -51,10 +58,10 @@ const ServicesPage = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 py-8 p-20">
-        {filteredServices.map((servicio) => (
+        {paginatedServices.map((servicio) => (
           <div
             key={servicio.id}
-            className="bg-white border border-background rounded-lg overflow-hidden shadow-md flex flex-col w-full h-[340px] gap-x-6"
+            className="bg-white border border-background rounded-lg overflow-hidden shadow-md flex flex-col w-full h-[350px] gap-x-6"
           >
             <img
               src={servicio.img}
@@ -63,9 +70,12 @@ const ServicesPage = () => {
             />
 
             <div className="p-4 flex flex-col flex-1 justify-between">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-text-main font-medium text-base">{servicio.name}</h2>
-                <span className="text-text-main font-bold text-base">{servicio.price}</span>
+              <div className="flex flex-col mb-2">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-text-main font-medium text-base">{servicio.name}</h2>
+                  <span className="text-text-main font-bold text-base">{servicio.price}</span>
+                </div>
+                <span className="text-xs text-primary-dark font-semibold mt-1">{servicio.category}</span>
               </div>
               <button
                 onClick={() => setSelectedService(servicio)}
@@ -81,6 +91,16 @@ const ServicesPage = () => {
           </div>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-4">
+          <Paginator
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
 
       {selectedService && <DetailServices service={selectedService} onClose={() => setSelectedService(null)} />}
     </div>

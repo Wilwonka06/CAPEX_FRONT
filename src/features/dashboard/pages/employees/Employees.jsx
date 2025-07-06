@@ -7,10 +7,10 @@ import SeeEmployee from "../../../dashboard/pages/employees/components/SeeEmploy
 import AddScheduling from "../../../dashboard/pages/employees/components/AddScheduling";
 
 const initialEmployees = [
-  { id: 1, nombre: "Ana", apellido: "García", documento: "12345678", estado: true },
-  { id: 2, nombre: "Luis", apellido: "Pérez", documento: "87654321", estado: true },
-  { id: 3, nombre: "María", apellido: "López", documento: "11223344", estado: false },
-  { id: 4, nombre: "Carlos", apellido: "Ramírez", documento: "99887766", estado: true },
+  { id: 1, nombre: "Ana", apellido: "García", documento: "12345678", estado: true, schedulings: [] },
+  { id: 2, nombre: "Luis", apellido: "Pérez", documento: "87654321", estado: true, schedulings: [] },
+  { id: 3, nombre: "María", apellido: "López", documento: "11223344", estado: false, schedulings: [] },
+  { id: 4, nombre: "Carlos", apellido: "Ramírez", documento: "99887766", estado: true, schedulings: [] },
 ];
 
 const EMPLOYEES_KEY = 'capex_employees';
@@ -19,6 +19,25 @@ const EMPLOYEES_KEY = 'capex_employees';
 const normalizeText = (text) => {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 };
+
+// Utilidad para expandir una programación a eventos diarios
+function expandirProgramacion(prog) {
+  const { fechaInicio, fechaFin, ...rest } = prog;
+  const start = new Date(fechaInicio);
+  const end = new Date(fechaFin || fechaInicio);
+  const dias = [];
+  let current = new Date(start);
+  while (current <= end) {
+    dias.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dias.map(date => ({
+    ...rest,
+    fechaInicio: date.toISOString().split('T')[0],
+    fechaFin: date.toISOString().split('T')[0],
+    id: Date.now() + Math.random(), // id único
+  }));
+}
 
 const EmployeesPage = () => {
   // Leer empleados de localStorage al iniciar
@@ -35,6 +54,7 @@ const EmployeesPage = () => {
   const [employeeForm, setEmployeeForm] = useState(null); // Estado temporal del formulario de empleado
   const [schedulings, setSchedulings] = useState([]); // Lista de programaciones
   const [editingScheduling, setEditingScheduling] = useState(null); // Programación en edición
+  const [addEmployeeSchedulings, setAddEmployeeSchedulings] = useState([]);
 
   // Guardar empleados en localStorage cada vez que cambian
   useEffect(() => {
@@ -79,15 +99,12 @@ const EmployeesPage = () => {
       ...employees,
       {
         id: Date.now(),
-        nombre: data.nombre,
-        apellido: data.apellidos,
-        documento: data.documento,
-        estado: data.estado === 'Activo',
-        correo: data.correo,
-        tipoDocumento: data.tipoDocumento,
+        ...data,
+        schedulings: addEmployeeSchedulings,
       }
     ]);
     setShowForm(false);
+    setAddEmployeeSchedulings([]);
   };
 
   const handleEditClick = (employee) => {
@@ -134,9 +151,11 @@ const EmployeesPage = () => {
       setSchedulings(schedulings.map(s => s.id === editingScheduling.id ? { ...prog, id: editingScheduling.id } : s));
       setEditingScheduling(null);
     } else {
+      // Expandir la programación a eventos diarios
+      const nuevosEventos = expandirProgramacion(prog);
       setSchedulings([
         ...schedulings,
-        { ...prog, id: Date.now() },
+        ...nuevosEventos,
       ]);
     }
   };
@@ -182,6 +201,7 @@ const EmployeesPage = () => {
     setSchedulings([]);
     setEditingScheduling(null);
     setActiveTab('empleado');
+    setAddEmployeeSchedulings([]);
   };
 
   return (
@@ -194,94 +214,91 @@ const EmployeesPage = () => {
         {/* Contenedor principal: calendario a la izquierda, buscador y empleados a la derecha */}
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Calendario - Lado izquierdo */}
-          <div className="lg:w-2/3">
-            <div className="bg-white rounded-lg shadow-md mb-4">
-              <Calendar
-                events={showForm
-                  ? schedulings.map(ev => ({
-                      ...ev,
-                      title: (employeeForm?.nombre ? employeeForm.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
-                    }))
-                  : employees.flatMap(emp =>
-                      (emp.schedulings || []).map(ev => ({
-                        ...ev,
-                        title: emp.nombre + ': ' + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
-                      }))
-                    )
-                }
-                onEditEvent={event => handleEditScheduling(event)}
-                onDeleteEvent={id => handleDeleteScheduling(id)}
-              />
-            </div>
-          </div>
-          {/* Lado derecho: buscador y empleados */}
-          <div className="lg:w-1/3 lg:ml-auto">
-            {/* Buscador y botón en la parte superior izquierda de la columna */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="relative w-full max-w-xs">
-                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-                <input
-                  type="text"
-                  placeholder="Buscar empleado..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+          {(showForm || editEmployee || seeEmployee) && (
+            <div className="lg:w-2/3">
+              <div className="bg-white rounded-lg shadow-md mb-4">
+                <Calendar
+                  events={
+                    showForm
+                      ? addEmployeeSchedulings.map(ev => ({
+                          ...ev,
+                          title: (employeeForm?.nombre ? employeeForm.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
+                        }))
+                      : editEmployee
+                        ? (editEmployee.schedulings || []).map(ev => ({
+                            ...ev,
+                            title: (editEmployee?.nombre ? editEmployee.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
+                          }))
+                        : seeEmployee
+                          ? (seeEmployee.schedulings || []).map(ev => ({
+                              ...ev,
+                              title: (seeEmployee?.nombre ? seeEmployee.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
+                            }))
+                          : employees.flatMap(emp =>
+                              (emp.schedulings || []).map(ev => ({
+                                ...ev,
+                                title: (emp.nombre ? emp.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
+                              }))
+                            )
+                  }
+                  onEditEvent={event => handleEditScheduling(event)}
+                  onDeleteEvent={id => handleDeleteScheduling(id)}
                 />
               </div>
-              <button
-                className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors"
-                onClick={() => setShowForm(true)}
-              >
-                <i className="bi bi-plus-lg text-lg"></i>
-                Agregar
-              </button>
             </div>
+          )}
+          {/* Lado derecho: buscador y empleados */}
+          <div className={(showForm || editEmployee || seeEmployee) ? "lg:w-1/3 lg:ml-auto" : "w-full"}>
+            {/* Buscador y botón en la parte superior izquierda de la columna */}
+            {!(showForm || editEmployee || seeEmployee) ? (
+              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                <div className="relative w-full max-w-xs flex-1">
+                  <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
+                  <input
+                    type="text"
+                    placeholder="Buscar empleado..."
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+                  />
+                </div>
+                <button
+                  className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors"
+                  onClick={() => setShowForm(true)}
+                >
+                  <i className="bi bi-plus-lg text-lg"></i>
+                  Agregar
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mb-4">
+                <div className="relative w-full max-w-xs">
+                  <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
+                  <input
+                    type="text"
+                    placeholder="Buscar empleado..."
+                    value={searchTerm}
+                    onChange={handleSearch}
+                    className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+                  />
+                </div>
+                <button
+                  className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors"
+                  onClick={() => setShowForm(true)}
+                >
+                  <i className="bi bi-plus-lg text-lg"></i>
+                  Agregar
+                </button>
+              </div>
+            )}
             {showForm ? (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex gap-2 mb-4">
-                  <button
-                    className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${activeTab === 'empleado' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'}`}
-                    onClick={() => setActiveTab('empleado')}
-                    type="button"
-                  >
-                    Nuevo Empleado
-                  </button>
-                  <button
-                    className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${activeTab === 'programacion' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'}`}
-                    onClick={() => setActiveTab('programacion')}
-                    type="button"
-                  >
-                    Programación
-                  </button>
-                </div>
-                {activeTab === 'empleado' ? (
-                  <AddEmployee
-                    onCancel={handleCancel}
-                    onSave={handleEmployeeFormChange}
-                    formData={employeeForm}
-                  />
-                ) : (
-                  <AddScheduling
-                    onAdd={handleAddScheduling}
-                    editing={editingScheduling}
-                    onCancelEdit={() => setEditingScheduling(null)}
-                  />
-                )}
-                {/* Botón general para guardar todo */}
-                <div className="flex justify-end gap-2 mt-8">
-                  <button
-                    onClick={handleCancel}
-                    className="bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleSaveAll}
-                    className="bg-primary-dark text-white px-6 py-2 rounded font-semibold hover:bg-primary transition"
-                  >
-                    Guardar todo
-                  </button>
-                </div>
+                <AddEmployee
+                  onCancel={handleCancel}
+                  onSave={handleAddEmployee}
+                  schedulings={addEmployeeSchedulings}
+                  setSchedulings={setAddEmployeeSchedulings}
+                />
               </div>
             ) : editEmployee ? (
               <div className="bg-white rounded-lg shadow-md p-6">
@@ -363,7 +380,7 @@ const EmployeesPage = () => {
         </div>
       </div>
     </div>
-  );
+);
 };
 
 export default EmployeesPage;
