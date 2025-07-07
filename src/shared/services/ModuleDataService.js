@@ -32,11 +32,65 @@ const initialRoles = [
   }
 ];
 
+const ROLES_KEY = 'roles';
+
+function saveRolesToStorage(roles) {
+  localStorage.setItem(ROLES_KEY, JSON.stringify(roles));
+}
+
+function loadRolesFromStorage() {
+  const data = localStorage.getItem(ROLES_KEY);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export const getRoles = () => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve(initialRoles);
-    }, 500); // Simula un retardo de red
+      let roles = loadRolesFromStorage();
+      if (!roles) {
+        saveRolesToStorage(initialRoles);
+        roles = initialRoles;
+      }
+      resolve(roles);
+    }, 500);
+  });
+};
+
+export const createRole = (role) => {
+  return new Promise((resolve) => {
+    getRoles().then((roles) => {
+      const newRole = { ...role, id: Date.now() };
+      const updatedRoles = [...roles, newRole];
+      saveRolesToStorage(updatedRoles);
+      resolve(newRole);
+    });
+  });
+};
+
+export const updateRole = (updatedRole) => {
+  return new Promise((resolve) => {
+    getRoles().then((roles) => {
+      const updatedRoles = roles.map(r => r.id === updatedRole.id ? updatedRole : r);
+      saveRolesToStorage(updatedRoles);
+      resolve(updatedRole);
+    });
+  });
+};
+
+export const deleteRole = (roleId) => {
+  return new Promise((resolve) => {
+    getRoles().then((roles) => {
+      const updatedRoles = roles.filter(r => r.id !== roleId);
+      saveRolesToStorage(updatedRoles);
+      resolve(roleId);
+    });
   });
 };
 

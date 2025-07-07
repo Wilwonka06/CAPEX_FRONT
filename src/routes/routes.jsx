@@ -1,6 +1,8 @@
 // routes/Routes.jsx
-// routes/Routes.jsx
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import RequireAuth from '../features/auth/components/RequireAuth';
+import RequirePrivilege from '../features/auth/components/RequirePrivilege';
+import NotFound from '../shared/components/NotFound';
 
 // Layouts
 import Layout from '../features/dashboard/Layout';
@@ -9,7 +11,8 @@ import Landing from '../features/landing/Landing';
 // Pages Dashboard
 import CategoriasProductos from '../features/dashboard/pages/CatProducts/CatProducts';
 import CategoriasServicios from '../features/dashboard/pages/CatServices/CatServices';
-import Citas from '../features/dashboard/pages/Quotes/Quotes';
+import Appointments from '../features/dashboard/pages/appointments/Appointments';
+import Quotes from '../features/dashboard/pages/quotes/Quotes';
 import Clientes from '../features/dashboard/pages/Customers/Customer';
 import Compras from '../features/dashboard/pages/Shopping/Shopping';
 import Dashboard from '../features/dashboard/components/Dashboard';
@@ -17,118 +20,222 @@ import Empleados from '../features/dashboard/pages/Employees/Employees';
 import Pedidos from '../features/dashboard/pages/Orders/Orders';
 import Productos from '../features/dashboard/pages/Products/Products';
 import Proveedores from '../features/dashboard/pages/Suppliers/Suppliers';
-import RolesPage from '../features/dashboard/pages/Roles/RolesPage';
+import RolesPage from '../features/dashboard/pages/roles/RolesPage';
 import SaleServices from '../features/dashboard/pages/SaleServices/SaleServices';
 import Servicios from '../features/dashboard/pages/Services/Services';
-import Usuarios from '../features/dashboard/pages/Users/Users';
+import Users from '../features/dashboard/pages/users/Users';
 import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProducts';
 
 // Pages Landing
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
 import Products from '../features/landing/pages/products/Products';
-import Quotes from '../features/landing/pages/quotes/Quotes';
+import ClientAppointments from '../features/landing/pages/appointments/ClientAppointments';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
+import EditProfile from '../features/landing/components/EditProfile';
+
+import LoginPage from '../features/auth/pages/LoginPage';
+import ForgotPassword from '../features/auth/pages/ForgotPassword';
+import ResetPassword from '../features/auth/pages/ResetPassword';
+import EditProfilePage from '../shared/pages/EditProfilePage';
 
 const router = createBrowserRouter([
   {
-    path: '/',
-    element: <Layout />,
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPassword />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPassword />,
+  },
+  {
+    path: '/edit-profile',
+    element: <EditProfile />,
+  },
+  {
+    path: '/perfil',
+    element: <EditProfilePage />,
+  },
+  {
+    path: '/dashboard/perfil',
+    element: <EditProfilePage />,
+  },
+  {
+    element: <RequireAuth />,
     children: [
       {
-        index: true,
-        element: <Navigate to="/dashboard" replace />
-      },
-      // Dashboard routes ordenadas alfabéticamente
-      {
-        path: 'categorias-productos',
-        element: <CategoriasProductos />
+        path: '/',
+        element: <Navigate to="/dashboard" replace />,
       },
       {
-        path: 'categorias-servicios',
-        element: <CategoriasServicios />
+        path: '/dashboard',
+        element: <Layout />,
+        children: [
+          {
+            index: true,
+            element: (
+              <RequirePrivilege module="Dashboard" action="Visualizar">
+                <Dashboard />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'roles',
+            element: (
+              <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
+                <RolesPage />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'usuarios',
+            element: (
+              <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
+                <Users />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'productos',
+            element: (
+              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+                <Productos />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'compras',
+            element: (
+              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+                <Compras />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'proveedores',
+            element: (
+              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+                <Proveedores />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'categorias-productos',
+            element: (
+              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+                <CategoriasProductos />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'servicios',
+            element: (
+              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+                <Servicios />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'empleados',
+            element: (
+              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+                <Empleados />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'categorias-servicios',
+            element: (
+              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+                <CategoriasServicios />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'ventas-servicios',
+            element: (
+              <RequirePrivilege module="Ventas" action="Visualizar">
+                <SaleServices />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'ventas-productos',
+            element: (
+              <RequirePrivilege module="Ventas" action="Visualizar">
+                <VentasProductos />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'pedidos',
+            element: (
+              <RequirePrivilege module="Ventas" action="Visualizar">
+                <Pedidos />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'citas',
+            element: (
+              <RequirePrivilege module="Ventas" action="Visualizar">
+                <Appointments />
+              </RequirePrivilege>
+            )
+          },
+          {
+            path: 'clientes',
+            element: (
+              <RequirePrivilege module="Ventas" action="Visualizar">
+                <Clientes />
+              </RequirePrivilege>
+            )
+          },
+        ]
       },
       {
-        path: 'citas',
-        element: <Citas />
+        path: '/landing',
+        element: <Landing />,
+        children: [
+          {
+            index: true,
+            element: <Home />
+          },
+          {
+            path: 'citas',
+            element: <Quotes />
+          },
+          {
+            path: 'pedidos',
+            element: <Orders />
+          },
+          {
+            path: 'productos',
+            element: <Products />
+          },
+          {
+            path: 'servicios',
+            element: <ServicesPage />
+          },
+          {
+            path: 'citas-cliente',
+            element: <ClientAppointments />
+          }
+        ]
       },
       {
-        path: 'clientes',
-        element: <Clientes />
-      },
-      {
-        path: 'compras',
-        element: <Compras />
-      },
-      {
-        path: 'dashboard',
-        element: <Dashboard />
-      },
-      {
-        path: 'empleados',
-        element: <Empleados />
-      },
-      {
-        path: 'pedidos',
-        element: <Pedidos />
-      },
-      {
-        path: 'productos',
-        element: <Productos />
-      },
-      {
-        path: 'proveedores',
-        element: <Proveedores />
-      },
-      {
-        path: 'roles',
-        element: <RolesPage />
-      },
-      {
-        path: 'servicios',
-        element: <Servicios />
-      },
-      {
-        path: 'usuarios',
-        element: <Usuarios />
-      },
-      {
-        path: 'ventas-productos',
-        element: <VentasProductos />
-      },
-      {
-        path: 'ventas-servicios',
-        element: <SaleServices />
-      },
+        path: '/roles',
+        element: <Navigate to="/dashboard/roles" replace />
+      }
     ]
   },
   {
-    path: '/landing',
-    element: <Landing />,
-    children: [
-      {
-        index: true,
-        element: <Home />
-      },
-      // Landing routes ordenadas alfabéticamente
-      {
-        path: 'citas',
-        element: <Quotes />
-
-      },
-      {
-        path: 'pedidos',
-        element: <Orders />
-      },
-      {
-        path: 'productos',
-        element: <Products />
-      },
-      {
-        path: 'servicios',
-        element: <ServicesPage />
-      }
-    ]
+    path: '*',
+    element: <NotFound />
   }
 ]);
 
