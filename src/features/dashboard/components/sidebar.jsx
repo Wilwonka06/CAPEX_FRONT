@@ -55,10 +55,11 @@ const Sidebar = () => {
       title: 'Gestión de Servicios',
       icon: 'bi-tools',
       items: [
-        { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
-        { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
-        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' }
-      ]
+  { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
+  { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
+  { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' },
+  { name: 'Agendamiento de Citas', icon: 'bi-calendar-check', path: '/programacion' }
+]
     },
    {
   id: 'sales',

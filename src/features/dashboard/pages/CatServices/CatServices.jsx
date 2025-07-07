@@ -8,9 +8,9 @@ import SearchProduct from '../../../../shared/Search';
 
 // Interruptor de Estado
 const StatusToggle = ({ isActive, onToggle }) => (
-  <label onClick={(e) => { e.stopPropagation(); onToggle(); }} className="flex items-center cursor-pointer">
+  <label onClick={(e) => { e.stopPropagation(); }} className="flex items-center cursor-pointer">
     <div className="relative">
-      <input type="checkbox" className="sr-only" checked={isActive} readOnly />
+      <input type="checkbox" className="sr-only" checked={isActive} onChange={onToggle} />
       <div className={`block w-11 h-6 rounded-full ${isActive ? 'bg-primary' : 'bg-gray-300'}`}></div>
       <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'translate-x-full' : ''}`}></div>
     </div>
@@ -68,6 +68,11 @@ const initialCategories = [
   { id: 5, name: 'Depilación', description: 'Servicios de depilación con cera, láser y otros métodos.', isActive: true },
 ];
 
+// Función para normalizar texto (remover tildes)
+const normalizeText = (text) => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
 // --- Componente Principal ---
 const CatServices = () => {
   const [categories, setCategories] = useState(initialCategories);
@@ -117,10 +122,17 @@ const CatServices = () => {
     setIsEditModalOpen(true);
   };
 
+  const handleDeleteCategory = (category) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar la categoría "${category.name}"?`)) {
+      setCategories(categories.filter((cat) => cat.id !== category.id));
+    }
+  };
+
   const filteredCategories = categories.filter(
     (cat) =>
-      cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cat.description.toLowerCase().includes(searchTerm.toLowerCase())
+      normalizeText(cat.name).includes(normalizeText(searchTerm)) ||
+      normalizeText(cat.description).includes(normalizeText(searchTerm)) ||
+      (cat.isActive ? 'Activo' : 'Inactivo').includes(searchTerm)
   );
 
   const itemsPerPage = 3;
@@ -155,7 +167,7 @@ const CatServices = () => {
               categories={paginatedCategories} 
               onToggleStatus={toggleCategoryStatus}
               onEdit={handleEditClick}
-              onDelete={(category) => alert(`Eliminar ${category.name}`)}
+              onDelete={handleDeleteCategory}
             />
 
             {totalPages > 1 && (
