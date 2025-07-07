@@ -1,8 +1,21 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { validateCustomer } from "../services/ValidateCustomerService";
 
-const CreateCustomer = ({ onBack }) => {
-  const navigate = useNavigate();
+const CreateProductCard = ({ children, title, onClose }) => (
+  <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
+    <button
+      className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
+      onClick={onClose}
+      aria-label="Cerrar"
+    >
+      ×
+    </button>
+    <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>
+    {children}
+  </div>
+);
+
+const CreateCustomer = ({ isOpen, onClose, onCreate, loading, customers = [] }) => {
   const [formData, setFormData] = useState({
     documentType: "",
     documentNumber: "",
@@ -10,174 +23,182 @@ const CreateCustomer = ({ onBack }) => {
     lastName: "",
     email: "",
     phone: "",
-    password: "",
-    confirmPassword: "",
   });
+  const [errors, setErrors] = useState({});
+
+  // Resetear formulario cuando se abre/cierra el modal
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        documentType: "",
+        documentNumber: "",
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+      });
+      setErrors({});
+    }
+  }, [isOpen]);
+
+  // Validación en tiempo real
+  useEffect(() => {
+    if (isOpen) {
+      const validation = validateCustomer(formData, customers);
+      setErrors(validation.errors);
+    }
+  }, [formData, customers, isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log(formData);
-    navigate("/dashboard/customers");
+    if (Object.keys(errors).length === 0 && onCreate) onCreate(formData);
   };
 
-  return (
-    <div className="p-4 bg-white">
-      <div className="flex items-center mb-6">
-        <i className="bi bi-arrow-left text-xl mr-2 cursor-pointer" onClick={onBack}></i>
-        <h2 className="text-xl">Registrese en CAPEX</h2>
-      </div>
+  const handleClose = () => {
+    if (!loading) {
+      onClose();
+    }
+  };
 
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-4">
-        <div className="space-y-3">
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Nombre:</label>
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <CreateProductCard title="Crear nuevo cliente" onClose={handleClose}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Nombre *</label>
               <input
                 type="text"
                 name="firstName"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.firstName}
                 onChange={handleChange}
-                className="w-full border rounded p-1.5"
                 required
+                disabled={loading}
+                placeholder="Ej. Juan"
               />
+              {errors.firstName && <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>}
             </div>
-          </div>
-
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Apellido:</label>
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Apellido *</label>
               <input
                 type="text"
                 name="lastName"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.lastName}
                 onChange={handleChange}
-                className="w-full border rounded p-1.5"
                 required
+                disabled={loading}
+                placeholder="Ej. Pérez"
               />
+              {errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
             </div>
           </div>
 
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Tipo de documento:</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Tipo de documento *</label>
               <select
                 name="documentType"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.documentType}
                 onChange={handleChange}
-                className="w-full border rounded p-1.5"
                 required
+                disabled={loading}
               >
                 <option value="">Seleccione...</option>
                 <option value="CC">Cédula de Ciudadanía</option>
                 <option value="CE">Cédula de Extranjería</option>
                 <option value="TI">Tarjeta de Identidad</option>
               </select>
+              {errors.documentType && <p className="text-red-600 text-xs mt-1">{errors.documentType}</p>}
             </div>
-          </div>
-
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Documento:</label>
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Número de documento *</label>
               <input
                 type="text"
                 name="documentNumber"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.documentNumber}
                 onChange={handleChange}
-                className="w-full border rounded p-1.5"
                 required
+                disabled={loading}
+                placeholder="Ej. 123456789"
               />
+              {errors.documentNumber && <p className="text-red-600 text-xs mt-1">{errors.documentNumber}</p>}
             </div>
           </div>
 
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Teléfono:</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full border rounded p-1.5"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Correo:</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Correo electrónico *</label>
               <input
                 type="email"
                 name="email"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full border rounded p-1.5"
                 required
+                disabled={loading}
+                placeholder="Ej. correo@ejemplo.com"
               />
+              {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
             </div>
-          </div>
-
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Contraseña:</label>
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Teléfono *</label>
               <input
-                type="password"
-                name="password"
-                value={formData.password}
+                type="tel"
+                name="phone"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                value={formData.phone}
                 onChange={handleChange}
-                className="w-full border rounded p-1.5"
                 required
+                disabled={loading}
+                placeholder="Ej. 3001234567"
               />
+              {errors.phone && <p className="text-red-600 text-xs mt-1">{errors.phone}</p>}
             </div>
           </div>
 
-          <div className="flex items-start">
-            <span className="text-red-500 mr-1">*</span>
-            <div className="w-full">
-              <label className="block mb-1">Confirmar contraseña:</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full border rounded p-1.5"
-                required
-              />
-            </div>
+          <div className="flex justify-end gap-4 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition flex items-center"
+              disabled={loading || Object.keys(errors).length > 0}
+            >
+              {loading ? (
+                <>
+                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-plus-circle mr-2"></i>
+                  Crear Cliente
+                </>
+              )}
+            </button>
           </div>
-        </div>
-
-        <div className="flex justify-center gap-4 mt-6">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-6 py-1.5 border rounded"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-1.5 border rounded"
-          >
-            Registrarme
-          </button>
-        </div>
-      </form>
+        </form>
+      </CreateProductCard>
     </div>
   );
 };

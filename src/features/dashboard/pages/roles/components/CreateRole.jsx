@@ -1,10 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import PrivilegesTable from './PrivilegesTable';
+import { validateRole } from '../services/ValidateRoleService';
 
-const CreateRole = ({ isOpen, onClose }) => {
+const CreateProductCard = ({ children, title, onClose }) => (
+  <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
+    <button
+      className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
+      onClick={onClose}
+      aria-label="Cerrar"
+    >
+      ×
+    </button>
+    <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>
+    {children}
+  </div>
+);
+
+const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: ''
   });
+  const [privileges, setPrivileges] = useState({});
+  const [errors, setErrors] = useState({});
+
+  // Resetear formulario cuando se abre/cierra el modal
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({ nombre: '', descripcion: '' });
+      setPrivileges({});
+      setErrors({});
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setErrors(validateRole(formData, privileges, roles));
+  }, [formData, privileges, roles]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -14,64 +45,93 @@ const CreateRole = ({ isOpen, onClose }) => {
     }));
   };
 
+  const handlePrivilegeChange = (modulo, accion, checked) => {
+    setPrivileges(prev => ({
+      ...prev,
+      [modulo]: {
+        ...prev[modulo],
+        [accion]: checked
+      }
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Aquí irá la lógica para crear el rol
-    console.log('Datos del formulario:', formData);
-    onClose();
+    if (Object.keys(errors).length === 0 && onCreate) onCreate(formData, privileges);
+  };
+
+  const handleClose = () => {
+    if (!loading) {
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-md w-full">
-        <h2 className="text-2xl font-bold mb-6">Crear Nuevo Rol</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nombre">
-              Nombre
-            </label>
-            <input
-              type="text"
-              id="nombre"
-              name="nombre"
-              value={formData.nombre}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <CreateProductCard title="Crear nuevo rol" onClose={handleClose}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Nombre</label>
+              <input
+                type="text"
+                name="nombre"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                value={formData.nombre}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
+              {errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Descripción (opcional)</label>
+              <input
+                type="text"
+                name="descripcion"
+                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                value={formData.descripcion}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="descripcion">
-              Descripción
-            </label>
-            <textarea
-              id="descripcion"
-              name="descripcion"
-              value={formData.descripcion}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-32"
-              required
-            />
+          <div>
+            <label className="block text-text-main text-sm font-bold mb-2">Privilegios</label>
+            <PrivilegesTable value={privileges} onChange={handlePrivilegeChange} disabled={loading} />
+            {errors.privilegios && <p className="text-red-600 text-xs mt-1">{errors.privilegios}</p>}
           </div>
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
-              onClick={onClose}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+              onClick={handleClose}
+              className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
+              disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition flex items-center"
+              disabled={loading || Object.keys(errors).length > 0}
             >
-              Crear Rol
+              {loading ? (
+                <>
+                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-plus-circle mr-2"></i>
+                  Crear Rol
+                </>
+              )}
             </button>
           </div>
         </form>
-      </div>
+      </CreateProductCard>
     </div>
   );
 };

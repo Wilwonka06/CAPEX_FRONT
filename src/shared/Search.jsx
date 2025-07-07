@@ -1,6 +1,13 @@
 import React from "react";
+import PropTypes from "prop-types";
 
-export default function SearchProduct({ searchTerm, handleSearch }) {
+/**
+ * Componente de buscador reutilizable
+ * @param {string} searchTerm - El término de búsqueda actual
+ * @param {function} handleSearch - Función para manejar el cambio en el input
+ * @param {string} placeholder - Placeholder personalizado (opcional)
+ */
+function SearchProduct({ searchTerm, handleSearch, placeholder ="buscar "}) {
     return (
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -16,3 +23,11 @@ export default function SearchProduct({ searchTerm, handleSearch }) {
         </div>
       );
 }
+
+SearchProduct.propTypes = {
+  searchTerm: PropTypes.string.isRequired,
+  handleSearch: PropTypes.func.isRequired,
+  placeholder: PropTypes.string,
+};
+
+export default SearchProduct;

@@ -1,17 +1,20 @@
-import React from 'react'
 // o la ruta correcta según tu estructura
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 import { RouterProvider } from 'react-router-dom';
 import router from './routes/Routes';
-import ServicesPage from './features/landing/pages/ServicesPage/ServicesPage';
+import { SalesProvider } from './features/dashboard/pages/SaleProducts/context/SalesContext';
+import { OrdersProvider } from './features/dashboard/pages/orders/context/OrdersContext';
 
-
- function App() {
+function App() {
   console.log('hoal')
   return (
     <div className="App">
-      <RouterProvider router={router} />
+      <SalesProvider>
+        <OrdersProvider>
+          <RouterProvider router={router} />
+        </OrdersProvider>
+      </SalesProvider>
     </div>
   );
 }

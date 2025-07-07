@@ -36,7 +36,7 @@ const EmployeeSelector = ({ selectedEmployee, onEmployeeChange }) => {
             }
           }}
           onFocus={() => setIsOpen(true)}
-          className="w-full border rounded px-3 py-1 text-sm"
+          className="w-full border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           placeholder="Buscar empleado..."
         />
         <i className="bi bi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -44,7 +44,7 @@ const EmployeeSelector = ({ selectedEmployee, onEmployeeChange }) => {
 
       {/* Dropdown de empleados */}
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-accent rounded shadow-lg max-h-40 overflow-y-auto">
           {filteredEmployees.map(employee => (
             <div
               key={employee.id}
