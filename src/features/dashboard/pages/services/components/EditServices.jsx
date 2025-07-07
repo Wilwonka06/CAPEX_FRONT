@@ -71,7 +71,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [] }) => {
                 <form className="px-8 pb-8" onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                         <div>
-                            <label htmlFor="servicio" className="block text-sm font-medium text-text-main mb-1">Servicio</label>
+                            <label htmlFor="servicio" className="block text-sm font-medium text-text-main mb-1">Servicio <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
                                 name="Servicio"
@@ -83,7 +83,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [] }) => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="categoria" className="block text-sm font-medium text-text-main mb-1">Categoría</label>
+                            <label htmlFor="categoria" className="block text-sm font-medium text-text-main mb-1">Categoría <span className="text-red-500">*</span></label>
                             <select
                                 name="Categoria"
                                 id="categoria"
@@ -101,7 +101,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [] }) => {
                             </select>
                         </div>
                         <div>
-                            <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción</label>
+                            <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
                                 name="Descripcion"
@@ -113,7 +113,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [] }) => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="duracion" className="block text-sm font-medium text-text-main mb-1">Duración (min)</label>
+                            <label htmlFor="duracion" className="block text-sm font-medium text-text-main mb-1">Duración (min) <span className="text-red-500">*</span></label>
                             <input
                                 type="number"
                                 name="duracion"
@@ -125,7 +125,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [] }) => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="precio" className="block text-sm font-medium text-text-main mb-1">Precio</label>
+                            <label htmlFor="precio" className="block text-sm font-medium text-text-main mb-1">Precio <span className="text-red-500">*</span></label>
                             <input
                                 type="number"
                                 name="precio"
@@ -137,7 +137,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [] }) => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado</label>
+                            <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
                             <select
                                 name="estado"
                                 id="estado"

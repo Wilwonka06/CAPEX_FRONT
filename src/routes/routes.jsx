@@ -25,6 +25,7 @@ import SaleServices from '../features/dashboard/pages/SaleServices/SaleServices'
 import Servicios from '../features/dashboard/pages/Services/Services';
 import Users from '../features/dashboard/pages/users/Users';
 import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProducts';
+import Scheduling from '../features/dashboard/pages/scheduling/scheduling';
 
 // Pages Landing
 import Home from '../features/landing/components/Home';

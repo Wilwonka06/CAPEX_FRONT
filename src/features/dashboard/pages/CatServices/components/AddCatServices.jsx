@@ -36,7 +36,7 @@ const AddCatServices = ({ onClose, onAdd }) => {
                 <form className="px-8 pb-8" onSubmit={handleSubmit}>
                     <div className="space-y-6 mb-4">
                         <div>
-                            <label htmlFor="categoria" className="block text-sm font-medium text-text-main mb-1">Categoría</label>
+                            <label htmlFor="categoria" className="block text-sm font-medium text-text-main mb-1">Categoría <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
                                 name="Categoria"
@@ -48,7 +48,7 @@ const AddCatServices = ({ onClose, onAdd }) => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción</label>
+                            <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
                                 name="Descripcion"
@@ -60,7 +60,7 @@ const AddCatServices = ({ onClose, onAdd }) => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado</label>
+                            <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
                             <select
                                 name="estado"
                                 id="estado"
