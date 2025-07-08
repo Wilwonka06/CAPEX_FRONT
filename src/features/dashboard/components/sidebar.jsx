@@ -1,7 +1,6 @@
 // components/Sidebar.jsx
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import Logo from '../../../shared/images/Logo(sin fondo).png';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -57,8 +56,8 @@ const Sidebar = () => {
       items: [
         { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
         { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
-        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' }
-        
+        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' },
+        { name: 'Agendamiento General', icon: 'bi-calendar-range-fill', path: '/programacion' }
       ]
     },
     {
@@ -71,7 +70,6 @@ const Sidebar = () => {
         { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
         { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
         { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
-        
       ]
     },
    {

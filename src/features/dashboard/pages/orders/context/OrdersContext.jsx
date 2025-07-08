@@ -7,10 +7,9 @@ const pedidosMock = [
     fecha: "2024-06-10",
     clienteId: 1,
     estado: "Pendiente",
-    valor: 250000,
+    valor: 350,
     productos: [
-      { id: 1, nombre: "Shampoo Nutritivo", cantidad: 2, precio: 50000 },
-      { id: 2, nombre: "Acondicionador Suavizante", cantidad: 1, precio: 150000 },
+      { id: 1, nombre: "Extensión Lacia Natural", cantidad: 1, precio: 350 },
     ],
     numeroOrden: "ORD-20240610-001"
   },
@@ -19,9 +18,10 @@ const pedidosMock = [
     fecha: "2024-06-09",
     clienteId: 2,
     estado: "En proceso",
-    valor: 180000,
+    valor: 215,
     productos: [
-      { id: 3, nombre: "Mascarilla Reparadora", cantidad: 3, precio: 60000 },
+      { id: 2, nombre: "Shampoo Nutritivo", cantidad: 1, precio: 120 },
+      { id: 3, nombre: "Acondicionador Suavizante", cantidad: 1, precio: 95 },
     ],
     numeroOrden: "ORD-20240609-002"
   },

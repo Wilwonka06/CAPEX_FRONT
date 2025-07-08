@@ -1,5 +1,3 @@
-// routes/Routes.jsx
-// routes/Routes.jsx
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 // Layouts
@@ -15,7 +13,7 @@ import Compras from '../features/dashboard/pages/Shopping/Shopping';
 import Dashboard from '../features/dashboard/components/Dashboard';
 import Empleados from '../features/dashboard/pages/employees/Employees';  
 import Pedidos from '../features/dashboard/pages/Orders/Orders';
-import Productos from '../features/dashboard/pages/Products/Products';
+import Productos from '../features/dashboard/pages/products/products';
 import Proveedores from '../features/dashboard/pages/Suppliers/Suppliers';
 import RolesPage from '../features/dashboard/pages/Roles/RolesPage';
 import SaleServices from '../features/dashboard/pages/SaleServices/SaleServices';
@@ -25,9 +23,12 @@ import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProdu
 import Scheduling from '../features/dashboard/pages/scheduling/scheduling';
 
 // Pages Landing
+import Cart from '../features/landing/pages/cart/Cart';
+import CuidadoCapilar from '../features/landing/pages/products/pages/CuidadoCapilar';
+import Extensiones from '../features/landing/pages/products/pages/Extensiones';
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
-import Products from '../features/landing/pages/products/Products';
+import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
 import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
 
@@ -40,7 +41,6 @@ const router = createBrowserRouter([
         index: true,
         element: <Navigate to="/dashboard" replace />
       },
-      // === RUTAS DASHBOARD (orden alfabético) ===
       {
         path: 'categorias-productos',
         element: <CategoriasProductos />
@@ -103,7 +103,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'programacion',
-        element: <Scheduling/>
+        element: <Scheduling />
       }
     ]
   },
@@ -115,28 +115,42 @@ const router = createBrowserRouter([
         index: true,
         element: <Home />
       },
-      // === RUTAS LANDING (orden alfabético) ===
+      {
+        path: 'cart',
+        element: <Cart />
+      },
       {
         path: 'citas',
         element: <Quotes />
       },
       {
-        path: 'servicespage',
-        element: <ServicesPage />
-
+        path: 'cuidado-capilar',
+        element: <CuidadoCapilar />
+      },
+      {
+        path: 'extensiones',
+        element: <Extensiones />
+      },
+      {
+        path: 'mis-pedidos',
+        element: <Orders />
       },
       {
         path: 'pedidos',
         element: <Orders />
       },
       {
-        path: 'productos', // Catálogo de productos para el cliente
-        element: <Products />
+        path: 'productos/:id',
+        element: <ProductDetailPageCliente />
+      },
+      {
+        path: 'servicespage',
+        element: <ServicesPage />
       },
       {
         path: 'servicios',
         element: <ServicesPage />
-      }
+      },
     ]
   }
 ]);
