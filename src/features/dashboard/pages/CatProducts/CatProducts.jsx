@@ -3,6 +3,7 @@ import CategoryTable from "./components/CategoryTable";
 import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import CreateCategory from "./components/CreateCategory";
+import { useCategories } from './hooks/useCategories';
 
 export const initialCategories = [
   {
@@ -38,7 +39,7 @@ export const initialCategories = [
 ];
 
 const CatProductsPage = () => {
-  const [categories, setCategories] = useState(initialCategories);
+  const { categories, setCategories, addCategory, editCategory, deleteCategory, toggleCategoryStatus } = useCategories();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -61,29 +62,6 @@ const CatProductsPage = () => {
       (category.isActive ? 'activo' : 'inactivo').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Función para cambiar el estado de una categoría
-  const toggleCategoryStatus = (id) => {
-    setCategories(
-      categories.map((category) =>
-        category.id === id ? { ...category, isActive: !category.isActive } : category
-      )
-    );
-  };
-
-  // Función para editar una categoría
-  const handleEditCategory = (updatedCategory) => {
-    setCategories(
-      categories.map((category) =>
-        category.id === updatedCategory.id ? updatedCategory : category
-      )
-    );
-  };
-
-  // Función para eliminar una categoría
-  const handleDeleteCategory = (categoryId) => {
-    setCategories(categories.filter((category) => category.id !== categoryId));
-  };
-
   // Paginación simple
   const itemsPerPage = 5;
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
@@ -105,17 +83,7 @@ const CatProductsPage = () => {
               <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar categorías..." />
               <CreateCategory 
                 categories={categories}
-                onCreate={(newCat) => {
-                setCategories([
-                  ...categories,
-                  {
-                    id: categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1,
-                    name: newCat.name,
-                    description: newCat.description,
-                    isActive: true
-                  }
-                ]);
-                }} 
+                onCreate={addCategory}
               />
             </div>
 
@@ -123,8 +91,8 @@ const CatProductsPage = () => {
             <CategoryTable 
               categories={paginatedCategories} 
               onToggleStatus={toggleCategoryStatus}
-              onEditCategory={handleEditCategory}
-              onDeleteCategory={handleDeleteCategory}
+              onEditCategory={editCategory}
+              onDeleteCategory={deleteCategory}
             />
 
             {/* Paginación */}

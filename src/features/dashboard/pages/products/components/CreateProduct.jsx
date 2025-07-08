@@ -1,13 +1,16 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 import {
   isDuplicateProductName,
   isNumberInputValid,
   isValidNumber,
   isValidDecimal,
 } from "../../../../../shared/validations";
+import { useCategories } from '../../CatProducts/hooks/useCategories';
 
-const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
+const CreateProduct = ({ onCreate, products = [] }) => {
   const [open, setOpen] = useState(false);
+  const { categories: useCategoriesCategories } = useCategories();
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -228,9 +231,9 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
                     required
                   >
                     <option value="">Seleccionar categoría</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.name}>
-                        {category.name}
+                    {useCategoriesCategories.filter(c => c.isActive).map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
                       </option>
                     ))}
                   </select>
@@ -314,6 +317,11 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
       {error && <div className="text-red-500 text-xs mb-2">{error}</div>}
     </>
   );
+};
+
+CreateProduct.propTypes = {
+  onCreate: PropTypes.func,
+  products: PropTypes.array,
 };
 
 export default CreateProduct;
