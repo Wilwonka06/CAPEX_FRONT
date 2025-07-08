@@ -68,6 +68,22 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
     horaInicio: '08:00',
     horaFin: '09:00',
   });
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const newErrors = {};
+    if (!form.nombre.trim()) newErrors.nombre = 'El nombre es obligatorio';
+    if (!form.apellidos.trim()) newErrors.apellidos = 'Los apellidos son obligatorios';
+    if (!form.tipoDocumento.trim()) newErrors.tipoDocumento = 'El tipo de documento es obligatorio';
+    if (!form.documento.trim()) newErrors.documento = 'El documento es obligatorio';
+    if (!form.correo.trim()) newErrors.correo = 'El correo es obligatorio';
+    if (!form.contrasena.trim()) newErrors.contrasena = 'La contraseña es obligatoria';
+    if (!form.confirmarContrasena.trim()) newErrors.confirmarContrasena = 'Confirma la contraseña';
+    if (form.contrasena && form.confirmarContrasena && form.contrasena !== form.confirmarContrasena) newErrors.confirmarContrasena = 'Las contraseñas no coinciden';
+    if (!form.estado.trim()) newErrors.estado = 'El estado es obligatorio';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleProgChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -110,6 +126,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validate()) return;
     if (onSave) onSave(form);
   };
 
@@ -190,6 +207,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
             </div>
             <div>
               <label htmlFor="apellidos" className="block text-sm font-medium text-text-main mb-1">Apellidos</label>
@@ -202,6 +220,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.apellidos && <p className="text-red-500 text-xs mt-1">{errors.apellidos}</p>}
             </div>
             <div>
               <label htmlFor="tipoDocumento" className="block text-sm font-medium text-text-main mb-1">Tipo de Documento</label>
@@ -217,6 +236,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                   <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
                 ))}
               </select>
+              {errors.tipoDocumento && <p className="text-red-500 text-xs mt-1">{errors.tipoDocumento}</p>}
             </div>
             <div>
               <label htmlFor="documento" className="block text-sm font-medium text-text-main mb-1">Documento</label>
@@ -229,6 +249,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
             </div>
             <div>
               <label htmlFor="correo" className="block text-sm font-medium text-text-main mb-1">Correo</label>
@@ -241,6 +262,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
             </div>
             <div>
               <label htmlFor="contrasena" className="block text-sm font-medium text-text-main mb-1">Contraseña</label>
@@ -253,6 +275,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.contrasena && <p className="text-red-500 text-xs mt-1">{errors.contrasena}</p>}
             </div>
             <div>
               <label htmlFor="confirmarContrasena" className="block text-sm font-medium text-text-main mb-1">Confirmar Contraseña</label>
@@ -265,6 +288,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.confirmarContrasena && <p className="text-red-500 text-xs mt-1">{errors.confirmarContrasena}</p>}
             </div>
             <div>
               <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado</label>
@@ -278,6 +302,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
                 <option value="Activo">Activo</option>
                 <option value="Inactivo">Inactivo</option>
               </select>
+              {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
             </div>
           </div>
           <div className="flex justify-end mt-8 gap-2">

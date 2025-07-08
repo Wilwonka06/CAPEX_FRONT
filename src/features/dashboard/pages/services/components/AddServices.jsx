@@ -11,6 +11,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
         estado: "Activo",
         imagen: null
     });
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         setForm(prev => ({
@@ -19,6 +20,18 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
         }));
         // eslint-disable-next-line
     }, [categories]);
+
+    const validate = () => {
+        const newErrors = {};
+        if (!form.Servicio.trim()) newErrors.Servicio = 'El nombre del servicio es obligatorio';
+        if (!form.Categoria) newErrors.Categoria = 'La categoría es obligatoria';
+        if (!form.Descripcion.trim()) newErrors.Descripcion = 'La descripción es obligatoria';
+        if (!form.duracion || isNaN(form.duracion) || Number(form.duracion) <= 0) newErrors.duracion = 'La duración debe ser un número mayor a 0';
+        if (!form.precio || isNaN(form.precio) || Number(form.precio) <= 0) newErrors.precio = 'El precio debe ser un número mayor a 0';
+        if (!form.estado) newErrors.estado = 'El estado es obligatorio';
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleChange = (e) => {
         const { name, value, type, files } = e.target;
@@ -30,6 +43,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!validate()) return;
         onAdd({
             name: form.Servicio,
             category: form.Categoria,
@@ -73,6 +87,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.Servicio && <p className="text-red-500 text-xs mt-1">{errors.Servicio}</p>}
                         </div>
                         <div>
                             <label htmlFor="categoria" className="block text-sm font-medium text-text-main mb-1">Categoría <span className="text-red-500">*</span></label>
@@ -91,6 +106,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                     <option key={cat.id} value={cat.name}>{cat.name}</option>
                                 ))}
                             </select>
+                            {errors.Categoria && <p className="text-red-500 text-xs mt-1">{errors.Categoria}</p>}
                         </div>
                         <div>
                             <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción <span className="text-red-500">*</span></label>
@@ -103,6 +119,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.Descripcion && <p className="text-red-500 text-xs mt-1">{errors.Descripcion}</p>}
                         </div>
                         <div>
                             <label htmlFor="duracion" className="block text-sm font-medium text-text-main mb-1">Duración (min) <span className="text-red-500">*</span></label>
@@ -115,6 +132,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.duracion && <p className="text-red-500 text-xs mt-1">{errors.duracion}</p>}
                         </div>
                         <div>
                             <label htmlFor="precio" className="block text-sm font-medium text-text-main mb-1">Precio <span className="text-red-500">*</span></label>
@@ -127,6 +145,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.precio && <p className="text-red-500 text-xs mt-1">{errors.precio}</p>}
                         </div>
                         <div>
                             <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
@@ -140,6 +159,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 <option value="Activo">Activo</option>
                                 <option value="Inactivo">Inactivo</option>
                             </select>
+                            {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
                         </div>
                         <div className="md:col-span-2">
                             <label htmlFor="imagen" className="block text-sm font-medium text-text-main mb-1">
