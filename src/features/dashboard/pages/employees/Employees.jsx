@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Paginator from "../Paginator";
+import Paginator from "../../../../shared/Paginator";
 import Calendar from "../../../dashboard/pages/employees/components/Calendar";
 import AddEmployee from "../../../dashboard/pages/employees/components/AddEmployee";
 import EditEmployee from "../../../dashboard/pages/employees/components/EditEmployee";

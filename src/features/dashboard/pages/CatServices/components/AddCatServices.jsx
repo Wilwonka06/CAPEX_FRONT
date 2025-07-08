@@ -6,6 +6,16 @@ const AddCatServices = ({ onClose, onAdd }) => {
         Descripcion: "",
         estado: "Activo"
     });
+    const [errors, setErrors] = useState({});
+
+    const validate = () => {
+        const newErrors = {};
+        if (!form.Categoria.trim()) newErrors.Categoria = 'La categoría es obligatoria';
+        if (!form.Descripcion.trim()) newErrors.Descripcion = 'La descripción es obligatoria';
+        if (!form.estado) newErrors.estado = 'El estado es obligatorio';
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -14,6 +24,7 @@ const AddCatServices = ({ onClose, onAdd }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!validate()) return;
         onAdd({
             name: form.Categoria,
             description: form.Descripcion,
@@ -46,6 +57,7 @@ const AddCatServices = ({ onClose, onAdd }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.Categoria && <p className="text-red-500 text-xs mt-1">{errors.Categoria}</p>}
                         </div>
                         <div>
                             <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción <span className="text-red-500">*</span></label>
@@ -58,6 +70,7 @@ const AddCatServices = ({ onClose, onAdd }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.Descripcion && <p className="text-red-500 text-xs mt-1">{errors.Descripcion}</p>}
                         </div>
                         <div>
                             <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
@@ -71,6 +84,7 @@ const AddCatServices = ({ onClose, onAdd }) => {
                                 <option value="Activo">Activo</option>
                                 <option value="Inactivo">Inactivo</option>
                             </select>
+                            {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
                         </div>
                     </div>
                     <div className="flex justify-end space-x-4 mt-8">
