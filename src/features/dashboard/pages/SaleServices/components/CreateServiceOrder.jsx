@@ -1,187 +1,253 @@
 import React, { useState, useEffect } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
+import { validateServiceOrder } from "../services/ServiceOrderService";
 
-const CreateServiceOrder = ({ onBack }) => {
+const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) => {
   const [formData, setFormData] = useState({
-    cliente: "",
-    dineroProporcionado: 0,
-    devolucion: 0,
+    clientName: "",
+    dineroProporcionado: "",
     status: "En ejecucion"
   });
 
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [errors, setErrors] = useState({});
 
   // Calcular totales
-  const totalServices = selectedServices.reduce((total, service) => total + service.subtotal, 0);
-  const totalProducts = selectedProducts.reduce((total, product) => total + product.subtotal, 0);
+  const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
+  const totalProducts = selectedProducts.reduce((total, product) => total + (product.subtotal || 0), 0);
   const totalGeneral = totalServices + totalProducts;
 
-  // Calcular devolución automáticamente
+  // Validación en tiempo real
   useEffect(() => {
-    const devolucion = Math.max(0, formData.dineroProporcionado - totalGeneral);
-    setFormData(prev => ({
-      ...prev,
-      devolucion: devolucion
-    }));
-  }, [formData.dineroProporcionado, totalGeneral]);
+    const orderData = {
+      ...formData,
+      servicios: selectedServices,
+      productos: selectedProducts
+    };
+    
+    const validation = validateServiceOrder(orderData, services, totalGeneral, formData.status);
+    setErrors(validation.errors);
+  }, [formData, selectedServices, selectedProducts, totalGeneral, services]);
+
+  // Reset form cuando se cierra el modal
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        clientName: "",
+        dineroProporcionado: "",
+        status: "En ejecucion"
+      });
+      setSelectedServices([]);
+      setSelectedProducts([]);
+      setErrors({});
+    }
+  }, [isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Datos del servicio:", {
+    
+    if (Object.keys(errors).length > 0 || loading) {
+      return;
+    }
+
+    const orderData = {
       ...formData,
       servicios: selectedServices,
       productos: selectedProducts,
       totalServices,
       totalProducts,
       totalGeneral
-    });
+    };
+
+    onCreate(orderData);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'dineroProporcionado' ? parseFloat(value) || 0 : value
+      [name]: value
     }));
   };
 
-  return (
-    <div className="p-6 bg-white rounded-lg shadow-lg border border-gray-200 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center mb-6">
-        <button onClick={onBack} className="mr-3 p-2 bg-primary-dark text-white rounded hover:bg-primary transition">
-          <i className="bi bi-arrow-left text-xl"></i>
+  const handleClose = () => {
+    if (!loading) {
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const CreateOrderCard = ({ children }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl border border-gray-200 relative max-h-[90vh] overflow-y-auto w-full max-w-4xl">
+        <button
+          onClick={handleClose}
+          disabled={loading}
+          className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold disabled:opacity-50"
+        >
+          ×
         </button>
-        <h2 className="text-xl font-semibold text-text-main">Crear Venta de Servicio</h2>
+        {children}
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Cliente */}
-        <div className="flex items-center space-x-4">
-          <label className="text-sm font-medium w-20 text-text-main">Cliente:</label>
-          <input
-            type="text"
-            name="cliente"
-            value={formData.cliente}
-            onChange={handleInputChange}
-            className="flex-1 border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="Buscar cliente..."
-          />
-        </div>
-
-        {/* Estado */}
-        <div className="flex items-center space-x-4">
-          <label className="text-sm font-medium w-20 text-text-main">Estado:</label>
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleInputChange}
-            className="flex-1 border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-          >
-            <option value="En ejecucion">En ejecución</option>
-            <option value="Pagado">Pagado</option>
-          </select>
-        </div>
-
-        {/* Servicios */}
-        <div className="space-y-2">
-          <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium w-20">Servicios:</label>
-            <div className="flex-1">
-              <ServiceSelector 
-                selectedServices={selectedServices}
-                onServicesChange={setSelectedServices}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Productos */}
-        <div className="space-y-2">
-          <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium w-20">Productos:</label>
-            <div className="flex-1">
-              <ProductSelector 
-                selectedProducts={selectedProducts}
-                onProductsChange={setSelectedProducts}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Resumen de totales */}
-        <div className="border rounded p-4 bg-gray-50">
-          <h3 className="text-lg font-semibold mb-4">Resumen de Venta</h3>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium">Total Servicios:</span>
-                <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="font-medium">Total Productos:</span>
-                <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
-              </div>
-              
-              <div className="flex justify-between border-t pt-2">
-                <span className="font-bold text-lg">TOTAL GENERAL:</span>
-                <span className="text-purple-600 font-bold text-lg">${totalGeneral.toLocaleString()}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Dinero proporcionado por el cliente:</label>
-                <input
-                  type="number"
-                  name="dineroProporcionado"
-                  value={formData.dineroProporcionado}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 text-sm"
-                  placeholder="0"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Devolución:</label>
-                <div className="w-full border rounded px-3 py-2 text-sm bg-gray-100 font-bold">
-                  ${formData.devolucion.toLocaleString()}
-                </div>
-              </div>
-              
-              {formData.dineroProporcionado < totalGeneral && totalGeneral > 0 && (
-                <div className="text-red-600 text-sm font-medium">
-                  Falta: ${(totalGeneral - formData.dineroProporcionado).toLocaleString()}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Botones */}
-        <div className="flex justify-center space-x-4 pt-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-6 py-2 border border-accent text-text-main rounded hover:bg-accent-light transition"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-2 bg-primary-dark text-white rounded hover:bg-primary transition"
-          >
-            Crear Venta de Servicio
-          </button>
-        </div>
-      </form>
     </div>
+  );
+
+  return (
+    <CreateOrderCard>
+      <div className="p-6">
+        <h2 className="text-xl font-bold text-text-main mb-6">Crear Orden de Servicio</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Cliente */}
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Nombre del Cliente *
+            </label>
+            <input
+              type="text"
+              name="clientName"
+              value={formData.clientName}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                errors.clientName ? 'border-red-500' : 'border-accent'
+              }`}
+              placeholder="Ingrese el nombre del cliente..."
+            />
+            {errors.clientName && (
+              <p className="text-red-500 text-sm mt-1">{errors.clientName}</p>
+            )}
+          </div>
+
+          {/* Estado */}
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Estado
+            </label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="En ejecucion">En ejecución</option>
+              <option value="Pagado">Pagado</option>
+            </select>
+          </div>
+
+          {/* Servicios */}
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Servicios
+            </label>
+            <ServiceSelector 
+              selectedServices={selectedServices}
+              onServicesChange={setSelectedServices}
+            />
+          </div>
+
+          {/* Productos */}
+          <div>
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Productos
+            </label>
+            <ProductSelector 
+              selectedProducts={selectedProducts}
+              onProductsChange={setSelectedProducts}
+            />
+          </div>
+
+          {errors.items && (
+            <p className="text-red-500 text-sm">{errors.items}</p>
+          )}
+
+          {/* Resumen de totales */}
+          <div className="border border-accent rounded-lg p-4 bg-gray-50">
+            <h3 className="text-lg font-semibold mb-4 text-text-main">Resumen de Venta</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="font-medium text-text-main">Total Servicios:</span>
+                  <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="font-medium text-text-main">Total Productos:</span>
+                  <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
+                </div>
+                
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-bold text-lg text-text-main">TOTAL GENERAL:</span>
+                  <span className="text-purple-600 font-bold text-lg">${totalGeneral.toLocaleString()}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-text-main">
+                    Dinero proporcionado:
+                  </label>
+                  <input
+                    type="number"
+                    name="dineroProporcionado"
+                    value={formData.dineroProporcionado}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                      errors.dineroProporcionado ? 'border-red-500' : 'border-accent'
+                    }`}
+                    placeholder="0"
+                    min="0"
+                    step="0.01"
+                  />
+                  {errors.dineroProporcionado && (
+                    <p className="text-red-500 text-sm mt-1">{errors.dineroProporcionado}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-text-main">Devolución:</label>
+                  <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main font-bold">
+                    ${Math.max(0, (formData.dineroProporcionado ? parseFloat(formData.dineroProporcionado) : 0) - totalGeneral).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Botones */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={loading}
+              className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading || Object.keys(errors).length > 0}
+              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center"
+            >
+              {loading ? (
+                <>
+                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-plus-circle mr-2"></i>
+                  Crear Orden
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </CreateOrderCard>
   );
 };
 

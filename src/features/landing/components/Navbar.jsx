@@ -45,7 +45,7 @@ const Navbar = () => {
                 <div className="text-text-main text-2xl font-bold rounded-md flex items-center">
                     {/* Imagen de ejemplo - reemplaza con tu logo real */}
                     <img src="https://placehold.co/32x32/D2B48C/1E1E1E?text=M" alt="Logo" className="rounded-full mr-2" />
-                    <Link to="/landing" className="p-2 rounded-md transition-colors duration-300 text-primary hover:text-primary">
+                    <Link to="/" className="p-2 rounded-md transition-colors duration-300 text-primary hover:text-primary">
                         CAPEX
                     </Link>
                 </div>
@@ -110,7 +110,7 @@ const Navbar = () => {
                     </Link>
                 </div>
 
-                {/* Botones de Autenticación (a la derecha) */}
+                {/* Botones de Autenticación o Perfil de Usuario (a la derecha) */}
                 <div className="hidden md:flex md:space-x-4 items-center">
                     <Link to="/landing/mis-pedidos" className="px-4 py-2 font-semibold duration-300 flex items-center gap-2">
                         <span className="material-icons">assignment</span>
