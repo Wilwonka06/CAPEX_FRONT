@@ -1,35 +1,5 @@
 // Servicio para órdenes de servicio con validación centralizada
-
-export const validateServiceOrder = (orderData, orders = [], totalGeneral = 0, status = '') => {
-  const errors = {};
-
-  // Validación del nombre del cliente
-  if (!orderData.clientName || orderData.clientName.trim().length < 2) {
-    errors.clientName = 'El nombre del cliente es requerido y debe tener al menos 2 caracteres';
-  }
-
-  // Validación de servicios y productos
-  const hasServices = (orderData.servicios?.length || 0) > 0;
-  const hasProducts = (orderData.productos?.length || 0) > 0;
-  
-  if (!hasServices && !hasProducts) {
-    errors.items = 'Debe agregar al menos un servicio o producto';
-  }
-
-  // Validación de dinero proporcionado si el status es "Pagado"
-  if (status === 'Pagado') {
-    if (!orderData.dineroProporcionado || isNaN(orderData.dineroProporcionado)) {
-      errors.dineroProporcionado = 'El dinero proporcionado es requerido y debe ser un número válido';
-    } else if (parseFloat(orderData.dineroProporcionado) < totalGeneral) {
-      errors.dineroProporcionado = `El dinero proporcionado debe ser mayor o igual al total general ($${totalGeneral.toLocaleString()})`;
-    }
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
-};
+import { validateServiceOrder } from '../../../../../shared/validations';
 
 export const createServiceOrder = async (orderData, orders) => {
   // Simula delay de API

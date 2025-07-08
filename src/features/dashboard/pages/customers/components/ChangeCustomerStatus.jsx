@@ -21,7 +21,7 @@ const ChangeCustomerStatus = ({ status = 'Activo', onToggle }) => {
         onClick={handleToggle}
         disabled={isChanging}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          isActive ? 'bg-primary' : 'bg-gray-300'
+          isActive ? 'bg-text-main' : 'bg-gray-300'
         } ${isChanging ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <span

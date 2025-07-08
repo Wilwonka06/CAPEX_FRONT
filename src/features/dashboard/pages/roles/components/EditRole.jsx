@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import PrivilegesTable from './PrivilegesTable';
-import { validateRole } from '../services/ValidateRoleService';
+import { validateRole } from '../../../../../shared/validations';
 
 const EditProductCard = ({ children, title, onClose }) => (
   <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">

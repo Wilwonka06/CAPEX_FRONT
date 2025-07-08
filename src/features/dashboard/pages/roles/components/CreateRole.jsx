@@ -114,7 +114,7 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition flex items-center"
+              className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center"
               disabled={loading || Object.keys(errors).length > 0}
             >
               {loading ? (

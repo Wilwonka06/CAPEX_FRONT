@@ -196,7 +196,7 @@ const RolesPage = () => {
               <SearchRole searchTerm={searchTerm} handleSearch={handleSearch} />
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
               >
                 <i className="bi bi-plus-circle mr-2"></i>
                 Nuevo Rol

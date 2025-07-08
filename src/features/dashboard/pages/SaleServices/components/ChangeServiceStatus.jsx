@@ -22,7 +22,7 @@ const ChangeServiceStatus = ({ status, onToggle }) => {
         onClick={handleToggle}
         disabled={isChanging}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-          isActive ? 'bg-primary' : 'bg-gray-300'
+          isActive ? 'bg-text-main' : 'bg-gray-300'
         } ${isChanging ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <span

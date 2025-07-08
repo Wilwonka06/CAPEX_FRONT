@@ -1,6 +1,6 @@
 import DetailServices from './components/DetailServices';
 import React, { useState } from "react";
-import Paginator from '../../../dashboard/pages/Paginator';
+import Paginator from '../../../../shared/Paginator';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
-import { validateServiceOrder } from "../services/ServiceOrderService";
+import { validateServiceOrder } from "../../../../../shared/validations";
 
 const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) => {
   const [formData, setFormData] = useState({
@@ -229,8 +229,8 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
             </button>
             <button
               type="submit"
+              className="w-full bg-text-main text-white py-2 rounded-md font-semibold hover:bg-primary-dark transition disabled:opacity-50 flex items-center justify-center mt-4"
               disabled={loading || Object.keys(errors).length > 0}
-              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center"
             >
               {loading ? (
                 <>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
-import { validateServiceOrder } from "../services/ServiceOrderService";
+import { validateServiceOrder } from "../../../../../shared/validations";
 
 const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services }) => {
   const [formData, setFormData] = useState({

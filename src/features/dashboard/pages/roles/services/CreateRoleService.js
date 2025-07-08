@@ -1,4 +1,4 @@
-import { validateRole } from './ValidateRoleService';
+import { validateRole } from '../../../../../shared/validations';
 
 // Servicio simulado para crear un rol
 export async function createRole(role, roles = []) {
