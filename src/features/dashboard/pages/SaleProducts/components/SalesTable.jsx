@@ -1,6 +1,8 @@
 import PropTypes from "prop-types";
 
 export default function SalesTable({ sales, customers, onView, onAnnul, onDownload, currentPage, totalPages, onPageChange }) {
+  const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
       <table className="min-w-full text-xs">
@@ -22,7 +24,7 @@ export default function SalesTable({ sales, customers, onView, onAnnul, onDownlo
                 <td className="py-2 px-3">{sale.fecha}</td>
                 <td className="py-2 px-3">{sale.numeroVenta}</td>
                 <td className="py-2 px-3">{cliente ? `${cliente.firstName} ${cliente.lastName}` : "-"}</td>
-                <td className="py-2 px-3">${sale.valor.toLocaleString()}</td>
+                <td className="py-2 px-3">${formatNumber(sale.valor)}</td>
                 <td className="py-2 px-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${sale.estado === 'Completado' ? ' text-green-800' : ' text-red-500'}`}>{sale.estado}</span>
                 </td>

@@ -62,6 +62,14 @@ export default function CreateSaleModal({
     0
   );
 
+  const formatNumber = (num) => {
+    if (num === '' || num === undefined || num === null) return '';
+    const parts = num.toString().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  };
+  const cleanNumber = (str) => str.replace(/,/g, '');
+
   const handleAddProduct = () => {
     let nuevosErrores = {};
     if (!productoSeleccionado) {
@@ -328,13 +336,11 @@ export default function CreateSaleModal({
                       Cantidad <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="number"
-                      min="1"
+                      type="text"
+                      name="cantidad"
+                      value={formatNumber(cantidad)}
+                      onChange={e => setCantidad(Number(cleanNumber(e.target.value)))}
                       className="w-full px-3 py-2 border rounded-md text-sm"
-                      value={cantidad}
-                      onChange={(e) =>
-                        setCantidad(Math.max(1, Number(e.target.value)))
-                      }
                     />
                     {errores.cantidad && (
                       <span className="text-xs text-red-500">
@@ -437,7 +443,7 @@ export default function CreateSaleModal({
                           Total:
                         </td>
                         <td className="py-2 px-3 font-bold text-lg" colSpan="2">
-                          ${total.toLocaleString()}
+                          <span className="font-bold text-lg text-primary">${formatNumber(total)}</span>
                         </td>
                       </tr>
                     </tfoot>
