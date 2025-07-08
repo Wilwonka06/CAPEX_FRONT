@@ -9,7 +9,6 @@ export default function ProductsTable({
   products,
   onEdit,
   onDelete,
-  categories = [],
 }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -187,7 +186,7 @@ export default function ProductsTable({
           setSelectedProduct(null);
         }}
         onSave={handleSaveEdit}
-        categories={categories}
+
         products={products}
       />
 
@@ -221,5 +220,4 @@ ProductsTable.propTypes = {
   ).isRequired,
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
-  categories: PropTypes.array,
 };

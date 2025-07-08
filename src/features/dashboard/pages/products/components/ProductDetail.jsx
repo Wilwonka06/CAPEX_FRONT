@@ -22,11 +22,11 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
           <div className="flex flex-col md:flex-row gap-8">
             {/* Columna Izquierda: Imagen y nombre */}
             <div className="flex flex-col items-center md:w-1/2 w-full">
-              <div className="w-60 h-60 bg-gray-50 border-2 border-gray-200 rounded-lg flex items-center justify-center mb-4 shadow-sm p-0">
+              <div className="w-60 h-60 bg-gray-50 rounded-lg flex items-center justify-center mb-4 shadow-lg p-0">
                 <img
                   src={product.foto}
                   alt={product.nombre}
-                  className="w-full h-full object-contain rounded-lg m-0"
+                  className="w-full h-full object-cover rounded-lg m-0"
                 />
               </div>
               <div className="text-lg font-bold text-gray-800 text-center mb-2">{product.nombre}</div>
