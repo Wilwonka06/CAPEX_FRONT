@@ -7,7 +7,7 @@ export function validateRole(formData, privileges, roles = []) {
     errors.nombre = 'Ya existe un rol con ese nombre.';
   }
   // Privilegios: al menos uno seleccionado
-  const hasAnyPrivilege = Object.values(privileges).some(
+  const hasAnyPrivilege = privileges && Object.values(privileges).some(
     mod => mod && Object.values(mod).some(Boolean)
   );
   if (!hasAnyPrivilege) {

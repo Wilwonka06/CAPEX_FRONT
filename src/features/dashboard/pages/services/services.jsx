@@ -6,11 +6,16 @@ import Paginator from "../../../../shared/Paginator";
 import { initialCategories } from '../CatServices/CatServices';
 import SearchProduct from '../../../../shared/Search';
 
+// Función para normalizar texto (remover tildes)
+const normalizeText = (text) => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
+
 // Componente para el interruptor de estado
 const StatusToggle = ({ isActive, onToggle }) => (
-  <label onClick={(e) => { e.stopPropagation(); onToggle(); }} className="flex items-center cursor-pointer">
+  <label onClick={(e) => { e.stopPropagation(); }} className="flex items-center cursor-pointer">
     <div className="relative">
-      <input type="checkbox" className="sr-only" checked={isActive} readOnly />
+      <input type="checkbox" className="sr-only" checked={isActive} onChange={onToggle} />
       <div className={`block w-11 h-6 rounded-full ${isActive ? 'bg-primary' : 'bg-gray-300'}`}></div>
       <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'translate-x-full' : ''}`}></div>
     </div>
@@ -127,10 +132,20 @@ const Services = () => {
     setIsEditModalOpen(true);
   };
 
+  const handleDeleteService = (service) => {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`)) {
+      setServices(services.filter((s) => s.id !== service.id));
+    }
+  };
+
   const filteredServices = services.filter(
     (service) =>
-      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.category.toLowerCase().includes(searchTerm.toLowerCase())
+      normalizeText(service.name).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.category).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.duration).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.price).includes(normalizeText(searchTerm)) ||
+      normalizeText(service.description).includes(normalizeText(searchTerm)) ||
+      (service.active ? 'Activo' : 'Inactivo').includes(searchTerm)
   );
 
   const itemsPerPage = 3;
@@ -166,7 +181,7 @@ const Services = () => {
               onToggleStatus={toggleServiceStatus}
               onSee={handleSeeService}
               onEdit={handleEditClick}
-              onDelete={(service) => alert(`Eliminar ${service.name}`)}
+              onDelete={handleDeleteService}
             />
 
             {totalPages > 1 && (
