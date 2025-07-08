@@ -20,6 +20,7 @@ const initialProg = {
 
 const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
   const [prog, setProg] = useState(initialProg);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (editing) {
@@ -28,6 +29,28 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
       setProg(initialProg);
     }
   }, [editing]);
+
+  const validate = () => {
+    const newErrors = {};
+    if (!prog.fechaInicio) newErrors.fechaInicio = 'Selecciona la fecha de inicio';
+    if (!prog.fechaFin) newErrors.fechaFin = 'Selecciona la fecha de fin';
+    if (!prog.horaInicio) newErrors.horaInicio = 'Selecciona la hora de inicio';
+    if (!prog.horaFin) newErrors.horaFin = 'Selecciona la hora de fin';
+    if (!prog.repeticion) newErrors.repeticion = 'Selecciona la frecuencia';
+    if ((prog.repeticion === 'Semanal' || prog.repeticion === 'Mensual') && (!prog.dias || prog.dias.length === 0)) {
+      newErrors.dias = 'Selecciona al menos un día';
+    }
+    // Validar que fechaFin no sea menor que fechaInicio
+    if (prog.fechaInicio && prog.fechaFin && prog.fechaFin < prog.fechaInicio) {
+      newErrors.fechaFin = 'La fecha fin no puede ser menor que la fecha inicio';
+    }
+    // Validar que horaFin sea mayor que horaInicio
+    if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
+      newErrors.horaFin = 'La hora fin debe ser mayor que la hora inicio';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleProgChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -45,9 +68,10 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
 
   const handleAddEvent = (e) => {
     e.preventDefault();
-    if (!prog.fechaInicio || !prog.horaInicio || !prog.horaFin) return;
+    if (!validate()) return;
     if (onAdd) onAdd(prog);
     setProg(initialProg);
+    setErrors({});
   };
 
   return (
@@ -62,6 +86,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
                 <input type="date" name="fechaInicio" value={prog.fechaInicio} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
                 <i className="bi bi-calendar text-xl text-primary-dark"></i>
               </div>
+              {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">Fecha fin</label>
@@ -69,6 +94,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
                 <input type="date" name="fechaFin" value={prog.fechaFin} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
                 <i className="bi bi-calendar text-xl text-primary-dark"></i>
               </div>
+              {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
             </div>
             {/* Selector de repetición */}
             <div className="flex-1 min-w-[180px]">
@@ -78,6 +104,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
                 <option>Semanal</option>
                 <option>Mensual</option>
               </select>
+              {errors.repeticion && <p className="text-red-500 text-xs mt-1">{errors.repeticion}</p>}
             </div>
           </div>
           {/* Días de la semana */}
@@ -93,6 +120,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
                 /> {dia}
               </label>
             ))}
+            {errors.dias && <p className="text-red-500 text-xs w-full mt-1">{errors.dias}</p>}
           </div>
           {/* Horario y botón */}
           <div className="flex flex-wrap items-end gap-4 mt-2">

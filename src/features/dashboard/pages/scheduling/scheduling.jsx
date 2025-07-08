@@ -37,6 +37,70 @@ const Scheduling = () => {
         return hasMatchingSchedulings;
     });
 
+    // Utilidad para expandir una programación a eventos diarios según frecuencia y días
+    function expandirProgramacion(prog, idBase) {
+        const { fechaInicio, fechaFin, dias = [], repeticion, ...rest } = prog;
+        const start = new Date(fechaInicio);
+        const end = new Date(fechaFin || fechaInicio);
+        const eventos = [];
+        let current = new Date(start);
+        // Mapear días de la semana a números (0=Domingo, 1=Lunes, ..., 6=Sábado)
+        const diasSemanaMap = {
+            'Domingo': 0,
+            'Lunes': 1,
+            'Martes': 2,
+            'Miercoles': 3,
+            'Jueves': 4,
+            'Viernes': 5,
+            'Sabado': 6,
+        };
+        const diasSeleccionados = dias.map(d => diasSemanaMap[d]);
+        let idx = 0;
+        while (current <= end) {
+            const diaSemana = current.getDay();
+            if (
+                (repeticion === 'No se repite' && (diasSeleccionados.length === 0 || diasSeleccionados.includes(diaSemana))) ||
+                (repeticion === 'Semanal' && diasSeleccionados.length > 0 && diasSeleccionados.includes(diaSemana)) ||
+                (repeticion === 'Mensual' && diasSeleccionados.length > 0 && diasSeleccionados.includes(diaSemana))
+            ) {
+                eventos.push({
+                    ...rest,
+                    fechaInicio: current.toISOString().split('T')[0],
+                    fechaFin: current.toISOString().split('T')[0],
+                    dias,
+                    repeticion,
+                    id: idBase + '_' + idx,
+                    idBase,
+                });
+                idx++;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+        return eventos;
+    }
+
+    // Agregar programación a un empleado
+    const handleAddEvent = (prog) => {
+        // Obtener empleados del localStorage
+        const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
+        // Generar un id base único para la programación
+        const idBase = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+        // Expandir la programación según frecuencia y días, usando el id base
+        const eventos = expandirProgramacion(prog, idBase);
+        // Buscar el empleado y agregar todas las programaciones generadas
+        const nuevosEmpleados = empleados.map(emp =>
+            emp.id && prog.empleadoId && emp.id.toString() === prog.empleadoId.toString()
+                ? { ...emp, schedulings: [...(emp.schedulings || []), ...eventos] }
+                : emp
+        );
+        // Guardar en localStorage
+        localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(nuevosEmpleados));
+        // Actualizar el estado
+        setEmployees(nuevosEmpleados);
+        // Refrescar el calendario
+        window.location.reload();
+    };
+
     return (
         <div className="p-6 bg-white rounded-lg shadow-md">
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Agendamiento de Servicios</h1>
@@ -53,7 +117,7 @@ const Scheduling = () => {
                 </div>
             </div>
             <div className="w-full">
-                <GeneralCalendar employees={filteredEmployees} />
+                <GeneralCalendar employees={filteredEmployees} onAddEvent={handleAddEvent} />
             </div>
         </div>
     )
