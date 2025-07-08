@@ -22,6 +22,7 @@ import SaleServices from '../features/dashboard/pages/SaleServices/SaleServices'
 import Servicios from '../features/dashboard/pages/Services/Services';
 import Usuarios from '../features/dashboard/pages/Users/Users';
 import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProducts';
+import Scheduling from '../features/dashboard/pages/scheduling/scheduling';
 
 // Pages Landing
 import Home from '../features/landing/components/Home';
@@ -100,6 +101,10 @@ const router = createBrowserRouter([
         path: 'ventas-servicios',
         element: <SaleServices />
       },
+      {
+        path: 'programacion',
+        element: <Scheduling/>
+      }
     ]
   },
   {
@@ -114,6 +119,11 @@ const router = createBrowserRouter([
       {
         path: 'citas',
         element: <Quotes />
+      },
+      {
+        path: 'servicespage',
+        element: <ServicesPage />
+
       },
       {
         path: 'pedidos',

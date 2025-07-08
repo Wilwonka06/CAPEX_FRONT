@@ -44,7 +44,7 @@ const ViewRole = ({ isOpen, onClose, role }) => {
           <button
             type="button"
             onClick={onClose}
-            className="border border-gray-300 hover:bg-gray-50 text-gray-800 font-bold py-2 px-4 rounded"
+            className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
           >
             Cerrar
           </button>

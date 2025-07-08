@@ -37,4 +37,4 @@ const Paginator = ({ currentPage, totalPages, onPageChange }) => {
   );
 };
 
-export default Paginator;
+export default Paginator; 

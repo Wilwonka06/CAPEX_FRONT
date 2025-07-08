@@ -1,14 +1,15 @@
 // components/Sidebar.jsx
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import Logo from '../../../shared/images/Logo(sin fondo).png';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({
     main: true,
+    config: true,
     users: true,
-    contacts: true,
-    products: true,
+    shoppings: true,
     services: true,
     sales: true
   });
@@ -18,10 +19,9 @@ const Sidebar = () => {
   const menuGroups = [
     {
       id: 'main',
-      name: 'Dashboard', 
-      icon: 'bi-speedometer2', 
+      name: 'Dashboard',
+      icon: 'bi-speedometer2',
       path: '/'
-      
     },
     {
       id: 'config',
@@ -74,6 +74,19 @@ const Sidebar = () => {
         
       ]
     },
+   {
+  id: 'sales',
+  title: 'Ventas',
+  icon: 'bi-graph-up-arrow',
+  items: [
+    { name: 'Clientes', icon: 'bi-person-fill', path: '/clientes' },
+    { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
+    { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
+    { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
+    { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
+  ]
+}
+
   ];
 
   const handleMouseEnter = () => {
@@ -174,6 +187,7 @@ const Sidebar = () => {
         <div className="flex items-center">
           {(isExpanded || isLocked) ? (
             <span className="ml-3 font-semibold text-white text-3xl whitespace-nowrap">
+
               CAP<span className='text-yellow-700'>EX</span>
             </span>
           ) : (
@@ -198,7 +212,7 @@ const Sidebar = () => {
       </div>
 
       {/* Menu con scroll */}
-      <nav 
+      <nav
         className="flex-1 py-4 overflow-y-auto"
         style={{
           scrollbarWidth: 'none',

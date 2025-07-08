@@ -1,5 +1,11 @@
 import DetailServices from './components/DetailServices';
 import React, { useState } from "react";
+import Paginator from '../../../dashboard/pages/Paginator';
+
+// Función para normalizar texto (remover tildes)
+const normalizeText = (text) => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+};
 
 const ServicesPage = () => {
   const servicios = [
@@ -13,6 +19,8 @@ const ServicesPage = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -20,47 +28,54 @@ const ServicesPage = () => {
 
   const filteredServices = servicios.filter(
     (service) =>
-      (service.name && service.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (service.price && service.price.toLowerCase().includes(searchTerm.toLowerCase()))
+      (service.name && normalizeText(service.name).includes(normalizeText(searchTerm))) ||
+      (service.category && normalizeText(service.category).includes(normalizeText(searchTerm))) ||
+      (service.duration && normalizeText(service.duration).includes(normalizeText(searchTerm))) ||
+      (service.price && normalizeText(service.price).includes(normalizeText(searchTerm))) ||
+      (service.description && normalizeText(service.description).includes(normalizeText(searchTerm))) ||
+      (typeof service.active === 'boolean' && normalizeText(service.active ? 'activo' : 'inactivo').includes(normalizeText(searchTerm))) ||
+      (service.estado && normalizeText(service.estado).includes(normalizeText(searchTerm)))
   );
 
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
+
   return (
-    <div className="container mx-auto mt-8 px-4">
-      <div className="container mx-auto mt-8 px-4" >
-        <div className="flex justify-between mb-4 items-center">
-          <h1 className="text-4xl font-bold text-text-main ml-8">Servicios</h1>
-          <div className="relative w-full max-w-sm mr-8">
-            <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-            <input
-              type="text"
-              placeholder="Buscar servicios..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-            />
-          </div>
+    <div className="container mx-auto mt-8 px-8 gap-8">
+      <div className="flex justify-between mb-4 items-center px-20">
+        <h1 className="text-4xl font-bold text-text-main ml-4">Servicios</h1>
+        <div className="relative w-full max-w-sm mr-4">
+          <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
+          <input
+            type="text"
+            placeholder="Buscar servicios..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+          />
         </div>
       </div>
 
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-12 py-12 px-4 place-items-center">
-        {filteredServices.map((servicio) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 py-8 p-20">
+        {paginatedServices.map((servicio) => (
           <div
             key={servicio.id}
-            className="bg-white border border-background rounded-lg overflow-hidden shadow-md flex flex-col"
-            style={{ width: "400px", height: "500px" }}
+            className="bg-white border border-background rounded-lg overflow-hidden shadow-md flex flex-col w-full h-[350px] gap-x-6"
           >
-            {/* Imagen casi cuadrada */}
             <img
               src={servicio.img}
               alt={servicio.name}
-              className="w-[400px] h-[310px] object-cover"
+              className="w-full h-[160px] object-cover"
             />
 
             <div className="p-4 flex flex-col flex-1 justify-between">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-text-main font-medium text-base">{servicio.name}</h2>
-                <span className="text-text-main font-bold text-base">{servicio.price}</span>
+              <div className="flex flex-col mb-2">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-text-main font-medium text-base">{servicio.name}</h2>
+                  <span className="text-text-main font-bold text-base">{servicio.price}</span>
+                </div>
+                <span className="text-xs text-primary-dark font-semibold mt-1">{servicio.category}</span>
               </div>
               <button
                 onClick={() => setSelectedService(servicio)}
@@ -76,8 +91,20 @@ const ServicesPage = () => {
           </div>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-4">
+          <Paginator
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+
       {selectedService && <DetailServices service={selectedService} onClose={() => setSelectedService(null)} />}
     </div>
+
   );
 };
 
