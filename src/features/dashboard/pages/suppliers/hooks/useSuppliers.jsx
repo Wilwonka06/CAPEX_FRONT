@@ -29,6 +29,15 @@ const initialSuppliers = [
     correo: "info@suministrosestetica.com",
     isActive: false,
   },
+  {
+    id: 4,
+    nombre: "Cabello Natural Importaciones",
+    contacto: "Luis Ramírez",
+    direccion: "Calle Comercio 100, Monterrey",
+    telefono: "818-123-4567",
+    correo: "ventas@cabellonatural.com",
+    isActive: true,
+  },
 ];
 
 const SuppliersContext = createContext();
