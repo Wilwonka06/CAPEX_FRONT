@@ -40,7 +40,7 @@ const router = createBrowserRouter([
         index: true,
         element: <Navigate to="/dashboard" replace />
       },
-      // Dashboard routes ordenadas alfabéticamente
+      // === RUTAS DASHBOARD (orden alfabético) ===
       {
         path: 'categorias-productos',
         element: <CategoriasProductos />
@@ -115,11 +115,10 @@ const router = createBrowserRouter([
         index: true,
         element: <Home />
       },
-      // Landing routes ordenadas alfabéticamente
+      // === RUTAS LANDING (orden alfabético) ===
       {
         path: 'citas',
         element: <Quotes />
-
       },
       {
         path: 'servicespage',
@@ -131,7 +130,7 @@ const router = createBrowserRouter([
         element: <Orders />
       },
       {
-        path: 'productos',
+        path: 'productos', // Catálogo de productos para el cliente
         element: <Products />
       },
       {

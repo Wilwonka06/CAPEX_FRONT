@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import { isDuplicateProductName } from '../../../../../shared/validations';
+import { useCategories } from '../../CatProducts/hooks/useCategories';
 
-const EditProduct = ({ product, isOpen, onClose, onSave, categories = [], products = [] }) => {
+const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
+  const { categories: useCategoriesCategories } = useCategories();
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -209,7 +212,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, categories = [], produc
                 required
               >
                 <option value="">Seleccionar categoría</option>
-                {categories.map((category) => (
+                {useCategoriesCategories.filter(c => c.isActive).map((category) => (
                   <option key={category.id} value={category.name}>
                     {category.name}
                   </option>
@@ -305,6 +308,14 @@ const EditProduct = ({ product, isOpen, onClose, onSave, categories = [], produc
       </div>
     </div>
   );
+};
+
+EditProduct.propTypes = {
+  product: PropTypes.object,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSave: PropTypes.func.isRequired,
+  products: PropTypes.array,
 };
 
 export default EditProduct;
