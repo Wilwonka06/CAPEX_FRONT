@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
-import Paginator from "../Paginator";
+import { useState, useEffect } from "react";
+import Paginator from "../../../../";
 import Calendar from "../../../dashboard/pages/employees/components/Calendar";
 import AddEmployee from "../../../dashboard/pages/employees/components/AddEmployee";
 import EditEmployee from "../../../dashboard/pages/employees/components/EditEmployee";
 import SeeEmployee from "../../../dashboard/pages/employees/components/SeeEmployee";
-import AddScheduling from "../../../dashboard/pages/employees/components/AddScheduling";
+import AddScheduling from "./components/AddScheduling";
 
 const initialEmployees = [
   { id: 1, nombre: "Ana", apellido: "García", documento: "12345678", estado: true, schedulings: [] },

@@ -23,14 +23,14 @@ import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProdu
 import Scheduling from '../features/dashboard/pages/scheduling/scheduling';
 
 // Pages Landing
+import Cart from '../features/landing/pages/cart/Cart';
+import CuidadoCapilar from '../features/landing/pages/products/pages/CuidadoCapilar';
+import Extensiones from '../features/landing/pages/products/pages/Extensiones';
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
+import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
 import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
-import Extensiones from '../features/landing/pages/products/pages/Extensiones';
-import CuidadoCapilar from '../features/landing/pages/products/pages/CuidadoCapilar';
-import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
-import Cart from '../features/landing/pages/cart/Cart';
 
 const router = createBrowserRouter([
   {
@@ -103,7 +103,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'programacion',
-        element: <Scheduling/>
+        element: <Scheduling />
       }
     ]
   },
@@ -114,6 +114,10 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <Home />
+      },
+      {
+        path: 'cart',
+        element: <Cart />
       },
       {
         path: 'citas',
@@ -128,24 +132,24 @@ const router = createBrowserRouter([
         element: <Extensiones />
       },
       {
-        path: 'pedidos',
+        path: 'mis-pedidos',
         element: <Orders />
       },
       {
-        path: 'servicios',
-        element: <ServicesPage />
+        path: 'pedidos',
+        element: <Orders />
       },
       {
         path: 'productos/:id',
         element: <ProductDetailPageCliente />
       },
       {
-        path: 'cart',
-        element: <Cart />
+        path: 'servicespage',
+        element: <ServicesPage />
       },
       {
-        path: 'mis-pedidos',
-        element: <Orders />
+        path: 'servicios',
+        element: <ServicesPage />
       },
     ]
   }
