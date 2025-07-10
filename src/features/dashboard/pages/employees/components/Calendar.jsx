@@ -13,6 +13,29 @@ const Calendar = ({ events = [], onEditEvent, onDeleteEvent, onAddEvent }) => {
   const [titleInput, setTitleInput] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
 
+  // Expansión robusta de eventos
+  const calendarEvents = events.flatMap(ev => {
+    let start = ev.fechaInicio ? ev.fechaInicio.split('T')[0] : undefined;
+    let end = ev.fechaFin ? ev.fechaFin.split('T')[0] : undefined;
+    if (!start) return [];
+    if (!end) end = start;
+    const days = [];
+    let current = new Date(start);
+    const endDate = new Date(end);
+    while (current <= endDate) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    return days.map((date, idx) => ({
+      ...ev,
+      id: `${ev.id ? ev.id.toString() : (ev.idBase ? ev.idBase.toString() : 'noid')}_${idx}`,
+      idBase: ev.idBase ? ev.idBase : (ev.id ? ev.id.toString() : 'noid'),
+      title: ev.title || `${ev.horaInicio}-${ev.horaFin}`,
+      start: date.toISOString().split('T')[0],
+      allDay: true,
+    }));
+  });
+
   const handleEventClick = (info) => {
     setModalType('edit');
     setSelectedEvent(info.event);
@@ -45,35 +68,6 @@ const Calendar = ({ events = [], onEditEvent, onDeleteEvent, onAddEvent }) => {
     }
     setModalOpen(false);
   };
-
-  // Utilidad para obtener todas las fechas entre dos días (inclusive)
-  function getDatesInRange(startDate, endDate) {
-    const dates = [];
-    let current = new Date(startDate);
-    const end = new Date(endDate);
-    while (current <= end) {
-      dates.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    return dates;
-  }
-
-  // Adaptar las programaciones a eventos de FullCalendar, expandiendo rangos
-  const calendarEvents = events.flatMap(ev => {
-    let start = ev.fechaInicio ? ev.fechaInicio.split('T')[0] : undefined;
-    let end = ev.fechaFin ? ev.fechaFin.split('T')[0] : undefined;
-    if (!start) return [];
-    if (!end) end = start;
-    // Expandir a un evento por cada día del rango
-    const days = getDatesInRange(start, end);
-    return days.map((date, idx) => ({
-      id: `${ev.id.toString()}_${idx}`,
-      title: ev.title || `${ev.horaInicio}-${ev.horaFin}`,
-      start: date.toISOString().split('T')[0],
-      allDay: true,
-      ...ev,
-    }));
-  });
 
   return (
     <div className="max-w-4xl mx-auto p-4">

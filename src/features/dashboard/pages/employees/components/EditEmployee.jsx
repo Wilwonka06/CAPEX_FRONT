@@ -20,6 +20,12 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
   const [activeTab, setActiveTab] = useState('empleado');
   const [schedulings, setSchedulings] = useState(employee?.schedulings || []);
   const [editingScheduling, setEditingScheduling] = useState(null);
+  // Estado de paginación para la lista de programaciones
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
+  const totalPages = Math.ceil(schedulings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageSchedulings = schedulings.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => {
     if (employee) {
@@ -190,31 +196,53 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
               schedulings={schedulings}
             />
           ) : schedulings.length > 0 ? (
-            <ul className="list-disc pl-6">
-              {schedulings.map((s, idx) => (
-                <li key={s.id || idx} className="mb-2 flex items-center gap-4">
-                  <span>
-                    {s.fechaInicio} - {s.fechaFin} | {s.horaInicio} - {s.horaFin} | {s.repeticion} | Días: {(s.dias && s.dias.length > 0) ? s.dias.join(', ') : '-'}
-                  </span>
-                  <button onClick={() => handleEditScheduling(s)} className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 transition text-xs">Editar</button>
-                  <button onClick={() => handleDeleteScheduling(s.id)} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition text-xs">Eliminar</button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="list-disc pl-6">
+                {pageSchedulings.map((s, idx) => (
+                  <li key={s.id || idx} className="mb-2 flex items-center gap-4">
+                    <span>
+                      {s.fechaInicio} - {s.fechaFin} | {s.horaInicio} - {s.horaFin} | {s.repeticion} | Días: {(s.dias && s.dias.length > 0) ? s.dias.join(', ') : '-'}
+                    </span>
+                    <button onClick={() => handleEditScheduling(s)} className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 transition text-xs">Editar</button>
+                    <button onClick={() => handleDeleteScheduling(s.id)} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition text-xs">Eliminar</button>
+                  </li>
+                ))}
+              </ul>
+              {/* Paginador y botón de cerrar */}
+              {totalPages > 1 || true ? (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    <i className="bi bi-chevron-left"></i>
+                  </button>
+                  <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    <i className="bi bi-chevron-right"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    className="ml-6 bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <p className="text-text-main/60">No hay programaciones registradas.</p>
           )}
         </div>
       )}
-      <div className="flex justify-end mt-8">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
-        >
-          Cancelar
-        </button>
-      </div>
     </div>
   );
 };

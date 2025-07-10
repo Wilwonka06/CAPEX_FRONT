@@ -72,18 +72,7 @@ const Sidebar = () => {
         { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
       ]
     },
-   {
-  id: 'sales',
-  title: 'Ventas',
-  icon: 'bi-graph-up-arrow',
-  items: [
-    { name: 'Clientes', icon: 'bi-person-fill', path: '/clientes' },
-    { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
-    { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
-    { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
-    { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
-  ]
-}
+   
 
   ];
 

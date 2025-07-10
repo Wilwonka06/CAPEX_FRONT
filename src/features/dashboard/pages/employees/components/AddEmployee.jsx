@@ -331,7 +331,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
       )}
       {step === 2 && (
         <div className="mt-8">
-          
           {editingScheduling ? (
             <AddScheduling
               onAdd={handleSaveEditScheduling}
@@ -343,6 +342,67 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings }) => {
               onAdd={handleAddScheduling}
             />
           )}
+
+          {/* PAGINACIÓN DE PROGRAMACIONES */}
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-2 text-text-main">Programaciones</h3>
+            {(() => {
+              const itemsPerPage = 3;
+              const [currentPage, setCurrentPage] = React.useState(1);
+              const totalPages = Math.ceil(schedulings.length / itemsPerPage);
+              const startIndex = (currentPage - 1) * itemsPerPage;
+              const pageSchedulings = schedulings.slice(startIndex, startIndex + itemsPerPage);
+
+              return (
+                <>
+                  {pageSchedulings.map((prog, idx) => (
+                    <div key={prog.id || idx} className="mb-4 flex items-center gap-2">
+                      <div className="flex-1">
+                        {prog.fechaInicio} - {prog.fechaFin} | {prog.horaInicio} - {prog.horaFin} | {prog.repeticion} | Días: {prog.dias && prog.dias.length > 0 ? prog.dias.join(', ') : '-'}
+                      </div>
+                      <button
+                        type="button"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-1 rounded font-semibold transition text-xs"
+                        onClick={() => handleEditScheduling(prog)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 rounded font-semibold transition text-xs"
+                        onClick={() => handleDeleteScheduling(prog.id)}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  ))}
+                  {/* Paginador */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                      >
+                        <i className="bi bi-chevron-left"></i>
+                      </button>
+                      <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                      >
+                        <i className="bi bi-chevron-right"></i>
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
           <div className="flex justify-end mt-8 gap-2">
             <button
               type="button"

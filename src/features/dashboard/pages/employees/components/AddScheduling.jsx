@@ -18,9 +18,36 @@ const initialProg = {
   horaFin: '09:00',
 };
 
-const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
+const EMPLOYEES_KEY = 'capex_employees';
+
+const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
   const [prog, setProg] = useState(initialProg);
   const [errors, setErrors] = useState({});
+
+  // ✅ MIGRACIÓN OPCIONAL: para datos viejos
+  useEffect(() => {
+    const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
+    let cambios = false;
+    const empleadosMigrados = empleados.map(emp => {
+      if (!Array.isArray(emp.schedulings)) return emp;
+      const nuevasSchedulings = emp.schedulings.map(ev => {
+        let newEv = { ...ev };
+        if (!newEv.id) {
+          newEv.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+          cambios = true;
+        }
+        if (!newEv.idBase) {
+          newEv.idBase = newEv.id;
+          cambios = true;
+        }
+        return newEv;
+      });
+      return { ...emp, schedulings: nuevasSchedulings };
+    });
+    if (cambios) {
+      localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(empleadosMigrados));
+    }
+  }, []);
 
   useEffect(() => {
     if (editing) {
@@ -40,11 +67,9 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
     if ((prog.repeticion === 'Semanal' || prog.repeticion === 'Mensual') && (!prog.dias || prog.dias.length === 0)) {
       newErrors.dias = 'Selecciona al menos un día';
     }
-    // Validar que fechaFin no sea menor que fechaInicio
     if (prog.fechaInicio && prog.fechaFin && prog.fechaFin < prog.fechaInicio) {
       newErrors.fechaFin = 'La fecha fin no puede ser menor que la fecha inicio';
     }
-    // Validar que horaFin sea mayor que horaInicio
     if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
       newErrors.horaFin = 'La hora fin debe ser mayor que la hora inicio';
     }
@@ -69,7 +94,21 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
   const handleAddEvent = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    if (onAdd) onAdd(prog);
+
+    let progWithIds = { ...prog };
+
+    if (!progWithIds.id) {
+      progWithIds.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+    }
+    if (!progWithIds.idBase) {
+      progWithIds.idBase = progWithIds.id;
+    }
+
+    // ✅ CLAVE: Guarda siempre el empleadoId correcto
+    progWithIds.empleadoId = empleado.id;
+
+    if (onAdd) onAdd(progWithIds);
+
     setProg(initialProg);
     setErrors({});
   };
@@ -79,7 +118,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
       <div className="mt-8 p-6 bg-gray-50 border border-accent-light rounded-lg">
         <form onSubmit={handleAddEvent}>
           <div className="flex flex-wrap gap-6 items-end">
-            {/* Fechas */}
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">Fecha inicio</label>
               <div className="flex items-center gap-2">
@@ -96,7 +134,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
               </div>
               {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
             </div>
-            {/* Selector de repetición */}
             <div className="flex-1 min-w-[180px]">
               <label className="block text-sm font-medium text-text-main mb-1">Repetición</label>
               <select name="repeticion" value={prog.repeticion} onChange={handleProgChange} className="border rounded px-3 py-2 w-full">
@@ -107,7 +144,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
               {errors.repeticion && <p className="text-red-500 text-xs mt-1">{errors.repeticion}</p>}
             </div>
           </div>
-          {/* Días de la semana */}
           <div className="flex flex-wrap gap-4 mt-6 mb-4">
             {diasSemana.map(dia => (
               <label key={dia} className="flex items-center gap-1 text-text-main text-sm">
@@ -122,7 +158,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit }) => {
             ))}
             {errors.dias && <p className="text-red-500 text-xs w-full mt-1">{errors.dias}</p>}
           </div>
-          {/* Horario y botón */}
           <div className="flex flex-wrap items-end gap-4 mt-2">
             <div className="flex items-center gap-2">
               <select name="horaInicio" value={prog.horaInicio} onChange={handleProgChange} className="border rounded px-3 py-2">
