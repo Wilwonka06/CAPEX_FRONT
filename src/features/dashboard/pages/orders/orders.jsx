@@ -3,6 +3,7 @@ import OrderDetailModal from "./components/OrderDetailModal";
 import EditOrderModal from "./components/EditOrderModal";
 import { useSales } from '../SaleProducts/context/SalesContext';
 import { useOrders } from './context/OrdersContext';
+import Paginator from '../../../../shared/Paginator';
 
 // Datos mock de clientes (idénticos a los de customers/customer.jsx)
 const customersMock = [
@@ -17,8 +18,56 @@ const customersMock = [
 // Estados posibles
 const estados = ["Pendiente", "En proceso", "Enviado", "Entregado", "Cancelado"];
 
+function OrdersTable({ orders, onView, onEdit }) {
+  const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+  return (
+    <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+      <table className="min-w-full text-xs">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
+            <th className="py-2 px-3 text-left font-semibold text-gray-700">Orden</th>
+            <th className="py-2 px-3 text-left font-semibold text-gray-700">Cliente</th>
+            <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
+            <th className="py-2 px-3 text-left font-semibold text-gray-700">Valor</th>
+            <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {orders.length > 0 ? orders.map((order) => {
+            const cliente = customersMock.find(c => c.id === order.clienteId);
+            return (
+              <tr key={order.id} className="hover:bg-gray-50 transition-colors duration-150">
+                <td className="py-4 px-4 text-xs font-medium text-gray-900">{order.fecha}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{order.numeroOrden}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{cliente ? `${cliente.firstName} ${cliente.lastName}` : "-"}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{order.estado}</td>
+                <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${formatNumber(order.valor)}</td>
+                <td className="py-4 px-4 text-sm font-medium text-center">
+                  <div className="flex justify-center space-x-2">
+                    <button className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver detalles" onClick={() => onView(order)}>
+                      <i className="bi bi-eye text-primary text-lg"></i>
+                    </button>
+                    <button className="h-8 w-8 p-0 hover:bg-yellow-50 hover:border-yellow-300 rounded-md flex items-center justify-center transition-colors" title="Editar" onClick={() => onEdit(order)}>
+                      <i className="bi bi-pencil-square text-yellow-600 text-lg"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          }) : (
+            <tr>
+              <td colSpan="6" className="text-center py-4 text-gray-500">No hay pedidos para mostrar.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function OrdersPage() {
-  const { orders, setOrders } = useOrders();
+  const { orders, updateOrderStatus } = useOrders();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [detailOrder, setDetailOrder] = useState(null);
@@ -47,29 +96,28 @@ export default function OrdersPage() {
 
   // Actualizar estado
   const handleUpdateEstado = (id, nuevoEstado) => {
-    setOrders(prev => prev.map(o => {
+    const updatedOrder = updateOrderStatus(id, nuevoEstado);
+    
       // Si el estado cambia a 'Enviado' y antes no lo era, crear la venta
-      if (o.id === id && nuevoEstado === "Enviado" && o.estado !== "Enviado") {
+    if (updatedOrder && nuevoEstado === "Enviado" && updatedOrder.estado === "Enviado") {
         // Evitar duplicados: verifica si ya existe una venta con ese número de orden
-        const yaEsVenta = sales.some(sale => sale.numeroVenta === o.numeroOrden);
+      const yaEsVenta = sales.some(sale => sale.numeroVenta === updatedOrder.numeroOrden);
         if (!yaEsVenta) {
           setSales(prevSales => [
             {
               id: Date.now(),
-              numeroVenta: o.numeroOrden,
-              fecha: o.fecha,
-              clienteId: o.clienteId,
-              valor: o.valor,
+            numeroVenta: updatedOrder.numeroOrden,
+            fecha: updatedOrder.fecha,
+            clienteId: updatedOrder.clienteId,
+            valor: updatedOrder.valor,
               estado: "Completado",
-              productos: o.productos,
+            productos: updatedOrder.productos,
               metodoPago: "No especificado"
             },
             ...prevSales
           ]);
         }
       }
-      return o.id === id ? { ...o, estado: nuevoEstado } : o;
-    }));
     setEditOrder(null);
   };
 
@@ -91,53 +139,14 @@ export default function OrdersPage() {
               />
             </div>
             {/* Tabla de pedidos */}
-            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              <table className="min-w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Orden</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Cliente</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Valor</th>
-                    <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {paginatedOrders.length > 0 ? paginatedOrders.map((order) => {
-                    const cliente = customersMock.find(c => c.id === order.clienteId);
-                    return (
-                      <tr key={order.id}>
-                        <td className="py-2 px-3">{order.fecha}</td>
-                        <td className="py-2 px-3">{order.numeroOrden}</td>
-                        <td className="py-2 px-3">{cliente ? `${cliente.firstName} ${cliente.lastName}` : "-"}</td>
-                        <td className="py-2 px-3">{order.estado}</td>
-                        <td className="py-2 px-3">${order.valor.toLocaleString()}</td>
-                        <td className="py-2 px-3 text-center">
-                          <button className="text-primary hover:text-blue-700 mr-2 text-lg" title="Ver detalle" onClick={() => setDetailOrder(order)}>
-                            <i className="bi bi-eye"></i>
-                          </button>
-                          <button className="text-yellow-600 hover:text-yellow-800 text-lg" title="Editar" onClick={() => setEditOrder(order)}>
-                            <i className="bi bi-pencil-square"></i>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  }) : (
-                    <tr>
-                      <td colSpan="6" className="text-center py-4 text-gray-500">No hay pedidos para mostrar.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {/* Paginador */}
+            <OrdersTable
+              orders={paginatedOrders}
+              onView={setDetailOrder}
+              onEdit={setEditOrder}
+            />
+            {/* Paginador unificado */}
             {totalPages > 1 && (
-              <div className="flex justify-center mt-4">
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border rounded-l disabled:opacity-50">Anterior</button>
-                <span className="px-4 py-1 border-t border-b">Página {currentPage} de {totalPages}</span>
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border rounded-r disabled:opacity-50">Siguiente</button>
-              </div>
+              <Paginator currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             )}
           </div>
         </div>
