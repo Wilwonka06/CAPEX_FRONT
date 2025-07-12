@@ -6,10 +6,8 @@ import ViewRole from "./components/ViewRole";
 import ChangeRoleStatus from "./components/ChangeRoleStatus";
 import DeleteRole from "./components/DeleteRole";
 import Paginator from "./components/Paginator";
-import { createRole } from "./services/CreateRoleService";
-import { editRole } from "./services/EditRoleService";
+import { createRole, updateRole, deleteRole, getRoles } from '../../../../shared/services/ModuleDataService';
 import SearchRole from "./components/SearchRole";
-import { getRoles } from '../../../../shared/services/ModuleDataService';
 
 const itemsPerPage = 5;
 
@@ -93,29 +91,24 @@ const RolesPage = () => {
   };
 
   const handleDeleteRole = async (roleId) => {
-    try {
-      // Simulación de eliminación
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setRoles(prevRoles => prevRoles.filter(role => role.id !== roleId));
-      setIsDeleteModalOpen(false);
-      setSelectedRole(null);
-      showMessage('Rol eliminado exitosamente', 'success');
-    } catch (error) {
-      showMessage('Error al eliminar el rol', 'error');
-    }
+    await deleteRole(roleId);
+    setRoles(prev => prev.filter(r => r.id !== roleId));
+    setIsDeleteModalOpen(false);
+    setSelectedRole(null);
+    showMessage('Rol eliminado exitosamente', 'success');
   };
 
   const handleToggleStatus = async (roleId) => {
     try {
-      // Simulación de cambio de estado
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setRoles(prevRoles => prevRoles.map(role =>
+      const updatedRoles = roles.map(role =>
         role.id === roleId
           ? { ...role, estado: role.estado === 'Activo' ? 'Inactivo' : 'Activo' }
           : role
-      ));
-      const updatedRole = roles.find(r => r.id === roleId);
-      const newStatus = updatedRole.estado === 'Activo' ? 'Inactivo' : 'Activo';
+      );
+      const updatedRole = updatedRoles.find(r => r.id === roleId);
+      await updateRole(updatedRole);
+      setRoles(updatedRoles);
+      const newStatus = updatedRole.estado;
       showMessage(`Estado del rol cambiado a ${newStatus}`, 'success');
     } catch (error) {
       showMessage('Error al cambiar el estado del rol', 'error');
@@ -129,9 +122,9 @@ const RolesPage = () => {
       const newRole = await createRole({
         name: formData.nombre,
         description: formData.descripcion,
-        estado: 'Activo',
-        privileges
-      }, roles);
+        estado: formData.estado || 'Activo',
+        privileges,
+      });
       setRoles(prev => [...prev, newRole]);
       setIsCreateModalOpen(false);
       showMessage('Rol creado exitosamente', 'success');
@@ -143,25 +136,12 @@ const RolesPage = () => {
   };
 
   // Editar rol usando servicio
-  const handleEditRole = async (formData, privileges) => {
-    setLoading(true);
-    try {
-      const updatedRole = await editRole({
-        id: selectedRole.id,
-        name: formData.name,
-        description: formData.description,
-        estado: selectedRole.estado,
-        privileges
-      }, roles);
-      setRoles(prev => prev.map(role => role.id === updatedRole.id ? updatedRole : role));
-      setIsEditModalOpen(false);
-      setSelectedRole(null);
-      showMessage('Rol actualizado exitosamente', 'success');
-    } catch (error) {
-      showMessage(error.message || 'Error al actualizar el rol', 'error');
-    } finally {
-      setLoading(false);
-    }
+  const handleEditRole = async (updatedRole) => {
+    const role = await updateRole(updatedRole);
+    setRoles(prev => prev.map(r => r.id === role.id ? role : r));
+    setIsEditModalOpen(false);
+    setSelectedRole(null);
+    showMessage('Rol actualizado exitosamente', 'success');
   };
 
   const handleSearch = (e) => {
