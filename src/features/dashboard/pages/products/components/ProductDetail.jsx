@@ -1,4 +1,4 @@
-import { useState } from "react";
+import PropTypes from "prop-types";
 
 const ProductDetail = ({ product, isOpen, onClose }) => {
   if (!isOpen || !product) return null;
@@ -22,11 +22,11 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
           <div className="flex flex-col md:flex-row gap-8">
             {/* Columna Izquierda: Imagen y nombre */}
             <div className="flex flex-col items-center md:w-1/2 w-full">
-              <div className="w-60 h-60 bg-gray-50 border-2 border-gray-200 rounded-lg flex items-center justify-center mb-4 shadow-sm p-0">
+              <div className="w-60 h-60 bg-gray-50 rounded-lg flex items-center justify-center mb-4 shadow-lg p-0">
                 <img
                   src={product.foto}
                   alt={product.nombre}
-                  className="w-full h-full object-contain rounded-lg m-0"
+                  className="w-full h-full object-cover rounded-lg m-0"
                 />
               </div>
               <div className="text-lg font-bold text-gray-800 text-center mb-2">{product.nombre}</div>
@@ -51,12 +51,41 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
                     <span className="font-semibold text-gray-800 text-sm">{product.color}</span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Tipo de producto</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.tipoProducto || 'No especificado'}</span>
+                  </div>
+                  {/* Volumen solo si es Cuidado capilar */}
+                  {product.tipoProducto === 'Cuidado capilar' && (
+                    <div className="flex justify-between px-4 py-2">
+                      <span className="text-xs text-gray-500">Volumen (ml)</span>
+                      <span className="font-semibold text-gray-800 text-sm">{product.volumen ? `${product.volumen} ml` : 'No especificado'}</span>
+                    </div>
+                  )}
+                  {/* Textura solo si es Extensiones */}
+                  {product.tipoProducto === 'Extensiones' && (
+                    <div className="flex justify-between px-4 py-2">
+                      <span className="text-xs text-gray-500">Textura</span>
+                      <span className="font-semibold text-gray-800 text-sm">{product.textura || 'No especificado'}</span>
+                    </div>
+                  )}
+                  {/* Tipo de cabello ideal si existe */}
+                  {product.tipoCabelloIdeal && (
+                    <div className="flex justify-between px-4 py-2">
+                      <span className="text-xs text-gray-500">Tipo de cabello ideal</span>
+                      <span className="font-semibold text-gray-800 text-sm">{product.tipoCabelloIdeal}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Largo (mtr)</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.tamanio ? `${product.tamanio}m` : 'No especificado'}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Fecha de Registro</span>
                     <span className="font-semibold text-gray-800 text-sm">{product.fechaRegistro}</span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Precio</span>
-                    <span className="font-semibold text-gray-800 text-sm">${product.precio?.toFixed(2)} {product.cantidad}</span>
+                    <span className="font-semibold text-gray-800 text-sm">${product.precio?.toFixed(2)} </span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Cantidad en Stock</span>
@@ -79,6 +108,12 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
       </div>
     </div>
   );
+};
+
+ProductDetail.propTypes = {
+  product: PropTypes.object,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default ProductDetail; 

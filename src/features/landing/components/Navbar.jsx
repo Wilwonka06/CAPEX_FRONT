@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ProfileMenu from './ProfileMenu';
+import { useCart } from './CartContext';
 
 // Asegúrate de que los colores personalizados estén configurados en tu tailwind.config.js
 // Ejemplo de configuración en tailwind.config.js:
@@ -27,6 +29,12 @@ const Navbar = () => {
     const [showProfile, setShowProfile] = useState(false);
     const navigate = useNavigate();
     const profileRef = useRef();
+
+    // Estado para controlar el menú desplegable de productos
+    const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
+    const { cart } = useCart();
+    const totalItems = cart.reduce((sum, item) => sum + (item.cantidad || 1), 0);
+
 
     // Función para alternar el menú móvil
     const toggleMobileMenu = () => {
@@ -68,10 +76,15 @@ const Navbar = () => {
         window.dispatchEvent(new Event('user-auth-changed'));
         setShowProfile(false);
         navigate('/login');
+
+    // Función para alternar el menú desplegable de productos
+    const toggleProductsDropdown = () => {
+        setIsProductsDropdownOpen(!isProductsDropdownOpen);
+
     };
 
     return (
-        <nav className="bg-white p-4">
+        <nav className="bg-background p-2 shadow-lg">
             <div className="container mx-auto flex justify-between items-center flex-wrap">
                 {/* Logo o Nombre de la Marca */}
                 <div className="text-text-main text-2xl font-bold rounded-md flex items-center">
@@ -96,14 +109,47 @@ const Navbar = () => {
                     id="navigation-menu"
                     className={`${isMobileMenuOpen ? 'flex flex-col' : 'hidden'} md:flex md:flex-row md:space-x-8 mt-4 md:mt-0 w-full md:w-auto items-center justify-center`}
                 >
-                    <Link to="servicespage" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
+                    <Link to="/landing/servicespage" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary ">
                         Servicios
                     </Link>
-                    
                     <Link to="/dashboard/productos" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
+                    {/* Menú desplegable de Productos */}
+                    <div className="relative w-full md:w-auto">
+                        <button
+                            onClick={toggleProductsDropdown}
+                            className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary  flex items-center justify-center gap-2"
+                        >
+
                         Productos
+                            <svg 
+                                className={`w-4 h-4 transition-transform duration-200 ${isProductsDropdownOpen ? 'rotate-180' : ''}`} 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        
+                        {/* Dropdown de Productos */}
+                        <div className={`${isProductsDropdownOpen ? 'block' : 'hidden'} absolute left-0 right-0 md:left-auto md:right-auto md:min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1`}>
+                            
+                            <Link 
+                                to="/landing/extensiones" 
+                                className="block px-4 py-2 text-text-main hover:bg-accent-light hover:text-primary transition-colors duration-200  text-sm"
+                                onClick={() => setIsProductsDropdownOpen(false)}
+                            >
+                                Extensiones
+                            </Link>
+                            <Link 
+                                to="/landing/cuidado-capilar" 
+                                className="block px-4 py-2 text-text-main hover:bg-accent-light hover:text-primary transition-colors duration-200  text-sm"
+                                onClick={() => setIsProductsDropdownOpen(false)}
+                            >
+                                Cuidado Capilar
                     </Link>
-                    
+                        </div>
+                    </div>
                     {isClient && (
                         <Link to="/landing/citas-cliente" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
                             Citas
@@ -139,6 +185,7 @@ const Navbar = () => {
                             Iniciar Sesión
                         </Link>
                     )}
+
                 </div>
             </div>
         </nav>

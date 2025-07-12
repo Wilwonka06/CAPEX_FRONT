@@ -5,12 +5,7 @@ import EditProduct from "./EditProduct";
 import { useState } from "react";
 import TruncatedText from "../../../../../shared/components/TruncatedText";
 
-export default function ProductsTable({
-  products,
-  onEdit,
-  onDelete,
-  categories = [],
-}) {
+export default function ProductsTable({ products, onEdit, onDelete }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -42,6 +37,8 @@ export default function ProductsTable({
     setSelectedProduct(null);
   }; */
 
+  const formatNumber = (num) => new Intl.NumberFormat("es-MX").format(num);
+
   return (
     <>
       <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
@@ -56,6 +53,9 @@ export default function ProductsTable({
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 COLOR
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                TAMAÑO
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 STOCK
@@ -83,77 +83,72 @@ export default function ProductsTable({
                 <td className="py-4 px-4">
                   <div className="flex items-center">
                     <img
-                      src={
-                        product.foto
-                          ? product.foto
-                          : "https://img.freepik.com/vector-premium/icono-marco-fotos-foto-vacia-blanco-vector-sobre-fondo-transparente-aislado-eps-10_399089-1290.jpg"
-                      }
+                      src={product.foto}
                       alt={product.nombre}
                       className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                      onError={(e) => {
-                        e.target.src =
-                          "https://img.freepik.com/vector-premium/icono-marco-fotos-foto-vacia-blanco-vector-sobre-fondo-transparente-aislado-eps-10_399089-1290.jpg";
-                      }}
                     />
                   </div>
                 </td>
                 <td className="py-4 px-4 text-xs font-medium text-gray-900">
-                  <TruncatedText 
-                    text={product.nombre} 
-                    maxLength={25} 
+                  <TruncatedText
+                    text={product.nombre}
+                    maxLength={25}
                     maxWidth="max-w-[180px]"
                   />
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
-                  <TruncatedText 
-                    text={product.color} 
-                    maxLength={15} 
+                  <TruncatedText
+                    text={product.color}
+                    maxLength={15}
                     maxWidth="max-w-[100px]"
                   />
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
+                  {product.tamanio ? formatNumber(product.tamanio) + "m" : "-"}
+                </td>
+                <td className="py-4 px-4 text-xs text-gray-600">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    product.cantidad > 10 
+                      product.cantidad > 10
                         ? " text-green-800"
-                      : product.cantidad > 0 
+                        : product.cantidad > 0
                         ? " text-yellow-800"
                         : " text-red-800"
                     }`}
                   >
-                    {product.cantidad}
+                    {formatNumber(product.cantidad)}
                   </span>
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
-                  <TruncatedText 
-                    text={product.categoria} 
-                    maxLength={20} 
+                  <TruncatedText
+                    text={product.categoria}
+                    maxLength={20}
                     maxWidth="max-w-[120px]"
                   />
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
-                  ${product.precio.toFixed(2)}
+                  ${formatNumber(product.precio.toFixed(2))}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   {product.fechaRegistro}
                 </td>
                 <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleViewDetail(product)}
                       title="Ver detalles"
                     >
                       <i className="bi bi-eye text-primary text-lg"></i>
                     </button>
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => handleEdit(product)}
                       title="Editar"
                     >
                       <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
                     </button>
-                    <button 
+                    <button
                       className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
                       onClick={() => onDelete(product.id)}
                       title="Eliminar"
@@ -187,7 +182,6 @@ export default function ProductsTable({
           setSelectedProduct(null);
         }}
         onSave={handleSaveEdit}
-        categories={categories}
         products={products}
       />
 
@@ -221,5 +215,4 @@ ProductsTable.propTypes = {
   ).isRequired,
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
-  categories: PropTypes.array,
 };

@@ -1,37 +1,12 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-
-// Asumiendo que estos datos vienen de props o un contexto
-const suppliersList = [
-  { id: 1, nombre: "Proveedor A", nit: "A1234567" },
-  { id: 2, nombre: "Proveedor B", nit: "B7654321" },
-];
-
-const productsList = [
-  {
-    id: 101,
-    codigo: "P001",
-    nombre: "Producto Alpha",
-    costo: 100,
-    precioVenta: 150,
-  },
-  {
-    id: 102,
-    codigo: "P002",
-    nombre: "Producto Beta",
-    costo: 200,
-    precioVenta: 280,
-  },
-  {
-    id: 103,
-    codigo: "P003",
-    nombre: "Producto Gamma",
-    costo: 50,
-    precioVenta: 90,
-  },
-];
+import { useProducts } from "../../products/hooks/useProducts";
+import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
+  const { products: productsList, editProduct } = useProducts();
+  const { suppliers: suppliersList } = useSuppliers();
+  
   // Estado del formulario principal
   const [proveedorId, setProveedorId] = useState("");
   const [nit, setNit] = useState("");
@@ -68,13 +43,13 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   useEffect(() => {
     const producto = productsList.find(p => p.id === Number(productoSeleccionado));
     if (producto) {
-      setCosto(producto.costo?.toString() || "");
-      setPrecioVenta(producto.precioVenta?.toString() || "");
+      setCosto(producto.precio?.toString() || "");
+      setPrecioVenta(producto.precio?.toString() || "");
     } else {
       setCosto("");
       setPrecioVenta("");
     }
-  }, [productoSeleccionado]);
+  }, [productoSeleccionado, productsList]);
 
   // Efecto para recalcular totales cuando cambia la lista de items o el IVA general
   useEffect(() => {
@@ -109,6 +84,14 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     }
   }, [ivaGeneral]);
 
+  const formatNumber = (num) => {
+    if (num === '' || num === undefined || num === null) return '';
+    const parts = num.toString().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  };
+  const cleanNumber = (str) => str.replace(/,/g, '');
+
   const handleAddProduct = () => {
     let nuevosErrores = {};
     if (!productoSeleccionado) {
@@ -137,6 +120,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     const precioConIva = (Number(costo) * (1 + ivaGeneral)).toFixed(2);
     const newItem = {
       ...producto,
+      codigo: `P${producto.id.toString().padStart(3, '0')}`,
       cantidad: Number(cantidad),
       costo: Number(costo),
       precioVenta: Number(precioVenta),
@@ -181,6 +165,18 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       return;
     }
     const proveedor = suppliersList.find((s) => s.id === Number(proveedorId));
+
+    // Actualizar la cantidad de los productos
+    itemsCompra.forEach(item => {
+      const productoOriginal = productsList.find(p => p.id === item.id);
+      if (productoOriginal) {
+        const productoActualizado = {
+          ...productoOriginal,
+          cantidad: productoOriginal.cantidad + item.cantidad
+        };
+        editProduct(productoActualizado);
+      }
+    });
 
     const nuevaCompra = {
       id: Date.now(),
@@ -233,6 +229,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     value={fechaCompra}
                     onChange={(e) => setFechaCompra(e.target.value)}
                     required
+                    max={new Date().toISOString().slice(0, 10)}
                   />
                 </div>
                 <div>
@@ -262,7 +259,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     required
                   >
                     <option value="">Seleccione proveedor</option>
-                    {suppliersList.map((s) => (
+                    {suppliersList.filter(s => s.isActive).map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.nombre}
                       </option>
@@ -323,11 +320,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     Cantidad <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="number"
-                    min="1"
+                    type="text"
+                    name="cantidad"
+                    value={formatNumber(cantidad)}
+                    onChange={e => setCantidad(cleanNumber(e.target.value))}
                     className="w-full px-3 py-2 border rounded-md text-sm"
-                    value={cantidad}
-                    onChange={(e) => setCantidad(e.target.value)}
                   />
                   {errores.cantidad && <span className="text-xs text-red-500">{errores.cantidad}</span>}
                 </div>
@@ -336,11 +333,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     Costo <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="number"
-                    min="0"
+                    type="text"
+                    name="costo"
+                    value={formatNumber(costo)}
+                    onChange={e => setCosto(cleanNumber(e.target.value))}
                     className="w-full px-3 py-2 border rounded-md text-sm"
-                    value={costo}
-                    onChange={(e) => setCosto(e.target.value)}
                   />
                   {errores.costo && <span className="text-xs text-red-500">{errores.costo}</span>}
                 </div>
@@ -349,11 +346,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     Precio Venta
                   </label>
                   <input
-                    type="number"
-                    min="0"
+                    type="text"
+                    name="precioVenta"
+                    value={formatNumber(precioVenta)}
+                    onChange={e => setPrecioVenta(cleanNumber(e.target.value))}
                     className="w-full px-3 py-2 border rounded-md text-sm"
-                    value={precioVenta}
-                    onChange={(e) => setPrecioVenta(e.target.value)}
                   />
                   {errores.precioVenta && <span className="text-xs text-red-500">{errores.precioVenta}</span>}
                 </div>
@@ -424,17 +421,17 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Subtotal:</td>
-                        <td className="py-2 px-3 font-bold" colSpan="2">${subtotal.toFixed(2)}</td>
+                        <td className="py-2 px-3 font-bold" colSpan="2">${formatNumber(subtotal)}</td>
                       </tr>
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Total IVA:</td>
-                        <td className="py-2 px-3 font-bold" colSpan="2">${totalIva.toFixed(2)}</td>
+                        <td className="py-2 px-3 font-bold" colSpan="2">${formatNumber(totalIva)}</td>
                       </tr>
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right text-primary">Total a Pagar:</td>
-                        <td className="py-2 px-3 font-bold text-primary" colSpan="2">${total.toFixed(2)}</td>
+                        <td className="py-2 px-3 font-bold text-primary" colSpan="2">${formatNumber(total)}</td>
                       </tr>
                     </tfoot>
                   )}

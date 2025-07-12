@@ -42,20 +42,20 @@ export default function SeeScheduling({ isOpen, onClose, title, children, onDele
                   {canEdit && (
                     <button
                       onClick={handleEdit}
-                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                      className="px-4 py-2 bg-amber-400 text-white rounded hover:bg-amber-500 transition">
                       Editar
                     </button>
                   )}
                   {canDelete && (
                     <button
                       onClick={onDelete}
-                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                      className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition">
                       Eliminar
                     </button>
                   )}
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition">
+                    className="px-4 py-2 bg-accent text-text-main rounded hover:bg-accent/70 transition">
                     Cerrar
                   </button>
                 </div>

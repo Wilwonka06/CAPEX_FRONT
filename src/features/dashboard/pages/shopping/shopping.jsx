@@ -3,6 +3,7 @@ import SearchProduct from '../../../../shared/Search';
 import CreatePurchaseModal from './components/CreatePurchaseModal';
 import PurchaseDetailModal from './components/PurchaseDetailModal';
 import PurchasesTable from './components/PurchasesTable';
+import { useProducts } from '../products/hooks/useProducts';
 
 // Mock de proveedores y productos para selects
 // const mockSuppliers = [ ... ];
@@ -42,6 +43,7 @@ export default function Shopping() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailCompra, setDetailCompra] = useState(null);
+  const { products } = useProducts();
 
   // Filtro de búsqueda
   const filteredPurchases = purchases.filter((p) => {
@@ -120,10 +122,11 @@ export default function Shopping() {
         </div>
       </div>
       {/* Modal de crear compra */}
-      <CreatePurchaseModal 
+      <CreatePurchaseModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreatePurchase}
+        products={products}
       />
       {/* Modal de detalle de compra */}
       <PurchaseDetailModal 
