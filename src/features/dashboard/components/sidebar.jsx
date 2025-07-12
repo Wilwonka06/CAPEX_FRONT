@@ -15,77 +15,105 @@ const Sidebar = () => {
   const [isLocked, setIsLocked] = useState(true);
   const location = useLocation();
 
-  const menuGroups = [
-    {
-      id: 'main',
-      name: 'Dashboard',
-      icon: 'bi-speedometer2',
-      path: '/'
-    },
-    {
-      id: 'config',
-      title: 'Configuración',
-      icon: 'bi-gear-fill',
-      items: [
-        { name: 'Roles', icon: 'bi-shield-check', path: '/roles' },
-      ]
-    },
-    {
-      id: 'users',
-      title: 'Gestión de Usuarios',
-      icon: 'bi-people-fill',
-      items: [
-        { name: 'Usuarios', icon: 'bi-person-fill', path: '/usuarios' },
-      ]
-    },
-    {
-      id: 'shoppings',
-      title: 'Gestión de Compras',
-      icon: 'bi-cart-check-fill',
-      items: [
-        { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/categorias-productos' },
-        { name: 'Productos', icon: 'bi-box-seam-fill', path: '/productos' },
-        { name: 'Proveedores', icon: 'bi-truck', path: '/proveedores' },
-        { name: 'Compras', icon: 'bi-cart-plus-fill', path: '/compras' }
-      ]
-    },
-    {
-      id: 'services',
-      title: 'Gestión de Servicios',
-      icon: 'bi-tools',
-      items: [
-        { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/categorias-servicios' },
-        { name: 'Servicios', icon: 'bi-scissors', path: '/servicios' },
-        { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/empleados' },
-        { name: 'Agendamiento General', icon: 'bi-calendar-range-fill', path: '/programacion' }
-      ]
-    },
-    {
-      id: 'sales',
-      title: 'Ventas',
-      icon: 'bi-graph-up-arrow',
-      items: [
-        { name: 'Clientes', icon: 'bi-person-fill', path: '/clientes' },
-        { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
-        { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
-        { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
-        { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
-      ]
-    },
-   {
-  id: 'sales',
-  title: 'Ventas',
-  icon: 'bi-graph-up-arrow',
-  items: [
-    { name: 'Clientes', icon: 'bi-person-fill', path: '/clientes' },
-    { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/citas' },
-    { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/pedidos' },
-    { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/ventas-productos' },
-    { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/ventas-servicios' }
-  ]
-}
+  // Función para verificar si el usuario tiene permisos para un módulo
+  const hasPermission = (module, action = 'Visualizar') => {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    if (!user || !user.privileges) return false;
+    return user.privileges[module] && user.privileges[module][action];
+  };
 
-  ];
+  // Función para filtrar los menús según los permisos del usuario
+  const getFilteredMenuGroups = () => {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    if (!user) return [];
+
+    const allMenuGroups = [
+      {
+        id: 'main',
+        name: 'Dashboard',
+        icon: 'bi-speedometer2',
+        path: '/dashboard',
+        module: 'Dashboard'
+      },
+      {
+        id: 'config',
+        title: 'Configuración',
+        icon: 'bi-gear-fill',
+        module: 'Gestión de Usuarios',
+        items: [
+          { name: 'Roles', icon: 'bi-shield-check', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
+        ]
+      },
+      {
+        id: 'users',
+        title: 'Gestión de Usuarios',
+        icon: 'bi-people-fill',
+        module: 'Gestión de Usuarios',
+        items: [
+          { name: 'Usuarios', icon: 'bi-person-fill', path: '/dashboard/usuarios', module: 'Gestión de Usuarios' },
+        ]
+      },
+      {
+        id: 'shoppings',
+        title: 'Gestión de Compras',
+        icon: 'bi-cart-check-fill',
+        module: 'Gestión de Compras',
+        items: [
+          { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/dashboard/categorias-productos', module: 'Gestión de Compras' },
+          { name: 'Productos', icon: 'bi-box-seam-fill', path: '/dashboard/productos', module: 'Gestión de Compras' },
+          { name: 'Proveedores', icon: 'bi-truck', path: '/dashboard/proveedores', module: 'Gestión de Compras' },
+          { name: 'Compras', icon: 'bi-cart-plus-fill', path: '/dashboard/compras', module: 'Gestión de Compras' }
+        ]
+      },
+      {
+        id: 'services',
+        title: 'Gestión de Servicios',
+        icon: 'bi-tools',
+        module: 'Gestión de Servicios',
+        items: [
+          { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/dashboard/categorias-servicios', module: 'Gestión de Servicios' },
+          { name: 'Servicios', icon: 'bi-scissors', path: '/dashboard/servicios', module: 'Gestión de Servicios' },
+          { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/dashboard/empleados', module: 'Gestión de Servicios' },
+          { name: 'Agendamiento General', icon: 'bi-calendar-range-fill', path: '/dashboard/programacion', module: 'Gestión de Servicios' }
+        ]
+      },
+      {
+        id: 'sales',
+        title: 'Ventas',
+        icon: 'bi-graph-up-arrow',
+        module: 'Ventas',
+        items: [
+          { name: 'Clientes', icon: 'bi-person-fill', path: '/dashboard/clientes', module: 'Ventas' },
+          { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/dashboard/citas', module: 'Ventas' },
+          { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/dashboard/pedidos', module: 'Ventas' },
+          { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/dashboard/ventas-productos', module: 'Ventas' },
+          { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/dashboard/ventas-servicios', module: 'Ventas' }
+        ]
+      }
+    ];
+
+    // Filtrar grupos según permisos
+    return allMenuGroups.filter(group => {
+      // Si el grupo tiene items, verificar que al menos uno tenga permisos
+      if (group.items) {
+        const hasAnyPermission = group.items.some(item => hasPermission(item.module));
+        return hasAnyPermission;
+      }
+      // Si es un grupo simple, verificar permisos directamente
+      return hasPermission(group.module);
+    }).map(group => {
+      // Si el grupo tiene items, filtrar solo los que tienen permisos
+      if (group.items) {
+        return {
+          ...group,
+          items: group.items.filter(item => hasPermission(item.module))
+        };
+      }
+      return group;
+    });
+  };
+
+  const menuGroups = getFilteredMenuGroups();
 
   const handleMouseEnter = () => {
     if (!isLocked && !isExpanded) {
@@ -185,7 +213,6 @@ const Sidebar = () => {
         <div className="flex items-center">
           {(isExpanded || isLocked) ? (
             <span className="ml-3 font-semibold text-white text-3xl whitespace-nowrap">
-
               CAP<span className='text-yellow-700'>EX</span>
             </span>
           ) : (
