@@ -1,129 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import SeeScheduling from '../../scheduling/components/SeeScheduling';
 import AddScheduling from './AddScheduling';
 
-const Calendar = ({ events = [], onEditEvent, onDeleteEvent, onAddEvent }) => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState('edit'); // 'edit' o 'add'
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [titleInput, setTitleInput] = useState('');
-  const [selectedDate, setSelectedDate] = useState(null);
+const EMPLOYEES_KEY = 'capex_employees';
 
-  // Expansión robusta de eventos
-  const calendarEvents = events.flatMap(ev => {
-    let start = ev.fechaInicio ? ev.fechaInicio.split('T')[0] : undefined;
-    let end = ev.fechaFin ? ev.fechaFin.split('T')[0] : undefined;
-    if (!start) return [];
-    if (!end) end = start;
-    const days = [];
+const Calendar = ({ empleado, onUpdateEmpleado }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [eventos, setEventos] = useState([]);
+
+  const expandirProgramacion = (prog, idBase) => {
+    const { fechaInicio, fechaFin, dias = [] } = prog;
+  
+    const diasSemanaMap = {
+      domingo: 0, lunes: 1, martes: 2, miercoles: 3,
+      miércoles: 3, jueves: 4, viernes: 5, sabado: 6, sábado: 6
+    };
+  
+    const diasSeleccionados = dias.map(d => {
+      const limpio = d.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return diasSemanaMap[limpio];
+    });
+  
+    const eventos = [];
+    const start = new Date(fechaInicio + 'T00:00');
+    const end = new Date(fechaFin + 'T23:59');
+  
     let current = new Date(start);
-    const endDate = new Date(end);
-    while (current <= endDate) {
-      days.push(new Date(current));
+    let idx = 0;
+  
+    while (current <= end) {
+      const diaSemana = current.getDay();
+  
+      if (diasSeleccionados.length === 0 || diasSeleccionados.includes(diaSemana)) {
+        eventos.push({
+          ...prog,
+          fechaInicio: current.toISOString().split('T')[0],
+          fechaFin: current.toISOString().split('T')[0],
+          id: `${idBase}_${idx}`,
+          idBase,
+        });
+        idx++;
+      }
+  
       current.setDate(current.getDate() + 1);
+      current.setHours(0, 0, 0, 0);
     }
-    return days.map((date, idx) => ({
-      ...ev,
-      id: `${ev.id ? ev.id.toString() : (ev.idBase ? ev.idBase.toString() : 'noid')}_${idx}`,
-      idBase: ev.idBase ? ev.idBase : (ev.id ? ev.id.toString() : 'noid'),
-      title: ev.title || `${ev.horaInicio}-${ev.horaFin}`,
-      start: date.toISOString().split('T')[0],
+  
+    return eventos;
+  };
+  
+
+  const handleAddEvent = (prog) => {
+    const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
+    const idBase = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+    const nuevoProg = { ...prog, idBase };
+
+    const nuevosEmpleados = empleados.map(emp =>
+      emp.id === empleado.id
+        ? { ...emp, schedulings: [...(emp.schedulings || []), nuevoProg] }
+        : emp
+    );
+
+    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(nuevosEmpleados));
+    if (onUpdateEmpleado) onUpdateEmpleado(nuevosEmpleados.find(e => e.id === empleado.id));
+
+    const eventosNuevos = expandirProgramacion(nuevoProg, idBase).map(ev => ({
+      id: ev.id,
+      title: `${ev.horaInicio} - ${ev.horaFin}`,
+      start: ev.fechaInicio,
       allDay: true,
     }));
-  });
 
-  const handleEventClick = (info) => {
-    setModalType('edit');
-    setSelectedEvent(info.event);
-    setTitleInput(info.event.title);
-    setModalOpen(true);
-  };
-
-  // Nuevo: manejar click en un día vacío
-  const handleDateClick = (info) => {
-    setModalType('add');
-    setSelectedDate(info.dateStr);
-    setModalOpen(true);
-  };
-
-  const handleSave = () => {
-    if (onEditEvent && selectedEvent) {
-      onEditEvent({
-        ...selectedEvent.extendedProps,
-        id: selectedEvent.id,
-        title: titleInput,
-        date: selectedEvent.startStr,
-      });
-    }
+    setEventos(prev => [...prev, ...eventosNuevos]);
     setModalOpen(false);
+
+    window.location.reload();
   };
 
-  const handleDelete = () => {
-    if (onDeleteEvent && selectedEvent) {
-      onDeleteEvent(selectedEvent.id);
-    }
-    setModalOpen(false);
-  };
+  useEffect(() => {
+    if (!empleado) return;
+
+    const schedulings = empleado.schedulings || [];
+    const todosEventos = schedulings.flatMap(prog => {
+      const idBase = prog.idBase || prog.id;
+      return expandirProgramacion(prog, idBase);
+    }).map(ev => ({
+      id: ev.id,
+      title: `${ev.horaInicio} - ${ev.horaFin}`,
+      start: ev.fechaInicio,
+      allDay: true,
+    }));
+
+    setEventos(todosEventos);
+  }, [empleado]);
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="w-full">
       <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+        plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay',
-        }}
-        selectable={true}
-        editable={false}
-        events={calendarEvents}
-        eventClick={handleEventClick}
-        dateClick={handleDateClick}
-        height="auto"
-        displayEventTime={false}
+        events={eventos}
+        dateClick={() => setModalOpen(true)}
       />
-      {/* Modal para editar evento */}
-      {modalType === 'edit' && (
-        <SeeScheduling
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={'Detalle de programación'}>
-          <input
-            type="text"
-            className="w-full border border-gray-300 rounded px-3 py-2 mt-2"
-            placeholder="Título de la programación"
-            value={titleInput}
-            readOnly
-          />
-          <div className="mt-4 flex justify-end space-x-2">
-            <button
-              onClick={() => setModalOpen(false)}
-              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition">
-              Cerrar
-            </button>
-          </div>
-        </SeeScheduling>
-      )}
-      {/* Modal para agregar evento */}
-      {modalType === 'add' && (
-        <SeeScheduling
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={'Agregar programación'}>
+
+      {modalOpen && (
+        <div className="mt-4">
           <AddScheduling
-            onAdd={(prog) => {
-              if (onAddEvent) onAddEvent({ ...prog, fechaInicio: selectedDate, fechaFin: selectedDate });
-              setModalOpen(false);
-            }}
+            onAdd={handleAddEvent}
+            empleado={empleado}
             editing={null}
             onCancelEdit={() => setModalOpen(false)}
           />
-        </SeeScheduling>
+        </div>
       )}
     </div>
   );

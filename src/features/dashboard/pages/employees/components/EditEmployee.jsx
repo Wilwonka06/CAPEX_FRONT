@@ -23,6 +23,8 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
   // Estado de paginación para la lista de programaciones
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
+  
+  // Recalcular paginación cuando cambien las programaciones
   const totalPages = Math.ceil(schedulings.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const pageSchedulings = schedulings.slice(startIndex, startIndex + itemsPerPage);
@@ -41,6 +43,14 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
     }
   }, [employee]);
 
+  // Resetear página cuando cambien las programaciones
+  useEffect(() => {
+    const newTotalPages = Math.ceil(schedulings.length / itemsPerPage);
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(newTotalPages);
+    }
+  }, [schedulings, currentPage, itemsPerPage]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -48,7 +58,14 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (onSave) onSave(form);
+    if (onSave) {
+      // Incluir las programaciones actualizadas en el formulario
+      const employeeData = {
+        ...form,
+        schedulings: schedulings // Incluir las programaciones actualizadas
+      };
+      onSave(employeeData);
+    }
   };
 
   const handleEditScheduling = (prog) => {
@@ -56,13 +73,25 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
   };
 
   const handleSaveScheduling = (updatedProg) => {
-    setSchedulings(schedulings.map(s => s.id === updatedProg.id ? updatedProg : s));
+    setSchedulings(schedulings.map(s => String(s.id) === String(updatedProg.id) ? updatedProg : s));
     setEditingScheduling(null);
   };
 
   const handleDeleteScheduling = (id) => {
+    console.log('=== DEBUG ELIMINACIÓN ===');
+    console.log('ID a eliminar:', id);
+    console.log('Tipo de ID:', typeof id);
+    console.log('Programaciones actuales:', schedulings);
+    console.log('IDs de programaciones:', schedulings.map(s => ({ id: s.id, tipo: typeof s.id })));
+    
     if (window.confirm('¿Seguro que deseas eliminar esta programación?')) {
-      setSchedulings(schedulings.filter(s => s.id !== id));
+      console.log('Eliminando programación con ID:', id);
+      console.log('Programaciones antes de eliminar:', schedulings.length);
+      // Convertir ambos IDs a string para comparación consistente
+      const updatedSchedulings = schedulings.filter(s => String(s.id) !== String(id));
+      console.log('Programaciones después de eliminar:', updatedSchedulings.length);
+      console.log('Programaciones filtradas:', updatedSchedulings);
+      setSchedulings(updatedSchedulings);
     }
   };
 

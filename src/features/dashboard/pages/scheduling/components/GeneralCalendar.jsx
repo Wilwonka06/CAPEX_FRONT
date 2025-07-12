@@ -1,248 +1,159 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import SeeScheduling from '../../scheduling/components/SeeScheduling';
 import AddScheduling from './AddScheduling';
-import EditScheduling from './EditScheduling';
 
 const EMPLOYEES_KEY = 'capex_employees';
 
-const GeneralCalendar = ({ employees = [] }) => {
+const GeneralCalendar = () => {
+  const [calendarEvents, setCalendarEvents] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState('edit');
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [titleInput, setTitleInput] = useState('');
-  const [editFormOpen, setEditFormOpen] = useState(false);
-  const [editingData, setEditingData] = useState(null);
+  // Estado para guardar el empleado seleccionado en el modal de AddScheduling
+  const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
 
-  // ✅ EXPANSIÓN de eventos robusta
-  const calendarEvents = employees
-    .filter(emp => emp && emp.id)
-    .flatMap(emp =>
-      (emp.schedulings || [])
-        .filter(ev => ev && (ev.id || ev.idBase))
-        .flatMap(ev => {
-          let start = ev.fechaInicio ? ev.fechaInicio.split('T')[0] : undefined;
-          let end = ev.fechaFin ? ev.fechaFin.split('T')[0] : undefined;
-          if (!start) return [];
-          if (!end) end = start;
 
-          const days = [];
-          let current = new Date(start);
-          const endDate = new Date(end);
-
-          while (current <= endDate) {
-            days.push(new Date(current));
-            current.setDate(current.getDate() + 1);
-          }
-
-          const baseId = ev.idBase || (ev.id ? ev.id.toString() : Date.now().toString());
-
-          return days.map((date, idx) => ({
-            ...ev,
-            id: `${baseId}_${idx}`,
-            idBase: baseId,
-            empleadoId: emp.id,
-            title: emp.nombre + ': ' + (ev.title || `${ev.horaInicio}-${ev.horaFin}`),
-            start: date.toISOString().split('T')[0],
-            allDay: true,
-          }));
-        })
-    );
-
-  // 📅 Expandir programaciones con getUTCDay() corregido
+  // --- Función expandirProgramacion (con manejo de UTC y logs de depuración) ---
   const expandirProgramacion = (prog, idBase) => {
-    const { fechaInicio, fechaFin, dias = [], repeticion, ...rest } = prog;
-    const start = new Date(fechaInicio);
-    const end = new Date(fechaFin || fechaInicio);
+    const { fechaInicio, fechaFin, dias = [] } = prog;
 
     const diasSemanaMap = {
-      Domingo: 0,
-      Lunes: 1,
-      Martes: 2,
-      Miercoles: 3,
-      Jueves: 4,
-      Viernes: 5,
-      Sabado: 6,
+      domingo: 0, lunes: 1, martes: 2, miercoles: 3,
+      miércoles: 3, jueves: 4, viernes: 5, sabado: 6, sábado: 6
     };
 
-    const diasSeleccionados = dias.map(d => diasSemanaMap[d]);
-    const eventos = [];
+    const diasSeleccionados = dias.map(d => {
+      const limpio = d.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return diasSemanaMap[limpio];
+    });
 
-    let current = new Date(start);
+    const eventos = [];
+    
+    // Normalizar las fechas de inicio y fin a medianoche UTC.
+    // Añadir 'T00:00:00Z' asegura que se interpreten como UTC y en el inicio del día.
+    const startUTC = new Date(fechaInicio + 'T00:00:00Z');
+    const endUTC = new Date(fechaFin + 'T00:00:00Z');
+
+    let current = new Date(startUTC); // Clona la fecha de inicio para iterar
+
     let idx = 0;
 
-    while (current <= end) {
-      const diaSemana = current.getUTCDay(); // ✅ CORRECTO
-      if (
-        (repeticion === 'No se repite' && (diasSeleccionados.length === 0 || diasSeleccionados.includes(diaSemana))) ||
-        (repeticion === 'Semanal' && diasSeleccionados.includes(diaSemana)) ||
-        (repeticion === 'Mensual' && diasSeleccionados.includes(diaSemana))
-      ) {
+    // --- CONSOLE.LOGS DEPURACIÓN EN expandirProgramacion ---
+    console.log("3. prog recibido en expandirProgramacion:", JSON.parse(JSON.stringify(prog))); // Log completo del objeto
+    console.log(`Rango recibido (prog original): ${fechaInicio} a ${fechaFin}`);
+    console.log(`Días seleccionados (numéricos): ${diasSeleccionados}`);
+    console.log(`startUTC (ISO): ${startUTC.toISOString()}`);
+    console.log(`endUTC (ISO): ${endUTC.toISOString()}`);
+    // ---------------------------------------------------------------------
+
+    // Bucle para iterar desde la fecha de inicio hasta (e incluyendo) la fecha de fin.
+    // Usamos getTime() para comparar milisegundos, que es más preciso.
+    while (current.getTime() <= endUTC.getTime()) {
+      // Obtener el día de la semana en UTC (0=Domingo, 1=Lunes, etc.)
+      const diaSemana = current.getUTCDay();
+
+      // Formatear la fecha actual para FullCalendar (YYYY-MM-DD).
+      // toISOString() devuelve la fecha en UTC, y split('T')[0] toma solo la parte de la fecha.
+      const formattedDate = current.toISOString().split('T')[0];
+
+      // --- CONSOLE.LOGS DEPURACIÓN PARA CADA ITERACIÓN ---
+      console.log(`  Iteración: Fecha actual (ISO): ${current.toISOString()} | Dia UTC: ${diaSemana} | Incluir? ${diasSeleccionados.includes(diaSemana) || diasSeleccionados.length === 0}`);
+      // ---------------------------------------------------------------------
+
+      // Si no hay días seleccionados (se muestran todos), o si el día actual está en los seleccionados
+      if (diasSeleccionados.length === 0 || diasSeleccionados.includes(diaSemana)) {
         eventos.push({
-          ...rest,
-          fechaInicio: current.toISOString().split('T')[0],
-          fechaFin: current.toISOString().split('T')[0],
-          dias,
-          repeticion,
-          id: idBase + '_' + idx,
-          idBase,
-          empleadoId: prog.empleadoId,
+          ...prog, // Mantener todas las propiedades originales de la programación
+          fechaInicio: formattedDate, // Usar la fecha expandida para el inicio del evento
+          fechaFin: formattedDate,   // Y también para el fin (es un evento de un solo día)
+          id: `${idBase}_${idx}`,    // ID único para cada evento expandido
+          idBase,                    // Referencia al ID original de la programación
         });
         idx++;
       }
-      current.setDate(current.getDate() + 1);
+
+      // Incrementar la fecha actual en un día en UTC para la siguiente iteración
+      current.setUTCDate(current.getUTCDate() + 1);
     }
+
+    // --- CONSOLE.LOGS DEPURACIÓN AL FINAL DE LA EXPANSIÓN ---
+    console.log("4. Eventos generados por expandirProgramacion:", eventos.map(e => e.fechaInicio));
+    console.log("------------------------------------------"); // Separador para claridad
+    // ---------------------------------------------------------------------
 
     return eventos;
   };
+  // --- FIN expandirProgramacion ---
 
-  // ✅ AGREGAR programación correctamente
+  const loadEvents = () => {
+    const empleadosActuales = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
+    // --- CONSOLE.LOG DEPURACIÓN AL CARGAR EMPLEADOS ---
+    console.log("2. Empleados cargados de localStorage en loadEvents:", JSON.parse(JSON.stringify(empleadosActuales)));
+    // --------------------------------------------------
+
+    const events = empleadosActuales.flatMap(emp =>
+      (emp.schedulings || []).flatMap(prog => {
+        const idBase = prog.idBase || prog.id;
+        // Aquí prog contiene el rango completo (ej: 2025-07-14 a 2025-07-25)
+        return expandirProgramacion(prog, idBase).map(ev => ({
+          ...ev,
+          empleadoId: emp.id,
+          title: `${emp.nombre}: ${ev.horaInicio}-${ev.horaFin}`,
+          start: ev.fechaInicio, // 'fechaInicio' ya viene formateado YYYY-MM-DD desde expandirProgramacion
+          allDay: true,
+        }));
+      })
+    );
+    // --- CONSOLE.LOG DEPURACIÓN ANTES DE setCalendarEvents ---
+    console.log("5. Eventos finales pasados a setCalendarEvents:", events.map(e => e.start));
+    // --------------------------------------------------------
+    setCalendarEvents(events);
+  };
+
+  useEffect(() => {
+    loadEvents();
+    // Escucha cambios en localStorage para actualizar el calendario
+    const handleStorageChange = () => loadEvents();
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const handleAddEvent = (prog) => {
+    // prog ya debería traer empleadoId de AddScheduling, pero se añade un fallback por seguridad.
     if (!prog.empleadoId) {
-      alert('⚠️ Debes seleccionar un empleado.');
-      return;
+        alert('Selecciona un empleado');
+        return;
     }
 
     const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
-    const idBase = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
-    const eventos = expandirProgramacion(prog, idBase);
+    // Genera un idBase único para la nueva programación (si no viene de una edición)
+    // AddScheduling ya está generando un id para 'nuevaProg', pero este es para el idBase
+    const idBase = prog.idBase || (Date.now().toString() + Math.floor(Math.random() * 10000).toString());
+
+    // --- CONSOLE.LOG DEPURACIÓN EN handleAddEvent ---
+    console.log("1. Prog (objeto a guardar) en handleAddEvent:", JSON.parse(JSON.stringify(prog)));
+    // ------------------------------------------------
 
     const nuevosEmpleados = empleados.map(emp =>
-      emp.id && prog.empleadoId && emp.id.toString() === prog.empleadoId.toString()
-        ? { ...emp, schedulings: [...(emp.schedulings || []), ...eventos] }
-        : emp
+        String(emp.id) === String(prog.empleadoId)
+            ? { ...emp, schedulings: [...(emp.schedulings || []), { ...prog, idBase }] }
+            : emp
     );
 
     localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(nuevosEmpleados));
     setModalOpen(false);
-    window.location.reload();
+    // Llama a loadEvents DIRECTAMENTE para actualizar el calendario sin recargar la página
+    loadEvents(); 
   };
 
-  // ✅ EDITAR programación
-  const handleEdit = () => {
-    if (!selectedEvent) return;
-
-    const rawId = selectedEvent.extendedProps?.id || selectedEvent.id;
-    const idBase = rawId.includes('_') ? rawId.split('_')[0] : rawId;
-
-    const empleadoId =
-      selectedEvent.extendedProps?.empleadoId ||
-      selectedEvent.groupId ||
-      selectedEvent.resourceId ||
-      (selectedEvent.getResources?.()[0]?.id);
-
-    if (!empleadoId) {
-      alert('⚠️ Error: empleadoId no definido.');
-      return;
-    }
-
-    const emp = employees.find(e => e.id && String(e.id) === String(empleadoId));
-    let progData = null;
-
-    if (emp && Array.isArray(emp.schedulings)) {
-      progData = emp.schedulings.find(ev => {
-        const evIdBase = ev.idBase || (ev.id ? ev.id.toString() : undefined);
-        return String(evIdBase) === String(idBase) || String(ev.id) === String(idBase);
-      });
-    }
-
-    if (!progData) {
-      alert(`No se encontró la programación para empleadoId=${empleadoId} y idBase=${idBase}`);
-      return;
-    }
-
-    setEditingData({
-      fechaInicio: progData.fechaInicio,
-      fechaFin: progData.fechaFin,
-      horaInicio: progData.horaInicio,
-      horaFin: progData.horaFin,
-      repeticion: progData.repeticion,
-      dias: progData.dias || [],
-      id: idBase,
-      idBase,
-      empleadoId,
-      title: progData.title,
-    });
-    setEditFormOpen(true);
-  };
-
-  // ✅ GUARDAR edición
-  const handleSaveEdit = (prog) => {
-    if (!editingData) {
-      alert('Error: no hay datos de edición válidos.');
-      return;
-    }
-
-    const empId = editingData.empleadoId;
-    const idBase = editingData.idBase || editingData.id || Date.now().toString();
-
-    const updatedEmployees = employees.map(emp => {
-      if (emp.id !== empId) return emp;
-
-      let nuevasSchedulings = (emp.schedulings || []).filter(
-        ev => String(ev.idBase) !== String(idBase) && String(ev.id) !== String(idBase)
-      );
-
-      nuevasSchedulings = [...nuevasSchedulings, ...expandirProgramacion(prog, idBase)];
-
-      return { ...emp, schedulings: nuevasSchedulings };
-    });
-
-    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
-    setEditFormOpen(false);
-    setModalOpen(false);
-    setEditingData(null);
-    setSelectedEvent(null);
-    window.location.reload();
-  };
-
-  // ✅ ELIMINAR programación
-  const handleDelete = () => {
-    if (!selectedEvent) return;
-  
-    const empId = selectedEvent.extendedProps?.empleadoId;
-    const rawId = selectedEvent.extendedProps?.id || selectedEvent.id;
-    const idBase = rawId ? rawId.split('_')[0] : undefined;
-  
-    console.log('🗑️ Eliminando:', { empId, rawId, idBase });
-  
-    if (!idBase) {
-      alert('⚠️ No se pudo obtener idBase.');
-      return;
-    }
-  
-    const updatedEmployees = employees.map(emp => {
-      if (String(emp.id) !== String(empId)) return emp;
-  
-      const schedulingsAntes = emp.schedulings || [];
-      const schedulingsDespues = schedulingsAntes.filter(
-        ev => String(ev.idBase) !== String(idBase)
-      );
-  
-      console.log('Antes:', schedulingsAntes);
-      console.log('Después:', schedulingsDespues);
-  
-      return { ...emp, schedulings: schedulingsDespues };
-    });
-  
-    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
-    setModalOpen(false);
-    window.location.reload();
-  };
-  
-
-  const handleEventClick = (info) => {
-    setModalType('edit');
-    setSelectedEvent(info.event);
-    setTitleInput(info.event.title);
-    setModalOpen(true);
-  };
-
+  // Función para abrir el modal y seleccionar el empleado
   const handleDateClick = (info) => {
-    setModalType('add');
+    // Si tu dateClick solo abre el modal para AÑADIR una programación,
+    // puedes dejar el empleado como null inicialmente o seleccionarlo en el modal.
+    // Si quieres asociarlo a un empleado existente, necesitarías un mecanismo de selección de empleado antes de abrir el modal.
+    setSelectedEmployeeForModal(null); // Reinicia el empleado seleccionado
     setModalOpen(true);
   };
 
@@ -251,72 +162,28 @@ const GeneralCalendar = ({ employees = [] }) => {
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay',
-        }}
-        selectable={true}
-        editable={false}
         events={calendarEvents}
-        eventClick={handleEventClick}
-        dateClick={handleDateClick}
-        height="auto"
+        dateClick={handleDateClick} // Usa la función revisada
+        // Puedes añadir más opciones de FullCalendar aquí
+        locale="es" // Asegúrate de que el calendario use el idioma español
       />
 
-      {modalType === 'edit' && !editFormOpen && (
+      {modalOpen && (
         <SeeScheduling
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          title={'Detalle de programación'}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
-          canEdit={true}
-          canDelete={true}
+          title="Agregar programación"
         >
-          <input
-            type="text"
-            className="w-full border border-gray-300 rounded px-3 py-2 mt-2"
-            placeholder="Título de la programación"
-            value={titleInput}
-            readOnly
-          />
-        </SeeScheduling>
-      )}
-
-      {editFormOpen && (
-        <SeeScheduling
-          isOpen={editFormOpen}
-          onClose={() => {
-            setEditFormOpen(false);
-            setModalOpen(false);
-            setEditingData(null);
-            setSelectedEvent(null);
-          }}
-          title={'Editar programación'}
-        >
-          <EditScheduling
-            editing={editingData}
-            onSave={handleSaveEdit}
-            onCancelEdit={() => {
-              setEditFormOpen(false);
-              setEditingData(null);
-            }}
-          />
-        </SeeScheduling>
-      )}
-
-      {modalType === 'add' && (
-        <SeeScheduling
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={'Agregar programación'}
-        >
+          {/* Aquí pasamos el empleado si AddScheduling lo necesita */}
           <AddScheduling
             onAdd={handleAddEvent}
-            editing={null}
+            editing={null} // Si no estás editando, es null
             onCancelEdit={() => setModalOpen(false)}
-            employees={employees}
+            // 'employees' se pasa a AddScheduling para el selector de empleado
+            // Asegúrate de que este 'employees' sea el array completo de empleados para el select
+            employees={JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || []}
+            // Si AddScheduling espera un solo objeto 'empleado'
+            // empleado={selectedEmployeeForModal} // Pasa el empleado si es relevante para el flujo del formulario
           />
         </SeeScheduling>
       )}
