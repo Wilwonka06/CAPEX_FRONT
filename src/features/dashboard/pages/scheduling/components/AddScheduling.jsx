@@ -44,11 +44,9 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
     if ((prog.repeticion === 'Semanal' || prog.repeticion === 'Mensual') && (!prog.dias || prog.dias.length === 0)) {
       newErrors.dias = 'Selecciona al menos un día';
     }
-    // Validar que fechaFin no sea menor que fechaInicio
     if (prog.fechaInicio && prog.fechaFin && prog.fechaFin < prog.fechaInicio) {
       newErrors.fechaFin = 'La fecha fin no puede ser menor que la fecha inicio';
     }
-    // Validar que horaFin sea mayor que horaInicio
     if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
       newErrors.horaFin = 'La hora fin debe ser mayor que la hora inicio';
     }
@@ -77,7 +75,15 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
   const handleAddEvent = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    if (onAdd) onAdd({ ...prog, empleadoId: selectedEmployee });
+    let progWithIds = { ...prog };
+    progWithIds.empleadoId = selectedEmployee;
+    if (!progWithIds.id) {
+      progWithIds.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+    }
+    if (!progWithIds.idBase) {
+      progWithIds.idBase = progWithIds.id;
+    }
+    if (onAdd) onAdd(progWithIds);
     setProg(initialProg);
     setSelectedEmployee('');
     setErrors({});
@@ -87,7 +93,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
     <div>
       <form onSubmit={handleAddEvent}>
         <div className="flex flex-wrap gap-6 items-end">
-          {/* Selector de empleado */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
             <select name="empleadoId" value={selectedEmployee} onChange={handleEmployeeChange} className="border rounded px-3 py-2 w-40">
@@ -98,7 +103,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
             </select>
             {errors.empleado && <p className="text-red-500 text-xs mt-1">{errors.empleado}</p>}
           </div>
-          {/* Fechas */}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Fecha inicio</label>
             <input type="date" name="fechaInicio" value={prog.fechaInicio} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
@@ -109,7 +113,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
             <input type="date" name="fechaFin" value={prog.fechaFin} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
             {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
           </div>
-          {/* Selector de repetición */}
           <div className="flex-1 min-w-[180px]">
             <label className="block text-sm font-medium text-text-main mb-1">Repetición</label>
             <select name="repeticion" value={prog.repeticion} onChange={handleProgChange} className="border rounded px-3 py-2 w-full">
@@ -120,7 +123,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
             {errors.repeticion && <p className="text-red-500 text-xs mt-1">{errors.repeticion}</p>}
           </div>
         </div>
-        {/* Días de la semana */}
         <div className="flex flex-wrap gap-4 mt-6 mb-4">
           {diasSemana.map(dia => (
             <label key={dia} className="flex items-center gap-1 text-text-main text-sm">
@@ -135,7 +137,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
           ))}
           {errors.dias && <p className="text-red-500 text-xs w-full mt-1">{errors.dias}</p>}
         </div>
-        {/* Horario y botón */}
         <div className="flex flex-wrap items-end gap-4 mt-2">
           <div className="flex items-center gap-2">
             <select name="horaInicio" value={prog.horaInicio} onChange={handleProgChange} className="border rounded px-3 py-2">
@@ -158,4 +159,4 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
   );
 };
 
-export default AddScheduling; 
+export default AddScheduling;

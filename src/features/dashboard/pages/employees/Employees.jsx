@@ -22,23 +22,48 @@ const normalizeText = (text) => {
 };
 
 // Utilidad para expandir una programación a eventos diarios
-function expandirProgramacion(prog) {
-  const { fechaInicio, fechaFin, ...rest } = prog;
+// Utilidad para expandir una programación a eventos diarios
+// adentro de tu archivo EmployeesPage.jsx
+
+function expandirProgramacion(prog, idBase) {
+  const { fechaInicio, fechaFin, dias = [] } = prog;
+
+  const diasSemanaMap = {
+    Domingo: 0, Lunes: 1, Martes: 2, Miercoles: 3,
+    Jueves: 4, Viernes: 5, Sabado: 6,
+  };
+
+  const diasSeleccionados = dias.map(d => diasSemanaMap[d.trim()]);
+  const eventos = [];
+
   const start = new Date(fechaInicio);
   const end = new Date(fechaFin || fechaInicio);
-  const dias = [];
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+
   let current = new Date(start);
+  let idx = 0;
+
   while (current <= end) {
-    dias.push(new Date(current));
+    const diaSemana = current.getDay();
+    if (diasSeleccionados.length > 0 ? diasSeleccionados.includes(diaSemana) : current.getTime() === start.getTime()) {
+      eventos.push({
+        ...prog,
+        fechaInicio: current.toISOString().split('T')[0],
+        fechaFin: current.toISOString().split('T')[0],
+        id: `${idBase}_${idx}`,
+        idBase,
+      });
+      idx++;
+    }
     current.setDate(current.getDate() + 1);
+    current.setHours(0, 0, 0, 0);
   }
-  return dias.map(date => ({
-    ...rest,
-    fechaInicio: date.toISOString().split('T')[0],
-    fechaFin: date.toISOString().split('T')[0],
-    id: Date.now() + Math.random(), // id único
-  }));
+
+  return eventos;
 }
+
+
 
 const EmployeesPage = () => {
   // Leer empleados de localStorage al iniciar
@@ -96,17 +121,31 @@ const EmployeesPage = () => {
   };
 
   const handleAddEmployee = (data) => {
+    // ✅ 1) NO expandas la programación aquí.
+    // Guarda las programaciones tal cual: con fechaInicio, fechaFin, días, repetición, etc.
+  
+    const schedulingsCrudo = addEmployeeSchedulings.map(prog => ({
+      ...prog,
+      idBase: Date.now().toString() + Math.floor(Math.random() * 10000).toString(),
+    }));
+  
+    console.log('✅ Schedulings guardados CRUDO:', schedulingsCrudo);
+  
+    // ✅ 2) Agrega el empleado con la programación base.
     setEmployees([
       ...employees,
       {
         id: Date.now(),
         ...data,
-        schedulings: addEmployeeSchedulings,
+        schedulings: schedulingsCrudo,
       }
     ]);
+  
+    // ✅ 3) Limpia el formulario.
     setShowForm(false);
     setAddEmployeeSchedulings([]);
   };
+  
 
   const handleEditClick = (employee) => {
     setEditEmployee(employee);
@@ -123,6 +162,7 @@ const EmployeesPage = () => {
             estado: data.estado === 'Activo',
             correo: data.correo,
             tipoDocumento: data.tipoDocumento,
+            schedulings: data.schedulings || emp.schedulings, // Incluir las programaciones actualizadas
           }
         : emp
     ));
@@ -153,7 +193,7 @@ const EmployeesPage = () => {
       setEditingScheduling(null);
     } else {
       // Expandir la programación a eventos diarios
-      const nuevosEventos = expandirProgramacion(prog);
+      const nuevosEventos = expandirProgramacion(prog, Date.now());
       setSchedulings([
         ...schedulings,
         ...nuevosEventos,
@@ -219,31 +259,30 @@ const EmployeesPage = () => {
             <div className="lg:w-2/3">
               <div className="bg-white rounded-lg shadow-md mb-4">
                 <Calendar
-                  events={
+                  empleado={
                     showForm
-                      ? addEmployeeSchedulings.map(ev => ({
-                          ...ev,
-                          title: (employeeForm?.nombre ? employeeForm.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
-                        }))
+                      ? { schedulings: addEmployeeSchedulings, ...employeeForm }
                       : editEmployee
-                        ? (editEmployee.schedulings || []).map(ev => ({
-                            ...ev,
-                            title: (editEmployee?.nombre ? editEmployee.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
-                          }))
+                        ? editEmployee
                         : seeEmployee
-                          ? (seeEmployee.schedulings || []).map(ev => ({
-                              ...ev,
-                              title: (seeEmployee?.nombre ? seeEmployee.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
-                            }))
-                          : employees.flatMap(emp =>
-                              (emp.schedulings || []).map(ev => ({
-                                ...ev,
-                                title: (emp.nombre ? emp.nombre + ': ' : '') + (ev.title || `${ev.horaInicio}-${ev.horaFin}`)
-                              }))
-                            )
+                          ? seeEmployee
+                          : null
                   }
-                  onEditEvent={event => handleEditScheduling(event)}
-                  onDeleteEvent={id => handleDeleteScheduling(id)}
+                  onUpdateEmpleado={empleadoActualizado => {
+                    if (editEmployee) {
+                      setEmployees(emps =>
+                        emps.map(emp => emp.id === empleadoActualizado.id ? empleadoActualizado : emp)
+                      );
+                      setEditEmployee(empleadoActualizado);
+                    }
+                    if (showForm) {
+                      setAddEmployeeSchedulings(empleadoActualizado.schedulings || []);
+                      setEmployeeForm(empleadoActualizado);
+                    }
+                    if (seeEmployee) {
+                      setSeeEmployee(empleadoActualizado);
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -264,7 +303,7 @@ const EmployeesPage = () => {
                   />
                 </div>
                 <button
-                  className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors"
+                  className="bg-text-main hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm"
                   onClick={() => setShowForm(true)}
                 >
                   <i className="bi bi-plus-lg text-lg"></i>
@@ -284,7 +323,7 @@ const EmployeesPage = () => {
                   />
                 </div>
                 <button
-                  className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors"
+                  className="bg-text-main hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm"
                   onClick={() => setShowForm(true)}
                 >
                   <i className="bi bi-plus-lg text-lg"></i>
@@ -315,7 +354,7 @@ const EmployeesPage = () => {
                 <h2 className="text-lg font-semibold text-text-main mb-4">Lista de Empleados</h2>
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm text-left">
-                    <thead className="bg-accent/20 text-text-main/80 uppercase">
+                    <thead className="bg-gray-50 text-text-main/80 uppercase">
                       <tr>
                         <th className="py-3 px-4 font-semibold">Nombre</th>
                         <th className="py-3 px-4 font-semibold">Apellido</th>
@@ -326,33 +365,33 @@ const EmployeesPage = () => {
                     </thead>
                     <tbody className="bg-white text-text-main">
                       {paginatedEmployees.map((emp) => (
-                        <tr key={emp.id} className="border-b border-gray-200 hover:bg-accent/10">
+                        <tr key={emp.id} className="border-b border-gray-200 hover:bg-gray-50">
                           <td className="py-3 px-4 font-medium">{emp.nombre}</td>
                           <td className="py-3 px-4">{emp.apellido}</td>
                           <td className="py-3 px-4">{emp.documento}</td>
                           <td className="py-3 px-4">
                             <button
                               onClick={() => toggleEstado(emp.id)}
-                              className={`px-3 py-1 rounded-full text-xs font-semibold focus:outline-none transition ${emp.estado ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}
+                              className={`px-3 py-1 rounded-full text-xs font-semibold focus:outline-none transition ${emp.estado ? 'bg-black' : 'bg-gray-200 text-gray-600'}`}
                             >
-                              {emp.estado ? 'Activo' : 'Inactivo'}
+                              <span className={emp.estado ? 'text-white' : 'text-gray-600'}>{emp.estado ? 'Activo' : 'Inactivo'}</span>
                             </button>
                           </td>
                           <td className="py-4 px-4 text-sm font-medium text-right">
-                            <div className="flex gap-2 justify-end">
+                            <div className="flex gap-2 justify-end items-center">
                               <button
-                                className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
+                                className="bg-transparent p-0 m-0 border-none focus:outline-none"
                                 title="Visualizar"
                                 onClick={() => handleSeeClick(emp)}
                               >
-                                <i className="bi bi-eye text-amber-500 text-sm"></i>
+                                <i className="bi bi-eye text-xl" style={{ color: '#b8864b' }}></i>
                               </button>
                               <button
-                                className="h-8 w-8 p-0 border border-gray-300 hover:bg-accent/20 hover:border-primary rounded-md flex items-center justify-center transition-colors"
+                                className="bg-transparent p-0 m-0 border-none focus:outline-none"
                                 title="Editar"
                                 onClick={() => handleEditClick(emp)}
                               >
-                                <i className="bi bi-pencil-square text-primary text-sm"></i>
+                                <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
                               </button>
                             </div>
                           </td>
@@ -381,7 +420,7 @@ const EmployeesPage = () => {
         </div>
       </div>
     </div>
-);
+  );
 };
 
 export default EmployeesPage;
