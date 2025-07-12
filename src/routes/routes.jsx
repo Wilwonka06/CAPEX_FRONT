@@ -31,6 +31,8 @@ import Orders from '../features/landing/pages/orders/Orders';
 import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
 import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
+import Checkout from '../features/landing/pages/checkout/Checkout';
+import ThankYou from '../features/landing/pages/checkout/ThankYou';
 
 const router = createBrowserRouter([
   {
@@ -150,6 +152,14 @@ const router = createBrowserRouter([
       {
         path: 'servicios',
         element: <ServicesPage />
+      },
+      {
+        path: 'checkout',
+        element: <Checkout />
+      },
+      {
+        path: 'gracias',
+        element: <ThankYou />
       },
     ]
   }

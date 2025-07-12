@@ -1,49 +1,81 @@
-import { createContext, useContext, useState } from 'react';
-
-// Mock de pedidos (idéntico a pedidosMock en Orders.jsx)
-const pedidosMock = [
-  {
-    id: 1001,
-    fecha: "2024-06-10",
-    clienteId: 1,
-    estado: "Pendiente",
-    valor: 350,
-    productos: [
-      { id: 1, nombre: "Extensión Lacia Natural", cantidad: 1, precio: 350 },
-    ],
-    numeroOrden: "ORD-20240610-001"
-  },
-  {
-    id: 1002,
-    fecha: "2024-06-09",
-    clienteId: 2,
-    estado: "En proceso",
-    valor: 215,
-    productos: [
-      { id: 2, nombre: "Shampoo Nutritivo", cantidad: 1, precio: 120 },
-      { id: 3, nombre: "Acondicionador Suavizante", cantidad: 1, precio: 95 },
-    ],
-    numeroOrden: "ORD-20240609-002"
-  },
-  {
-    id: 1003,
-    fecha: "2024-06-08",
-    clienteId: 3,
-    estado: "Enviado",
-    valor: 90000,
-    productos: [
-      { id: 4, nombre: "Gel Fijador", cantidad: 1, precio: 90000 },
-    ],
-    numeroOrden: "ORD-20240608-003"
-  },
-];
+import { createContext, useContext, useState, useEffect } from 'react';
+import ordersService from '../../../../../shared/services/OrdersService';
 
 const OrdersContext = createContext();
 
 export function OrdersProvider({ children }) {
-  const [orders, setOrders] = useState(pedidosMock);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Cargar pedidos al inicializar
+  useEffect(() => {
+    const loadOrders = () => {
+      setLoading(true);
+      try {
+        const allOrders = ordersService.getAllOrders();
+        setOrders(allOrders);
+      } catch (error) {
+        console.error('Error cargando pedidos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, []);
+
+  // Función para actualizar pedidos
+  const updateOrders = () => {
+    const allOrders = ordersService.getAllOrders();
+    setOrders(allOrders);
+  };
+
+  // Función para actualizar estado de pedido
+  const updateOrderStatus = (id, newStatus) => {
+    const updatedOrder = ordersService.updateOrderStatus(id, newStatus);
+    if (updatedOrder) {
+      updateOrders();
+    }
+    return updatedOrder;
+  };
+
+  // Función para actualizar pedido completo
+  const updateOrder = (id, orderData) => {
+    const updatedOrder = ordersService.updateOrder(id, orderData);
+    if (updatedOrder) {
+      updateOrders();
+    }
+    return updatedOrder;
+  };
+
+  // Función para crear nuevo pedido
+  const createOrder = (orderData) => {
+    const newOrder = ordersService.createOrder(orderData);
+    if (newOrder) {
+      updateOrders();
+    }
+    return newOrder;
+  };
+
+  // Función para eliminar pedido
+  const deleteOrder = (id) => {
+    const deletedOrder = ordersService.deleteOrder(id);
+    if (deletedOrder) {
+      updateOrders();
+    }
+    return deletedOrder;
+  };
+
   return (
-    <OrdersContext.Provider value={{ orders, setOrders }}>
+    <OrdersContext.Provider value={{ 
+      orders, 
+      setOrders: updateOrders,
+      updateOrderStatus,
+      updateOrder,
+      createOrder,
+      deleteOrder,
+      loading
+    }}>
       {children}
     </OrdersContext.Provider>
   );
