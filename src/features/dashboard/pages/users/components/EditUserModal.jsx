@@ -58,7 +58,13 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       case 'telefono':
         return isValidPhone(value) ? '' : 'Teléfono inválido';
       case 'documento':
-        return isValidNumber(value) ? '' : 'Documento inválido';
+        if (!isValidNumber(value)) return 'Documento inválido';
+        if (form.tipoDocumento && users.some(u => u.tipoDocumento === form.tipoDocumento && u.documento === value && u.id !== form.id)) return 'Ya existe un usuario con ese tipo y número de documento';
+        return '';
+      case 'tipoDocumento':
+        if (!value.trim()) return 'Campo obligatorio';
+        if (form.documento && users.some(u => u.tipoDocumento === value && u.documento === form.documento && u.id !== form.id)) return 'Ya existe un usuario con ese tipo y número de documento';
+        return '';
       case 'password':
         return value ? (isValidPassword(value) ? '' : 'Contraseña débil') : '';
       case 'confirmPassword':

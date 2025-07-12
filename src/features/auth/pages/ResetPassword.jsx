@@ -14,27 +14,31 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const isFormValid = password.trim() && confirm.trim() && isValidPassword(password.trim()) && password.trim() === confirm.trim();
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!isValidPassword(password)) {
-      setError('Password is not valid.');
+    const trimmedPassword = password.trim();
+    const trimmedConfirm = confirm.trim();
+    if (!isValidPassword(trimmedPassword)) {
+      setError('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.');
       return;
     }
-    if (password !== confirm) {
-      setError('Passwords do not match.');
+    if (trimmedPassword !== trimmedConfirm) {
+      setError('Las contraseñas no coinciden.');
       return;
     }
     const users = JSON.parse(localStorage.getItem('usuarios')) || [];
     const idx = users.findIndex(u => u.correo === email);
     if (idx === -1) {
-      setError('User not found.');
+      setError('Usuario no encontrado.');
       return;
     }
-    users[idx].password = password;
+    users[idx].password = trimmedPassword;
     localStorage.setItem('usuarios', JSON.stringify(users));
-    setSuccess('Password successfully reset!');
+    setSuccess('¡Contraseña restablecida exitosamente!');
     setTimeout(() => navigate('/login'), 1500);
   };
 
@@ -85,6 +89,7 @@ const ResetPassword = () => {
             <button
               type="submit"
               className="px-6 py-2 bg-primary text-white rounded shadow hover:bg-primary-dark transition font-semibold"
+              disabled={!isFormValid}
             >
               Restaurar
             </button>

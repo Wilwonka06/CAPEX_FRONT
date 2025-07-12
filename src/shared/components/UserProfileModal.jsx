@@ -11,7 +11,7 @@ const UserProfileModal = ({ user, onClose, onEdit, onGoToPurchases, onLogout }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative animate-fade-in max-h-[90vh] flex flex-col mt-16">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative animate-fade-in max-h-[90vh] flex flex-col mt-5">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-100 rounded-t-2xl flex items-center justify-between px-8 py-5">
           <h2 className="text-2xl font-bold text-primary m-0">Mi perfil</h2>
@@ -63,14 +63,6 @@ const UserProfileModal = ({ user, onClose, onEdit, onGoToPurchases, onLogout }) 
                 <span className={`font-semibold text-xs px-2 py-1 rounded ${user.estado === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{user.estado}</span>
               </div>
             </div>
-            {isClient && (
-              <button
-                className="mt-4 px-4 py-2 bg-primary text-white rounded-lg shadow hover:bg-primary-dark transition font-semibold"
-                onClick={onGoToPurchases}
-              >
-                Mis compras
-              </button>
-            )}
             <button
               className="mt-4 px-4 py-2 bg-text-main text-white rounded-lg shadow hover:bg-primary-dark transition font-semibold"
               onClick={onEdit}
@@ -79,7 +71,7 @@ const UserProfileModal = ({ user, onClose, onEdit, onGoToPurchases, onLogout }) 
             </button>
             {typeof onLogout === 'function' && (
               <button
-                className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 transition font-semibold"
+                className="mt-2 px-4 py-2 bg-primary text-white rounded-lg shadow hover:bg-primary-dark transition font-semibold"
                 onClick={onLogout}
               >
                 Cerrar sesión

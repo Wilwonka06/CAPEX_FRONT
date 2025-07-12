@@ -72,6 +72,7 @@ const EditProfile = () => {
       telefono: form.telefono,
       direccion: form.direccion,
       foto: form.foto,
+      avatarCompressed: form.foto || usuarios[idx].avatarCompressed,
     };
     if (form.password) {
       updatedUser.password = form.password;

@@ -1,26 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isValidEmail } from '../../../shared/validations';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const isFormValid = isValidEmail(email.trim());
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
-    if (!email) {
-      setError('Please enter your email.');
+    const trimmedEmail = email.trim();
+    if (!isValidEmail(trimmedEmail)) {
+      setError('Por favor ingresa un correo válido.');
       return;
     }
     const users = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const user = users.find(u => u.correo === email);
+    const user = users.find(u => u.correo === trimmedEmail);
     if (!user) {
-      setError('No user found with that email.');
+      setError('No existe un usuario con ese correo.');
       return;
     }
-    // Redirigir a la página de reset con el email como parámetro de estado
-    navigate('/reset-password', { state: { email } });
+    navigate('/reset-password', { state: { email: trimmedEmail } });
   };
 
   return (
@@ -52,6 +55,7 @@ const ForgotPassword = () => {
             <button
               type="submit"
               className="px-6 py-2 bg-white border border-primary text-primary rounded shadow hover:bg-primary hover:text-white transition font-semibold"
+              disabled={!isFormValid}
             >
               Obtener nueva contraseña
             </button>

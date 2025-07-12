@@ -94,6 +94,61 @@ export const deleteRole = (roleId) => {
   });
 };
 
+const USERS_KEY = 'usuarios';
+
+function saveUsersToStorage(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function loadUsersFromStorage() {
+  // Migración automática de 'users' a 'usuarios'
+  const oldData = localStorage.getItem('users');
+  const newData = localStorage.getItem(USERS_KEY);
+  if (!newData && oldData) {
+    try {
+      const oldUsers = JSON.parse(oldData);
+      if (Array.isArray(oldUsers)) {
+        localStorage.setItem(USERS_KEY, JSON.stringify(oldUsers));
+        localStorage.removeItem('users');
+        return oldUsers;
+      }
+    } catch {}
+  }
+  const data = localStorage.getItem(USERS_KEY);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export const getUsers = () => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      let users = loadUsersFromStorage();
+      if (!users) {
+        users = [];
+        saveUsersToStorage(users);
+      }
+      resolve(users);
+    }, 200);
+  });
+};
+
+export const addUser = (user) => {
+  return new Promise((resolve) => {
+    getUsers().then((users) => {
+      const newUser = { ...user, id: Date.now() };
+      const updatedUsers = [...users, newUser];
+      saveUsersToStorage(updatedUsers);
+      resolve(newUser);
+    });
+  });
+};
+
 // Más adelante, podrías añadir funciones como:
 // export const getCustomers = () => { /* ... */ };
 // export const getEmployees = () => { /* ... */ }; 

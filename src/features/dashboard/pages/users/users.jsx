@@ -6,6 +6,8 @@ import EditUserModal from './components/EditUserModal';
 import UserDetailModal from './components/UserDetailModal';
 import Paginator from '../../../../shared/Paginator';
 import { getRoles } from '../../../../shared/services/ModuleDataService';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const LOCAL_STORAGE_KEY = 'usuarios';
 const USERS_PER_PAGE = 5;
@@ -135,6 +137,7 @@ const Users = () => {
   const handleCreateUser = (newUser) => {
     setUsers(prev => {
       const updated = [...prev, newUser];
+      toast.success('Usuario creado correctamente', { position: 'top-right' });
       return updated;
     });
     setShowCreateModal(false);
@@ -142,9 +145,11 @@ const Users = () => {
   const handleEditUser = (updatedUser) => {
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     setShowEditModal(false);
+    toast.success('Usuario editado correctamente', { position: 'top-right' });
   };
   const handleDeleteUser = (userId) => {
     setUsers(prev => prev.filter(u => u.id !== userId));
+    toast.info('Usuario eliminado', { position: 'top-right' });
   };
 
   // Abrir modales
@@ -217,6 +222,7 @@ const Users = () => {
           user={selectedUser}
         />
       )}
+      <ToastContainer />
     </div>
   );
 };

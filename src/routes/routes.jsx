@@ -12,7 +12,6 @@ import Landing from '../features/landing/Landing';
 import CategoriasProductos from '../features/dashboard/pages/CatProducts/CatProducts';
 import CategoriasServicios from '../features/dashboard/pages/CatServices/CatServices';
 import Appointments from '../features/dashboard/pages/appointments/Appointments';
-import Quotes from '../features/dashboard/pages/quotes/Quotes';
 import Clientes from '../features/dashboard/pages/Customers/Customer';
 import Compras from '../features/dashboard/pages/Shopping/Shopping';
 import Dashboard from '../features/dashboard/components/Dashboard';
@@ -31,7 +30,7 @@ import Scheduling from '../features/dashboard/pages/scheduling/scheduling';
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
 import Products from '../features/landing/pages/products/Products';
-import ClientAppointments from '../features/landing/pages/appointments/ClientAppointments';
+import ClientAppointments from '../features/landing/pages/ClientAppointments/ClientAppointments';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
 import EditProfile from '../features/landing/components/EditProfile';
 
@@ -39,11 +38,16 @@ import LoginPage from '../features/auth/pages/LoginPage';
 import ForgotPassword from '../features/auth/pages/ForgotPassword';
 import ResetPassword from '../features/auth/pages/ResetPassword';
 import EditProfilePage from '../shared/pages/EditProfilePage';
+import RegisterPage from '../features/auth/pages/RegisterPage';
 
 const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />,
   },
   {
     path: '/forgot-password',
@@ -208,7 +212,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'citas',
-            element: <Quotes />
+            element: <ClientAppointments />
           },
           {
             path: 'pedidos',

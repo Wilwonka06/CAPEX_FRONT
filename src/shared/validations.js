@@ -79,3 +79,13 @@ export function isValidDecimal(value) {
 export function isValidPassword(password) {
   return typeof password === 'string' && password.length >= 6;
 }
+
+// Valida nombre: solo letras y espacios, mínimo 2 caracteres
+export function isValidName(nombre) {
+  return /^[A-Za-zÁÉÍÓÚáéíóúÑñ ]{2,}$/.test(nombre.trim());
+}
+
+// Valida que dos contraseñas coincidan
+export function isPasswordMatch(password, confirmPassword) {
+  return password === confirmPassword;
+}
