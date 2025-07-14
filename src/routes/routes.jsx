@@ -15,9 +15,9 @@ import Appointments from '../features/dashboard/pages/appointments/Appointments'
 import Clientes from '../features/dashboard/pages/Customers/Customer';
 import Compras from '../features/dashboard/pages/Shopping/Shopping';
 import Dashboard from '../features/dashboard/components/Dashboard';
-import Empleados from '../features/dashboard/pages/Employees/Employees';
+import Empleados from '../features/dashboard/pages/employees/Employees';  
 import Pedidos from '../features/dashboard/pages/Orders/Orders';
-import Productos from '../features/dashboard/pages/Products/Products';
+import Productos from '../features/dashboard/pages/products/products';
 import Proveedores from '../features/dashboard/pages/Suppliers/Suppliers';
 import RolesPage from '../features/dashboard/pages/roles/RolesPage';
 import SaleServices from '../features/dashboard/pages/SaleServices/SaleServices';
@@ -27,11 +27,18 @@ import VentasProductos from '../features/dashboard/pages/SaleProducts/SalesProdu
 import Scheduling from '../features/dashboard/pages/scheduling/scheduling';
 
 // Pages Landing
+import Cart from '../features/landing/pages/cart/Cart';
+import CuidadoCapilar from '../features/landing/pages/products/pages/CuidadoCapilar';
+import Extensiones from '../features/landing/pages/products/pages/Extensiones';
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
 import Products from '../features/landing/pages/products/Products';
 import ClientAppointments from '../features/landing/pages/ClientAppointments/ClientAppointments';
+import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
+import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
+import Checkout from '../features/landing/pages/checkout/Checkout';
+import ThankYou from '../features/landing/pages/checkout/ThankYou';
 import EditProfile from '../features/landing/components/EditProfile';
 
 import LoginPage from '../features/auth/pages/LoginPage';
@@ -41,6 +48,7 @@ import EditProfilePage from '../shared/pages/EditProfilePage';
 import RegisterPage from '../features/auth/pages/RegisterPage';
 
 const router = createBrowserRouter([
+  // Rutas públicas de autenticación
   {
     path: '/login',
     element: <LoginPage />,
@@ -69,6 +77,8 @@ const router = createBrowserRouter([
     path: '/dashboard/perfil',
     element: <EditProfilePage />,
   },
+  
+  // Rutas protegidas
   {
     element: <RequireAuth />,
     children: [
@@ -76,6 +86,7 @@ const router = createBrowserRouter([
         path: '/',
         element: <Navigate to="/dashboard" replace />,
       },
+      // Dashboard con rutas protegidas por privilegios
       {
         path: '/dashboard',
         element: <Layout />,
@@ -200,8 +211,13 @@ const router = createBrowserRouter([
               </RequirePrivilege>
             )
           },
+          {
+            path: 'programacion',
+            element: <Scheduling />
+          }
         ]
       },
+      // Landing page del cliente
       {
         path: '/landing',
         element: <Landing />,
@@ -209,6 +225,10 @@ const router = createBrowserRouter([
           {
             index: true,
             element: <Home />
+          },
+          {
+            path: 'cart',
+            element: <Cart />
           },
           {
             path: 'citas',
@@ -223,24 +243,53 @@ const router = createBrowserRouter([
             element: <Products />
           },
           {
+            path: 'productos/:id',
+            element: <ProductDetailPageCliente />
+          },
+          {
             path: 'servicios',
+            element: <ServicesPage />
+          },
+          {
+            path: 'servicespage',
             element: <ServicesPage />
           },
           {
             path: 'citas-cliente',
             element: <ClientAppointments />
+          },
+          {
+            path: 'mis-pedidos',
+            element: <Orders />
+          },
+          {
+            path: 'cuidado-capilar',
+            element: <CuidadoCapilar />
+          },
+          {
+            path: 'extensiones',
+            element: <Extensiones />
+          },
+          {
+            path: 'quotes',
+            element: <Quotes />
           }
         ]
       },
+      // Redirección para compatibilidad
       {
-        path: '/roles',
-        element: <Navigate to="/dashboard/roles" replace />
-      }
+        path: 'productos/:id',
+        element: <ProductDetailPageCliente />
+      },
+      {
+        path: 'servicespage',
+        element: <ServicesPage />
+      },
+      {
+        path: 'servicios',
+        element: <ServicesPage />
+      },
     ]
-  },
-  {
-    path: '*',
-    element: <NotFound />
   }
 ]);
 

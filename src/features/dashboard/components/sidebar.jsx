@@ -1,7 +1,6 @@
 // components/Sidebar.jsx
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import Logo from '../../../shared/images/Logo(sin fondo).png';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -33,7 +32,7 @@ const Sidebar = () => {
         id: 'main',
         name: 'Dashboard',
         icon: 'bi-speedometer2',
-        path: '/',
+        path: '/dashboard',
         module: 'Dashboard'
       },
       {
@@ -74,7 +73,8 @@ const Sidebar = () => {
         items: [
           { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/dashboard/categorias-servicios', module: 'Gestión de Servicios' },
           { name: 'Servicios', icon: 'bi-scissors', path: '/dashboard/servicios', module: 'Gestión de Servicios' },
-          { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/dashboard/empleados', module: 'Gestión de Servicios' }
+          { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/dashboard/empleados', module: 'Gestión de Servicios' },
+          { name: 'Agendamiento General', icon: 'bi-calendar-range-fill', path: '/dashboard/programacion', module: 'Gestión de Servicios' }
         ]
       },
       {
@@ -154,6 +154,14 @@ const Sidebar = () => {
     setExpandedGroups(currentGroup ? { [currentGroup]: true } : {});
   }, [location.pathname]);
 
+  // Mantener la categoría abierta si una opción está seleccionada
+  useEffect(() => {
+    const currentGroup = getGroupIdByPath(location.pathname);
+    if (currentGroup) {
+      setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
+    }
+  }, [location.pathname]);
+
   // Guardar el grupo abierto al cerrar el sidebar
   useEffect(() => {
     if (!isExpanded && isLocked) {
@@ -203,10 +211,13 @@ const Sidebar = () => {
       {/* Header */}
       <div className="p-4 border-b border-accent/50 flex items-center justify-between">
         <div className="flex items-center">
-          <img src={Logo} alt="Logo" className="h-12 w-12 object-contain" />
-          {(isExpanded || isLocked) && (
-            <span className="ml-2 font-semibold text-background text-3xl whitespace-nowrap">
+          {(isExpanded || isLocked) ? (
+            <span className="ml-3 font-semibold text-white text-3xl whitespace-nowrap">
               CAP<span className='text-yellow-700'>EX</span>
+            </span>
+          ) : (
+            <span className=" font-bold text-white text-3xl bg-yellow-700 rounded-full w-10 h-10 flex items-center justify-center">
+              C
             </span>
           )}
         </div>
@@ -214,9 +225,9 @@ const Sidebar = () => {
           <button
             onClick={toggleLock}
             className={`p-1 rounded transition-colors ${
-              isLocked
-                ? 'text-background/80 hover:text-background'
-                : 'text-background/80 hover:text-background'
+              isLocked 
+                ? 'text-white/80 hover:text-white' 
+                : 'text-white/80 hover:text-white'
             }`}
             title={isLocked ? 'Desbloquear sidebar' : 'Bloquear sidebar'}
           >
@@ -239,7 +250,7 @@ const Sidebar = () => {
             {/* Group Header - Solo mostrar si tiene items o si es un link directo */}
             {group.items ? (
               <div
-                className={`flex items-center px-4 py-2 text-background/80 hover:bg-white-500 cursor-pointer transition-colors ${
+                className={`flex items-center px-4 py-2 text-white/80 hover:bg-white/10 hover:text-white rounded-lg cursor-pointer transition-colors ${
                   (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
                 }`}
                 onClick={() => toggleGroup(group.id)}
@@ -264,14 +275,14 @@ const Sidebar = () => {
                   (isExpanded || isLocked) ? '' : 'justify-center'
                 } ${
                   isActiveRoute(group.path)
-                    ? 'bg-background/20 text-background border-r-2 border-primary'
-                    : 'text-background/90 hover:bg-background/10 hover:text-background'
+                    ? 'bg-white/20 text-white rounded-xl'
+                    : 'text-white/90 hover:bg-white/10 hover:text-white rounded-xl'
                 }`}
                 title={!(isExpanded || isLocked) ? group.name : ''}
               >
                 <i className={`${group.icon} text-base`}></i>
                 {(isExpanded || isLocked) && (
-                  <span className="ml-3 text-xs whitespace-nowrap">
+                  <span className="ml-3 text-xs whitespace-nowrap ">
                     {group.name}
                   </span>
                 )}
@@ -289,8 +300,8 @@ const Sidebar = () => {
                       (isExpanded || isLocked) ? '' : 'justify-center'
                     } ${
                       isActiveRoute(item.path)
-                        ? 'bg-background/20 text-background border-r-2 border-primary'
-                        : 'text-background/90 hover:bg-background/10 hover:text-background'
+                        ? 'bg-white/20 text-white rounded-xl '
+                        : 'text-white/90 hover:bg-white/10 hover:text-white rounded-xl'
                     }`}
                     title={!(isExpanded || isLocked) ? item.name : ''}
                   >

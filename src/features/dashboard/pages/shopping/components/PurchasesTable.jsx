@@ -1,6 +1,8 @@
 import PropTypes from "prop-types";
 
 export default function PurchasesTable({ purchases, onView, onAnnul, currentPage, totalPages, onPageChange }) {
+  const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
       <table className="min-w-full text-xs">
@@ -22,7 +24,7 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
               <td className="py-4 px-4 text-xs text-gray-600">{p.fechaRegistro}</td>
               <td className="py-4 px-4 text-xs text-gray-600">{p.fechaCompra}</td>
               <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor}</td>
-              <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${p.total}</td>
+              <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${formatNumber(p.total)}</td>
               <td className="py-4 px-4 text-xs text-gray-600">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? ' text-green-800' : ' text-red-800'}`}>{p.estado}</span>
               </td>

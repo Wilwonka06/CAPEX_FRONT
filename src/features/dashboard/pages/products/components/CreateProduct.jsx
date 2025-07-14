@@ -1,13 +1,16 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 import {
   isDuplicateProductName,
   isNumberInputValid,
   isValidNumber,
   isValidDecimal,
 } from "../../../../../shared/validations";
+import { useCategories } from '../../CatProducts/hooks/useCategories';
 
-const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
+const CreateProduct = ({ onCreate, products = [] }) => {
   const [open, setOpen] = useState(false);
+  const { categories: useCategoriesCategories } = useCategories();
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -15,7 +18,13 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
     cantidad: "",
     categoria: "",
     color: "",
+    tamanio: "",
     foto: "",
+    tipoProducto: "",
+    volumen: "",
+    tipoCabelloIdeal: "",
+    textura: "",
+    origen: "",
   });
   const [preview, setPreview] = useState("");
   const [error, setError] = useState("");
@@ -30,12 +39,40 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
       cantidad: "",
       categoria: "",
       color: "",
+      tamanio: "",
       foto: "",
+      tipoProducto: "",
+      volumen: "",
+      tipoCabelloIdeal: "",
+      textura: "",
+      origen: "",
     });
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Si cambia el tipo de producto a Extensiones, forzar cantidad a 1
+    if (name === 'tipoProducto' && value === 'Extensiones') {
+      setFormData((prev) => ({
+        ...prev,
+        tipoProducto: value,
+        cantidad: '1',
+      }));
+      return;
+    }
+    // Si cambia el tipo de producto a otro, permitir editar cantidad
+    if (name === 'tipoProducto' && value !== 'Extensiones') {
+      setFormData((prev) => ({
+        ...prev,
+        tipoProducto: value,
+        cantidad: '',
+      }));
+      return;
+    }
+    if (name === "cantidad" && formData.tipoProducto === "Extensiones") {
+      // No permitir editar cantidad si es Extensiones
+      return;
+    }
     if (name === "cantidad" && value && !isValidNumber(value)) {
       setError("Solo se permiten números enteros positivos en cantidad.");
       return;
@@ -93,7 +130,9 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
       formData.nombre.trim() &&
       formData.categoria.trim() &&
       formData.precio &&
-      formData.descripcion.trim()
+      formData.descripcion.trim() &&
+      formData.tipoProducto.trim() &&
+      (formData.tipoProducto !== "Extensiones" || formData.textura.trim())
     ) {
       let fotoUrl = formData.foto;
       if (formData.foto instanceof File) {
@@ -104,6 +143,7 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
         id: Date.now(), // ID temporal
         precio: parseFloat(formData.precio),
         cantidad: formData.cantidad ? parseInt(formData.cantidad) : 0,
+        tamanio: formData.tamanio ? parseFloat(formData.tamanio) : null,
         fechaRegistro: new Date().toISOString().split("T")[0],
         foto: fotoUrl,
       };
@@ -119,6 +159,15 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
       setFormData((prev) => ({ ...prev, nombre: "" }));
     }
   };
+
+  const formatNumber = (num) => {
+    if (num === '' || num === undefined || num === null) return '';
+    const parts = num.toString().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  };
+
+  const cleanNumber = (str) => str.replace(/,/g, '');
 
   return (
     <>
@@ -228,9 +277,9 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
                     required
                   >
                     <option value="">Seleccionar categoría</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.name}>
-                        {category.name}
+                    {useCategoriesCategories.filter(c => c.isActive).map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.name}
                       </option>
                     ))}
                   </select>
@@ -249,32 +298,135 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
+                    Tipo de producto <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="tipoProducto"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                    value={formData.tipoProducto}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Seleccionar tipo</option>
+                    <option value="Extensiones">Extensiones</option>
+                    <option value="Cuidado capilar">Cuidado capilar</option>
+                  </select>
+                </div>
+                {/* Volumen solo si es Cuidado capilar */}
+                {formData.tipoProducto === "Cuidado capilar" && (
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Volumen (ml)
+                    </label>
+                    <input
+                      type="text"
+                      name="volumen"
+                      value={formatNumber(formData.volumen)}
+                      onChange={e => handleChange({ target: { name: 'volumen', value: cleanNumber(e.target.value) } })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                      placeholder="Opcional"
+                    />
+                  </div>
+                )}
+                {/* Textura solo si es Extensiones */}
+                {formData.tipoProducto === "Extensiones" && (
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Textura <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="textura"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                      value={formData.textura}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Seleccionar textura</option>
+                      <option value="Ondulado">Ondulado</option>
+                      <option value="Rizo">Rizo</option>
+                      <option value="Liso">Liso</option>
+                    </select>
+                  </div>
+                )}
+                {/* Origen solo si es Extensiones */}
+                {formData.tipoProducto === "Extensiones" && (
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Origen <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="origen"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                      value={formData.origen || ""}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Seleccionar origen</option>
+                      <option value="Natural">Natural</option>
+                      <option value="Sintética">Sintética</option>
+                    </select>
+                  </div>
+                )}
+                {/* Tipo de cabello ideal solo si es Cuidado capilar */}
+                {formData.tipoProducto === "Cuidado capilar" && (
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Tipo de cabello ideal
+                    </label>
+                    <select
+                      name="tipoCabelloIdeal"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                      value={formData.tipoCabelloIdeal || ""}
+                      onChange={handleChange}
+                    >
+                      <option value="">Seleccionar tipo</option>
+                      <option value="Cabello seco">Cabello seco</option>
+                      <option value="Cabello graso">Cabello graso</option>
+                      <option value="Cabello teñido">Cabello teñido</option>
+                      <option value="Cabello rizado">Cabello rizado</option>
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-text-main mb-1">
+                    Largo (mtr)
+                  </label>
+                  <input
+                    type="text"
+                    name="tamanio"
+                    value={formatNumber(formData.tamanio)}
+                    onChange={e => handleChange({ target: { name: 'tamanio', value: cleanNumber(e.target.value) } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
+                    placeholder="Opcional"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-main mb-1">
                       Precio <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     name="precio"
-                    step="0.01"
-                    min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                      value={formData.precio}
-                    onChange={handleChange}
+                    value={formatNumber(formData.precio)}
+                    onChange={e => handleChange({ target: { name: 'precio', value: cleanNumber(e.target.value) } })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
                     required
                       onKeyDown={isNumberInputValid}
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Cantidad en Stock
-                  </label>
+                    Cantidad en Stock</label>
                   <input
-                    type="number"
+                    type="text"
                     name="cantidad"
-                    min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                      value={formData.cantidad}
-                    onChange={handleChange}
-                      onKeyDown={isNumberInputValid}
+                    value={formatNumber(formData.cantidad)}
+                    onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                    required
+                    min={formData.tipoProducto === 'Extensiones' ? 1 : 0}
+                    max={formData.tipoProducto === 'Extensiones' ? 1 : undefined}
+                    disabled={formData.tipoProducto === 'Extensiones'}
                   />
                 </div>
               </div>
@@ -314,6 +466,11 @@ const CreateProduct = ({ onCreate, categories = [], products = [] }) => {
       {error && <div className="text-red-500 text-xs mb-2">{error}</div>}
     </>
   );
+};
+
+CreateProduct.propTypes = {
+  onCreate: PropTypes.func,
+  products: PropTypes.array,
 };
 
 export default CreateProduct;

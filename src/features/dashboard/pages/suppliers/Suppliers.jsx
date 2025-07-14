@@ -3,39 +3,10 @@ import SuppliersTable from "./components/SuppliersTable";
 import CreateSupplier from "./components/CreateSupplier";
 import SearchProduct from '../../../../shared/Search';
 import Paginator from "../../../../shared/Paginator";
-
-const initialSuppliers = [
-  {
-    id: 1,
-    nombre: "Distribuidora Capilar S.A.",
-    contacto: "María López",
-    direccion: "Av. Reforma 123, CDMX",
-    telefono: "555-123-4567",
-    correo: "contacto@capilarsa.com",
-    isActive: true,
-  },
-  {
-    id: 2,
-    nombre: "Proveedora Belleza MX",
-    contacto: "Juan Pérez",
-    direccion: "Calle 5 de Mayo 456, Puebla",
-    telefono: "222-987-6543",
-    correo: "ventas@bellezamx.com",
-    isActive: true,
-  },
-  {
-    id: 3,
-    nombre: "Suministros Estética",
-    contacto: "Ana Torres",
-    direccion: "Blvd. Estética 789, GDL",
-    telefono: "333-555-7890",
-    correo: "info@suministrosestetica.com",
-    isActive: false,
-  },
-];
+import { useSuppliers } from "./hooks/useSuppliers";
 
 const SuppliersPage = () => {
-  const [suppliers, setSuppliers] = useState(initialSuppliers);
+  const { suppliers, addSupplier, editSupplier, deleteSupplier, toggleSupplierStatus } = useSuppliers();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -61,28 +32,22 @@ const SuppliersPage = () => {
 
   // Crear
   const handleCreateSupplier = (newSupplier) => {
-    setSuppliers((prev) => [newSupplier, ...prev]);
+    addSupplier(newSupplier);
   };
 
   // Editar
   const handleEditSupplier = (updatedSupplier) => {
-    setSuppliers((prev) =>
-      prev.map((s) => (s.id === updatedSupplier.id ? updatedSupplier : s))
-    );
+    editSupplier(updatedSupplier);
   };
 
   // Eliminar
   const handleDeleteSupplier = (supplierId) => {
-    setSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
+    deleteSupplier(supplierId);
   };
 
   // Cambiar estado
   const handleStatusChange = (supplierId) => {
-    setSuppliers((prev) =>
-      prev.map((s) =>
-        s.id === supplierId ? { ...s, isActive: !s.isActive } : s
-      )
-    );
+    toggleSupplierStatus(supplierId);
   };
 
   // Paginación
@@ -131,4 +96,4 @@ const SuppliersPage = () => {
   );
 };
 
-  export default SuppliersPage;
+export default SuppliersPage;
