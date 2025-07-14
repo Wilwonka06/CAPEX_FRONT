@@ -37,6 +37,8 @@ import ClientAppointments from '../features/landing/pages/ClientAppointments/Cli
 import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
 import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
+import Checkout from '../features/landing/pages/checkout/Checkout';
+import ThankYou from '../features/landing/pages/checkout/ThankYou';
 import EditProfile from '../features/landing/components/EditProfile';
 
 import LoginPage from '../features/auth/pages/LoginPage';
@@ -276,14 +278,18 @@ const router = createBrowserRouter([
       },
       // Redirección para compatibilidad
       {
-        path: '/roles',
-        element: <Navigate to="/dashboard/roles" replace />
-      }
+        path: 'productos/:id',
+        element: <ProductDetailPageCliente />
+      },
+      {
+        path: 'servicespage',
+        element: <ServicesPage />
+      },
+      {
+        path: 'servicios',
+        element: <ServicesPage />
+      },
     ]
-  },
-  {
-    path: '*',
-    element: <NotFound />
   }
 ]);
 
