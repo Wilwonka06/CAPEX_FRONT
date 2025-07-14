@@ -1,6 +1,33 @@
 const PROFESSIONALS_KEY = 'professionals';
 
-// Lista inicial de profesionales (mock)
+// Función para obtener empleados desde el módulo de empleados existente
+const getEmployeesFromStorage = () => {
+  const data = localStorage.getItem('capex_employees');
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+// Función para convertir empleados a formato de profesionales
+const convertEmployeesToProfessionals = (employees) => {
+  return employees
+    .filter(emp => emp.estado) // Solo empleados activos
+    .map(emp => ({
+      id: emp.id,
+      name: `${emp.nombre} ${emp.apellido}`.trim(),
+      active: emp.estado,
+      role: 'Empleado',
+      phone: '',
+      email: ''
+    }));
+};
+
+// Lista inicial de profesionales (fallback)
 const initialProfessionals = [
   { id: 1, name: 'Ana Torres', active: true },
   { id: 2, name: 'Carlos Ruiz', active: true },
@@ -26,12 +53,21 @@ function loadProfessionalsFromStorage() {
 export const getProfessionals = () => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      let professionals = loadProfessionalsFromStorage();
-      if (!professionals) {
-        saveProfessionalsToStorage(initialProfessionals);
-        professionals = initialProfessionals;
+      // Obtener empleados desde el módulo de empleados existente
+      const employees = getEmployeesFromStorage();
+      const professionals = convertEmployeesToProfessionals(employees);
+      
+      // Si no hay empleados activos, usar datos de respaldo
+      if (professionals.length === 0) {
+        let fallbackProfessionals = loadProfessionalsFromStorage();
+        if (!fallbackProfessionals) {
+          saveProfessionalsToStorage(initialProfessionals);
+          fallbackProfessionals = initialProfessionals;
+        }
+        resolve(fallbackProfessionals);
+      } else {
+        resolve(professionals);
       }
-      resolve(professionals);
     }, 200);
   });
 };
