@@ -3,94 +3,105 @@ import React from "react";
 const SeeServices = ({ onClose, service }) => {
   if (!service) return null;
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-0 relative border border-accent">
-        {/* Botón cerrar */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-primary-dark hover:text-primary text-2xl font-bold focus:outline-none"
-          title="Cerrar"
-        >
-          ×
-        </button>
-        {/* Encabezado con ícono */}
-        <div className="flex flex-col items-center pt-8 pb-2">
-          <div className="bg-primary flex items-center justify-center rounded-full w-16 h-16 mb-2">
-            <i className="bi bi-scissors text-white text-3xl"></i>
-          </div>
-          <h2 className="text-2xl font-bold text-primary-dark mb-2 text-center">Detalle del Servicio</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
+        {/* Header fijo */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
+          <h2 className="text-xl font-bold text-primary m-0">Detalle del Servicio</h2>
+          <button
+            className="text-gray-400 hover:text-primary text-xl font-bold"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
         </div>
-        {/* Detalle en dos columnas */}
-        <form className="px-8 pb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-            <div>
-              <label className="block text-text-main/80 text-sm font-semibold mb-1">ID del Servicio</label>
-              <input
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                value={`#${service.id}`}
-                disabled
-              />
+        {/* Contenido con scroll */}
+        <div className="overflow-y-auto p-8 flex-1">
+          <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">ID del Servicio</label>
+                <input
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50"
+                  value={`#${service.id}`}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">Estado</label>
+                <input
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50"
+                  value={service.estado}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">Servicio</label>
+                <input
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50"
+                  value={service.name}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">Categoría</label>
+                <input
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50"
+                  value={service.category}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">Duración</label>
+                <input
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50"
+                  value={service.duration}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">Precio</label>
+                <input
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50"
+                  value={service.price}
+                  disabled
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-text-main/80 text-sm font-semibold mb-1">Estado</label>
-              <input
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                value={service.estado}
+              <label className="block text-xs font-medium text-text-main mb-1">Descripción</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50 resize-none"
+                value={service.description}
                 disabled
+                rows={2}
               />
             </div>
+          {service.imagen && (
             <div>
-              <label className="block text-text-main/80 text-sm font-semibold mb-1">Servicio</label>
-              <input
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                value={service.name}
-                disabled
-              />
+              <label className="block text-xs font-medium text-text-main mb-1">Imagen</label>
+              <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 flex justify-center">
+                <img 
+                  src={service.imagen instanceof File ? URL.createObjectURL(service.imagen) : service.imagen} 
+                  alt={`Imagen de ${service.name}`}
+                  className="max-w-32 h-auto max-h-24 object-contain rounded"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-text-main/80 text-sm font-semibold mb-1">Categoría</label>
-              <input
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                value={service.category}
-                disabled
-              />
-            </div>
-            <div>
-              <label className="block text-text-main/80 text-sm font-semibold mb-1">Duración</label>
-              <input
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                value={service.duration}
-                disabled
-              />
-            </div>
-            <div>
-              <label className="block text-text-main/80 text-sm font-semibold mb-1">Precio</label>
-              <input
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                value={service.price}
-                disabled
-              />
-            </div>
+          )}
           </div>
-          <div>
-            <label className="block text-text-main/80 text-sm font-semibold mb-1">Descripción</label>
-            <textarea
-              className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none resize-none"
-              value={service.description}
-              disabled
-              rows={2}
-            />
-          </div>
-          <div className="flex justify-end mt-8">
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-primary-dark text-white px-6 py-2 rounded font-semibold hover:bg-primary transition"
-            >
-              Cerrar
-            </button>
-          </div>
-        </form>
+        </div>
+        {/* Footer fijo */}
+        <div className="sticky bottom-0 bg-white rounded-b-lg flex justify-end px-8 py-4">
+          <button
+            type="button"
+            className="px-4 py-2 rounded-md font-semibold transition text-sm bg-text-main text-white hover:bg-primary-dark"
+            onClick={onClose}
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   );

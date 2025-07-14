@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toast } from 'react-toastify';
 import AddServices from './components/AddServices'
 import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
@@ -97,28 +98,62 @@ const Services = () => {
   };
 
   const toggleServiceStatus = (id) => {
+    const service = services.find(s => s.id === id);
+    const newStatus = service.active ? 'Inactivo' : 'Activo';
+    
     setServices(
       services.map((service) =>
-        service.id === id ? { ...service, active: !service.active, estado: service.active ? 'Inactivo' : 'Activo' } : service
+        service.id === id ? { ...service, active: !service.active, estado: newStatus } : service
       )
     );
+    
+    // Mostrar alerta de éxito
+    toast.success(`Estado del servicio cambiado a ${newStatus}`, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
   };
 
   const handleAddService = (newService) => {
-    setServices([
-      ...services,
-      { ...newService, id: Date.now(), active: newService.estado === 'Activo' }
-    ]);
-    setIsAddModalOpen(false);
+    const mappedService = {
+      id: Date.now(),
+      name: newService.name,
+      category: newService.Categoria,
+      description: newService.Descripcion,
+      duration: newService.duracion + ' min',
+      price: '$' + newService.precio,
+      active: newService.estado === 'Activo',
+      estado: newService.estado,
+      imagen: newService.imagen
+    };
+    
+    setServices([...services, mappedService]);
+    // No cerrar el modal aquí, dejar que el componente hijo lo maneje
   };
 
   const handleEditService = (editedService) => {
+    const mappedService = {
+      id: editedService.id,
+      name: editedService.name,
+      category: editedService.Categoria,
+      description: editedService.Descripcion,
+      duration: editedService.duracion + ' min',
+      price: '$' + editedService.precio,
+      active: editedService.estado === 'Activo',
+      estado: editedService.estado,
+      imagen: editedService.imagen
+    };
+    
     setServices(
       services.map((service) =>
-        service.id === editedService.id ? { ...editedService, active: editedService.estado === 'Activo' } : service
+        service.id === editedService.id ? mappedService : service
       )
     );
-    setIsEditModalOpen(false);
+    // No cerrar el modal aquí, dejar que el componente hijo lo maneje
     setSelectedService(null);
   };
 
@@ -135,6 +170,16 @@ const Services = () => {
   const handleDeleteService = (service) => {
     if (window.confirm(`¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`)) {
       setServices(services.filter((s) => s.id !== service.id));
+      
+      // Mostrar alerta de éxito
+      toast.success(`Servicio eliminado exitosamente!`, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   };
 
@@ -208,8 +253,8 @@ const Services = () => {
         </div>
       </div>
       {/* Modales */}
-      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} />}
-      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} />}
+      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} services={services} />}
+      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} services={services} />}
       {isSeeModalOpen && selectedService && <SeeServices onClose={() => { setIsSeeModalOpen(false); setSelectedService(null); }} service={selectedService} />}
     </div>
   );

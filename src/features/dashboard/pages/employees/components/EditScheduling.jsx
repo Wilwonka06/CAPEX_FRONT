@@ -1,4 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import {
+  validateSchedulingForm,
+  validateSchedulingStartDate,
+  validateSchedulingEndDate,
+  validateSchedulingStartTime,
+  validateSchedulingEndTime,
+  validateSchedulingRepetition,
+  validateSchedulingDays
+} from '../../../../../shared/validations';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -28,24 +38,11 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
     } else {
       setProg(initialProg);
     }
+    setErrors({}); // Limpiar errores al cambiar de programación
   }, [editing]);
 
   const validate = () => {
-    const newErrors = {};
-    if (!prog.fechaInicio) newErrors.fechaInicio = 'Selecciona la fecha de inicio';
-    if (!prog.fechaFin) newErrors.fechaFin = 'Selecciona la fecha de fin';
-    if (!prog.horaInicio) newErrors.horaInicio = 'Selecciona la hora de inicio';
-    if (!prog.horaFin) newErrors.horaFin = 'Selecciona la hora de fin';
-    if (!prog.repeticion) newErrors.repeticion = 'Selecciona la frecuencia';
-    if ((prog.repeticion === 'Semanal' || prog.repeticion === 'Mensual') && (!prog.dias || prog.dias.length === 0)) {
-      newErrors.dias = 'Selecciona al menos un día';
-    }
-    if (prog.fechaInicio && prog.fechaFin && prog.fechaFin < prog.fechaInicio) {
-      newErrors.fechaFin = 'La fecha fin no puede ser menor que la fecha inicio';
-    }
-    if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
-      newErrors.horaFin = 'La hora fin debe ser mayor que la hora inicio';
-    }
+    const newErrors = validateSchedulingForm(prog);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -62,24 +59,66 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
     } else {
       setProg((prev) => ({ ...prev, [name]: value }));
     }
+    
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    let error = '';
+    
+    switch (name) {
+      case 'fechaInicio':
+        const fechaInicioErrors = validateSchedulingStartDate(value);
+        error = fechaInicioErrors.fechaInicio || '';
+        break;
+      case 'fechaFin':
+        const fechaFinErrors = validateSchedulingEndDate(value, prog.fechaInicio);
+        error = fechaFinErrors.fechaFin || '';
+        break;
+      case 'horaInicio':
+        const horaInicioErrors = validateSchedulingStartTime(value);
+        error = horaInicioErrors.horaInicio || '';
+        break;
+      case 'horaFin':
+        const horaFinErrors = validateSchedulingEndTime(value, prog.horaInicio);
+        error = horaFinErrors.horaFin || '';
+        break;
+      case 'repeticion':
+        const repeticionErrors = validateSchedulingRepetition(value);
+        error = repeticionErrors.repeticion || '';
+        break;
+      default:
+        break;
+    }
+    
+    if (error) {
+      setErrors(prev => ({ ...prev, [name]: error }));
+    }
+  };
+
+  // Tu función para guardar cambios:
   const handleEditEvent = (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    const formErrors = validateSchedulingForm(prog);
+    setErrors(formErrors);
   
-    let progToSave = { ...prog };
+    if (Object.keys(formErrors).length === 0) {
+      let progToSave = { ...prog };
+      if (editing?.id) progToSave.id = editing.id;
+      if (editing?.idBase) progToSave.idBase = editing.idBase;
+      progToSave.empleadoId = editing.empleadoId;
   
-    if (editing?.id) progToSave.id = editing.id;
-    if (editing?.idBase) progToSave.idBase = editing.idBase;
-  
-    // ✅ CONSERVA el empleadoId:
-    progToSave.empleadoId = editing.empleadoId;
-  
-    if (onSave) onSave(progToSave);
-  
-    setErrors({});
+      if (onSave) onSave(progToSave);
+      setErrors({});
+      toast.success('Programación actualizada!', { position: 'top-right' });
+    }
   };
+  
+
   
 
   return (
@@ -88,17 +127,17 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
         <div className="flex flex-wrap gap-6 items-end">
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Fecha inicio</label>
-            <input type="date" name="fechaInicio" value={prog.fechaInicio} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
+            <input type="date" name="fechaInicio" value={prog.fechaInicio} onChange={handleProgChange} onBlur={handleBlur} className="border rounded px-3 py-2 w-32" />
             {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Fecha fin</label>
-            <input type="date" name="fechaFin" value={prog.fechaFin} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
+            <input type="date" name="fechaFin" value={prog.fechaFin} onChange={handleProgChange} onBlur={handleBlur} className="border rounded px-3 py-2 w-32" />
             {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
           </div>
           <div className="flex-1 min-w-[180px]">
             <label className="block text-sm font-medium text-text-main mb-1">Repetición</label>
-            <select name="repeticion" value={prog.repeticion} onChange={handleProgChange} className="border rounded px-3 py-2 w-full">
+            <select name="repeticion" value={prog.repeticion} onChange={handleProgChange} onBlur={handleBlur} className="border rounded px-3 py-2 w-full">
               <option>No se repite</option>
               <option>Semanal</option>
               <option>Mensual</option>
@@ -122,11 +161,11 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
         </div>
         <div className="flex flex-wrap items-end gap-4 mt-2">
           <div className="flex items-center gap-2">
-            <select name="horaInicio" value={prog.horaInicio} onChange={handleProgChange} className="border rounded px-3 py-2">
+            <select name="horaInicio" value={prog.horaInicio} onChange={handleProgChange} onBlur={handleBlur} className="border rounded px-3 py-2">
               {horas.map(h => <option key={h}>{h}</option>)}
             </select>
             <span className="mx-1">-</span>
-            <select name="horaFin" value={prog.horaFin} onChange={handleProgChange} className="border rounded px-3 py-2">
+            <select name="horaFin" value={prog.horaFin} onChange={handleProgChange} onBlur={handleBlur} className="border rounded px-3 py-2">
               {horas.map(h => <option key={h}>{h}</option>)}
             </select>
           </div>

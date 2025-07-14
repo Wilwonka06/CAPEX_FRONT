@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import EditScheduling from './EditScheduling';
+import {
+  validateEmployeeEditForm,
+  validateEmployeeName,
+  validateEmployeeLastName,
+  validateEmployeeDocument,
+  validateEmployeeEmail
+} from '../../../../../shared/validations';
 
 const tiposDocumento = [
   { value: 'CC', label: 'Cédula de Ciudadanía' },
@@ -8,22 +16,23 @@ const tiposDocumento = [
   { value: 'PAS', label: 'Pasaporte' },
 ];
 
-const EditEmployee = ({ employee, onCancel, onSave }) => {
+const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
   const [form, setForm] = useState({
     nombre: '',
-    apellidos: '',
+    apellido: '', // Cambiado a singular
     tipoDocumento: 'CC',
     documento: '',
     correo: '',
     estado: 'Activo',
   });
+  const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('empleado');
   const [schedulings, setSchedulings] = useState(employee?.schedulings || []);
   const [editingScheduling, setEditingScheduling] = useState(null);
   // Estado de paginación para la lista de programaciones
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
-  
+
   // Recalcular paginación cuando cambien las programaciones
   const totalPages = Math.ceil(schedulings.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -33,13 +42,14 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
     if (employee) {
       setForm({
         nombre: employee.nombre || '',
-        apellidos: employee.apellido || '',
+        apellido: employee.apellido || '', // Cambiado a singular
         tipoDocumento: employee.tipoDocumento || 'CC',
         documento: employee.documento || '',
         correo: employee.correo || '',
         estado: employee.estado ? 'Activo' : 'Inactivo',
       });
       setSchedulings(employee.schedulings || []);
+      setErrors({}); // Limpiar errores al cambiar de empleado
     }
   }, [employee]);
 
@@ -51,31 +61,91 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
     }
   }, [schedulings, currentPage, itemsPerPage]);
 
+  const validate = () => {
+    const newErrors = validateEmployeeEditForm(form, employees, employee);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    let error = '';
+
+    switch (name) {
+      case 'nombre':
+        const nombreErrors = validateEmployeeName(value);
+        error = nombreErrors.nombre || '';
+        break;
+      case 'apellido':
+        const apellidoErrors = validateEmployeeLastName(value);
+        error = apellidoErrors.apellido || '';
+        break;
+      case 'documento':
+        const documentoErrors = validateEmployeeDocument(value, employees, employee);
+        error = documentoErrors.documento || '';
+        break;
+      case 'correo':
+        const correoErrors = validateEmployeeEmail(value, employees, employee);
+        error = correoErrors.correo || '';
+        break;
+      default:
+        break;
+    }
+
+    if (error) {
+      setErrors(prev => ({ ...prev, [name]: error }));
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validate()) return;
+  
     if (onSave) {
-      // Incluir las programaciones actualizadas en el formulario
       const employeeData = {
         ...form,
-        schedulings: schedulings // Incluir las programaciones actualizadas
+        schedulings: schedulings
       };
       onSave(employeeData);
+      toast.success('Empleado actualizado exitosamente!');
     }
   };
+  
 
   const handleEditScheduling = (prog) => {
     setEditingScheduling(prog);
   };
 
   const handleSaveScheduling = (updatedProg) => {
-    setSchedulings(schedulings.map(s => String(s.id) === String(updatedProg.id) ? updatedProg : s));
+    const updatedSchedulings = schedulings.map(s =>
+      String(s.id) === String(updatedProg.id) ? updatedProg : s
+    );
+    setSchedulings(updatedSchedulings);
+  
+    // 🔑 Actualiza el empleado global para refrescar el calendario:
+    const updatedEmployee = {
+      ...employee,
+      schedulings: updatedSchedulings,
+    };
+    if (onSave) {
+      onSave(updatedEmployee); // Llama handleEditSave del padre
+    }
+  
     setEditingScheduling(null);
   };
+  
+  
+  
 
   const handleDeleteScheduling = (id) => {
     console.log('=== DEBUG ELIMINACIÓN ===');
@@ -83,7 +153,7 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
     console.log('Tipo de ID:', typeof id);
     console.log('Programaciones actuales:', schedulings);
     console.log('IDs de programaciones:', schedulings.map(s => ({ id: s.id, tipo: typeof s.id })));
-    
+
     if (window.confirm('¿Seguro que deseas eliminar esta programación?')) {
       console.log('Eliminando programación con ID:', id);
       console.log('Programaciones antes de eliminar:', schedulings.length);
@@ -118,7 +188,7 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
         </button>
       </div>
       {activeTab === 'empleado' && (
-        <form className="px-2 pb-2" onSubmit={handleSubmit}>
+        <form className="px-2 pb-2" onSubmit={e => { e.preventDefault(); if (onSave) { const employeeData = { ...employee, ...form, schedulings: schedulings }; onSave(employeeData); toast.success('Empleado actualizado exitosamente!'); } if (onCancel) onCancel(); }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
             <div>
               <label htmlFor="nombre" className="block text-sm font-medium text-text-main mb-1">Nombre</label>
@@ -128,21 +198,25 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
                 id="nombre"
                 value={form.nombre}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
             </div>
             <div>
-              <label htmlFor="apellidos" className="block text-sm font-medium text-text-main mb-1">Apellidos</label>
+              <label htmlFor="apellido" className="block text-sm font-medium text-text-main mb-1">Apellido</label>
               <input
                 type="text"
-                name="apellidos"
-                id="apellidos"
-                value={form.apellidos}
+                name="apellido"
+                id="apellido"
+                value={form.apellido}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.apellido && <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>}
             </div>
             <div>
               <label htmlFor="tipoDocumento" className="block text-sm font-medium text-text-main mb-1">Tipo de Documento</label>
@@ -167,9 +241,11 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
                 id="documento"
                 value={form.documento}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
             </div>
             <div>
               <label htmlFor="correo" className="block text-sm font-medium text-text-main mb-1">Correo</label>
@@ -179,9 +255,11 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
                 id="correo"
                 value={form.correo}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                 required
               />
+              {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
             </div>
             <div>
               <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado</label>
@@ -215,63 +293,94 @@ const EditEmployee = ({ employee, onCancel, onSave }) => {
         </form>
       )}
       {activeTab === 'programacion' && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-2 text-text-main">Programaciones</h3>
-          {editingScheduling ? (
-            <EditScheduling
-              editing={editingScheduling}
-              onEdit={handleSaveScheduling}
-              onCancelEdit={handleCancelEditScheduling}
-              schedulings={schedulings}
-            />
-          ) : schedulings.length > 0 ? (
-            <>
-              <ul className="list-disc pl-6">
-                {pageSchedulings.map((s, idx) => (
-                  <li key={s.id || idx} className="mb-2 flex items-center gap-4">
-                    <span>
-                      {s.fechaInicio} - {s.fechaFin} | {s.horaInicio} - {s.horaFin} | {s.repeticion} | Días: {(s.dias && s.dias.length > 0) ? s.dias.join(', ') : '-'}
-                    </span>
-                    <button onClick={() => handleEditScheduling(s)} className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 transition text-xs">Editar</button>
-                    <button onClick={() => handleDeleteScheduling(s.id)} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition text-xs">Eliminar</button>
-                  </li>
-                ))}
-              </ul>
-              {/* Paginador y botón de cerrar */}
-              {totalPages > 1 || true ? (
-                <div className="flex justify-center items-center gap-2 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                  >
-                    <i className="bi bi-chevron-left"></i>
-                  </button>
-                  <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                  >
-                    <i className="bi bi-chevron-right"></i>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    className="ml-6 bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <p className="text-text-main/60">No hay programaciones registradas.</p>
-          )}
-        </div>
-      )}
+  <div className="mt-8">
+    <h3 className="text-lg font-semibold mb-2 text-text-main">Programaciones</h3>
+
+    {editingScheduling ? (
+      <EditScheduling
+        editing={editingScheduling}
+        onSave={handleSaveScheduling}
+        onCancelEdit={handleCancelEditScheduling}
+      />
+    ) : schedulings.length > 0 ? (
+      <>
+        <ul className="list-disc pl-6">
+          {pageSchedulings.map((s, idx) => (
+            <li key={s.id || idx} className="mb-2 flex items-center gap-4">
+              <span>
+                {s.fechaInicio} - {s.fechaFin} | {s.horaInicio} - {s.horaFin} | {s.repeticion} | Días: {(s.dias && s.dias.length > 0) ? s.dias.join(', ') : '-'}
+              </span>
+              <button
+                onClick={() => handleEditScheduling(s)}
+                className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 transition text-xs"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => handleDeleteScheduling(s.id)}
+                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition text-xs"
+              >
+                Eliminar
+              </button>
+            </li>
+          ))}
+        </ul>
+        {/* Paginador */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <button
+              type="button"
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              <i className="bi bi-chevron-left"></i>
+            </button>
+            <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              <i className="bi bi-chevron-right"></i>
+            </button>
+          </div>
+        )}
+      </>
+    ) : (
+      <p className="text-text-main/60">No hay programaciones registradas.</p>
+    )}
+
+    {/* Botón Guardar Todo siempre visible */}
+    <div className="flex justify-end mt-6">
+      <button
+        type="button"
+        onClick={() => {
+          if (onSave) {
+            const updatedEmployee = {
+              ...employee,
+              schedulings: schedulings,
+            };
+            onSave(updatedEmployee);
+          }
+          toast.success('Programaciones guardadas!', {
+            position: "top-right",
+            autoClose: 3000,
+          });
+          if (onCancel) onCancel();
+        }}
+        className="bg-primary-dark text-white px-6 py-2 rounded font-semibold hover:bg-primary transition"
+      >
+        Guardar Todo
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
     </div>
   );
 };
