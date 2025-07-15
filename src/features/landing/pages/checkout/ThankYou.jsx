@@ -89,59 +89,41 @@ const ThankYou = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-background py-10 px-2">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-3xl w-full">
-        <div className="flex items-center gap-4 mb-2">
-          <span className="text-4xl text-green-600">✔️</span>
-          <div>
-            <div className="text-lg text-gray-500 font-mono">{order.numeroOrden || order.id}</div>
-            <h1 className="text-2xl font-bold text-text-main">Gracias por tu Compra</h1>
+    <div className="min-h-screen bg-background py-10 px-2 flex flex-col items-center">
+      {/* Migas de pan */}
+      <nav className="w-full max-w-2xl mx-auto text-xs text-gray-500 mb-6 flex items-center gap-2">
+        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing'}>Home</span>
+        <span className="mx-1">/</span>
+        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/catalogo'}>Productos</span>
+        <span className="mx-1">/</span>
+        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/cart'}>Carrito</span>
+        <span className="mx-1">/</span>
+        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/checkout'}>Información de cliente</span>
+        <span className="mx-1">/</span>
+        <span className="text-text-main font-semibold">Gracias</span>
+      </nav>
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-10 border border-gray-100 flex flex-col items-center">
+        <div className="text-6xl mb-4 text-primary">🎉</div>
+        <h1 className="text-3xl font-bold mb-4 text-primary text-center">¡Gracias por tu compra!</h1>
+        <p className="text-gray-700 text-lg mb-6 text-center">Tu pedido ha sido registrado exitosamente. Pronto recibirás la confirmación y el seguimiento en tu correo electrónico.</p>
+        {/* Resumen de la orden */}
+        <div className="w-full bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
+          <div className="flex justify-between items-center mb-2">
+            <span className="font-semibold">{order.productos.length} producto{order.productos.length !== 1 ? 's' : ''} --</span>
           </div>
-          <div className="ml-auto">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded font-semibold shadow transition" onClick={handleDownloadPDF}>Descargar recibo</button>
-          </div>
-        </div>
-        <div className="flex flex-col md:flex-row md:justify-between text-gray-600 text-sm border-b pb-2 mb-4">
-          <span>{estado}</span>
-          <span>Fecha estimada de entrega {fechaEntrega}</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div>
-            <h2 className="text-lg font-bold mb-2 text-text-main">información del pedido</h2>
-            <div className="mb-2">
-              <span className="font-semibold">Domicilio de entrega</span><br />
-              {order.direccion && <span>{order.direccion}, </span>}
-              {order.ciudad && <span>{order.ciudad}, </span>}
-              {order.pais && <span>{order.pais}</span>}<br />
-              {customer && customer.email && <a href={`mailto:${customer.email}`} className="text-blue-700 underline text-xs">{customer.email}</a>}
-            </div>
-            <div className="mb-2">
-              <span className="font-semibold">Forma de envío</span><br />
-              {order.medioPago || 'Por definir'}
-            </div>
-            <div className="mb-2">
-              <span className="font-semibold">Pedido realizado</span><br />
-              {order.fecha ? formatDate(order.fecha) : '-'}
-            </div>
-          </div>
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">{order.productos.length} producto{order.productos.length !== 1 ? 's' : ''} --</span>
-            </div>
-            <div className="flex flex-col gap-2 mb-4">
-              {order.productos.map((prod, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <div className="w-12 h-12 bg-gray-100 border flex items-center justify-center text-gray-400 text-2xl rounded">
-                    {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} className="w-full h-full object-cover rounded" /> : <span>✖</span>}
-                  </div>
-                  <span className="text-sm">{prod.nombre}</span>
+          <div className="flex flex-col gap-2 mb-4">
+            {order.productos.map((prod, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <div className="w-12 h-12 bg-gray-100 border flex items-center justify-center text-gray-400 text-2xl rounded">
+                  {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} className="w-full h-full object-cover rounded" /> : <span>✖</span>}
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-col gap-1 text-right">
-              <div className="text-sm text-gray-600">subtotal: <span className="font-semibold">${formatNumber(order.subtotal || order.valor)}</span></div>
-              <div className="text-base font-bold text-text-main">total: ${formatNumber(order.valor)}</div>
-            </div>
+                <span className="text-sm">{prod.nombre}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-1 text-right">
+            <div className="text-sm text-gray-600">subtotal: <span className="font-semibold">${formatNumber(order.subtotal || order.valor)}</span></div>
+            <div className="text-base font-bold text-text-main">total: ${formatNumber(order.valor)}</div>
           </div>
         </div>
         <div className="mt-8 text-center">

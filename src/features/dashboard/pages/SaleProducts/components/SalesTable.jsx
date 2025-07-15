@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 
-export default function SalesTable({ sales, customers, onView, onAnnul, onDownload, currentPage, totalPages, onPageChange }) {
+export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, currentPage, totalPages, onPageChange }) {
   const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
 
   return (
@@ -18,7 +18,7 @@ export default function SalesTable({ sales, customers, onView, onAnnul, onDownlo
         </thead>
         <tbody className="divide-y divide-gray-200">
           {sales.length > 0 ? sales.map((sale) => {
-            const cliente = customers.find(c => c.id === sale.clienteId);
+            const cliente = customers && customers.length > 0 ? customers.find(c => c.id === sale.clienteId) : null;
             return (
               <tr key={sale.id}>
                 <td className="py-2 px-3">{sale.fecha}</td>
@@ -32,12 +32,12 @@ export default function SalesTable({ sales, customers, onView, onAnnul, onDownlo
                   <button className="text-primary hover:text-blue-700 mr-2 text-lg" title="Ver detalle" onClick={() => onView(sale)}>
                     <i className="bi bi-eye"></i>
                   </button>
-                  {sale.estado !== 'Cancelado' && (
-                    <button className="text-red-600 hover:text-red-800 mr-2 text-lg" title="Anular" onClick={() => onAnnul(sale.id)}>
+                  {sale.estado !== 'Cancelada' && (
+                    <button className="text-red-600 hover:text-red-800 mr-2 text-lg" title="Cancelar" onClick={() => onAnnul(sale.id)}>
                       <i className="bi bi-x-octagon"></i>
                     </button>
                   )}
-                  <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => onDownload(sale)}>
+                  <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => onDownload()}>
                     <i className="bi bi-file-earmark-pdf"></i>
                   </button>
                 </td>
@@ -64,7 +64,7 @@ export default function SalesTable({ sales, customers, onView, onAnnul, onDownlo
 
 SalesTable.propTypes = {
   sales: PropTypes.array.isRequired,
-  customers: PropTypes.array.isRequired,
+  customers: PropTypes.array,
   onView: PropTypes.func.isRequired,
   onAnnul: PropTypes.func.isRequired,
   onDownload: PropTypes.func.isRequired,

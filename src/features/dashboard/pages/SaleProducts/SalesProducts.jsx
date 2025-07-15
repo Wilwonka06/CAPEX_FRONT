@@ -1,9 +1,14 @@
-import { useState } from "react";
-import CreateSaleModal from "./components/CreateSaleModal";
-import SaleDetailModal from "./components/SaleDetailModal";
-import SalesTable from './components/SalesTable';
-import { useSales } from "./context/SalesContext";
+import { useState, useEffect } from 'react';
+import { useSales } from './context/SalesContext';
 import { useProducts } from '../products/hooks/useProducts';
+import Search from '../../../../shared/Search';
+import Paginator from '../../../../shared/Paginator';
+import CreateSaleModal from './components/CreateSaleModal';
+import SaleDetailModal from './components/SaleDetailModal';
+import SalesTable from './components/SalesTable';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
 
 // Mock de clientes (idéntico a customers)
 const customersMock = [
@@ -15,115 +20,224 @@ const customersMock = [
   { id: 6, documentType: "CE", documentNumber: "2345678901", firstName: "Laura", lastName: "López", email: "laura.lopez@email.com", phone: "3167890123", address: "Av. 16 #17-18", status: "Inactivo" },
 ];
 
-export default function SalesProductPage() {
-  const { sales, setSales } = useSales();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [detailSale, setDetailSale] = useState(null);
+const SalesProducts = () => {
+  const { sales, createSale, updateSale, deleteSale, loading } = useSales();
   const { products } = useProducts();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [filteredSales, setFilteredSales] = useState([]);
 
-  // Búsqueda
-  const filteredSales = sales.filter((sale) => {
-    const cliente = customersMock.find(c => c.id === sale.clienteId);
-    const nombreCompleto = cliente ? `${cliente.firstName} ${cliente.lastName}` : "";
-    return (
-      sale.numeroVenta.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.clienteId.toString().includes(searchTerm) ||
-      sale.fecha.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.estado.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.valor.toString().includes(searchTerm) ||
+  const itemsPerPage = 5;
 
-      nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filtrar ventas por término de búsqueda
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredSales(sales);
+      return;
+    }
+    const lowerTerm = searchTerm.toLowerCase();
+    setFilteredSales(
+      sales.filter(sale =>
+        (sale.id?.toString() || '').includes(lowerTerm) ||
+        ((sale.numeroVenta || '').toLowerCase().includes(lowerTerm)) ||
+        ((sale.customerName || sale.clienteNombre || '').toLowerCase().includes(lowerTerm)) ||
+        ((sale.status || sale.estado || '').toLowerCase().includes(lowerTerm)) ||
+        ((sale.date || sale.fecha || '').toLowerCase().includes(lowerTerm)) ||
+        (sale.total?.toString() || sale.valor?.toString() || '').includes(lowerTerm) ||
+        ((sale.metodoPago || '').toLowerCase().includes(lowerTerm))
+      )
     );
-  });
+  }, [searchTerm, sales]);
 
   // Paginación
-  const itemsPerPage = 5;
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedSales = filteredSales.slice(startIndex, startIndex + itemsPerPage);
 
-  // Anular venta
-  const handleAnularVenta = (id) => {
-    setSales(prev => prev.map(s => s.id === id ? { ...s, estado: "Cancelado" } : s));
+  // Resetear página al cambiar el filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
-  // Crear venta
-  const handleCreateSale = (nuevaVenta) => {
-    setSales(prev => [nuevaVenta, ...prev]);
-    setIsCreateOpen(false);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
   };
 
-  // Descargar factura (PDF simulado)
-  const handleDownloadFactura = (venta) => {
-    //genera un PDF simple usando window.print
-    const win = window.open('', '', 'width=800,height=600');
-    win.document.write(`<h1>Factura Venta: ${venta.numeroVenta}</h1>`);
-    win.document.write(`<p>Cliente: ${customersMock.find(c => c.id === venta.clienteId)?.firstName || ''} ${customersMock.find(c => c.id === venta.clienteId)?.lastName || ''}</p>`);
-    win.document.write(`<p>Fecha: ${venta.fecha}</p>`);
-    win.document.write(`<p>Método de pago: ${venta.metodoPago}</p>`);
-    win.document.write('<table border="1" style="width:100%;border-collapse:collapse;"><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr>');
-    venta.productos.forEach(prod => {
-      win.document.write(`<tr><td>${prod.nombre}</td><td>${prod.cantidad}</td><td>${prod.precio}</td><td>${prod.precio * prod.cantidad}</td></tr>`);
+  const handleCreateSale = (saleData) => {
+    try {
+      createSale(saleData);
+      setShowCreateModal(false);
+      toast.success('Venta registrada exitosamente', { position: 'top-right' });
+    } catch {
+      toast.error('Error al registrar la venta', { position: 'top-right' });
+    }
+  };
+
+  const handleViewSale = (sale) => {
+    setSelectedSale(sale);
+    setShowDetailModal(true);
+  };
+
+  const handleEditSale = async (saleId, saleData) => {
+    const result = await Swal.fire({
+      title: '¿Confirmar edición?',
+      text: `¿Estás seguro de que deseas editar la venta #${saleId}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, editar',
+      cancelButtonText: 'Cancelar'
     });
-    win.document.write('</table>');
-    win.document.write(`<h3>Total: $${venta.valor}</h3>`);
-    win.document.close();
-    win.print();
+
+    if (result.isConfirmed) {
+      try {
+        updateSale(saleId, saleData);
+        setShowDetailModal(false);
+        setSelectedSale(null);
+        toast.success('Venta actualizada exitosamente', { position: 'top-right' });
+      } catch {
+        toast.error('Error al actualizar la venta', { position: 'top-right' });
+      }
+    }
   };
+
+  const handleDeleteSale = async (saleId) => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas anular la venta #${saleId}? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        updateSale(saleId, { estado: 'Cancelada' });
+        toast.success('Venta cancelada exitosamente', { position: 'top-right' });
+      } catch {
+        toast.error('Error al cancelar la venta', { position: 'top-right' });
+      }
+    }
+  };
+
+  const closeModals = () => {
+    setShowCreateModal(false);
+    setShowDetailModal(false);
+    setSelectedSale(null);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Pendiente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Completada':
+        return 'bg-green-100 text-green-800';
+      case 'Cancelada':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando ventas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            <h1 className="text-2xl font-bold">Ventas de Productos</h1>
+            <h1 className="text-2xl font-bold">Venta de Productos</h1>
           </div>
           <div className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 w-full">
-              <input
-                type="text"
-                placeholder="Buscar por orden o cliente..."
-                className="w-full px-3 py-2 border rounded-md text-sm flex-1"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              <button className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center whitespace-nowrap" onClick={() => setIsCreateOpen(true)}>
-                <i className="bi bi-plus-circle mr-2"></i> Registrar venta
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar ventas de productos" />
+              <button
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                onClick={() => setShowCreateModal(true)}
+              >
+                <i className="bi bi-plus-circle mr-2"></i> Nueva venta
               </button>
             </div>
+
             {/* Tabla de ventas */}
             <SalesTable
               sales={paginatedSales}
               customers={customersMock}
-              onView={setDetailSale}
-              onAnnul={handleAnularVenta}
-              onDownload={handleDownloadFactura}
+              onView={handleViewSale}
+              onAnnul={handleDeleteSale}
+              onDownload={() => {
+                // Función para descargar factura
+                toast.info('Función de descarga en desarrollo', { position: 'top-right' });
+              }}
               currentPage={currentPage}
               totalPages={totalPages}
-              onPageChange={setCurrentPage}
+              onPageChange={handlePageChange}
             />
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="mt-6">
+                <Paginator
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+
+            {/* Información de paginación */}
+            <div className="mt-4 text-center text-sm text-gray-600">
+              Mostrando {Math.min(filteredSales.length, startIndex + 1)} a {Math.min(filteredSales.length, startIndex + itemsPerPage)} de {filteredSales.length} ventas.
+            </div>
           </div>
         </div>
       </div>
-      {/* Modal de crear venta */}
-      <CreateSaleModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onCreate={handleCreateSale}
-        customers={customersMock}
-        products={products}
-      />
-      {/* Modal de detalle */}
-      <SaleDetailModal
-        sale={detailSale}
-        customer={detailSale ? customersMock.find(c => c.id === detailSale.clienteId) : null}
-        isOpen={!!detailSale}
-        onClose={() => setDetailSale(null)}
-      />
+
+      {/* Modales */}
+      {showCreateModal && (
+        <CreateSaleModal
+          onClose={closeModals}
+          onCreate={handleCreateSale}
+          customers={customersMock}
+          products={products}
+          isOpen={showCreateModal}
+        />
+      )}
+      {showDetailModal && selectedSale && (
+        <SaleDetailModal
+          sale={selectedSale}
+          customer={customersMock.find(c => c.id === selectedSale.clienteId)}
+          isOpen={showDetailModal}
+          onClose={closeModals}
+          onEdit={handleEditSale}
+          onDelete={handleDeleteSale}
+        />
+      )}
+      <ToastContainer />
     </div>
   );
-}
+};
+
+export default SalesProducts;
 
 export { customersMock };

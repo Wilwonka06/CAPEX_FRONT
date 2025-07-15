@@ -1,6 +1,7 @@
 import { useState, createContext, useContext, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
+const defaultPhoto = "https://placehold.co/80x80/EEE/31343C?text=Producto";
 const initialProducts = [
   {
     id: 1,
@@ -9,14 +10,16 @@ const initialProducts = [
     precio: 350.00,
     cantidad: 1,
     categoria: "Extensiones",
-    color: "Castaño Oscuro",
-    tamanio: 18,
-    textura: "Liso",
-    origen: "Natural",
     tipoProducto: "Extensiones",
     piezaUnica: true,
-    foto: "https://via.placeholder.com/80x80.png?text=Extensión",
+    foto: defaultPhoto,
     fechaRegistro: "2024-06-01",
+    especificaciones: [
+      { concepto: "Textura", valor: "Liso" },
+      { concepto: "Largo", valor: "18 cm" },
+      { concepto: "Origen", valor: "Natural" },
+      { concepto: "Color", valor: "Castaño Oscuro" }
+    ]
   },
   {
     id: 2,
@@ -25,12 +28,14 @@ const initialProducts = [
     precio: 120.00,
     cantidad: 40,
     categoria: "Shampoo",
-    color: "Transparente",
-    volumen: 520,
-    tipoCabelloIdeal: "Seco",
     tipoProducto: "Cuidado Capilar",
-    foto: "https://via.placeholder.com/80x80.png?text=Shampoo",
+    foto: defaultPhoto,
     fechaRegistro: "2024-06-01",
+    especificaciones: [
+      { concepto: "Volumen", valor: "520 ml" },
+      { concepto: "Tipo de Cabello Ideal", valor: "Seco" },
+      { concepto: "Fragancia", valor: "Frutal" }
+    ]
   },
   {
     id: 3,
@@ -39,12 +44,14 @@ const initialProducts = [
     precio: 95.00,
     cantidad: 35,
     categoria: "Acondicionador",
-    color: "Blanco",
-    volumen: 380,
-    tipoCabelloIdeal: "Normal",
     tipoProducto: "Cuidado Capilar",
-    foto: "https://via.placeholder.com/80x80.png?text=Acondicionador",
+    foto: defaultPhoto,
     fechaRegistro: "2024-05-20",
+    especificaciones: [
+      { concepto: "Volumen", valor: "380 ml" },
+      { concepto: "Tipo de Cabello Ideal", valor: "Normal" },
+      { concepto: "Fragancia", valor: "Floral" }
+    ]
   },
   {
     id: 4,
@@ -53,10 +60,13 @@ const initialProducts = [
     precio: 150.00,
     cantidad: 20,
     categoria: "Mascarilla",
-    color: "Crema",
-    tamanio: 7.5,
+    tipoProducto: "Cuidado Capilar",
+    foto: defaultPhoto,
     fechaRegistro: "2024-04-15",
-    foto: "https://via.placeholder.com/80x80.png?text=Mascarilla",
+    especificaciones: [
+      { concepto: "Volumen", valor: "250 ml" },
+      { concepto: "Textura", valor: "Cremosa" }
+    ]
   },
   {
     id: 5,
@@ -65,10 +75,13 @@ const initialProducts = [
     precio: 60.00,
     cantidad: 60,
     categoria: "Gel y Estilizado",
-    color: "Transparente",
-    tamanio: 2.1,
+    tipoProducto: "Cuidado Capilar",
+    foto: defaultPhoto,
     fechaRegistro: "2024-03-10",
-    foto: "https://via.placeholder.com/80x80.png?text=Gel",
+    especificaciones: [
+      { concepto: "Volumen", valor: "210 ml" },
+      { concepto: "Fijación", valor: "Extra Fuerte" }
+    ]
   },
   {
     id: 6,
@@ -77,10 +90,13 @@ const initialProducts = [
     precio: 180.00,
     cantidad: 15,
     categoria: "Aceites y Sueros",
-    color: "Ámbar",
-    tamanio: 1.5,
+    tipoProducto: "Cuidado Capilar",
+    foto: defaultPhoto,
     fechaRegistro: "2024-02-05",
-    foto: "https://via.placeholder.com/80x80.png?text=Aceite",
+    especificaciones: [
+      { concepto: "Volumen", valor: "150 ml" },
+      { concepto: "Origen", valor: "Natural" }
+    ]
   },
 ];
 

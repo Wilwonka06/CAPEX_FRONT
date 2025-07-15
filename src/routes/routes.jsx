@@ -16,7 +16,7 @@ import Clientes from '../features/dashboard/pages/Customers/Customer';
 import Compras from '../features/dashboard/pages/Shopping/Shopping';
 import Dashboard from '../features/dashboard/components/Dashboard';
 import Empleados from '../features/dashboard/pages/employees/Employees';  
-import Pedidos from '../features/dashboard/pages/Orders/Orders';
+import Pedidos from '../features/dashboard/pages/orders/Orders';
 import Productos from '../features/dashboard/pages/products/products';
 import Proveedores from '../features/dashboard/pages/Suppliers/Suppliers';
 import RolesPage from '../features/dashboard/pages/roles/RolesPage';
@@ -28,14 +28,13 @@ import Scheduling from '../features/dashboard/pages/scheduling/scheduling';
 
 // Pages Landing
 import Cart from '../features/landing/pages/cart/Cart';
+import Catalogo from '../features/landing/pages/products/Catalogo';
 import CuidadoCapilar from '../features/landing/pages/products/pages/CuidadoCapilar';
 import Extensiones from '../features/landing/pages/products/pages/Extensiones';
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
-import Products from '../features/landing/pages/products/Products';
 import ClientAppointments from '../features/landing/pages/ClientAppointments/ClientAppointments';
 import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
-import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
 import Checkout from '../features/landing/pages/checkout/Checkout';
 import ThankYou from '../features/landing/pages/checkout/ThankYou';
@@ -114,9 +113,9 @@ const router = createBrowserRouter([
                 <Users />
               </RequirePrivilege>
             )
-          },
-          {
-            path: 'productos',
+      },
+      {
+        path: 'productos',
             element: (
               <RequirePrivilege module="Gestión de Compras" action="Visualizar">
                 <Productos />
@@ -130,9 +129,9 @@ const router = createBrowserRouter([
                 <Compras />
               </RequirePrivilege>
             )
-          },
-          {
-            path: 'proveedores',
+      },
+      {
+        path: 'proveedores',
             element: (
               <RequirePrivilege module="Gestión de Compras" action="Visualizar">
                 <Proveedores />
@@ -146,9 +145,9 @@ const router = createBrowserRouter([
                 <CategoriasProductos />
               </RequirePrivilege>
             )
-          },
-          {
-            path: 'servicios',
+      },
+      {
+        path: 'servicios',
             element: (
               <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
                 <Servicios />
@@ -178,9 +177,9 @@ const router = createBrowserRouter([
                 <SaleServices />
               </RequirePrivilege>
             )
-          },
-          {
-            path: 'ventas-productos',
+      },
+      {
+        path: 'ventas-productos',
             element: (
               <RequirePrivilege module="Ventas" action="Visualizar">
                 <VentasProductos />
@@ -210,69 +209,73 @@ const router = createBrowserRouter([
                 <Clientes />
               </RequirePrivilege>
             )
-          },
-          {
-            path: 'programacion',
-            element: <Scheduling />
-          }
-        ]
       },
-      // Landing page del cliente
       {
-        path: '/landing',
-        element: <Landing />,
-        children: [
-          {
-            index: true,
-            element: <Home />
-          },
-          {
-            path: 'cart',
-            element: <Cart />
-          },
-          {
-            path: 'citas',
+        path: 'programacion',
+        element: <Scheduling />
+      }
+    ]
+  },
+      // Landing page del cliente
+  {
+    path: '/landing',
+    element: <Landing />,
+    children: [
+      {
+        index: true,
+        element: <Home />
+      },
+      {
+        path: 'cart',
+        element: <Cart />
+      },
+      {
+        path: 'citas',
             element: <ClientAppointments />
           },
           {
             path: 'pedidos',
             element: <Orders />
-          },
-          {
-            path: 'productos',
-            element: <Products />
-          },
-          {
-            path: 'productos/:id',
-            element: <ProductDetailPageCliente />
-          },
+      },
+      {
+        path: 'mis-pedidos',
+        element: <Orders />
+      },
+      {
+        path: 'productos/:id',
+        element: <ProductDetailPageCliente />
+      },
           {
             path: 'servicios',
             element: <ServicesPage />
-          },
-          {
-            path: 'servicespage',
-            element: <ServicesPage />
-          },
-          {
+      },
+      {
+        path: 'servicespage',
+        element: <ServicesPage />
+      },
+      {
             path: 'citas-cliente',
             element: <ClientAppointments />
-          },
-          {
-            path: 'mis-pedidos',
-            element: <Orders />
           },
           {
             path: 'cuidado-capilar',
             element: <CuidadoCapilar />
           },
           {
+            path: 'catalogo',
+            element: <Catalogo />
+          },
+          {
             path: 'extensiones',
             element: <Extensiones />
           },
           {
-            path: 'quotes',
-            element: <Quotes />
+            path: 'checkout',
+            element: <Checkout />
+          },
+          {
+            path: 'gracias',
+            element: <ThankYou />
           }
         ]
       },
@@ -286,26 +289,6 @@ const router = createBrowserRouter([
   {
     path: '*',
     element: <NotFound />
-        path: 'productos/:id',
-        element: <ProductDetailPageCliente />
-      },
-      {
-        path: 'servicespage',
-        element: <ServicesPage />
-      },
-      {
-        path: 'servicios',
-        element: <ServicesPage />
-      },
-      {
-        path: 'checkout',
-        element: <Checkout />
-      },
-      {
-        path: 'gracias',
-        element: <ThankYou />
-      },
-    ]
   }
 ]);
 

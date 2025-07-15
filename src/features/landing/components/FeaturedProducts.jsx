@@ -1,5 +1,6 @@
 import { FaCartPlus } from 'react-icons/fa';
 import { useProducts } from '../../dashboard/pages/products/hooks/useProducts';
+import { Link } from 'react-router-dom';
 
 const FeaturedProducts = () => {
   const { products } = useProducts();
@@ -15,7 +16,7 @@ const FeaturedProducts = () => {
             className="bg-primary-dark rounded-2xl shadow-2xl p-6 w-70 flex flex-col items-center transition-transform hover:-translate-y-1 hover:shadow-lg border-2 border-primary"
           >
             <img
-              src={prod.foto}
+              src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : prod.foto}
               alt={prod.nombre}
               className="w-40 h-40 object-cover rounded-xl mb-4 border-4 border-primary shadow-lg"
             />
@@ -32,12 +33,12 @@ const FeaturedProducts = () => {
         ))}
       </div>
       <div className="flex justify-center">
-        <a
-          href="/catalogo"
+        <Link
+          to="/landing/catalogo"
           className="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-8 rounded-full text-lg shadow transition border border-primary-dark"
         >
           Ver Catálogo Completo
-        </a>
+        </Link>
       </div>
     </section>
   );

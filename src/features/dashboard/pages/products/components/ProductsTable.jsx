@@ -52,16 +52,10 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 NOMBRE
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                COLOR
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                TAMAÑO
+                CATEGORÍA
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 STOCK
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                CATEGORÍA
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 PRECIO
@@ -83,7 +77,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 <td className="py-4 px-4">
                   <div className="flex items-center">
                     <img
-                      src={product.foto}
+                      src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
                       alt={product.nombre}
                       className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                     />
@@ -98,13 +92,10 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <TruncatedText
-                    text={product.color}
-                    maxLength={15}
-                    maxWidth="max-w-[100px]"
+                    text={product.categoria}
+                    maxLength={20}
+                    maxWidth="max-w-[120px]"
                   />
-                </td>
-                <td className="py-4 px-4 text-xs text-gray-600">
-                  {product.tamanio ? formatNumber(product.tamanio) + "m" : "-"}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <span
@@ -116,18 +107,11 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                         : " text-red-800"
                     }`}
                   >
-                    {formatNumber(product.cantidad)}
+                    {product.cantidad}
                   </span>
                 </td>
-                <td className="py-4 px-4 text-xs text-gray-600">
-                  <TruncatedText
-                    text={product.categoria}
-                    maxLength={20}
-                    maxWidth="max-w-[120px]"
-                  />
-                </td>
                 <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
-                  ${formatNumber(product.precio.toFixed(2))}
+                  ${product.precio.toFixed(2)}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   {product.fechaRegistro}

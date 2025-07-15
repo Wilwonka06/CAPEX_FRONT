@@ -60,11 +60,17 @@ const Orders = () => {
 
   return (
     <div className="min-h-screen bg-background py-10 px-2">
+      {/* Migas de pan */}
+      <nav className="max-w-4xl mx-auto text-xs text-gray-500 mb-6 flex items-center gap-2">
+        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing'}>Home</span>
+        <span className="mx-1">/</span>
+        <span className="text-text-main font-semibold">Mis pedidos</span>
+      </nav>
       <div className="max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-8 text-text-main font-montserrat">Mis Pedidos</h1>
         
         {/* Filtros y búsqueda */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-6 border border-gray-100">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <input

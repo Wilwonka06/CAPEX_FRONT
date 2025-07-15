@@ -137,7 +137,7 @@ const CreateSupplier = ({ onCreate, suppliers = [] }) => {
         onClick={handleOpen}
       >
         <i className="bi bi-plus-circle mr-2"></i>
-        Nuevo Proveedor
+        Crear proveedor
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">

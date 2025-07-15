@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { updateAppointment, APPOINTMENT_STATES } from '../../../../../shared/services/AppointmentsDataService';
 import { ToastContainer, toast } from 'react-toastify';

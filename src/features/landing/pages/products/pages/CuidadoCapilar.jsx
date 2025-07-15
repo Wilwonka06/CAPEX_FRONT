@@ -199,7 +199,7 @@ const CuidadoCapilar = () => {
                 {/* Imagen del producto */}
                 <div className="w-full h-48 bg-white flex items-center justify-center rounded-lg mb-3">
                   <img
-                    src={prod.foto || prod.imagen}
+                    src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : (prod.foto || prod.imagen)}
                     alt={prod.nombre}
                     className="object-contain max-h-full max-w-full p-4"
                   />
@@ -214,8 +214,11 @@ const CuidadoCapilar = () => {
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-2">
                     <span>Categoría: {prod.categoria}</span>
-                    {prod.volumen && <span>Tamaño: {prod.volumen}ml</span>}
-                    {prod.tipoCabelloIdeal && <span>Ideal para: {prod.tipoCabelloIdeal}</span>}
+                    {prod.especificaciones && prod.especificaciones.length > 0 && (
+                      prod.especificaciones.slice(0, 2).map((esp, idx) => (
+                        <span key={idx}>{esp.concepto}: {esp.valor}</span>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

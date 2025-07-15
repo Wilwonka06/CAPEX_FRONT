@@ -1,63 +1,143 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SuppliersTable from "./components/SuppliersTable";
 import CreateSupplier from "./components/CreateSupplier";
-import SearchProduct from '../../../../shared/Search';
+import EditSupplier from "./components/EditSupplier";
+import SupplierDetail from "./components/SupplierDetail";
+import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
 import { useSuppliers } from "./hooks/useSuppliers";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
 
 const SuppliersPage = () => {
   const { suppliers, addSupplier, editSupplier, deleteSupplier, toggleSupplierStatus } = useSuppliers();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
 
-  // Cambio de página
-  const handlePageChange = (page) => setCurrentPage(page);
-
-  // Búsqueda
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
-  };
-
-  // Filtrado
-  const filteredSuppliers = suppliers.filter(
-    (s) =>
-      s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.contacto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.direccion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.telefono.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.correo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.isActive ? 'activo' : 'inactivo').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Crear
-  const handleCreateSupplier = (newSupplier) => {
-    addSupplier(newSupplier);
-  };
-
-  // Editar
-  const handleEditSupplier = (updatedSupplier) => {
-    editSupplier(updatedSupplier);
-  };
-
-  // Eliminar
-  const handleDeleteSupplier = (supplierId) => {
-    deleteSupplier(supplierId);
-  };
-
-  // Cambiar estado
-  const handleStatusChange = (supplierId) => {
-    toggleSupplierStatus(supplierId);
-  };
+  // Filtrar proveedores por término de búsqueda
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredSuppliers(suppliers);
+      return;
+    }
+    const lowerTerm = searchTerm.toLowerCase();
+    setFilteredSuppliers(
+      suppliers.filter(supplier =>
+        (supplier.nit && supplier.nit.toLowerCase().includes(lowerTerm)) ||
+        (supplier.nombre && supplier.nombre.toLowerCase().includes(lowerTerm)) ||
+        (supplier.contacto && supplier.contacto.toLowerCase().includes(lowerTerm)) ||
+        (supplier.direccion && supplier.direccion.toLowerCase().includes(lowerTerm)) ||
+        (supplier.telefono && supplier.telefono.toLowerCase().includes(lowerTerm)) ||
+        (supplier.correo && supplier.correo.toLowerCase().includes(lowerTerm)) ||
+        (supplier.tipo && supplier.tipo.toLowerCase().includes(lowerTerm)) ||
+        (supplier.isActive ? 'activo' : 'inactivo').includes(lowerTerm)
+      )
+    );
+  }, [searchTerm, suppliers]);
 
   // Paginación
   const itemsPerPage = 5;
   const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSuppliers = filteredSuppliers.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const paginatedSuppliers = filteredSuppliers.slice(startIndex, startIndex + itemsPerPage);
+
+  // Resetear página al cambiar el filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Cambio de página
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Crear
+  const handleCreateSupplier = (newSupplier) => {
+    try {
+      addSupplier(newSupplier);
+      toast.success('Proveedor creado exitosamente', { position: 'top-right' });
+    } catch {
+      toast.error('Error al crear el proveedor', { position: 'top-right' });
+    }
+  };
+
+  // Editar sin confirmación (la confirmación ahora está en el modal)
+  const handleEditSupplier = (updatedSupplier) => {
+    try {
+      editSupplier(updatedSupplier);
+      setShowEditModal(false);
+      setSelectedSupplier(null);
+      toast.success('Proveedor actualizado exitosamente', { position: 'top-right' });
+    } catch {
+      toast.error('Error al actualizar el proveedor', { position: 'top-right' });
+    }
+  };
+
+  // Eliminar con confirmación
+  const handleDeleteSupplier = async (supplierId) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas eliminar el proveedor "${supplier?.nombre}"? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        deleteSupplier(supplierId);
+        toast.success('Proveedor eliminado exitosamente', { position: 'top-right' });
+      } catch {
+        toast.error('Error al eliminar el proveedor', { position: 'top-right' });
+      }
+    }
+  };
+
+  // Cambiar estado con confirmación
+  const handleStatusChange = async (supplierId) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    const newStatus = supplier.isActive ? 'Inactivo' : 'Activo';
+    
+    const result = await Swal.fire({
+      title: '¿Confirmar cambio de estado?',
+      text: `¿Estás seguro de que deseas cambiar el estado de "${supplier?.nombre}" a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        toggleSupplierStatus(supplierId);
+        setSelectedSupplier(null);
+        toast.success(`Estado cambiado a ${newStatus}`, { position: 'top-right' });
+      } catch {
+        toast.error('Error al cambiar el estado', { position: 'top-right' });
+      }
+    }
+  };
+
+  const closeModals = () => {
+    setShowEditModal(false);
+    setShowDetailModal(false);
+    setSelectedSupplier(null);
+  };
 
   return (
     <div className="min-h-screen font-inter">
@@ -68,13 +148,20 @@ const SuppliersPage = () => {
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar proveedores..." />
-              <CreateSupplier onCreate={handleCreateSupplier} />
+              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar proveedores..." />
+              <CreateSupplier onCreate={handleCreateSupplier} suppliers={suppliers} />
             </div>
             <SuppliersTable
               suppliers={paginatedSuppliers}
-              onEdit={handleEditSupplier}
+              onEdit={(supplier) => {
+                setSelectedSupplier(supplier);
+                setShowEditModal(true);
+              }}
               onDelete={handleDeleteSupplier}
+              onView={(supplier) => {
+                setSelectedSupplier(supplier);
+                setShowDetailModal(true);
+              }}
               onStatusChange={handleStatusChange}
             />
             {totalPages > 1 && (
@@ -84,14 +171,28 @@ const SuppliersPage = () => {
                 onPageChange={handlePageChange}
               />
             )}
-            <div className="mt-4 text-center">
-              {/* <p className="text-sm text-gray-600">
-                Mostrando {Math.min(filteredSuppliers.length, startIndex + 1)} a {Math.min(filteredSuppliers.length, startIndex + itemsPerPage)} de {filteredSuppliers.length} proveedores.
-              </p> */}
-            </div>
           </div>
         </div>
       </div>
+
+      {/* Modales */}
+      {showEditModal && selectedSupplier && (
+        <EditSupplier
+          supplier={selectedSupplier}
+          isOpen={showEditModal}
+          onClose={closeModals}
+          onSave={handleEditSupplier}
+          suppliers={suppliers}
+        />
+      )}
+      {showDetailModal && selectedSupplier && (
+        <SupplierDetail
+          supplier={selectedSupplier}
+          onClose={closeModals}
+        />
+      )}
+
+      <ToastContainer />
     </div>
   );
 };

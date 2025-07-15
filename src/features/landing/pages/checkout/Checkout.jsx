@@ -101,7 +101,7 @@ const Checkout = () => {
         cantidad: p.cantidad,
         precio: p.precio,
         color: p.color || '',
-        imagen: p.foto || p.imagen || '',
+        imagen: p.fotos && p.fotos.length > 0 ? p.fotos[0] : (p.foto || p.imagen || ''),
       })),
       subtotal,
       envio: precioEnvio,

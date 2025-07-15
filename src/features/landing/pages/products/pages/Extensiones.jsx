@@ -209,7 +209,7 @@ const Extensiones = () => {
                 {/* Imagen del producto */}
                 <div className="w-full h-48 bg-white flex items-center justify-center rounded-lg mb-3">
                   <img
-                    src={prod.foto || prod.imagen}
+                    src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : (prod.foto || prod.imagen)}
                     alt={prod.nombre}
                     className="object-contain max-h-full max-w-full p-4"
                   />
@@ -222,10 +222,16 @@ const Extensiones = () => {
                     <span className="text-sm text-text-main">{prod.cantidad} disponibles</span>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-2">
+                    {prod.especificaciones && prod.especificaciones.length > 0 ? (
+                      prod.especificaciones.slice(0, 3).map((esp, idx) => (
+                        <span key={idx}>{esp.concepto}: {esp.valor}</span>
+                      ))
+                    ) : (
+                      <>
+                        <span>Color: {prod.color}</span>
                     <span>Largo: {prod.tamanio}m</span>
-                    <span>Textura: {prod.textura}</span>
-                    <span>Color: {prod.color}</span>
-                    <span>Origen: {prod.origen}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

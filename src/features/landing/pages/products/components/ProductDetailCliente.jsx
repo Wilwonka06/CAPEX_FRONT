@@ -29,22 +29,38 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
     <div className="w-full max-w-5xl mx-auto py-10 px-4">
       {/* Migas de pan */}
       <nav className="text-xs text-gray-500 mb-4 flex items-center gap-2">
-        <span className="hover:underline cursor-pointer">Home</span>
+        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing'}>Home</span>
         <span className="mx-1">/</span>
-        <span className="hover:underline cursor-pointer">{product.categoria || 'Categoría'}</span>
+        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/catalogo'}>Productos</span>
         <span className="mx-1">/</span>
         <span className="text-text-main font-semibold">{product.nombre}</span>
       </nav>
       <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row gap-10">
         {/* Galería de imágenes */}
         <div className="flex flex-col items-center md:w-1/2 w-full">
+          {/* Imagen principal */}
           <div className="w-80 h-80 bg-gray-50 rounded-lg flex items-center justify-center mb-4 shadow-lg">
             <img
-              src={product.foto}
+              src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
               alt={product.nombre}
               className="w-full h-full object-contain rounded-lg"
             />
           </div>
+          
+          {/* Galería de imágenes adicionales */}
+          {product.fotos && product.fotos.length > 1 && (
+            <div className="flex gap-2 mb-4">
+              {product.fotos.slice(1).map((foto, index) => (
+                <div key={index} className="w-20 h-20 bg-gray-50 rounded-lg flex items-center justify-center shadow-md">
+                  <img
+                    src={foto}
+                    alt={`${product.nombre} - Imagen ${index + 2}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {/* Info principal */}
         <div className="flex-1 flex flex-col gap-4">
@@ -133,34 +149,20 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
                       <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Color</td>
                       <td className="px-4 py-2">{product.color}</td>
                     </tr>
-                    {product.volumen && (
+                    {/* Especificaciones técnicas dinámicas */}
+                    {product.especificaciones && product.especificaciones.length > 0 ? (
+                      product.especificaciones.map((esp, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">{esp.concepto}</td>
+                          <td className="px-4 py-2">{esp.valor}</td>
+                      </tr>
+                      ))
+                    ) : (
                       <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Volumen</td>
-                        <td className="px-4 py-2">{product.volumen ? formatNumber(product.volumen) + ' ml' : ''}</td>
+                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Características</td>
+                        <td className="px-4 py-2 text-gray-500">No especificadas</td>
                       </tr>
                     )}
-                    {product.textura && (
-                      <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Textura</td>
-                        <td className="px-4 py-2">{product.textura}</td>
-                      </tr>
-                    )}
-                    {product.origen && (
-                      <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Origen</td>
-                        <td className="px-4 py-2">{product.origen}</td>
-                      </tr>
-                    )}
-                    {product.tipoCabelloIdeal && (
-                      <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Tipo de cabello ideal</td>
-                        <td className="px-4 py-2">{product.tipoCabelloIdeal}</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Largo</td>
-                      <td className="px-4 py-2">{product.tamanio ? `${product.tamanio} m` : 'No especificado'}</td>
-                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -175,7 +177,7 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {recommended.map(prod => (
               <div key={prod.id} className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
-                <img src={prod.foto} alt={prod.nombre} className="w-20 h-20 object-contain mb-2" />
+                <img src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : prod.foto} alt={prod.nombre} className="w-20 h-20 object-contain mb-2" />
                 <div className="text-xs text-center font-semibold mb-1 line-clamp-2">{prod.nombre}</div>
                 <div className="text-primary font-bold text-sm mb-1">${formatNumber(prod.precio?.toFixed(2))}</div>
                 {prod.descuento && (

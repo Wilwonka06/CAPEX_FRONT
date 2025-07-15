@@ -4,6 +4,9 @@ import CreatePurchaseModal from './components/CreatePurchaseModal';
 import PurchaseDetailModal from './components/PurchaseDetailModal';
 import PurchasesTable from './components/PurchasesTable';
 import { useProducts } from '../products/hooks/useProducts';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
 
 // Mock de proveedores y productos para selects
 // const mockSuppliers = [ ... ];
@@ -67,6 +70,7 @@ export default function Shopping() {
 
   // Descargar Excel (últimos 10 registros)
   const handleDownloadExcel = () => {
+    try {
     const last10 = purchases.slice(-10);
     const csv = [
       ["ID", "Fecha Registro", "Fecha Compra", "Proveedor", "NIT", "Total", "Estado"],
@@ -79,17 +83,45 @@ export default function Shopping() {
     a.download = "compras_ultimos10.csv";
     a.click();
     URL.revokeObjectURL(url);
+      toast.success('Archivo descargado exitosamente', { position: 'top-right' });
+    } catch {
+      toast.error('Error al descargar el archivo', { position: 'top-right' });
+    }
   };
 
-  // Función para anular compra
-  const handleAnularCompra = (id) => {
+  // Función para anular compra con confirmación
+  const handleAnularCompra = async (id) => {
+    const compra = purchases.find(c => c.id === id);
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas anular la compra #${compra?.id}? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
     setPurchases(prev => prev.map(c => c.id === id ? { ...c, estado: "Anulada" } : c));
+        toast.success('Compra anulada exitosamente', { position: 'top-right' });
+      } catch {
+        toast.error('Error al anular la compra', { position: 'top-right' });
+      }
+    }
   };
 
   // Función para crear una nueva compra
   const handleCreatePurchase = (newPurchase) => {
+    try {
     setPurchases(prevPurchases => [newPurchase, ...prevPurchases]);
     setIsCreateOpen(false);
+      toast.success('Compra registrada exitosamente', { position: 'top-right' });
+    } catch {
+      toast.error('Error al registrar la compra', { position: 'top-right' });
+    }
   };
 
   return (
@@ -134,6 +166,7 @@ export default function Shopping() {
         isOpen={!!detailCompra} 
         onClose={() => setDetailCompra(null)} 
       />
+      <ToastContainer />
     </div>
   );
 }

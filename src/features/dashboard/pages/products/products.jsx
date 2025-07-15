@@ -4,6 +4,9 @@ import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import CreateProduct from "./components/CreateProduct";
 import { useProducts } from "./hooks/useProducts";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
 
 const ProductsPage = () => {
   const { products, addProduct, editProduct, deleteProduct } = useProducts();
@@ -34,17 +37,59 @@ const ProductsPage = () => {
 
   // Función para crear un nuevo producto
   const handleCreateProduct = (newProduct) => {
+    try {
     addProduct(newProduct);
+      toast.success('Producto creado exitosamente', { position: 'top-right' });
+    } catch (error) {
+      toast.error('Error al crear el producto', { position: 'top-right' });
+    }
   };
 
-  // Función para editar un producto
-  const handleEditProduct = (updatedProduct) => {
+  // Función para editar un producto con confirmación
+  const handleEditProduct = async (updatedProduct) => {
+    const result = await Swal.fire({
+      title: '¿Confirmar edición?',
+      text: `¿Estás seguro de que deseas editar el producto "${updatedProduct.nombre}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, editar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
     editProduct(updatedProduct);
+        toast.success('Producto actualizado exitosamente', { position: 'top-right' });
+      } catch (error) {
+        toast.error('Error al actualizar el producto', { position: 'top-right' });
+      }
+    }
   };
 
-  // Función para eliminar un producto
-  const handleDeleteProduct = (productId) => {
+  // Función para eliminar un producto con confirmación
+  const handleDeleteProduct = async (productId) => {
+    const product = products.find(p => p.id === productId);
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas eliminar el producto "${product?.nombre}"? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
     deleteProduct(productId);
+        toast.success('Producto eliminado exitosamente', { position: 'top-right' });
+      } catch (error) {
+        toast.error('Error al eliminar el producto', { position: 'top-right' });
+      }
+    }
   };
 
   // Paginación simple
@@ -94,6 +139,7 @@ const ProductsPage = () => {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

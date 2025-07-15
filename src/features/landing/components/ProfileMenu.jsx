@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import UserProfileModal from '../../../shared/components/UserProfileModal';
 
-const ProfileMenu = ({ user, onClose, onLogout }) => {
+const ProfileMenu = ({ user, onClose, onLogout, showOrdersOption }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(user);
   const isClient = Array.isArray(currentUser?.roles)
@@ -15,6 +15,12 @@ const ProfileMenu = ({ user, onClose, onLogout }) => {
     setShowProfileModal(false);
     onClose();
     navigate('/landing/mis-compras');
+  };
+
+  const handleGoToOrders = () => {
+    setShowProfileModal(false);
+    onClose();
+    navigate('/landing/mis-pedidos');
   };
 
   return (
@@ -49,6 +55,9 @@ const ProfileMenu = ({ user, onClose, onLogout }) => {
             {isClient && (
               <button className="text-left text-primary hover:underline px-2 py-1 rounded transition" onClick={handleGoToPurchases}>Mis compras</button>
             )}
+            {showOrdersOption && (
+              <button className="text-left text-primary hover:underline px-2 py-1 rounded transition" onClick={handleGoToOrders}>Mis pedidos</button>
+            )}
           </div>
           <div className="flex justify-end">
             <button
@@ -76,6 +85,7 @@ ProfileMenu.propTypes = {
   user: PropTypes.object,
   onClose: PropTypes.func.isRequired,
   onLogout: PropTypes.func.isRequired,
+  showOrdersOption: PropTypes.bool,
 };
 
 export default ProfileMenu; 

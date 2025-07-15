@@ -4,6 +4,9 @@ import EditOrderModal from "./components/EditOrderModal";
 import { useSales } from '../SaleProducts/context/SalesContext';
 import { useOrders } from './context/OrdersContext';
 import Paginator from '../../../../shared/Paginator';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
 
 // Datos mock de clientes (idénticos a los de customers/customer.jsx)
 const customersMock = [
@@ -94,31 +97,52 @@ export default function OrdersPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
 
-  // Actualizar estado
-  const handleUpdateEstado = (id, nuevoEstado) => {
-    const updatedOrder = updateOrderStatus(id, nuevoEstado);
-    
+  // Actualizar estado con confirmación
+  const handleUpdateEstado = async (id, nuevoEstado) => {
+    const order = orders.find(o => o.id === id);
+    const result = await Swal.fire({
+      title: '¿Confirmar cambio de estado?',
+      text: `¿Estás seguro de que deseas cambiar el estado del pedido #${order?.numeroOrden} a "${nuevoEstado}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const updatedOrder = updateOrderStatus(id, nuevoEstado);
+        
       // Si el estado cambia a 'Enviado' y antes no lo era, crear la venta
-    if (updatedOrder && nuevoEstado === "Enviado" && updatedOrder.estado === "Enviado") {
+        if (updatedOrder && nuevoEstado === "Enviado" && updatedOrder.estado === "Enviado") {
         // Evitar duplicados: verifica si ya existe una venta con ese número de orden
-      const yaEsVenta = sales.some(sale => sale.numeroVenta === updatedOrder.numeroOrden);
+          const yaEsVenta = sales.some(sale => sale.numeroVenta === updatedOrder.numeroOrden);
         if (!yaEsVenta) {
           setSales(prevSales => [
             {
               id: Date.now(),
-            numeroVenta: updatedOrder.numeroOrden,
-            fecha: updatedOrder.fecha,
-            clienteId: updatedOrder.clienteId,
-            valor: updatedOrder.valor,
+                numeroVenta: updatedOrder.numeroOrden,
+                fecha: updatedOrder.fecha,
+                clienteId: updatedOrder.clienteId,
+                valor: updatedOrder.valor,
               estado: "Completado",
-            productos: updatedOrder.productos,
+                productos: updatedOrder.productos,
               metodoPago: "No especificado"
             },
             ...prevSales
           ]);
+            toast.success('Pedido convertido a venta exitosamente', { position: 'top-right' });
+          }
         }
+        
+        toast.success(`Estado del pedido cambiado a ${nuevoEstado}`, { position: 'top-right' });
+        setEditOrder(null);
+      } catch {
+        toast.error('Error al actualizar el estado del pedido', { position: 'top-right' });
       }
-    setEditOrder(null);
+    }
   };
 
   return (
@@ -167,6 +191,7 @@ export default function OrdersPage() {
         onClose={() => setEditOrder(null)}
         onUpdateEstado={handleUpdateEstado}
       />
+      <ToastContainer />
     </div>
   );
 }
