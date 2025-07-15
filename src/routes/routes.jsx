@@ -37,10 +37,8 @@ import CuidadoCapilar from '../features/landing/pages/products/pages/CuidadoCapi
 import Extensiones from '../features/landing/pages/products/pages/Extensiones';
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
-import Products from '../features/landing/pages/products/Products';
 import ClientAppointments from '../features/landing/pages/ClientAppointments/ClientAppointments';
 import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
-import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
 import Checkout from '../features/landing/pages/checkout/Checkout';
 import ThankYou from '../features/landing/pages/checkout/ThankYou';
@@ -242,10 +240,6 @@ const router = createBrowserRouter([
             element: <Orders />
           },
           {
-            path: 'productos',
-            element: <Products />
-          },
-          {
             path: 'productos/:id',
             element: <ProductDetailPageCliente />
           },
@@ -273,10 +267,7 @@ const router = createBrowserRouter([
             path: 'extensiones',
             element: <Extensiones />
           },
-          {
-            path: 'quotes',
-            element: <Quotes />
-          }
+         
         ]
       },
       // Redirección para compatibilidad

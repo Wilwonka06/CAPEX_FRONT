@@ -7,6 +7,7 @@ import Paginator from '../../../../shared/Paginator';
 import Search from '../../../../shared/Search';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
 
 const ClientAppointments = () => {
   const { currentUser } = useAuth();
@@ -356,9 +357,21 @@ const ClientAppointments = () => {
       toast.error('Por favor indica el motivo de cancelación.', { position: 'top-right' });
       return;
     }
-    await cancelAppointment(cancelId, cancelReason);
-    setShowCancelModal(false);
-    toast.info('Cita cancelada', { position: 'top-right' });
+    const result = await Swal.fire({
+      title: '¿Estás seguro de cancelar esta cita?',
+      text: 'Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, cancelar',
+      cancelButtonText: 'Volver',
+    });
+    if (result.isConfirmed) {
+      await cancelAppointment(cancelId, cancelReason);
+      setShowCancelModal(false);
+      toast.info('Cita cancelada', { position: 'top-right' });
+    }
   };
 
   // Validaciones para reprogramar (igual que agendar)

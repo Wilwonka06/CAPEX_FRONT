@@ -41,11 +41,7 @@ const UserTable = ({ users, onView, onEdit, onDelete }) => {
                     ? user.roles.join(', ')
                     : user.roles}
                 </td>
-                <td className="py-2 px-4">
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${user.estado === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {user.estado}
-                  </span>
-                </td>
+                <td className="py-2 px-4">{user.estado}</td>
                 <td className="py-2 px-4 text-center flex gap-2 justify-center">
                   <button title="Ver" onClick={() => onView(user)} className="text-primary hover:text-primary-dark">
                     <i className="bi bi-eye"></i>

@@ -1,26 +1,8 @@
-
-import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ProfileMenu from './ProfileMenu';
 import { useCart } from './CartContext';
-
-// Asegúrate de que los colores personalizados estén configurados en tu tailwind.config.js
-// Ejemplo de configuración en tailwind.config.js:
-// module.exports = {
-//   theme: {
-//     extend: {
-//       colors: {
-//         'primary': '#A0522D',
-//         'primary-dark': '#4B2A2A',
-//         'accent': '#D2B48C',
-//         'accent-light': '#F7DAA2',
-//         'background': '#FFF8F0',
-//         'text-main': '#1E1E1E',
-//       },
-//     },
-//   },
-//   plugins: [],
-// };
+import { FaShoppingCart } from 'react-icons/fa';
+import React, { useState, useRef, useEffect } from 'react';
 
 const Navbar = () => {
     // Estado para controlar la visibilidad del menú móvil
@@ -33,8 +15,6 @@ const Navbar = () => {
     // Estado para controlar el menú desplegable de productos
     const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
     const { cart } = useCart();
-    const totalItems = cart.reduce((sum, item) => sum + (item.cantidad || 1), 0);
-
 
     // Función para alternar el menú móvil
     const toggleMobileMenu = () => {
@@ -53,7 +33,7 @@ const Navbar = () => {
             window.removeEventListener('storage', handleUserChange);
         };
     }, []);
-
+    
     // Cerrar el menú de perfil al hacer clic fuera
     useEffect(() => {
         if (!showProfile) return;
@@ -115,8 +95,8 @@ const Navbar = () => {
                     {/* Menú desplegable de Productos */}
                     <div className="relative w-full md:w-auto">
                         <button
+                            className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary flex items-center justify-center gap-1"
                             onClick={toggleProductsDropdown}
-                            className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary  flex items-center justify-center gap-2"
                         >
                             Productos
                             <svg 
@@ -155,6 +135,15 @@ const Navbar = () => {
 
                 {/* Botones de Autenticación (a la derecha) */}
                 <div className="hidden md:flex md:space-x-4 items-center relative" ref={profileRef}>
+                    {/* Carrito */}
+                    <Link to="/landing/cart" className="relative mr-2 group">
+                        <FaShoppingCart className="text-2xl text-primary group-hover:text-primary-dark transition" />
+                        {cart.length > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold shadow">
+                                {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}
+                            </span>
+                        )}
+                    </Link>
                     {currentUser ? (
                         <>
                             <button
@@ -173,6 +162,7 @@ const Navbar = () => {
                                     user={currentUser}
                                     onClose={() => setShowProfile(false)}
                                     onLogout={handleLogout}
+                                    showOrdersOption={true}
                                 />
                             )}
                         </>
@@ -181,7 +171,6 @@ const Navbar = () => {
                             Iniciar Sesión
                         </Link>
                     )}
-
                 </div>
             </div>
         </nav>
@@ -189,4 +178,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
