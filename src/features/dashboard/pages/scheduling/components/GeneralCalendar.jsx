@@ -6,6 +6,9 @@ import interactionPlugin from '@fullcalendar/interaction';
 import SeeScheduling from '../../scheduling/components/SeeScheduling';
 import AddScheduling from './AddScheduling';
 import EditScheduling from './EditScheduling';
+import Swal from 'sweetalert2';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const EMPLOYEES_KEY = 'capex_employees';
 
@@ -136,7 +139,7 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
     setModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selectedEvent) return;
   
     const rawId = selectedEvent.extendedProps?.id || selectedEvent.id;
@@ -148,12 +151,20 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
       selectedEvent.resourceId ||
       selectedEvent.getResources?.()[0]?.id;
   
-    console.log('DEBUG eliminar:', { rawId, idBase, empleadoId });
-  
     if (!idBase || !empleadoId) {
       alert('⚠️ No se pudo obtener idBase o empleadoId.');
       return;
     }
+  
+    const result = await Swal.fire({
+      title: '¿Estás seguro de eliminar esta programación?',
+      text: 'Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!result.isConfirmed) return;
   
     const updatedEmployees = employees.map(emp =>
       String(emp.id) === String(empleadoId)
@@ -170,7 +181,8 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
   
     localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
     setModalOpen(false);
-    window.location.reload();
+    loadEvents();
+    toast.success('Programación eliminada correctamente!');
   };
 
   
@@ -255,7 +267,8 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
       setModalOpen(false);
       setEditingData(null);
       setSelectedEvent(null);
-      window.location.reload();
+      loadEvents();
+      toast.success('Programación editada correctamente!');
     };
 
   
@@ -268,31 +281,37 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
     //loadEvents(); // Mejor que recargar la página
 
     const handleAddEvent = (prog) => {
-      // prog ya debería traer empleadoId de AddScheduling, pero se añade un fallback por seguridad.
+      // Validar que se seleccionó un empleado
       if (!prog.empleadoId) {
-          alert('Selecciona un empleado');
-          return;
+        alert('Debes seleccionar un empleado para la programación.');
+        return;
       }
-  
+
+      // Cargar empleados actuales
       const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
-      // Genera un idBase único para la nueva programación (si no viene de una edición)
-      // AddScheduling ya está generando un id para 'nuevaProg', pero este es para el idBase
+      // Buscar el empleado por id (asegura comparación de string)
+      const empleadoIndex = empleados.findIndex(emp => String(emp.id) === String(prog.empleadoId));
+      if (empleadoIndex === -1) {
+        alert('Empleado no encontrado.');
+        return;
+      }
+
+      // Generar idBase único si no existe
       const idBase = prog.idBase || (Date.now().toString() + Math.floor(Math.random() * 10000).toString());
-  
-      // --- CONSOLE.LOG DEPURACIÓN EN handleAddEvent ---
-      console.log("1. Prog (objeto a guardar) en handleAddEvent:", JSON.parse(JSON.stringify(prog)));
-      // ------------------------------------------------
-  
-      const nuevosEmpleados = empleados.map(emp =>
-          String(emp.id) === String(prog.empleadoId)
-              ? { ...emp, schedulings: [...(emp.schedulings || []), { ...prog, idBase }] }
-              : emp
-      );
-  
-      localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(nuevosEmpleados));
+      const nuevaProg = { ...prog, idBase };
+
+      // Agregar la programación al empleado correcto
+      empleados[empleadoIndex].schedulings = [
+        ...(empleados[empleadoIndex].schedulings || []),
+        nuevaProg
+      ];
+
+      // Guardar en localStorage
+      localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(empleados));
       setModalOpen(false);
-      // Llama a loadEvents DIRECTAMENTE para actualizar el calendario sin recargar la página
-      loadEvents(); 
+      loadEvents();
+      if (typeof onAddEvent === 'function') onAddEvent();
+      toast.success('Programación agregada correctamente!');
     };
 
   // ------------------------------
@@ -375,6 +394,17 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
           />
         </SeeScheduling>
       )}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };

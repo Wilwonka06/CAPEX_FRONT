@@ -558,10 +558,10 @@ export function isValidDocumentNumber(documento) {
 }
 
 // Valida contraseña (mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número)
-export function isValidPassword(password) {
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
-  return passwordRegex.test(password);
-}
+//export function isValidPassword(password) {
+  //const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
+  //return passwordRegex.test(password);
+//}
 
 // Valida longitud de texto
 export function isValidTextLength(text, minLength = 2, maxLength = 50) {

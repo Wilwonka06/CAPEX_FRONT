@@ -157,14 +157,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
       onSave(newEmployee);
       setForm(initialForm);
       setErrors({});
-      toast.success('Empleado agregado exitosamente!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
     }
   };
 

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Paginator from "../../../../shared/Paginator";
 import Calendar from "../../../dashboard/pages/employees/components/Calendar";
 import AddEmployee from "../../../dashboard/pages/employees/components/AddEmployee";
@@ -36,6 +38,11 @@ const EmployeesPage = () => {
   useEffect(() => {
     localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(employees));
   }, [employees]);
+
+  // Toast de prueba para verificar que funciona
+  useEffect(() => {
+    toast.info('Página de empleados cargada', { autoClose: 2000 });
+  }, []);
 
   const filteredEmployees = employees.filter(emp =>
     normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
@@ -107,6 +114,7 @@ const EmployeesPage = () => {
     ]);
     setShowForm(false);
     setAddEmployeeSchedulings([]);
+    toast.success('Empleado agregado exitosamente!');
   };
 
   const handleEditClick = (employee) => setEditEmployee(employee);
@@ -281,6 +289,14 @@ const EmployeesPage = () => {
           </div>
         </div>
       </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        closeOnClick
+        draggable
+        pauseOnHover
+        style={{ zIndex: 9999 }}
+      />
     </div>
   );
 };

@@ -12,13 +12,15 @@ import { AuthProvider } from './shared/contexts/AuthContext';
 function App() {
   console.log('hoal')
   return (
-    <div className="App">
-      <SalesProvider>
-        <OrdersProvider>
-          <RouterProvider router={router} />
-        </OrdersProvider>
-      </SalesProvider>
-    </div>
+    <AuthProvider>
+      <div className="App">
+        <SalesProvider>
+          <OrdersProvider>
+            <RouterProvider router={router} />
+          </OrdersProvider>
+        </SalesProvider>
+      </div>
+    </AuthProvider>
   );
 }
 export default App;

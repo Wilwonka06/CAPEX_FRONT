@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { 
   validateSchedulingForm,
   validateSchedulingStartDate,
@@ -33,16 +34,23 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [errors, setErrors] = useState({});
 
+  // Selección automática si solo hay un empleado
+  useEffect(() => {
+    if (employees.length === 1) {
+      setSelectedEmployee(String(employees[0].id));
+    }
+  }, [employees]);
+
   useEffect(() => {
     if (editing) {
       setProg(editing);
-      setSelectedEmployee(editing.empleadoId || '');
+      setSelectedEmployee(editing.empleadoId || (employees.length === 1 ? String(employees[0].id) : ''));
     } else {
       setProg(initialProg);
-      setSelectedEmployee('');
+      setSelectedEmployee(employees.length === 1 ? String(employees[0].id) : '');
     }
     setErrors({});
-  }, [editing]);
+  }, [editing, employees]);
 
   // Validación en tiempo real
   const validateField = (field, value) => {
@@ -160,16 +168,24 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
     <div>
       <form onSubmit={handleAddEvent}>
         <div className="flex flex-wrap gap-6 items-end">
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
-            <select name="empleadoId" value={selectedEmployee} onChange={handleEmployeeChange} className="border rounded px-3 py-2 w-40">
-              <option value="">Selecciona un empleado</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.nombre} {emp.apellido}</option>
-              ))}
-            </select>
-            {errors.empleado && <p className="text-red-500 text-xs mt-1">{errors.empleado}</p>}
-          </div>
+          {employees.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
+              <select name="empleadoId" value={selectedEmployee} onChange={handleEmployeeChange} className="border rounded px-3 py-2 w-40">
+                <option value="">Selecciona un empleado</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.nombre} {emp.apellido}</option>
+                ))}
+              </select>
+              {errors.empleado && <p className="text-red-500 text-xs mt-1">{errors.empleado}</p>}
+            </div>
+          )}
+          {employees.length === 1 && (
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
+              <input type="text" value={`${employees[0].nombre} ${employees[0].apellido}`} disabled className="border rounded px-3 py-2 w-40 bg-gray-100" />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Fecha inicio</label>
             <input type="date" name="fechaInicio" value={prog.fechaInicio} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
@@ -216,12 +232,23 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
           </div>
           <div className="flex-1 flex justify-end gap-2">
             <button type="button" onClick={onCancelEdit} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-semibold hover:bg-gray-300 transition">Cancelar</button>
-            <button type="submit" className="bg-primary-dark text-white px-8 py-2 rounded font-semibold hover:bg-primary transition shadow">
+            <button type="submit" className="bg-primary-dark text-white px-8 py-2 rounded font-semibold hover:bg-primary transition shadow" disabled={employees.length === 0}>
               {editing ? 'Guardar cambios' : 'Agregar'}
             </button>
           </div>
         </div>
       </form>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };

@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import AddServices from './components/AddServices'
 import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../../../../shared/Paginator";
 import { initialCategories } from '../CatServices/CatServices';
 import SearchProduct from '../../../../shared/Search';
+import Swal from 'sweetalert2';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -100,21 +102,28 @@ const Services = () => {
   const toggleServiceStatus = (id) => {
     const service = services.find(s => s.id === id);
     const newStatus = service.active ? 'Inactivo' : 'Activo';
-    
-    setServices(
-      services.map((service) =>
-        service.id === id ? { ...service, active: !service.active, estado: newStatus } : service
-      )
-    );
-    
-    // Mostrar alerta de éxito
-    toast.success(`Estado del servicio cambiado a ${newStatus}`, {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
+    Swal.fire({
+      title: `¿Estás seguro de cambiar el estado a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setServices(
+          services.map((service) =>
+            service.id === id ? { ...service, active: !service.active, estado: newStatus } : service
+          )
+        );
+        toast.success(`Estado del servicio cambiado a ${newStatus}`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
     });
   };
 
@@ -136,25 +145,41 @@ const Services = () => {
   };
 
   const handleEditService = (editedService) => {
-    const mappedService = {
-      id: editedService.id,
-      name: editedService.name,
-      category: editedService.Categoria,
-      description: editedService.Descripcion,
-      duration: editedService.duracion + ' min',
-      price: '$' + editedService.precio,
-      active: editedService.estado === 'Activo',
-      estado: editedService.estado,
-      imagen: editedService.imagen
-    };
-    
-    setServices(
-      services.map((service) =>
-        service.id === editedService.id ? mappedService : service
-      )
-    );
-    // No cerrar el modal aquí, dejar que el componente hijo lo maneje
-    setSelectedService(null);
+    Swal.fire({
+      title: '¿Guardar cambios en el servicio?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const mappedService = {
+          id: editedService.id,
+          name: editedService.name,
+          category: editedService.Categoria,
+          description: editedService.Descripcion,
+          duration: editedService.duracion + ' min',
+          price: '$' + editedService.precio,
+          active: editedService.estado === 'Activo',
+          estado: editedService.estado,
+          imagen: editedService.imagen
+        };
+        setServices(
+          services.map((service) =>
+            service.id === editedService.id ? mappedService : service
+          )
+        );
+        setSelectedService(null);
+        toast.success('Servicio editado exitosamente!', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const handleSeeService = (service) => {
@@ -168,19 +193,25 @@ const Services = () => {
   };
 
   const handleDeleteService = (service) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`)) {
-      setServices(services.filter((s) => s.id !== service.id));
-      
-      // Mostrar alerta de éxito
-      toast.success(`Servicio eliminado exitosamente!`, {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
-    }
+    Swal.fire({
+      title: `¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setServices(services.filter((s) => s.id !== service.id));
+        toast.success(`Servicio eliminado exitosamente!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const filteredServices = services.filter(
@@ -256,6 +287,17 @@ const Services = () => {
       {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} services={services} />}
       {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} services={services} />}
       {isSeeModalOpen && selectedService && <SeeServices onClose={() => { setIsSeeModalOpen(false); setSelectedService(null); }} service={selectedService} />}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 }

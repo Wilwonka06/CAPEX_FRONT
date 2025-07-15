@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import AddCatServices from './components/AddCatServices';
 import EditCatServices from './components/EditCatServices';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
+import Swal from 'sweetalert2';
 
 // --- Componentes Locales ---
 
@@ -95,21 +97,28 @@ const CatServices = () => {
   const toggleCategoryStatus = (id) => {
     const category = categories.find(cat => cat.id === id);
     const newStatus = category.isActive ? 'Inactivo' : 'Activo';
-    
-    setCategories(
-      categories.map((cat) =>
-        cat.id === id ? { ...cat, isActive: !cat.isActive } : cat
-      )
-    );
-    
-    // Mostrar alerta de éxito
-    toast.success(`Estado de la categoría cambiado a ${newStatus}`, {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
+    Swal.fire({
+      title: `¿Estás seguro de cambiar el estado a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setCategories(
+          categories.map((cat) =>
+            cat.id === id ? { ...cat, isActive: !cat.isActive } : cat
+          )
+        );
+        toast.success(`Estado de la categoría cambiado a ${newStatus}`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
     });
   };
 
@@ -127,17 +136,35 @@ const CatServices = () => {
   };
 
   const handleEditCategory = (editedCategory) => {
-    setCategories(
-      categories.map((cat) =>
-        cat.id === editedCategory.id ? { 
-          ...editedCategory, 
-          isActive: editedCategory.estado === 'Activo',
-          description: editedCategory.Descripcion // Mantener compatibilidad
-        } : cat
-      )
-    );
-    setIsEditModalOpen(false);
-    setSelectedCategory(null);
+    Swal.fire({
+      title: '¿Guardar cambios en la categoría?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setCategories(
+          categories.map((cat) =>
+            cat.id === editedCategory.id ? { 
+              ...editedCategory, 
+              isActive: editedCategory.estado === 'Activo',
+              description: editedCategory.Descripcion // Mantener compatibilidad
+            } : cat
+          )
+        );
+        setIsEditModalOpen(false);
+        setSelectedCategory(null);
+        toast.success('Categoría editada exitosamente!', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const handleEditClick = (category) => {
@@ -146,19 +173,25 @@ const CatServices = () => {
   };
 
   const handleDeleteCategory = (category) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar la categoría "${category.name}"?`)) {
-      setCategories(categories.filter((cat) => cat.id !== category.id));
-      
-      // Mostrar alerta de éxito
-      toast.success(`Categoría eliminada exitosamente!`, {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
-    }
+    Swal.fire({
+      title: `¿Estás seguro de que deseas eliminar la categoría "${category.name}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setCategories(categories.filter((cat) => cat.id !== category.id));
+        toast.success(`Categoría eliminada exitosamente!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const filteredCategories = categories.filter(
@@ -229,6 +262,17 @@ const CatServices = () => {
       {/* Modales */}
       {isAddModalOpen && <AddCatServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddCategory} existingCategories={categories} />}
       {isEditModalOpen && selectedCategory && <EditCatServices onClose={() => { setIsEditModalOpen(false); setSelectedCategory(null); }} category={selectedCategory} onEdit={handleEditCategory} existingCategories={categories} />}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };
