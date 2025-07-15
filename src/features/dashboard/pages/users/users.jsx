@@ -8,6 +8,7 @@ import Paginator from '../../../../shared/Paginator';
 import { getRoles } from '../../../../shared/services/ModuleDataService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
 
 const LOCAL_STORAGE_KEY = 'usuarios';
 const USERS_PER_PAGE = 5;
@@ -33,6 +34,49 @@ const DEFAULT_ADMIN = {
   isAdmin: true,
   privileges: ADMIN_PRIVILEGES
 };
+
+const DEFAULT_USERS = [
+  {
+    id: 2,
+    nombre: 'María López',
+    correo: 'maria@example.com',
+    password: 'test1234',
+    rol: 'Empleado',
+    estado: 'Activo',
+    isAdmin: false,
+    roles: ['Empleado']
+  },
+  {
+    id: 3,
+    nombre: 'Carlos Pérez',
+    correo: 'carlos@example.com',
+    password: 'test1234',
+    rol: 'Cliente',
+    estado: 'Activo',
+    isAdmin: false,
+    roles: ['Cliente']
+  },
+  {
+    id: 4,
+    nombre: 'Ana Torres',
+    correo: 'ana@example.com',
+    password: 'test1234',
+    rol: 'Empleado',
+    estado: 'Inactivo',
+    isAdmin: false,
+    roles: ['Empleado']
+  },
+  {
+    id: 5,
+    nombre: 'Luis Gómez',
+    correo: 'luis@example.com',
+    password: 'test1234',
+    rol: 'Cliente',
+    estado: 'Activo',
+    isAdmin: false,
+    roles: ['Cliente']
+  }
+];
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -87,8 +131,17 @@ const Users = () => {
       };
       storedUsers = [newAdmin, ...storedUsers];
     }
-    
-    setUsers(storedUsers);
+    // Agregar usuarios de prueba si no existen
+    DEFAULT_USERS.forEach(user => {
+      if (!storedUsers.some(u => u.correo === user.correo)) {
+        storedUsers.push(user);
+      }
+    });
+    // Eliminar duplicados por correo
+    const uniqueUsers = storedUsers.filter((user, index, self) =>
+      index === self.findIndex(u => u.correo === user.correo)
+    );
+    setUsers(uniqueUsers);
     setIsLoaded(true);
   }, []);
 
@@ -147,14 +200,20 @@ const Users = () => {
     setShowEditModal(false);
     toast.success('Usuario editado correctamente', { position: 'top-right' });
   };
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
     const userToDelete = users.find(u => u.id === userId);
     if (userToDelete) {
-      const confirmDelete = window.confirm(
-        `¿Estás seguro de que quieres eliminar al usuario "${userToDelete.nombre}"?\n\nEsta acción no se puede deshacer.`
-      );
-      
-      if (confirmDelete) {
+      const result = await Swal.fire({
+        title: `¿Estás seguro de que quieres eliminar al usuario "${userToDelete.nombre}"?`,
+        text: 'Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+      });
+      if (result.isConfirmed) {
         setUsers(prev => prev.filter(u => u.id !== userId));
         toast.success('Usuario eliminado correctamente', { position: 'top-right' });
       }
