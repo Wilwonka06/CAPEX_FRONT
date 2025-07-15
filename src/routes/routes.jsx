@@ -10,7 +10,7 @@ import Landing from '../features/landing/Landing';
 import CategoriasProductos from '../features/dashboard/pages/CatProducts/CatProducts';
 import CategoriasServicios from '../features/dashboard/pages/CatServices/CatServices';
 import Citas from '../features/dashboard/pages/Quotes/Quotes';
-import Clientes from '../features/dashboard/pages/Customers/Customer';
+import Clientes from '../features/dashboard/pages/customers/Customer';
 import Compras from '../features/dashboard/pages/Shopping/Shopping';
 import Dashboard from '../features/dashboard/components/Dashboard';
 import Empleados from '../features/dashboard/pages/Employees/Employees';

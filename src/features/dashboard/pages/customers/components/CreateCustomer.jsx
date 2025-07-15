@@ -1,70 +1,69 @@
-import { useState, useEffect } from "react";
-import { validateCustomer } from "../services/ValidateCustomerService";
+"use client"
 
-const CreateProductCard = ({ children, title, onClose }) => (
-  <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
-    <button
-      className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
-      onClick={onClose}
-      aria-label="Cerrar"
-    >
-      ×
-    </button>
-    <h2 className="text-xl font-bold mb-4 text-primary">{title}</h2>
-    {children}
-  </div>
-);
+import { useState, useEffect } from "react"
+import { validateCustomer } from "../../../../../shared/validations.js"
 
-const CreateCustomer = ({ isOpen, onClose, onCreate, loading, customers = [] }) => {
-  const [formData, setFormData] = useState({
-    documentType: "",
-    documentNumber: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-  });
-  const [errors, setErrors] = useState({});
+const initialFormData = {
+  documentType: "",
+  documentNumber: "",
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  password: "",
+  confirmPassword: "",
+};
 
-  // Resetear formulario cuando se abre/cierra el modal
+export default function CreateCustomer({ isOpen, onClose, onCreate, loading = false, customers = [] }) {
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [formData, setFormData] = useState(initialFormData)
+  const [touched, setTouched] = useState({})
+  const [errors, setErrors] = useState({})
+
   useEffect(() => {
     if (!isOpen) {
-      setFormData({
-        documentType: "",
-        documentNumber: "",
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-      });
-      setErrors({});
+      setFormData(initialFormData)
+      setErrors({})
+      setTouched({})
     }
-  }, [isOpen]);
+  }, [isOpen])
 
-  // Validación en tiempo real
   useEffect(() => {
-    if (isOpen) {
-      const validation = validateCustomer(formData, customers);
-      setErrors(validation.errors);
-    }
-  }, [formData, customers, isOpen]);
+    setErrors(validateCustomer(formData, customers, null, false));
+  }, [formData, customers]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    setTouched((prev) => ({ ...prev, [name]: true }))
+  }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (Object.keys(errors).length === 0 && onCreate) onCreate(formData);
-  };
+  const handleBlur = (e) => {
+    const { name } = e.target
+    setTouched((prev) => ({ ...prev, [name]: true }))
+  }
 
   const handleClose = () => {
-    if (!loading) {
-      onClose();
+    if (!loading && onClose) onClose()
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validation = validateCustomer(formData, customers, null, true);
+    const allTouched = Object.keys(formData).reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {});
+    setTouched(allTouched);
+    setErrors(validation.errors);
+    if (validation.isValid) {
+      try {
+        setLoading(true);
+        await onCreate(formData);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -72,135 +71,215 @@ const CreateCustomer = ({ isOpen, onClose, onCreate, loading, customers = [] }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <CreateProductCard title="Crear nuevo cliente" onClose={handleClose}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Nombre *</label>
-              <input
-                type="text"
-                name="firstName"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ej. Juan"
-              />
-              {errors.firstName && <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>}
+            <h2 className="text-xl font-bold text-accent m-0">Registrar Nuevo Cliente</h2>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Apellido *</label>
-              <input
-                type="text"
-                name="lastName"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ej. Pérez"
-              />
-              {errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
-            </div>
+          <button
+            className="text-gray-400 hover:text-black text-xl font-bold"
+            onClick={handleClose}
+            aria-label="Cerrar"
+            disabled={loading}
+          >
+            ×
+          </button>
           </div>
 
+        {/* Contenido */}
+        <div className="p-8 bg-white overflow-y-auto flex-1">
+          <form id="create-customer-form" onSubmit={handleSubmit} className="space-y-4">
+            {/* Documento */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Tipo de documento *</label>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Tipo de Documento <span className="text-red-500">*</span>
+                </label>
               <select
                 name="documentType"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.documentType}
-                onChange={handleChange}
-                required
-                disabled={loading}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               >
                 <option value="">Seleccione...</option>
                 <option value="CC">Cédula de Ciudadanía</option>
                 <option value="CE">Cédula de Extranjería</option>
                 <option value="TI">Tarjeta de Identidad</option>
               </select>
-              {errors.documentType && <p className="text-red-600 text-xs mt-1">{errors.documentType}</p>}
+                {touched.documentType && errors.documentType && (
+                  <p className="text-red-600 text-xs mt-1">{errors.documentType}</p>
+                )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Número de documento *</label>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Número de Documento <span className="text-red-500">*</span>
+                </label>
               <input
                 type="text"
                 name="documentNumber"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.documentNumber}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ej. 123456789"
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               />
-              {errors.documentNumber && <p className="text-red-600 text-xs mt-1">{errors.documentNumber}</p>}
+                {touched.documentNumber && errors.documentNumber && (
+                  <p className="text-red-600 text-xs mt-1">{errors.documentNumber}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Nombres */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Nombre <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+              />
+                {touched.firstName && errors.firstName && (
+                  <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Apellido <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                />
+                {touched.lastName && errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
             </div>
           </div>
 
+            {/* Email y Teléfono */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Correo electrónico *</label>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Correo Electrónico <span className="text-red-500">*</span>
+                </label>
               <input
                 type="email"
                 name="email"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ej. correo@ejemplo.com"
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               />
-              {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
+                {touched.email && errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Teléfono *</label>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Teléfono <span className="text-red-500">*</span>
+                </label>
               <input
                 type="tel"
                 name="phone"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
                 value={formData.phone}
-                onChange={handleChange}
-                required
-                disabled={loading}
-                placeholder="Ej. 3001234567"
-              />
-              {errors.phone && <p className="text-red-600 text-xs mt-1">{errors.phone}</p>}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                />
+                {touched.phone && errors.phone && <p className="text-red-600 text-xs mt-1">{errors.phone}</p>}
+              </div>
             </div>
+
+            {/* Contraseñas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Contraseña <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password || ''}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-black text-sm"
+                  >
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+                {touched.password && errors.password && (
+                  <p className="text-red-600 text-xs mt-1">{errors.password}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Confirmar Contraseña <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword || ''}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-black text-sm"
+                  >
+                    {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                  </button>
+                </div>
+                {touched.confirmPassword && errors.confirmPassword && (
+                  <p className="text-red-600 text-xs mt-1">{errors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+          </form>
           </div>
 
-          <div className="flex justify-end gap-4 pt-4">
+        {/* Footer */}
+        <div className="bg-white rounded-b-lg flex justify-end px-8 py-4 border-t border-gray-200">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
-              disabled={loading}
+            className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-black text-sm hover:bg-gray-200 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center"
-              disabled={loading || Object.keys(errors).length > 0}
+              form="create-customer-form"
+              className="px-4 py-2 rounded-md font-semibold transition ml-2 text-sm bg-black text-white hover:bg-gray-800 flex items-center"
             >
               {loading ? (
                 <>
                   <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
-                  Creando...
+                Registrando...
                 </>
               ) : (
                 <>
                   <i className="bi bi-plus-circle mr-2"></i>
-                  Crear Cliente
+                Registrar Cliente
                 </>
               )}
             </button>
           </div>
-        </form>
-      </CreateProductCard>
+      </div>
     </div>
-  );
-};
-
-export default CreateCustomer;
+  )
+}

@@ -7,6 +7,7 @@ import AnularServiceOrder from "./components/AnularServiceOrder";
 import SearchServiceOrder from "./components/SearchServiceOrder";
 import Paginator from "./components/Paginator.jsx";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
+import { normalizeText } from '../../../../shared/normalizers.js';
 
 const SaleServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -155,14 +156,32 @@ const SaleServices = () => {
 
   // Filtrar servicios basado en la búsqueda y el tab
   const filteredServices = services.filter((service) => {
+    // Si el término de búsqueda es un número, verificar si coincide exactamente con el ID
+    const term = normalizeText(searchTerm);
+    const isNumericSearch = /^\d+$/.test(term);
+    
+    if (isNumericSearch) {
+      // Si el ID coincide exactamente, mostrar solo ese servicio
+      if (parseInt(term, 10) === service.id) {
+        return true;
+      }
+      
+      // Si la longitud del término coincide con la longitud del ID pero no es una coincidencia exacta,
+      // no incluir este servicio en los resultados para evitar coincidencias parciales
+      if (term.length === service.id.toString().length) {
+        return false;
+      }
+    }
+    
+    // Búsqueda general en todos los campos si no es una coincidencia exacta de ID
     const matchesSearch = Object.values(service).some((value) =>
-      value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      normalizeText(value).toLowerCase().includes(term.toLowerCase())
     );
     
     // Mostrar todas las órdenes en ambas pestañas, incluyendo las anuladas
     const matchesTab = tab === "En ejecucion"
-      ? service.status.toLowerCase() === "en ejecucion" || service.status.toLowerCase() === "anulado"
-      : service.status.toLowerCase() === "pagado" || service.status.toLowerCase() === "anulado";
+      ? normalizeText(service.status).toLowerCase() === "en ejecucion" || normalizeText(service.status).toLowerCase() === "anulado"
+      : normalizeText(service.status).toLowerCase() === "pagado" || normalizeText(service.status).toLowerCase() === "anulado";
     
     return matchesSearch && matchesTab;
   });
@@ -333,7 +352,7 @@ const SaleServices = () => {
                           >
                             <i className="bi bi-eye text-primary text-sm"></i>
                           </button>
-                          {service.status.toLowerCase() === "en ejecucion" && (
+                          {normalizeText(service.status).toLowerCase() === "en ejecucion" && (
                             <button 
                               className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" 
                               title="Editar"
@@ -342,7 +361,7 @@ const SaleServices = () => {
                               <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
                             </button>
                           )}
-                          {service.status.toLowerCase() !== "anulado" && (
+                          {normalizeText(service.status).toLowerCase() !== "anulado" && (
                             <button
                               className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
                               title="Anular"

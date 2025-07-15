@@ -13,6 +13,8 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [showErrors, setShowErrors] = useState(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
@@ -31,6 +33,10 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
     setErrors(validation.errors);
   }, [formData, selectedServices, selectedProducts, totalGeneral, services]);
 
+  // Helpers para errores separados
+  const showServiceError = (showErrors || touched.clientName || touched.dineroProporcionado) && (!selectedServices || selectedServices.length === 0);
+  const showProductError = (showErrors || touched.clientName || touched.dineroProporcionado) && (!selectedProducts || selectedProducts.length === 0);
+
   // Reset form cuando se cierra el modal
   useEffect(() => {
     if (!isOpen) {
@@ -42,11 +48,19 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
       setSelectedServices([]);
       setSelectedProducts([]);
       setErrors({});
+      setTouched({});
+      setShowErrors(false);
     }
   }, [isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setShowErrors(true);
+    setTouched({
+      clientName: true,
+      dineroProporcionado: true,
+      // Agrega aquí otros campos si los hay
+    });
     
     if (Object.keys(errors).length > 0 || loading) {
       return;
@@ -70,6 +84,12 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
       ...prev,
       [name]: value
     }));
+    setTouched(prev => ({ ...prev, [name]: true }));
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
   };
 
   const handleClose = () => {
@@ -81,172 +101,177 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   if (!isOpen) return null;
 
   const CreateOrderCard = ({ children }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl border border-gray-200 relative max-h-[90vh] overflow-y-auto w-full max-w-4xl">
-        <button
-          onClick={handleClose}
-          disabled={loading}
-          className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold disabled:opacity-50"
-        >
-          ×
-        </button>
-        {children}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
+          <div>
+            <h2 className="text-xl font-bold text-accent m-0">Crear Orden de Servicio</h2>
+          </div>
+          <button
+            onClick={handleClose}
+            disabled={loading}
+            className="text-gray-400 hover:text-black text-xl font-bold"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+        {/* Contenido */}
+        <div className="p-8 bg-white overflow-y-auto flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );
 
   return (
     <CreateOrderCard>
-      <div className="p-6">
-        <h2 className="text-xl font-bold text-text-main mb-6">Crear Orden de Servicio</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Cliente */}
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">
-              Nombre del Cliente *
-            </label>
-            <input
-              type="text"
-              name="clientName"
-              value={formData.clientName}
-              onChange={handleInputChange}
-              className={`w-full px-3 py-2 border rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-                errors.clientName ? 'border-red-500' : 'border-accent'
-              }`}
-              placeholder="Ingrese el nombre del cliente..."
-            />
-            {errors.clientName && (
-              <p className="text-red-500 text-sm mt-1">{errors.clientName}</p>
-            )}
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">
-              Estado
-            </label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-            >
-              <option value="En ejecucion">En ejecución</option>
-              <option value="Pagado">Pagado</option>
-            </select>
-          </div>
-
-          {/* Servicios */}
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">
-              Servicios
-            </label>
-            <ServiceSelector 
-              selectedServices={selectedServices}
-              onServicesChange={setSelectedServices}
-            />
-          </div>
-
-          {/* Productos */}
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">
-              Productos
-            </label>
-            <ProductSelector 
-              selectedProducts={selectedProducts}
-              onProductsChange={setSelectedProducts}
-            />
-          </div>
-
-          {errors.items && (
-            <p className="text-red-500 text-sm">{errors.items}</p>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Cliente */}
+        <div>
+          <label className="block text-xs font-medium text-black mb-1">
+            Nombre del Cliente <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            name="clientName"
+            value={formData.clientName}
+            onChange={handleInputChange}
+            onBlur={handleBlur}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+            placeholder="Ingrese el nombre del cliente..."
+          />
+          {(touched.clientName || showErrors) && errors.clientName && (
+            <p className="text-red-600 text-xs mt-1">{errors.clientName}</p>
           )}
+        </div>
 
-          {/* Resumen de totales */}
-          <div className="border border-accent rounded-lg p-4 bg-gray-50">
-            <h3 className="text-lg font-semibold mb-4 text-text-main">Resumen de Venta</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="font-medium text-text-main">Total Servicios:</span>
-                  <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="font-medium text-text-main">Total Productos:</span>
-                  <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
-                </div>
-                
-                <div className="flex justify-between border-t pt-2">
-                  <span className="font-bold text-lg text-text-main">TOTAL GENERAL:</span>
-                  <span className="text-purple-600 font-bold text-lg">${totalGeneral.toLocaleString()}</span>
-                </div>
+        {/* Estado */}
+        <div>
+          <label className="block text-xs font-medium text-black mb-1">
+            Estado
+          </label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+          >
+            <option value="En ejecucion">En ejecución</option>
+            <option value="Pagado">Pagado</option>
+          </select>
+        </div>
+
+        {/* Servicios */}
+        <div>
+          <label className="block text-xs font-medium text-black mb-1">
+            Servicios
+          </label>
+          <ServiceSelector 
+            selectedServices={selectedServices}
+            onServicesChange={setSelectedServices}
+          />
+          {showServiceError && (
+            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio o producto</p>
+          )}
+        </div>
+
+        {/* Productos */}
+        <div>
+          <label className="block text-xs font-medium text-black mb-1">
+            Productos
+          </label>
+          <ProductSelector 
+            selectedProducts={selectedProducts}
+            onProductsChange={setSelectedProducts}
+          />
+          {showProductError && (
+            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio o producto</p>
+          )}
+        </div>
+
+        {/* Resumen de totales */}
+        <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+          <h3 className="text-lg font-semibold mb-4 text-accent">Resumen de Venta</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-medium text-black">Total Servicios:</span>
+                <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
               </div>
               
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-text-main">
-                    Dinero proporcionado:
-                  </label>
-                  <input
-                    type="number"
-                    name="dineroProporcionado"
-                    value={formData.dineroProporcionado}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md bg-background text-text-main focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-                      errors.dineroProporcionado ? 'border-red-500' : 'border-accent'
-                    }`}
-                    placeholder="0"
-                    min="0"
-                    step="0.01"
-                  />
-                  {errors.dineroProporcionado && (
-                    <p className="text-red-500 text-sm mt-1">{errors.dineroProporcionado}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-text-main">Devolución:</label>
-                  <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main font-bold">
-                    ${Math.max(0, (formData.dineroProporcionado ? parseFloat(formData.dineroProporcionado) : 0) - totalGeneral).toLocaleString()}
-                  </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-black">Total Productos:</span>
+                <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-medium text-black">Total General:</span>
+                <span className="text-primary font-bold">${totalGeneral.toLocaleString()}</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Dinero Proporcionado
+                </label>
+                <input
+                  type="text"
+                  name="dineroProporcionado"
+                  value={formData.dineroProporcionado}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  placeholder="0"
+                />
+                {(touched.dineroProporcionado || showErrors) && errors.dineroProporcionado && (
+                  <p className="text-red-600 text-xs mt-1">{errors.dineroProporcionado}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-black mb-1">
+                  Devolución
+                </label>
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                  ${formData.dineroProporcionado && !isNaN(parseFloat(formData.dineroProporcionado)) 
+                    ? Math.max(0, parseFloat(formData.dineroProporcionado) - totalGeneral).toLocaleString() 
+                    : '0'}
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Botones */}
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={loading}
-              className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="w-full bg-text-main text-white py-2 rounded-md font-semibold hover:bg-primary-dark transition disabled:opacity-50 flex items-center justify-center mt-4"
-              disabled={loading || Object.keys(errors).length > 0}
-            >
-              {loading ? (
-                <>
-                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
-                  Creando...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-plus-circle mr-2"></i>
-                  Crear Orden
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Botones */}
+        <div className="flex justify-end space-x-3 pt-4">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={loading}
+            className="px-4 py-2 border border-gray-300 rounded-md text-black hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-dark transition-colors disabled:opacity-50 flex items-center"
+          >
+            {loading ? (
+              <>
+                <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
+                Creando...
+              </>
+            ) : (
+              'Crear Orden'
+            )}
+          </button>
+        </div>
+      </form>
     </CreateOrderCard>
   );
 };

@@ -108,6 +108,10 @@ export function validateRole(formData, privileges, roles = [], rolActual = null)
   // Validar nombre
   if (!isValidRoleName(formData.nombre)) {
     errors.nombre = 'El nombre es requerido y debe tener al menos 3 caracteres.';
+  } else if (!isValidAlphaNumericSpace(formData.nombre)) {
+    errors.nombre = 'El nombre solo puede contener letras, números y espacios.';
+  } else if (!startsWithAlpha(formData.nombre)) {
+    errors.nombre = 'El nombre debe comenzar con una letra.';
   } else if (isDuplicateRoleName(formData.nombre, roles, rolActual)) {
     errors.nombre = 'Ya existe un rol con ese nombre.';
   }
@@ -160,60 +164,109 @@ export function isValidCustomerPhone(phone) {
   return phone && phone.trim().length >= 7;
 }
 
+// Valida que solo contenga letras (incluyendo tildes, ñ, Ñ y espacios)
+export function isValidAlphaOnly(value) {
+  if (value === null || value === undefined || value.trim() === '') return true;
+  const regex = /^[A-Za-z\u00C0-\u00FF\sñÑ]+$/;
+  return regex.test(value);
+}
+
+// Valida que empiece por una letra (no número, símbolo o espacio)
+export function startsWithAlpha(value) {
+  if (value === null || value === undefined || value.trim() === '') return true;
+  const regex = /^[A-Za-z\u00C0-\u00FFñÑ]/;
+  return regex.test(value);
+}
+
+// Valida que solo contenga números
+export function isNumeric(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return true;
+  const regex = /^\d+$/;
+  return regex.test(String(value));
+}
+
+// ===== VALIDACIONES DE CONTRASEÑA =====
+export function isValidPassword(password) {
+  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+  return regex.test(password);
+}
+
 // Validación completa de cliente
-export function validateCustomer(customerData, customers, excludeId = null) {
+export function validateCustomer(customerData, customers = [], excludeId = null, isSubmit = false) {
   const errors = {};
-
-  // Validar nombre
-  if (!isValidCustomerName(customerData.firstName)) {
-    errors.firstName = 'El nombre debe tener al menos 2 caracteres';
-  }
-
-  // Validar apellido
-  if (!isValidCustomerName(customerData.lastName)) {
-    errors.lastName = 'El apellido debe tener al menos 2 caracteres';
-  }
-
-  // Validar tipo de documento
-  if (!customerData.documentType) {
-    errors.documentType = 'El tipo de documento es requerido';
-  }
-
-  // Validar número de documento
-  if (!isValidDocumentNumber(customerData.documentNumber)) {
-    errors.documentNumber = 'El número de documento debe tener al menos 5 caracteres';
-  }
-
-  // Validar email
-  if (!customerData.email) {
-    errors.email = 'El correo electrónico es requerido';
-  } else if (!isValidEmail(customerData.email)) {
-    errors.email = 'El correo electrónico no es válido';
+  // Nombres
+  if (!customerData.firstName || customerData.firstName.trim().length < 2) {
+    errors.firstName = 'El nombre es requerido y debe tener al menos 2 caracteres.';
   } else {
-    // Verificar duplicado de email
-    const customerActual = excludeId ? customers.find(c => c.id === excludeId) : null;
-    if (isDuplicateCustomerEmail(customerData.email, customers, customerActual)) {
-      errors.email = 'El correo electrónico ya está registrado';
+    if (!isValidAlphaOnly(customerData.firstName)) {
+      errors.firstName = 'Solo se permiten letras y espacios.';
+    } else if (!startsWithAlpha(customerData.firstName)) {
+      errors.firstName = 'Debe comenzar con una letra.';
     }
   }
-
-  // Validar teléfono
-  if (!isValidCustomerPhone(customerData.phone)) {
-    errors.phone = 'El teléfono debe tener al menos 7 caracteres';
-  }
-
-  // Verificar duplicado de documento
-  if (customerData.documentType && customerData.documentNumber) {
-    const customerActual = excludeId ? customers.find(c => c.id === excludeId) : null;
-    if (isDuplicateCustomerDocument(customerData.documentType, customerData.documentNumber, customers, customerActual)) {
-      errors.documentNumber = 'El documento ya está registrado';
+  if (!customerData.lastName || customerData.lastName.trim().length < 2) {
+    errors.lastName = 'El apellido es requerido y debe tener al menos 2 caracteres.';
+  } else {
+    if (!isValidAlphaOnly(customerData.lastName)) {
+      errors.lastName = 'Solo se permiten letras y espacios.';
+    } else if (!startsWithAlpha(customerData.lastName)) {
+      errors.lastName = 'Debe comenzar con una letra.';
     }
   }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
+  // Tipo de documento
+  if (!customerData.documentType) {
+    errors.documentType = 'El tipo de documento es requerido.';
+  }
+  // Documento
+  if (!customerData.documentNumber || customerData.documentNumber.trim().length < 5) {
+    errors.documentNumber = 'El número de documento es requerido y debe tener al menos 5 caracteres.';
+  } else {
+    if (!isNumeric(customerData.documentNumber)) {
+      errors.documentNumber = 'Solo se permiten números.';
+    }
+  }
+  // Email
+  if (!customerData.email) {
+    errors.email = 'El correo electrónico es requerido.';
+  } else if (!isValidEmail(customerData.email)) {
+    errors.email = 'Correo electrónico inválido.';
+  } else if (customers.some(c => c.email === customerData.email && (!excludeId || c.id !== excludeId))) {
+    errors.email = 'El correo electrónico ya está registrado.';
+  }
+  // Teléfono
+  if (!customerData.phone) {
+    errors.phone = 'El teléfono es requerido.';
+  } else if (!isNumeric(customerData.phone)) {
+    errors.phone = 'Solo se permiten números.';
+  } else if (customerData.phone.length < 7) {
+    errors.phone = 'El teléfono debe tener al menos 7 dígitos.';
+  }
+  // Password y confirmPassword
+  if (!excludeId) { // CreateCustomer: password requerido
+    if (!customerData.password) {
+      errors.password = 'La contraseña es requerida.';
+    } else if (!isValidPassword(customerData.password)) {
+      errors.password = 'La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
+    }
+    if (!customerData.confirmPassword) {
+      errors.confirmPassword = 'Confirma la contraseña.';
+    } else if (customerData.password !== customerData.confirmPassword) {
+      errors.confirmPassword = 'Las contraseñas no coinciden.';
+    }
+  } else { // EditCustomer: password opcional
+    if (customerData.password) {
+      if (!isValidPassword(customerData.password)) {
+        errors.password = 'La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
+      }
+      if (!customerData.confirmPassword) {
+        errors.confirmPassword = 'Confirma la contraseña.';
+      } else if (customerData.password !== customerData.confirmPassword) {
+        errors.confirmPassword = 'Las contraseñas no coinciden.';
+      }
+    }
+  }
+  return { isValid: Object.keys(errors).length === 0, errors };
 }
 
 // ===== VALIDACIONES DE ÓRDENES DE SERVICIO =====
@@ -261,4 +314,13 @@ export function validateServiceOrder(orderData, orders = [], totalGeneral = 0, s
     isValid: Object.keys(errors).length === 0,
     errors
   };
+} 
+
+// ===== VALIDACIONES DE ROLES (EXTRA) =====
+
+// Permite letras (incluyendo acentos y Ñ/ñ), números y espacios. Excluye caracteres especiales.
+export function isValidAlphaNumericSpace(value) {
+  if (value === null || value === undefined || value.trim() === '') return true; // Considerar válido si vacío, para que la validación de 'requerido' lo maneje.
+  const regex = /^[A-Za-z0-9\u00C0-\u00FF\sñÑ]+$/;
+  return regex.test(value);
 } 

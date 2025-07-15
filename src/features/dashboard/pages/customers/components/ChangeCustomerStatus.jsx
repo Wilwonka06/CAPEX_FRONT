@@ -1,10 +1,55 @@
 import { useState } from "react";
 
+// Copia del modal ConfirmStatusModal de roles
+const ConfirmStatusModal = ({ isOpen, onClose, onConfirm, isActive }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8 relative animate-fade-in">
+        <button 
+          className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold" 
+          onClick={onClose} 
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
+            <i className="bi bi-arrow-repeat text-white text-2xl"></i>
+          </div>
+          <h2 className="text-xl font-bold text-primary">Cambiar Estado</h2>
+          <p className="text-sm text-gray-600 mt-2">¿Estás seguro de que quieres cambiar el estado a <span className={isActive ? 'text-red-600' : 'text-green-600'}>{isActive ? 'Inactivo' : 'Activo'}</span>?</p>
+        </div>
+        <div className="flex justify-end gap-3">
+          <button 
+            className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200" 
+            onClick={onClose}
+          >
+            Cancelar
+          </button>
+          <button 
+            className={`px-4 py-2 rounded-md ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white font-semibold transition flex items-center`} 
+            onClick={onConfirm}
+          >
+            <i className="bi bi-check-circle mr-2"></i>
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ChangeCustomerStatus = ({ status = 'Activo', onToggle }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
   const isActive = status === 'Activo';
 
-  const handleToggle = async () => {
+  const handleToggle = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleConfirm = async () => {
     setIsChanging(true);
     try {
       if (onToggle) await onToggle();
@@ -12,6 +57,7 @@ const ChangeCustomerStatus = ({ status = 'Activo', onToggle }) => {
       console.error("Error al cambiar el estado del cliente:", error);
     } finally {
       setIsChanging(false);
+      setIsModalOpen(false);
     }
   };
 
@@ -36,6 +82,12 @@ const ChangeCustomerStatus = ({ status = 'Activo', onToggle }) => {
         )}
       </button>
       <span className={`text-sm font-semibold ${isActive ? 'text-green-600' : 'text-gray-500'}`}>{isActive ? 'Activo' : 'Inactivo'}</span>
+      <ConfirmStatusModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirm}
+        isActive={isActive}
+      />
     </div>
   );
 };

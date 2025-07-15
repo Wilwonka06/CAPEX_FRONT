@@ -83,7 +83,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            className="w-full border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
             placeholder="Buscar servicios..."
           />
           <i className="bi bi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -92,7 +92,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
       {/* Dropdown de servicios */}
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-accent rounded shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
           {filteredServices.map(service => (
             <div
               key={service.id}
@@ -115,99 +115,121 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
       {/* Modal para cantidad, empleado y detalles del servicio */}
       {showQuantityModal && selectedServiceForQuantity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">Detalles del Servicio</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in flex flex-col border border-gray-200">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-accent m-0">Detalles del Servicio</h2>
+              </div>
+              <button
+                onClick={cancelServiceSelection}
+                className="text-gray-400 hover:text-black text-xl font-bold"
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
             
-            <div className="space-y-3 mb-6">
-              <div>
-                <span className="font-medium">Servicio:</span>
-                <span className="ml-2">{selectedServiceForQuantity.name}</span>
-              </div>
-              
-              <div>
-                <span className="font-medium">Categoría:</span>
-                <span className="ml-2">{selectedServiceForQuantity.category}</span>
-              </div>
-              
-              <div>
-                <span className="font-medium">Duración:</span>
-                <span className="ml-2">{selectedServiceForQuantity.duration}</span>
-              </div>
-              
-              <div>
-                <span className="font-medium">Precio unitario:</span>
-                <span className="ml-2">${selectedServiceForQuantity.price}</span>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <span className="font-medium">Cantidad:</span>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-8 h-8 border border-accent rounded flex items-center justify-center hover:bg-accent-light"
+            {/* Contenido */}
+            <div className="p-8 bg-white">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">Servicio</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                    {selectedServiceForQuantity.name}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">Categoría</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                    {selectedServiceForQuantity.category}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">Duración</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                    {selectedServiceForQuantity.duration}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">Precio unitario</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                    ${selectedServiceForQuantity.price}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">
+                    Cantidad <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-16 text-center border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                      min="1"
+                    />
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">
+                    Empleado <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedEmployeeForService}
+                    onChange={(e) => setSelectedEmployeeForService(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                   >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-16 text-center border rounded px-2 py-1"
-                    min="1"
-                  />
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-8 h-8 border border-accent rounded flex items-center justify-center hover:bg-accent-light"
-                  >
-                    +
-                  </button>
+                    <option value="">Seleccionar empleado</option>
+                    {availableEmployees.map(employee => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="border-t pt-3">
+                  <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-bold text-blue-600">
+                    ${(selectedServiceForQuantity.price * quantity).toLocaleString()}
+                  </div>
                 </div>
               </div>
               
-              <div>
-                <label className="block font-medium mb-2">Empleado: *</label>
-                <select
-                  value={selectedEmployeeForService}
-                  onChange={(e) => setSelectedEmployeeForService(e.target.value)}
-                  className="w-full border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  required
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={cancelServiceSelection}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-black hover:bg-gray-50 transition-colors"
                 >
-                  <option value="">Seleccionar empleado</option>
-                  {availableEmployees.map(employee => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmServiceSelection}
+                  disabled={!isFormValid}
+                  className={`px-4 py-2 rounded-md text-white ${isFormValid ? 'bg-accent hover:bg-accent-dark' : 'bg-gray-300 cursor-not-allowed'} transition-colors`}
+                >
+                  Agregar Servicio
+                </button>
               </div>
-              
-              <div className="border-t pt-3">
-                <span className="font-medium text-lg">Subtotal:</span>
-                <span className="ml-2 text-lg font-bold text-blue-600">
-                  ${(selectedServiceForQuantity.price * quantity).toLocaleString()}
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={cancelServiceSelection}
-                className="px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmServiceSelection}
-                disabled={!isFormValid}
-                className={`px-4 py-2 rounded text-sm ${
-                  isFormValid 
-                    ? 'bg-primary-dark text-white hover:bg-primary transition' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                Agregar Servicio
-              </button>
             </div>
           </div>
         </div>
@@ -215,18 +237,18 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
       {/* Lista de servicios seleccionados - SIEMPRE VISIBLE */}
       <div className="mt-4">
-        <h4 className="text-sm font-medium mb-2">Lista de Servicios:</h4>
-        <div className="border rounded overflow-hidden">
+        <h4 className="text-xs font-medium mb-2">Lista de Servicios:</h4>
+        <div className="border border-gray-300 rounded-md overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-2 py-2 text-left border-r">Categoría Servicio</th>
-                <th className="px-2 py-2 text-left border-r">Servicio</th>
-                <th className="px-2 py-2 text-left border-r">Empleado</th>
-                <th className="px-2 py-2 text-left border-r">Cantidad</th>
-                <th className="px-2 py-2 text-left border-r">Subtotal</th>
-                <th className="px-2 py-2 text-left border-r">Duración del servicio</th>
-                <th className="px-2 py-2 text-left">Acciones</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Categoría Servicio</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Servicio</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Empleado</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Subtotal</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Duración del servicio</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-700">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -238,7 +260,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 </tr>
               ) : (
                 selectedServices.map((service) => (
-                  <tr key={service.uniqueId} className="border-t">
+                  <tr key={service.uniqueId} className="border-t hover:bg-gray-50">
                     <td className="px-2 py-2 border-r">{service.category}</td>
                     <td className="px-2 py-2 border-r">{service.name}</td>
                     <td className="px-2 py-2 border-r">{service.employee?.name}</td>
@@ -262,7 +284,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         </div>
         
         {/* Total de servicios */}
-        <div className="mt-2 text-sm bg-blue-50 p-2 rounded">
+        <div className="mt-2 text-sm bg-blue-50 p-2 rounded-md border border-blue-100">
           <span className="font-medium">TOTAL DE SERVICIOS: </span>
           <span className="font-bold text-blue-600">
             ${totalServices.toLocaleString()}
