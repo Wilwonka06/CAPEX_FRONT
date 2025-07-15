@@ -24,10 +24,12 @@ const Checkout = () => {
   const [error, setError] = useState('');
   const [clienteExistente, setClienteExistente] = useState(false);
 
-  // Autocompletar si documento existe
-  const handleDocumentoBlur = () => {
-    if (!form.documento) return;
-    const cliente = CustomerService.findByDocument(form.documento);
+  // Autocompletar si documento existe en tiempo real
+  const handleDocumentoChange = (e) => {
+    const value = e.target.value;
+    setForm(f => ({ ...f, documento: value }));
+    if (!value) return;
+    const cliente = CustomerService.findByDocument(value);
     if (cliente) {
       setForm(f => ({
         ...f,
@@ -40,9 +42,6 @@ const Checkout = () => {
         ciudad: cliente.city || '',
         pais: cliente.country || 'Colombia',
       }));
-      setClienteExistente(true);
-    } else {
-      setClienteExistente(false);
     }
   };
 
@@ -114,26 +113,26 @@ const Checkout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-10 px-2 flex flex-col items-center">
+    <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 py-10 px-2 flex flex-col items-center">
       <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8">
         {/* Formulario */}
-        <form className="flex-1 bg-white rounded-lg shadow p-6" onSubmit={handleSubmit}>
-          <h2 className="text-xl font-bold mb-4 text-text-main">Información del cliente</h2>
+        <form className="flex-1 bg-white rounded-2xl shadow-lg p-8" onSubmit={handleSubmit}>
+          <h2 className="text-2xl font-bold mb-6 text-[#1E1E1E]">Información del cliente</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <input className="border rounded px-3 py-2" placeholder="Número identificación*" value={form.documento} onChange={e => setForm(f => ({ ...f, documento: e.target.value }))} onBlur={handleDocumentoBlur} required />
-            <input className="border rounded px-3 py-2" placeholder="Nombre*" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
-            <input className="border rounded px-3 py-2" placeholder="Apellidos*" value={form.apellidos} onChange={e => setForm(f => ({ ...f, apellidos: e.target.value }))} required />
-            <input className="border rounded px-3 py-2" placeholder="Teléfono*" value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} required />
-            <input className="border rounded px-3 py-2 md:col-span-2" placeholder="Dirección de correo" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Número identificación*" value={form.documento} onChange={handleDocumentoChange} required />
+            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Nombre*" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
+            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Apellidos*" value={form.apellidos} onChange={e => setForm(f => ({ ...f, apellidos: e.target.value }))} required />
+            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Teléfono*" value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} required />
+            <input className="border rounded-lg px-3 py-3 md:col-span-2 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Dirección de correo" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
           </div>
-          <h2 className="text-xl font-bold mb-4 text-text-main mt-6">Dirección de Entrega</h2>
+          <h2 className="text-xl font-bold mb-4 text-[#1E1E1E] mt-6">Dirección de Entrega</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <input className="border rounded px-3 py-2 md:col-span-2" placeholder="Dirección de entrega*" value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} required />
-            <input className="border rounded px-3 py-2" placeholder="Apt. (opcional)" value={form.apto} onChange={e => setForm(f => ({ ...f, apto: e.target.value }))} />
-            <input className="border rounded px-3 py-2" placeholder="Ciudad*" value={form.ciudad} onChange={e => setForm(f => ({ ...f, ciudad: e.target.value }))} required />
-            <input className="border rounded px-3 py-2" placeholder="País*" value={form.pais} onChange={e => setForm(f => ({ ...f, pais: e.target.value }))} required />
+            <input className="border rounded-lg px-3 py-3 md:col-span-2 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Dirección de entrega*" value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} required />
+            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Apt. (opcional)" value={form.apto} onChange={e => setForm(f => ({ ...f, apto: e.target.value }))} />
+            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Ciudad*" value={form.ciudad} onChange={e => setForm(f => ({ ...f, ciudad: e.target.value }))} required />
+            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="País*" value={form.pais} onChange={e => setForm(f => ({ ...f, pais: e.target.value }))} required />
           </div>
-          <h2 className="text-xl font-bold mb-4 text-text-main mt-6">Método de envío</h2>
+          <h2 className="text-xl font-bold mb-4 text-[#1E1E1E] mt-6">Método de envío</h2>
           <div className="mb-6">
             {empresasEnvio.map(e => (
               <label key={e.nombre} className="flex items-center gap-2 mb-2 cursor-pointer">
@@ -144,20 +143,20 @@ const Checkout = () => {
             ))}
           </div>
           {error && <div className="text-red-600 mb-4">{error}</div>}
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-lg transition">Continuar con el pago</button>
+          <button type="submit" className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-bold py-3 rounded-full text-lg transition mt-4 shadow-lg">Continuar con el pago</button>
         </form>
         {/* Resumen */}
-        <div className="w-full md:w-80 bg-gray-50 rounded-lg shadow p-6 h-fit">
-          <h2 className="text-lg font-bold mb-4 text-text-main">Monto a pagar</h2>
-          <div className="mb-2">
+        <div className="w-full md:w-80 bg-white rounded-2xl shadow-lg p-6 h-fit">
+          <h2 className="text-lg font-bold mb-4 text-[#1E1E1E]">Monto a pagar</h2>
+          <div className="mb-2 divide-y divide-gray-100">
             {cart.map(item => (
-              <div key={item.id} className="flex justify-between text-sm mb-1">
+              <div key={item.id} className="flex justify-between text-sm py-2">
                 <span>{item.nombre}</span>
                 <span>${formatNumber(item.precio * item.cantidad)}</span>
               </div>
             ))}
           </div>
-          <div className="flex justify-between text-sm mb-1">
+          <div className="flex justify-between text-sm mb-1 mt-4">
             <span>Subtotal</span>
             <span>${formatNumber(subtotal)}</span>
           </div>
@@ -165,10 +164,10 @@ const Checkout = () => {
             <span>Envío</span>
             <span>${formatNumber(precioEnvio)}</span>
           </div>
-          <div className="border-t border-gray-300 my-2"></div>
+          <div className="border-t border-gray-200 my-2"></div>
           <div className="flex justify-between text-lg font-bold">
             <span>Total</span>
-            <span>${formatNumber(total)}</span>
+            <span className="text-[#FACC15]">${formatNumber(total)}</span>
           </div>
         </div>
       </div>

@@ -134,13 +134,13 @@ const Catalogo = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-white to-gray-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-primary mb-2">Catálogo de Productos</h1>
-            <p className="text-gray-600 text-lg">Descubre nuestra amplia selección de productos de belleza</p>
+            <h1 className="text-4xl font-bold text-[#1E1E1E] mb-2">Catálogo de Productos</h1>
+            <p className="text-gray-600 text-lg">Extensiones y productos premium para el cuidado de tu cabello</p>
           </div>
         </div>
       </div>
@@ -150,7 +150,7 @@ const Catalogo = () => {
         <nav className="text-xs text-gray-500 mb-6 flex items-center gap-2">
           <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing'}>Home</span>
           <span className="mx-1">/</span>
-          <span className="text-text-main font-semibold">Productos</span>
+          <span className="text-[#1E1E1E] font-semibold">Productos</span>
         </nav>
         {/* Barra de herramientas */}
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
@@ -162,15 +162,14 @@ const Catalogo = () => {
               placeholder="Buscar productos..."
               value={busqueda}
               onChange={e => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent"
             />
           </div>
-
           {/* Ordenamiento */}
           <select
             value={ordenarPor}
             onChange={e => setOrdenarPor(e.target.value)}
-            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-white"
           >
             <option value="nombre">Ordenar por nombre</option>
             <option value="precio-asc">Precio: menor a mayor</option>
@@ -181,7 +180,7 @@ const Catalogo = () => {
           {/* Botón filtros móvil */}
           <button
             onClick={() => setMostrarFiltros(!mostrarFiltros)}
-            className="lg:hidden flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+            className="lg:hidden flex items-center gap-2 px-4 py-3 bg-[#FACC15] text-[#1E1E1E] rounded-lg hover:bg-yellow-400 transition"
           >
             <FaFilter />
             Filtros
@@ -192,9 +191,9 @@ const Catalogo = () => {
         {getFiltrosActivos().length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {getFiltrosActivos().map((filtro, idx) => (
-              <span key={idx} className="px-3 py-1 bg-primary text-white text-sm rounded-full flex items-center gap-2">
+              <span key={idx} className="px-3 py-1 bg-[#FACC15] text-[#1E1E1E] text-sm rounded-full flex items-center gap-2">
                 {filtro}
-                <button onClick={limpiarFiltros} className="hover:bg-primary-dark rounded-full p-1">
+                <button onClick={limpiarFiltros} className="hover:bg-yellow-400 rounded-full p-1">
                   <FaTimes size={12} />
                 </button>
               </span>
@@ -213,7 +212,7 @@ const Catalogo = () => {
           <aside className={`lg:w-80 ${mostrarFiltros ? 'block' : 'hidden lg:block'}`}>
             <div className="bg-white rounded-xl shadow-lg p-6 sticky top-4">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-primary">Filtros</h2>
+                <h2 className="text-xl font-bold text-[#1E1E1E]">Filtros</h2>
                 <button
                   onClick={() => setMostrarFiltros(false)}
                   className="lg:hidden text-gray-400 hover:text-gray-600"
@@ -232,7 +231,7 @@ const Catalogo = () => {
                         type="checkbox"
                         checked={filtroCategoria.includes(categoria)}
                         onChange={() => toggleFiltro(categoria, filtroCategoria, setFiltroCategoria)}
-                        className="mr-3 text-primary focus:ring-primary rounded"
+                        className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
                       />
                       <span className="text-sm text-gray-700">{categoria}</span>
                     </label>
@@ -250,7 +249,7 @@ const Catalogo = () => {
                         type="checkbox"
                         checked={filtroTipoProducto.includes(tipo)}
                         onChange={() => toggleFiltro(tipo, filtroTipoProducto, setFiltroTipoProducto)}
-                        className="mr-3 text-primary focus:ring-primary rounded"
+                        className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
                       />
                       <span className="text-sm text-gray-700">{tipo}</span>
                     </label>
@@ -273,7 +272,7 @@ const Catalogo = () => {
                             type="checkbox"
                             checked={filtroEspecificaciones[concepto]?.includes(valor) || false}
                             onChange={() => toggleEspecificacion(concepto, valor)}
-                            className="mr-3 text-primary focus:ring-primary rounded"
+                            className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
                           />
                           <span className="text-sm text-gray-700">{valor}</span>
                         </label>
@@ -327,21 +326,21 @@ const Catalogo = () => {
             {/* Contador de resultados */}
             <div className="mb-6">
               <p className="text-gray-600">
-                Mostrando <span className="font-semibold text-primary">{productosFiltrados.length}</span> de{' '}
+                Mostrando <span className="font-semibold text-[#FACC15]">{productosFiltrados.length}</span> de{' '}
                 <span className="font-semibold">{products.length}</span> productos
               </p>
             </div>
 
             {/* Grid responsivo */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {productosFiltrados.length === 0 ? (
                 <div className="col-span-full text-center py-16">
                   <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">No se encontraron productos</h3>
+                  <h3 className="text-xl font-semibold text-[#1E1E1E] mb-2">No se encontraron productos</h3>
                   <p className="text-gray-600 mb-4">Intenta ajustar tus filtros de búsqueda</p>
                   <button
                     onClick={limpiarFiltros}
-                    className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition"
+                    className="px-6 py-2 bg-[#FACC15] text-[#1E1E1E] rounded-lg hover:bg-yellow-400 transition"
                   >
                     Limpiar filtros
                   </button>
@@ -350,68 +349,24 @@ const Catalogo = () => {
                 productosFiltrados.map(prod => (
                   <div
                     key={prod.id}
-                    className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group"
+                    className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col cursor-pointer group hover:shadow-2xl transition-all"
                     onClick={() => navigate(`/landing/productos/${prod.id}`)}
                   >
-                    {/* Badge para extensiones */}
-                    {prod.tipoProducto === 'Extensiones' && (
-                      <div className="absolute top-3 right-3 z-10">
-                        <span className="bg-yellow-400 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
-                          Pieza Única
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Imagen */}
-                    <div className="relative h-64 bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {/* Imagen ocupa todo el ancho superior, sin perder calidad */}
+                    <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img
                         src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : prod.foto}
                         alt={prod.nombre}
-                        className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
                       />
-                      {/* Overlay con botón de carrito */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
-                        <button className="opacity-0 group-hover:opacity-100 bg-primary text-white p-3 rounded-full shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                          <FaShoppingCart />
-                        </button>
-                      </div>
                     </div>
-
-                    {/* Información del producto */}
-                    <div className="p-4">
-                      <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                        {prod.nombre}
-                      </h3>
-                      
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-2xl font-bold text-primary">
-                          ${formatNumber(prod.precio)}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {prod.cantidad} disponibles
-                        </span>
-                      </div>
-
-                      {/* Especificaciones destacadas */}
-                      {prod.especificaciones && prod.especificaciones.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {prod.especificaciones.slice(0, 2).map((esp, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
-                            >
-                              {esp.concepto}: {esp.valor}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Categoría y tipo */}
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{prod.categoria}</span>
-                        <span className="bg-gray-100 px-2 py-1 rounded">
-                          {prod.tipoProducto}
-                        </span>
+                    {/* Info */}
+                    <div className="p-5 flex flex-col gap-2 flex-1 justify-between">
+                      <h3 className="font-semibold text-lg text-[#1E1E1E] mb-1 truncate group-hover:text-[#FACC15] transition-colors">{prod.nombre}</h3>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xl font-bold text-[#FACC15]">${formatNumber(prod.precio)}</span>
+                        <span className="text-xs text-gray-500">{prod.cantidad} disponibles</span>
                       </div>
                     </div>
                   </div>

@@ -89,45 +89,41 @@ const ThankYou = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-10 px-2 flex flex-col items-center">
-      {/* Migas de pan */}
-      <nav className="w-full max-w-2xl mx-auto text-xs text-gray-500 mb-6 flex items-center gap-2">
-        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing'}>Home</span>
-        <span className="mx-1">/</span>
-        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/catalogo'}>Productos</span>
-        <span className="mx-1">/</span>
-        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/cart'}>Carrito</span>
-        <span className="mx-1">/</span>
-        <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/checkout'}>Información de cliente</span>
-        <span className="mx-1">/</span>
-        <span className="text-text-main font-semibold">Gracias</span>
-      </nav>
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-10 border border-gray-100 flex flex-col items-center">
-        <div className="text-6xl mb-4 text-primary">🎉</div>
-        <h1 className="text-3xl font-bold mb-4 text-primary text-center">¡Gracias por tu compra!</h1>
+    <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 py-10 px-2 flex flex-col items-center">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-10  flex flex-col items-center">
+        <div className="text-7xl mb-4 animate-bounce text-[#FACC15]">🎉</div>
+        <h1 className="text-3xl font-bold mb-4 text-[#1E1E1E] text-center">¡Gracias por tu compra!</h1>
         <p className="text-gray-700 text-lg mb-6 text-center">Tu pedido ha sido registrado exitosamente. Pronto recibirás la confirmación y el seguimiento en tu correo electrónico.</p>
+        {/* Botón para descargar PDF */}
+        <button
+          onClick={handleDownloadPDF}
+          className="mb-6 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-bold py-2 px-6 rounded-full text-base transition shadow-lg flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Descargar recibo en PDF
+        </button>
         {/* Resumen de la orden */}
-        <div className="w-full bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
+        <div className="w-full bg-gray-50 rounded-xl p-6 mb-6 border border-gray-200">
           <div className="flex justify-between items-center mb-2">
-            <span className="font-semibold">{order.productos.length} producto{order.productos.length !== 1 ? 's' : ''} --</span>
+            <span className="font-semibold">{order.productos.length} producto{order.productos.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="flex flex-col gap-2 mb-4">
             {order.productos.map((prod, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <div className="w-12 h-12 bg-gray-100 border flex items-center justify-center text-gray-400 text-2xl rounded">
-                  {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} className="w-full h-full object-cover rounded" /> : <span>✖</span>}
+              <div key={prod.nombre + idx} className="flex items-center gap-3">
+                <div className="w-14 h-14 bg-white border-2 border-[#FACC15] flex items-center justify-center rounded-xl shadow">
+                  {prod.imagen ? <img src={prod.imagen} alt={prod.nombre} className="w-full h-full object-cover rounded-xl" /> : <span>✖</span>}
                 </div>
-                <span className="text-sm">{prod.nombre}</span>
+                <span className="text-base text-[#1E1E1E] font-medium">{prod.nombre}</span>
               </div>
             ))}
           </div>
           <div className="flex flex-col gap-1 text-right">
             <div className="text-sm text-gray-600">subtotal: <span className="font-semibold">${formatNumber(order.subtotal || order.valor)}</span></div>
-            <div className="text-base font-bold text-text-main">total: ${formatNumber(order.valor)}</div>
+            <div className="text-lg font-bold text-[#FACC15]">total: ${formatNumber(order.valor)}</div>
           </div>
         </div>
         <div className="mt-8 text-center">
-          <Link to="/landing/mis-pedidos" className="inline-block bg-primary hover:bg-yellow-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition">Ver mis pedidos</Link>
+          <Link to="/landing/mis-pedidos" className="inline-block bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-bold py-3 px-8 rounded-full text-lg transition shadow-lg">Ver mis pedidos</Link>
         </div>
       </div>
     </div>
