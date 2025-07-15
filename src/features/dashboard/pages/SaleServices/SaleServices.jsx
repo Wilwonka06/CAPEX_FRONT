@@ -8,6 +8,7 @@ import SearchServiceOrder from "./components/SearchServiceOrder";
 import Paginator from "./components/Paginator.jsx";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
 import { normalizeText } from '../../../../shared/normalizers.js';
+import Swal from 'sweetalert2';
 
 const SaleServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -148,10 +149,15 @@ const SaleServices = () => {
 
   // Función para mostrar mensajes de feedback
   const showMessage = (text, type = 'success') => {
-    setMessage({ text, type, show: true });
-    setTimeout(() => {
-      setMessage({ text: '', type: '', show: false });
-    }, 3000);
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: type === 'success' ? 'success' : 'error',
+      title: text,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+    });
   };
 
   // Filtrar servicios basado en la búsqueda y el tab
@@ -209,14 +215,38 @@ const SaleServices = () => {
     setIsViewModalOpen(true);
   };
 
+  // handleEditClick ahora pide confirmación
   const handleEditClick = (order) => {
-    setSelectedOrder(order);
-    setIsEditModalOpen(true);
+    Swal.fire({
+      title: '¿Editar orden?',
+      text: '¿Deseas editar la información de esta orden?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, editar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setSelectedOrder(order);
+        setIsEditModalOpen(true);
+      }
+    });
   };
 
+  // handleAnularClick ahora pide confirmación
   const handleAnularClick = (order) => {
-    setSelectedOrder(order);
-    setIsAnularModalOpen(true);
+    Swal.fire({
+      title: '¿Anular orden?',
+      text: 'Esta acción anulará la orden de servicio permanentemente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setSelectedOrder(order);
+        setIsAnularModalOpen(true);
+      }
+    });
   };
 
 
