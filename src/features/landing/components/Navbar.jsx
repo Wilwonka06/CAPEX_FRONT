@@ -34,7 +34,6 @@ const Navbar = () => {
             window.removeEventListener('storage', handleUserChange);
         };
     }, []);
-
     // Cerrar el menú de perfil al hacer clic fuera
     useEffect(() => {
         if (!showProfile) return;
@@ -57,6 +56,8 @@ const Navbar = () => {
         window.dispatchEvent(new Event('user-auth-changed'));
         setShowProfile(false);
         navigate('/login');
+    }
+    }
     }
 
     // Función para alternar el menú desplegable de productos
@@ -100,37 +101,28 @@ const Navbar = () => {
                     {/* Menú desplegable de Productos */}
                     <div className="relative w-full md:w-auto">
                         <button
-                            onClick={toggleProductsDropdown}
-                            className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary  flex items-center justify-center gap-2"
+                            className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:ring-2 hover:ring-primary focus:outline-none"
+                            onClick={() => setShowProfile(v => !v)}
+                            title={currentUser.nombre}
                         >
-
-                        Productos
-                            <svg 
-                                className={`w-4 h-4 transition-transform duration-200 ${isProductsDropdownOpen ? 'rotate-180' : ''}`} 
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
+                            {currentUser.foto || currentUser.avatar ? (
+                                <img src={currentUser.foto || currentUser.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                                <i className="bi bi-person text-2xl"></i>
+                            )}
                         </button>
-                        
-                        {/* Dropdown de Productos */}
-                        <div className={`${isProductsDropdownOpen ? 'block' : 'hidden'} absolute left-0 right-0 md:left-auto md:right-auto md:min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1`}>
-                            
-                            <Link 
-                                to="/landing/extensiones" 
-                                className="block px-4 py-2 text-text-main hover:bg-accent-light hover:text-primary transition-colors duration-200  text-sm"
-                                onClick={() => setIsProductsDropdownOpen(false)}
-                            >
-                                Extensiones
-                            </Link>
-                            <Link 
-                                to="/landing/cuidado-capilar" 
-                                className="block px-4 py-2 text-text-main hover:bg-accent-light hover:text-primary transition-colors duration-200  text-sm"
-                                onClick={() => setIsProductsDropdownOpen(false)}
-                            >
-                                Cuidado Capilar
+                        {showProfile && (
+                            <ProfileMenu
+                                user={currentUser}
+                                onClose={() => setShowProfile(false)}
+                                onLogout={handleLogout}
+                                showOrdersOption={true}
+                            />
+                        )}
+                    </>
+                ) : (
+                    <Link to="/login" className="bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md hover:bg-primary">
+                        Iniciar Sesión
                     </Link>
                         </div>
                     </div>
@@ -185,4 +177,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

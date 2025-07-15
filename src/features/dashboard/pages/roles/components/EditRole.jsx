@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import PrivilegesTable from './PrivilegesTable';
-import { validateRole } from '../services/ValidateRoleService';
+import { validateRole } from '../../../../../shared/validations';
 
 const EditProductCard = ({ children, title, onClose }) => (
   <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
@@ -23,6 +23,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
   });
   const [privileges, setPrivileges] = useState({});
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   // Cargar datos del rol cuando se abre el modal
   useEffect(() => {
@@ -41,6 +42,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
       setFormData({ name: '', description: '' });
       setPrivileges({});
       setErrors({});
+      setTouched({});
     }
   }, [isOpen]);
 
@@ -56,6 +58,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
       ...prevState,
       [name]: value
     }));
+    setTouched(prev => ({ ...prev, [name]: true }));
   };
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
@@ -87,6 +90,11 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
     }
   };
 
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -95,60 +103,49 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Nombre</label>
+              <label className="block text-sm font-medium mb-1">Nombre</label>
               <input
                 type="text"
                 name="name"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                 value={formData.name}
                 onChange={handleChange}
-                required
-                disabled={loading}
+                onBlur={handleBlur}
               />
-              {errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
+              {touched.name && errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Descripción (opcional)</label>
+              <label className="block text-sm font-medium mb-1">Descripción (opcional)</label>
               <input
                 type="text"
                 name="description"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                 value={formData.description}
                 onChange={handleChange}
-                disabled={loading}
+                onBlur={handleBlur}
               />
             </div>
           </div>
           <div>
-            <label className="block text-text-main text-sm font-bold mb-2">Privilegios</label>
-            <PrivilegesTable value={privileges} onChange={handlePrivilegeChange} disabled={loading} />
-            {errors.privilegios && <p className="text-red-600 text-xs mt-1">{errors.privilegios}</p>}
+            <label className="block text-sm font-bold mb-2">Privilegios</label>
+            <PrivilegesTable value={privileges} onChange={handlePrivilegeChange} />
+            {touched.privilegios && errors.privilegios && <p className="text-red-600 text-xs mt-1">{errors.privilegios}</p>}
           </div>
           <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
               onClick={handleClose}
               className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
-              disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition flex items-center"
-              disabled={loading || Object.keys(errors).length > 0}
+              className="px-4 py-2 rounded-md font-semibold transition flex items-center bg-black text-white hover:bg-gray-800"
+              disabled={Object.keys(errors).length > 0}
             >
-              {loading ? (
-                <>
-                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-check-circle mr-2"></i>
-                  Guardar Cambios
-                </>
-              )}
+              <i className="bi bi-check-circle mr-2"></i>
+              Guardar Cambios
             </button>
           </div>
         </form>

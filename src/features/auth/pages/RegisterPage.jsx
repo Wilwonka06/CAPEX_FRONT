@@ -40,7 +40,11 @@ const RegisterPage = () => {
         if (!isValidPhone(value)) return 'Teléfono inválido. Usa formato internacional, ej: +573001234567';
         return '';
       case 'documento':
-        if (!/^[0-9]{1,12}$/.test(value)) return 'Documento inválido (máx 12 dígitos, solo números)';
+        if (form.tipoDocumento === 'Pasaporte') {
+          if (!/^[a-zA-Z0-9]{6,12}$/.test(value)) return 'Pasaporte inválido (6-12 caracteres alfanuméricos)';
+        } else {
+          if (!/^[0-9]{1,12}$/.test(value)) return 'Documento inválido (máx 12 dígitos, solo números)';
+        }
         if (form.tipoDocumento && users.some(u => u.tipoDocumento === form.tipoDocumento && u.documento === value)) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
       case 'tipoDocumento':

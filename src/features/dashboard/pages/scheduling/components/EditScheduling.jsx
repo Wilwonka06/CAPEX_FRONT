@@ -1,4 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import { 
+  validateSchedulingForm,
+  validateSchedulingStartDate,
+  validateSchedulingEndDate,
+  validateSchedulingStartTime,
+  validateSchedulingEndTime,
+  validateSchedulingRepetition,
+  validateSchedulingDays
+} from '../../../../../shared/validations';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -28,59 +38,94 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
     } else {
       setProg(initialProg);
     }
+    setErrors({});
   }, [editing]);
 
-  const validate = () => {
-    const newErrors = {};
-    if (!prog.fechaInicio) newErrors.fechaInicio = 'Selecciona la fecha de inicio';
-    if (!prog.fechaFin) newErrors.fechaFin = 'Selecciona la fecha de fin';
-    if (!prog.horaInicio) newErrors.horaInicio = 'Selecciona la hora de inicio';
-    if (!prog.horaFin) newErrors.horaFin = 'Selecciona la hora de fin';
-    if (!prog.repeticion) newErrors.repeticion = 'Selecciona la frecuencia';
-    if (
-      (prog.repeticion === 'Semanal' || prog.repeticion === 'Mensual') &&
-      (!prog.dias || prog.dias.length === 0)
-    ) {
-      newErrors.dias = 'Selecciona al menos un día';
+  // Validación en tiempo real
+  const validateField = (field, value) => {
+    let fieldErrors = {};
+    
+    switch (field) {
+      case 'fechaInicio':
+        fieldErrors = validateSchedulingStartDate(value);
+        break;
+      case 'fechaFin':
+        fieldErrors = validateSchedulingEndDate(value, prog.fechaInicio);
+        break;
+      case 'horaInicio':
+        fieldErrors = validateSchedulingStartTime(value);
+        break;
+      case 'horaFin':
+        fieldErrors = validateSchedulingEndTime(value, prog.horaInicio);
+        break;
+      case 'repeticion':
+        fieldErrors = validateSchedulingRepetition(value);
+        break;
+      case 'dias':
+        fieldErrors = validateSchedulingDays(prog.dias, value);
+        break;
+      default:
+        break;
     }
-    if (prog.fechaInicio && prog.fechaFin && prog.fechaFin < prog.fechaInicio) {
-      newErrors.fechaFin = 'La fecha fin no puede ser menor que la fecha inicio';
-    }
-    if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
-      newErrors.horaFin = 'La hora fin debe ser mayor que la hora inicio';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    
+    return fieldErrors;
   };
 
   const handleProgChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
     if (type === 'checkbox') {
-      setProg((prev) => ({
+      const newDias = checked
+        ? [...prog.dias, value]
+        : prog.dias.filter((d) => d !== value);
+      
+      setProg((prev) => ({ ...prev, dias: newDias }));
+      
+      // Validar días cuando cambian
+      const diasErrors = validateSchedulingDays(newDias, prog.repeticion);
+      setErrors(prev => ({
         ...prev,
-        dias: checked
-          ? [...prev.dias, value]
-          : prev.dias.filter((d) => d !== value),
+        dias: diasErrors.dias || null
       }));
     } else {
       setProg((prev) => ({ ...prev, [name]: value }));
+      
+      // Validar campo específico en tiempo real
+      const fieldErrors = validateField(name, value);
+      setErrors(prev => ({
+        ...prev,
+        ...fieldErrors
+      }));
     }
   };
 
   const handleEditEvent = (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    
+    // Validación completa del formulario
+    const formErrors = validateSchedulingForm(prog);
+    setErrors(formErrors);
+    
+    if (Object.keys(formErrors).length === 0) {
+      let progToSave = { ...prog };
 
-    let progToSave = { ...prog };
+      if (editing && editing.id) progToSave.id = editing.id;
+      if (editing && editing.idBase) progToSave.idBase = editing.idBase;
 
-    if (editing && editing.id) progToSave.id = editing.id;
-    if (editing && editing.idBase) progToSave.idBase = editing.idBase;
+      // ✅ CLAVE: Conserva el empleadoId original
+      progToSave.empleadoId = editing.empleadoId;
 
-    // ✅ CLAVE: Conserva el empleadoId original
-    progToSave.empleadoId = editing.empleadoId;
-
-    if (onSave) onSave(progToSave);
-    setErrors({});
+      if (onSave) onSave(progToSave);
+      setErrors({});
+      toast.success('Programación actualizada exitosamente!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    }
   };
 
   return (
