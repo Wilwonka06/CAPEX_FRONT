@@ -1,4 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { 
+  validateSchedulingForm,
+  validateSchedulingStartDate,
+  validateSchedulingEndDate,
+  validateSchedulingStartTime,
+  validateSchedulingEndTime,
+  validateSchedulingRepetition,
+  validateSchedulingDays
+} from '../../../../../shared/validations';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -23,86 +34,158 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [errors, setErrors] = useState({});
 
+  // Selección automática si solo hay un empleado
+  useEffect(() => {
+    if (employees.length === 1) {
+      setSelectedEmployee(String(employees[0].id));
+    }
+  }, [employees]);
+
   useEffect(() => {
     if (editing) {
       setProg(editing);
-      setSelectedEmployee(editing.empleadoId || '');
+      setSelectedEmployee(editing.empleadoId || (employees.length === 1 ? String(employees[0].id) : ''));
     } else {
       setProg(initialProg);
-      setSelectedEmployee('');
+      setSelectedEmployee(employees.length === 1 ? String(employees[0].id) : '');
     }
-  }, [editing]);
+    setErrors({});
+  }, [editing, employees]);
 
-  const validate = () => {
-    const newErrors = {};
-    if (!selectedEmployee) newErrors.empleado = 'Selecciona un empleado';
-    if (!prog.fechaInicio) newErrors.fechaInicio = 'Selecciona la fecha de inicio';
-    if (!prog.fechaFin) newErrors.fechaFin = 'Selecciona la fecha de fin';
-    if (!prog.horaInicio) newErrors.horaInicio = 'Selecciona la hora de inicio';
-    if (!prog.horaFin) newErrors.horaFin = 'Selecciona la hora de fin';
-    if (!prog.repeticion) newErrors.repeticion = 'Selecciona la frecuencia';
-    if ((prog.repeticion === 'Semanal' || prog.repeticion === 'Mensual') && (!prog.dias || prog.dias.length === 0)) {
-      newErrors.dias = 'Selecciona al menos un día';
+  // Validación en tiempo real
+  const validateField = (field, value) => {
+    let fieldErrors = {};
+    
+    switch (field) {
+      case 'fechaInicio':
+        fieldErrors = validateSchedulingStartDate(value);
+        break;
+      case 'fechaFin':
+        fieldErrors = validateSchedulingEndDate(value, prog.fechaInicio);
+        break;
+      case 'horaInicio':
+        fieldErrors = validateSchedulingStartTime(value);
+        break;
+      case 'horaFin':
+        fieldErrors = validateSchedulingEndTime(value, prog.horaInicio);
+        break;
+      case 'repeticion':
+        fieldErrors = validateSchedulingRepetition(value);
+        break;
+      case 'dias':
+        fieldErrors = validateSchedulingDays(prog.dias, value);
+        break;
+      case 'empleado':
+        if (!selectedEmployee) {
+          fieldErrors.empleado = 'Selecciona un empleado';
+        }
+        break;
+      default:
+        break;
     }
-    if (prog.fechaInicio && prog.fechaFin && prog.fechaFin < prog.fechaInicio) {
-      newErrors.fechaFin = 'La fecha fin no puede ser menor que la fecha inicio';
-    }
-    if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
-      newErrors.horaFin = 'La hora fin debe ser mayor que la hora inicio';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    
+    return fieldErrors;
   };
 
   const handleProgChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
     if (type === 'checkbox') {
-      setProg((prev) => ({
+      const newDias = checked
+        ? [...prog.dias, value]
+        : prog.dias.filter((d) => d !== value);
+      
+      setProg((prev) => ({ ...prev, dias: newDias }));
+      
+      // Validar días cuando cambian
+      const diasErrors = validateSchedulingDays(newDias, prog.repeticion);
+      setErrors(prev => ({
         ...prev,
-        dias: checked
-          ? [...prev.dias, value]
-          : prev.dias.filter((d) => d !== value),
+        dias: diasErrors.dias || null
       }));
     } else {
       setProg((prev) => ({ ...prev, [name]: value }));
+      
+      // Validar campo específico en tiempo real
+      const fieldErrors = validateField(name, value);
+      setErrors(prev => ({
+        ...prev,
+        ...fieldErrors
+      }));
     }
   };
 
   const handleEmployeeChange = (e) => {
-    setSelectedEmployee(e.target.value);
+    const value = e.target.value;
+    setSelectedEmployee(value);
+    
+    // Validar empleado en tiempo real
+    const empleadoErrors = validateField('empleado', value);
+    setErrors(prev => ({
+      ...prev,
+      ...empleadoErrors
+    }));
   };
 
   const handleAddEvent = (e) => {
     e.preventDefault();
-    if (!validate()) return;
-    let progWithIds = { ...prog };
-    progWithIds.empleadoId = selectedEmployee;
-    if (!progWithIds.id) {
-      progWithIds.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+    
+    // Validación completa del formulario
+    const formErrors = validateSchedulingForm(prog);
+    
+    // Agregar validación de empleado
+    if (!selectedEmployee) {
+      formErrors.empleado = 'Selecciona un empleado';
     }
-    if (!progWithIds.idBase) {
-      progWithIds.idBase = progWithIds.id;
+    
+    setErrors(formErrors);
+    
+    if (Object.keys(formErrors).length === 0) {
+      let progWithIds = { ...prog };
+      progWithIds.empleadoId = selectedEmployee;
+      if (!progWithIds.id) {
+        progWithIds.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+      }
+      if (!progWithIds.idBase) {
+        progWithIds.idBase = progWithIds.id;
+      }
+      if (onAdd) onAdd(progWithIds);
+      setProg(initialProg);
+      setSelectedEmployee('');
+      setErrors({});
+      toast.success('Programación agregada exitosamente!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
-    if (onAdd) onAdd(progWithIds);
-    setProg(initialProg);
-    setSelectedEmployee('');
-    setErrors({});
   };
 
   return (
     <div>
       <form onSubmit={handleAddEvent}>
         <div className="flex flex-wrap gap-6 items-end">
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
-            <select name="empleadoId" value={selectedEmployee} onChange={handleEmployeeChange} className="border rounded px-3 py-2 w-40">
-              <option value="">Selecciona un empleado</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.nombre} {emp.apellido}</option>
-              ))}
-            </select>
-            {errors.empleado && <p className="text-red-500 text-xs mt-1">{errors.empleado}</p>}
-          </div>
+          {employees.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
+              <select name="empleadoId" value={selectedEmployee} onChange={handleEmployeeChange} className="border rounded px-3 py-2 w-40">
+                <option value="">Selecciona un empleado</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.nombre} {emp.apellido}</option>
+                ))}
+              </select>
+              {errors.empleado && <p className="text-red-500 text-xs mt-1">{errors.empleado}</p>}
+            </div>
+          )}
+          {employees.length === 1 && (
+            <div>
+              <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
+              <input type="text" value={`${employees[0].nombre} ${employees[0].apellido}`} disabled className="border rounded px-3 py-2 w-40 bg-gray-100" />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Fecha inicio</label>
             <input type="date" name="fechaInicio" value={prog.fechaInicio} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
@@ -149,12 +232,23 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
           </div>
           <div className="flex-1 flex justify-end gap-2">
             <button type="button" onClick={onCancelEdit} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-semibold hover:bg-gray-300 transition">Cancelar</button>
-            <button type="submit" className="bg-primary-dark text-white px-8 py-2 rounded font-semibold hover:bg-primary transition shadow">
+            <button type="submit" className="bg-primary-dark text-white px-8 py-2 rounded font-semibold hover:bg-primary transition shadow" disabled={employees.length === 0}>
               {editing ? 'Guardar cambios' : 'Agregar'}
             </button>
           </div>
         </div>
       </form>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };

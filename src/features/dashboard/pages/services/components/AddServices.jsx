@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
+import { 
+  validateServiceForm, 
+  validateServiceName, 
+  validateServiceDescription, 
+  validateServiceDuration, 
+  validateServicePrice,
+  isNumberInputValid
+} from "../../../../../shared/validations";
 
-const AddServices = ({ onClose, onAdd, categories = [] }) => {
+const AddServices = ({ onClose, onAdd, categories = [], services = [] }) => {
     const activeCategories = categories.filter(cat => cat.isActive);
-    const [form, setForm] = useState({
+    const [formData, setFormData] = useState({
         Servicio: "",
         Categoria: activeCategories[0]?.name || "",
         Descripcion: "",
@@ -14,45 +23,134 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
-        setForm(prev => ({
+        setFormData(prev => ({
             ...prev,
             Categoria: activeCategories[0]?.name || ""
         }));
         // eslint-disable-next-line
     }, [categories]);
 
-    const validate = () => {
-        const newErrors = {};
-        if (!form.Servicio.trim()) newErrors.Servicio = 'El nombre del servicio es obligatorio';
-        if (!form.Categoria) newErrors.Categoria = 'La categoría es obligatoria';
-        if (!form.Descripcion.trim()) newErrors.Descripcion = 'La descripción es obligatoria';
-        if (!form.duracion || isNaN(form.duracion) || Number(form.duracion) <= 0) newErrors.duracion = 'La duración debe ser un número mayor a 0';
-        if (!form.precio || isNaN(form.precio) || Number(form.precio) <= 0) newErrors.precio = 'El precio debe ser un número mayor a 0';
-        if (!form.estado) newErrors.estado = 'El estado es obligatorio';
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+    const handleKeyDown = (e) => {
+        // Prevenir cualquier letra en campos numéricos
+        if (e.target.name === 'duracion' || e.target.name === 'precio') {
+            // Permitir solo números, backspace, delete, tab, escape, enter
+            const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+            const isNumber = /^[0-9]$/.test(e.key);
+            
+            if (!isNumber && !allowedKeys.includes(e.key)) {
+                e.preventDefault();
+            }
+        }
     };
 
     const handleChange = (e) => {
         const { name, value, type, files } = e.target;
-        setForm((prev) => ({
-            ...prev,
-            [name]: type === "file" ? files[0] : value
-        }));
+        
+        // Para campos numéricos, solo permitir números
+        if (name === 'duracion' || name === 'precio') {
+            const numericValue = value.replace(/[^0-9]/g, '');
+            setFormData((prev) => ({
+                ...prev,
+                [name]: numericValue
+            }));
+        } else if (type === "file") {
+            // Convertir imagen a base64
+            const file = files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setFormData((prev) => ({
+                        ...prev,
+                        imagen: reader.result // base64
+                    }));
+                };
+                reader.readAsDataURL(file);
+            }
+        } else {
+            setFormData((prev) => ({
+                ...prev,
+                [name]: value
+            }));
+        }
+        // Limpiar error del campo cuando el usuario empiece a escribir
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: '' }));
+        }
+    };
+
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        let error = '';
+        
+        switch (name) {
+            case 'Servicio':
+                const servicioErrors = validateServiceName(value, services);
+                error = servicioErrors.servicio || '';
+                break;
+            case 'Descripcion':
+                const descripcionErrors = validateServiceDescription(value);
+                error = descripcionErrors.descripcion || '';
+                break;
+            case 'duracion':
+                const duracionErrors = validateServiceDuration(value);
+                error = duracionErrors.duracion || '';
+                break;
+            case 'precio':
+                const precioErrors = validateServicePrice(value);
+                error = precioErrors.precio || '';
+                break;
+            default:
+                break;
+        }
+        
+        if (error) {
+            setErrors(prev => ({ ...prev, [name]: error }));
+        }
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!validate()) return;
-        onAdd({
-            name: form.Servicio,
-            category: form.Categoria,
-            description: form.Descripcion,
-            duration: form.duracion + " min",
-            price: form.precio ? "$" + Number(form.precio).toLocaleString() : "",
-            estado: form.estado,
-            imagen: form.imagen
-        });
+        
+        const formErrors = validateServiceForm(formData, services);
+        setErrors(formErrors);
+        
+        if (Object.keys(formErrors).length === 0) {
+            const newService = {
+                id: Date.now().toString(),
+                name: formData.Servicio,
+                Categoria: formData.Categoria,
+                Descripcion: formData.Descripcion,
+                duracion: formData.duracion,
+                precio: formData.precio,
+                estado: formData.estado,
+                imagen: formData.imagen // base64
+            };
+            
+            onAdd(newService);
+            setFormData({
+                Servicio: "",
+                Categoria: activeCategories[0]?.name || "",
+                Descripcion: "",
+                duracion: "",
+                precio: "",
+                estado: "Activo",
+                imagen: null
+            });
+            setErrors({});
+            
+            // Mostrar alerta de éxito
+            toast.success('Servicio agregado exitosamente!', {
+                position: "top-right",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
+            
+            // Cerrar el modal después de mostrar la alerta
+            onClose();
+        }
     };
 
     return (
@@ -78,8 +176,10 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 <input
                                     type="text"
                                     name="Servicio"
-                                    value={form.Servicio}
+                                    value={formData.Servicio}
                                     onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    onKeyDown={handleKeyDown}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
                                         errors.Servicio ? 'border-red-500' : 'border-gray-300'
                                     }`}
@@ -91,7 +191,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 <label className="block text-xs font-medium text-text-main mb-1">Categoría <span className='text-red-500'>*</span></label>
                                 <select
                                     name="Categoria"
-                                    value={form.Categoria}
+                                    value={formData.Categoria}
                                     onChange={handleChange}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
                                         errors.Categoria ? 'border-red-500' : 'border-gray-300'
@@ -112,8 +212,10 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 <input
                                     type="text"
                                     name="Descripcion"
-                                    value={form.Descripcion}
+                                    value={formData.Descripcion}
                                     onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    onKeyDown={handleKeyDown}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
                                         errors.Descripcion ? 'border-red-500' : 'border-gray-300'
                                     }`}
@@ -124,28 +226,34 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                             <div>
                                 <label className="block text-xs font-medium text-text-main mb-1">Duración (min) <span className='text-red-500'>*</span></label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="duracion"
-                                    value={form.duracion}
+                                    value={formData.duracion}
                                     onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    onKeyDown={handleKeyDown}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
                                         errors.duracion ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     required
+                                    placeholder="Ej: 60"
                                 />
                                 {errors.duracion && <p className="text-red-500 text-xs mt-1">{errors.duracion}</p>}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-text-main mb-1">Precio <span className='text-red-500'>*</span></label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="precio"
-                                    value={form.precio}
+                                    value={formData.precio}
                                     onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    onKeyDown={handleKeyDown}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
                                         errors.precio ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     required
+                                    placeholder="Ej: 50000"
                                 />
                                 {errors.precio && <p className="text-red-500 text-xs mt-1">{errors.precio}</p>}
                             </div>
@@ -153,7 +261,7 @@ const AddServices = ({ onClose, onAdd, categories = [] }) => {
                                 <label className="block text-xs font-medium text-text-main mb-1">Estado <span className='text-red-500'>*</span></label>
                                 <select
                                     name="estado"
-                                    value={form.estado}
+                                    value={formData.estado}
                                     onChange={handleChange}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm bg-gray-100 cursor-not-allowed ${
                                         errors.estado ? 'border-red-500' : 'border-gray-300'

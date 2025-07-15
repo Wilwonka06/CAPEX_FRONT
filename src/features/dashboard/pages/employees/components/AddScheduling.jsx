@@ -1,4 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import {
+  validateSchedulingForm,
+  validateSchedulingStartDate,
+  validateSchedulingEndDate,
+  validateSchedulingStartTime,
+  validateSchedulingEndTime,
+  validateSchedulingRepetition,
+  validateSchedulingDays
+} from '../../../../../shared/validations';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -42,20 +52,49 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     } else {
       setProg({ ...prog, [name]: value });
     }
+    
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    let error = '';
+    
+    switch (name) {
+      case 'fechaInicio':
+        const fechaInicioErrors = validateSchedulingStartDate(value);
+        error = fechaInicioErrors.fechaInicio || '';
+        break;
+      case 'fechaFin':
+        const fechaFinErrors = validateSchedulingEndDate(value, prog.fechaInicio);
+        error = fechaFinErrors.fechaFin || '';
+        break;
+      case 'horaInicio':
+        const horaInicioErrors = validateSchedulingStartTime(value);
+        error = horaInicioErrors.horaInicio || '';
+        break;
+      case 'horaFin':
+        const horaFinErrors = validateSchedulingEndTime(value, prog.horaInicio);
+        error = horaFinErrors.horaFin || '';
+        break;
+      case 'repeticion':
+        const repeticionErrors = validateSchedulingRepetition(value);
+        error = repeticionErrors.repeticion || '';
+        break;
+      default:
+        break;
+    }
+    
+    if (error) {
+      setErrors(prev => ({ ...prev, [name]: error }));
+    }
   };
 
   const validate = () => {
-    const newErrors = {};
-    if (!prog.fechaInicio) newErrors.fechaInicio = 'Fecha inicio obligatoria';
-    if (!prog.fechaFin) newErrors.fechaFin = 'Fecha fin obligatoria';
-    if (!prog.horaInicio) newErrors.horaInicio = 'Hora inicio obligatoria';
-    if (!prog.horaFin) newErrors.horaFin = 'Hora fin obligatoria';
-
-    // Si tiene repetición semanal o mensual, debe tener días
-    if ((prog.repeticion === 'Semanal' || prog.repeticion === 'Mensual') && prog.dias.length === 0) {
-      newErrors.dias = 'Selecciona al menos un día';
-    }
-
+    const newErrors = validateSchedulingForm(prog);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -83,6 +122,43 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     setErrors({});
   };
 
+  const handleAddEvent = (e) => {
+    e.preventDefault();
+    
+    // Validación completa del formulario
+    const formErrors = validateSchedulingForm(prog);
+    
+    // Agregar validación de empleado
+    if (!selectedEmployee) {
+      formErrors.empleado = 'Selecciona un empleado';
+    }
+    
+    setErrors(formErrors);
+    
+    if (Object.keys(formErrors).length === 0) {
+      let progWithIds = { ...prog };
+      progWithIds.empleadoId = selectedEmployee;
+      if (!progWithIds.id) {
+        progWithIds.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
+      }
+      if (!progWithIds.idBase) {
+        progWithIds.idBase = progWithIds.id;
+      }
+      if (onAdd) onAdd(progWithIds);
+      setProg(initialProg);
+      setSelectedEmployee('');
+      setErrors({});
+      toast.success('Programación agregada exitosamente!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    }
+  };
+
   return (
     <div className="border border-accent-light rounded-md p-4 mt-4">
       <form onSubmit={handleSubmit}>
@@ -94,6 +170,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
               name="fechaInicio"
               value={prog.fechaInicio}
               onChange={handleProgChange}
+              onBlur={handleBlur}
               className="w-full border rounded px-3 py-2"
             />
             {errors.fechaInicio && <p className="text-red-500 text-xs">{errors.fechaInicio}</p>}
@@ -106,6 +183,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
               name="fechaFin"
               value={prog.fechaFin}
               onChange={handleProgChange}
+              onBlur={handleBlur}
               className="w-full border rounded px-3 py-2"
             />
             {errors.fechaFin && <p className="text-red-500 text-xs">{errors.fechaFin}</p>}
@@ -117,12 +195,14 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
               name="repeticion"
               value={prog.repeticion}
               onChange={handleProgChange}
+              onBlur={handleBlur}
               className="w-full border rounded px-3 py-2"
             >
               <option>No se repite</option>
               <option>Semanal</option>
               <option>Mensual</option>
             </select>
+            {errors.repeticion && <p className="text-red-500 text-xs">{errors.repeticion}</p>}
           </div>
 
           <div className="md:col-span-2">
@@ -135,6 +215,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
                     value={dia}
                     checked={prog.dias.includes(dia)}
                     onChange={handleProgChange}
+                    onBlur={handleBlur}
                   />
                   {dia}
                 </label>
@@ -148,19 +229,23 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
               name="horaInicio"
               value={prog.horaInicio}
               onChange={handleProgChange}
+              onBlur={handleBlur}
               className="border rounded px-3 py-2"
             >
               {horas.map(h => <option key={h}>{h}</option>)}
             </select>
+            {errors.horaInicio && <p className="text-red-500 text-xs">{errors.horaInicio}</p>}
             <span>-</span>
             <select
               name="horaFin"
               value={prog.horaFin}
               onChange={handleProgChange}
+              onBlur={handleBlur}
               className="border rounded px-3 py-2"
             >
               {horas.map(h => <option key={h}>{h}</option>)}
             </select>
+            {errors.horaFin && <p className="text-red-500 text-xs">{errors.horaFin}</p>}
           </div>
         </div>
 
