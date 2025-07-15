@@ -278,6 +278,14 @@ const router = createBrowserRouter([
       },
       // Redirección para compatibilidad
       {
+        path: '/roles',
+        element: <Navigate to="/dashboard/roles" replace />
+      }
+    ]
+  },
+  {
+    path: '*',
+    element: <NotFound />
         path: 'productos/:id',
         element: <ProductDetailPageCliente />
       },
@@ -288,6 +296,14 @@ const router = createBrowserRouter([
       {
         path: 'servicios',
         element: <ServicesPage />
+      },
+      {
+        path: 'checkout',
+        element: <Checkout />
+      },
+      {
+        path: 'gracias',
+        element: <ThankYou />
       },
     ]
   }
