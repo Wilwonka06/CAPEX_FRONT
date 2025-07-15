@@ -6,12 +6,12 @@ import ViewRole from "./components/ViewRole";
 import ChangeRoleStatus from "./components/ChangeRoleStatus";
 import DeleteRole from "./components/DeleteRole";
 import Paginator from "./components/Paginator";
-import { createRole } from "./services/CreateRoleService";
-import { editRole } from "./services/EditRoleService";
+// Corrected imports for services from ModuleDataService
+import { createRole, updateRole, deleteRole, getRoles } from '../../../../shared/services/ModuleDataService';
 import SearchRole from "./components/SearchRole";
-import { getRoles } from '../../../../shared/services/ModuleDataService';
-import { normalizeText } from '../../../../shared/normalizers.js';
+import { normalizeText } from '../../../../shared/normalizers.js'; // Ensure normalizeText is used consistently
 import Swal from 'sweetalert2';
+
 
 const itemsPerPage = 5;
 
@@ -57,11 +57,15 @@ const RolesPage = () => {
     });
   };
 
+  // Función para normalizar texto (eliminar tildes, pasar a minúsculas, etc.)
+  // Esta función ya debería estar en '../../../../shared/normalizers.js'
+  // y se usa aquí. La importación ya está en el código que me diste.
+
   // Filtrado de roles por búsqueda
   const filteredRoles = roles.filter((role) => {
     const term = normalizeText(searchTerm);
     if (!term) return true; // Si no hay término, mostrar todos
-    const idMatch = normalizeText(role.id).includes(term);
+    const idMatch = normalizeText(role.id).includes(term); // <<< ESTO ES LO QUE ESTÁ EN ROLES Y FUNCIONA
     const nameMatch = normalizeText(role.name).includes(term);
     const descMatch = normalizeText(role.description).includes(term);
     const estado = normalizeText(role.estado);
@@ -90,15 +94,17 @@ const RolesPage = () => {
 
   // Cálculo de paginación basado en roles filtrados
   const totalPages = Math.max(1, Math.ceil(filteredRoles.length / itemsPerPage));
-  
+
   // Para paginar los roles
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedRoles = filteredRoles.slice(startIndex, startIndex + itemsPerPage);
 
   // Ajusta currentPage si es mayor que totalPages
   useEffect(() => {
-    if (currentPage > totalPages) {
+    if (currentPage > totalPages && totalPages > 0) { // Añadida condición totalPages > 0
       setCurrentPage(totalPages);
+    } else if (totalPages === 0 && currentPage !== 1) { // Si no hay resultados, ir a página 1
+        setCurrentPage(1);
     }
   }, [roles, totalPages, currentPage]);
 
@@ -147,33 +153,47 @@ const RolesPage = () => {
   };
 
   const handleDeleteRole = async (roleId) => {
+    setLoading(true); // Activar loading para la operación de eliminación
     try {
-      // Simulación de eliminación
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setRoles(prevRoles => prevRoles.filter(role => role.id !== roleId));
+      await deleteRole(roleId, roles); // Pasa 'roles' para que el servicio simule la eliminación
+      setRoles(prev => prev.filter(r => r.id !== roleId));
       setIsDeleteModalOpen(false);
       setSelectedRole(null);
       showMessage('Rol eliminado exitosamente', 'success');
     } catch (error) {
-      showMessage('Error al eliminar el rol', 'error');
+      console.error("Error al eliminar rol:", error);
+      showMessage(error.message || 'Error al eliminar el rol', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // handleToggleStatus ahora solo cambia el estado, sin SweetAlert2
+  // handleToggleStatus ahora usa el servicio updateRole y muestra mensajes
   const handleToggleStatus = async (roleId) => {
+    setLoading(true); // Activar loading
     try {
-      // Simulación de cambio de estado
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Encuentra el rol y cambia su estado localmente para el servicio
+      const roleToUpdate = roles.find(r => r.id === roleId);
+      if (!roleToUpdate) throw new Error("Rol no encontrado.");
+
+      const newStatus = roleToUpdate.estado === 'Activo' ? 'Inactivo' : 'Activo';
+      const updatedRoleData = { ...roleToUpdate, estado: newStatus };
+
+      // Llama al servicio para actualizar el rol
+      const returnedRole = await updateRole(updatedRoleData, roles); // Pasa todos los roles al servicio para simular
+      
+      // Actualiza el estado local de roles con el rol retornado por el servicio
       setRoles(prevRoles => prevRoles.map(role =>
-        role.id === roleId
-          ? { ...role, estado: role.estado === 'Activo' ? 'Inactivo' : 'Activo' }
+        role.id === returnedRole.id
+          ? returnedRole
           : role
       ));
-      const role = roles.find(r => r.id === roleId);
-      const newStatus = role.estado === 'Activo' ? 'Inactivo' : 'Activo';
       showMessage(`Estado del rol cambiado a ${newStatus}`, 'success');
     } catch (error) {
-      showMessage('Error al cambiar el estado del rol', 'error');
+      console.error("Error al cambiar estado:", error);
+      showMessage(error.message || 'Error al cambiar el estado del rol', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -184,13 +204,14 @@ const RolesPage = () => {
       const newRole = await createRole({
         name: formData.nombre,
         description: formData.descripcion,
-        estado: 'Activo',
-        privileges
-      }, roles);
+        estado: formData.estado || 'Activo', // Asegura un estado por defecto si no viene del form
+        privileges,
+      }, roles); // Pasa todos los roles para la validación de unicidad
       setRoles(prev => [...prev, newRole]);
       setIsCreateModalOpen(false);
       showMessage('Rol creado exitosamente', 'success');
     } catch (error) {
+      console.error("Error al crear rol:", error);
       showMessage(error.message || 'Error al crear el rol', 'error');
     } finally {
       setLoading(false);
@@ -198,21 +219,25 @@ const RolesPage = () => {
   };
 
   // Editar rol usando servicio
-  const handleEditRole = async (formData, privileges) => {
+  const handleEditRole = async (formDataFromModal, privilegesFromModal) => { // Renombrar para claridad
     setLoading(true);
     try {
-      const updatedRole = await editRole({
-        id: selectedRole.id,
-        name: formData.name,
-        description: formData.description,
-        estado: selectedRole.estado,
-        privileges
-      }, roles);
-      setRoles(prev => prev.map(role => role.id === updatedRole.id ? updatedRole : role));
+      // Combina los datos del formulario con el ID y estado del rol seleccionado
+      const updatedRoleData = {
+        id: selectedRole.id, // ID del rol que estamos editando
+        name: formDataFromModal.name,
+        description: formDataFromModal.description,
+        estado: selectedRole.estado, // Mantener el estado actual del rol
+        privileges: privilegesFromModal
+      };
+
+      const returnedRole = await updateRole(updatedRoleData, roles); // Pasa todos los roles al servicio para simular
+      setRoles(prev => prev.map(r => r.id === returnedRole.id ? returnedRole : r));
       setIsEditModalOpen(false);
       setSelectedRole(null);
       showMessage('Rol actualizado exitosamente', 'success');
     } catch (error) {
+      console.error("Error al actualizar rol:", error);
       showMessage(error.message || 'Error al actualizar el rol', 'error');
     } finally {
       setLoading(false);
@@ -229,8 +254,8 @@ const RolesPage = () => {
       {/* Mensaje de feedback */}
       {message.show && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-          message.type === 'success' 
-            ? 'bg-primary text-white' 
+          message.type === 'success'
+            ? 'bg-primary text-white'
             : 'bg-primary-dark text-white'
         }`}>
           <div className="flex items-center space-x-2">
@@ -360,4 +385,3 @@ const RolesPage = () => {
 };
 
 export default RolesPage;
-  

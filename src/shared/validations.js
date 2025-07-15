@@ -1,3 +1,7 @@
+// validations.js
+
+// ====== VALIDACIONES GENERALES ======
+
 // Verifica si ya existe un producto con el mismo nombre (insensible a mayúsculas y espacios)
 export function isDuplicateProductName(nombre, productos) {
   const normalizar = (str) => str.trim().toLowerCase();
@@ -42,7 +46,9 @@ export function isValidNIT(nit) {
 
 // Valida formato de teléfono (código de país + números)
 export function isValidPhone(telefono) {
-  const phoneRegex = /^\+\d{7,15}$/;
+  // Nota: Esta validación es básica, ya que el campo de teléfono en los formularios de cliente
+  // ahora usa 'isNumeric' y longitud mínima. Si necesitas código de país, ajusta la regex
+  const phoneRegex = /^\d{7,15}$/; // Asumiendo solo números y longitud, sin '+' inicial
   return phoneRegex.test(telefono);
 }
 
@@ -101,10 +107,24 @@ export function hasAnyPrivilege(privileges) {
   );
 }
 
+// Permite letras (incluyendo acentos y Ñ/ñ), números y espacios. Excluye caracteres especiales.
+export function isValidAlphaNumericSpace(value) {
+  if (value === null || value === undefined || value.trim() === '') return true; // Considerar válido si vacío, para que la validación de 'requerido' lo maneje.
+  const regex = /^[A-Za-z0-9\u00C0-\u00FF\sñÑ]+$/;
+  return regex.test(value);
+}
+
+// Valida que empiece por una letra (no número, símbolo o espacio)
+export function startsWithAlpha(value) {
+  if (value === null || value === undefined || value.trim() === '') return true; // Considerar válido si vacío
+  const regex = /^[A-Za-z\u00C0-\u00FFñÑ]/;
+  return regex.test(value);
+}
+
 // Validación completa de rol
 export function validateRole(formData, privileges, roles = [], rolActual = null) {
   const errors = {};
-  
+
   // Validar nombre
   if (!isValidRoleName(formData.nombre)) {
     errors.nombre = 'El nombre es requerido y debe tener al menos 3 caracteres.';
@@ -115,13 +135,13 @@ export function validateRole(formData, privileges, roles = [], rolActual = null)
   } else if (isDuplicateRoleName(formData.nombre, roles, rolActual)) {
     errors.nombre = 'Ya existe un rol con ese nombre.';
   }
-  
+
   // Validar privilegios
   if (!hasAnyPrivilege(privileges)) {
     errors.privilegios = 'Debes seleccionar al menos un privilegio.';
   }
-  
-  return errors;
+
+  return { isValid: Object.keys(errors).length === 0, errors };
 }
 
 // ===== VALIDACIONES DE CLIENTES =====
@@ -161,6 +181,7 @@ export function isValidDocumentNumber(documentNumber) {
 
 // Valida teléfono de cliente (requerido, mínimo 7 caracteres)
 export function isValidCustomerPhone(phone) {
+  // Ya que en el formulario se usa isNumeric, esta validación se enfoca en la longitud y si es requerido.
   return phone && phone.trim().length >= 7;
 }
 
@@ -171,21 +192,14 @@ export function isValidAlphaOnly(value) {
   return regex.test(value);
 }
 
-// Valida que empiece por una letra (no número, símbolo o espacio)
-export function startsWithAlpha(value) {
-  if (value === null || value === undefined || value.trim() === '') return true;
-  const regex = /^[A-Za-z\u00C0-\u00FFñÑ]/;
-  return regex.test(value);
-}
-
-// Valida que solo contenga números
+// Valida que solo contenga números (usado para docNumber y phone en clientes)
 export function isNumeric(value) {
   if (value === null || value === undefined || String(value).trim() === '') return true;
   const regex = /^\d+$/;
   return regex.test(String(value));
 }
 
-// ===== VALIDACIONES DE CONTRASEÑA =====
+// ===== VALIDACIONES DE CONTRASEÑA (para clientes) =====
 export function isValidPassword(password) {
   // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -195,6 +209,10 @@ export function isValidPassword(password) {
 // Validación completa de cliente
 export function validateCustomer(customerData, customers = [], excludeId = null, isSubmit = false) {
   const errors = {};
+  // Tipo de documento
+  if (!customerData.documentType) {
+    errors.documentType = 'El tipo de documento es requerido.';
+  }
   // Nombres
   if (!customerData.firstName || customerData.firstName.trim().length < 2) {
     errors.firstName = 'El nombre es requerido y debe tener al menos 2 caracteres.';
@@ -214,15 +232,11 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
       errors.lastName = 'Debe comenzar con una letra.';
     }
   }
-  // Tipo de documento
-  if (!customerData.documentType) {
-    errors.documentType = 'El tipo de documento es requerido.';
-  }
-  // Documento
+  // Número de Documento
   if (!customerData.documentNumber || customerData.documentNumber.trim().length < 5) {
     errors.documentNumber = 'El número de documento es requerido y debe tener al menos 5 caracteres.';
   } else {
-    if (!isNumeric(customerData.documentNumber)) {
+    if (!isNumeric(customerData.documentNumber)) { // Usa isNumeric para el número de documento
       errors.documentNumber = 'Solo se permiten números.';
     }
   }
@@ -237,7 +251,7 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
   // Teléfono
   if (!customerData.phone) {
     errors.phone = 'El teléfono es requerido.';
-  } else if (!isNumeric(customerData.phone)) {
+  } else if (!isNumeric(customerData.phone)) { // Usa isNumeric para el teléfono
     errors.phone = 'Solo se permiten números.';
   } else if (customerData.phone.length < 7) {
     errors.phone = 'El teléfono debe tener al menos 7 dígitos.';
@@ -255,7 +269,7 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
       errors.confirmPassword = 'Las contraseñas no coinciden.';
     }
   } else { // EditCustomer: password opcional
-    if (customerData.password) {
+    if (customerData.password) { // Solo validar si se ha ingresado una contraseña
       if (!isValidPassword(customerData.password)) {
         errors.password = 'La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
       }
@@ -283,7 +297,7 @@ export function hasServiceOrderItems(servicios = [], productos = []) {
 
 // Valida dinero proporcionado para órdenes pagadas
 export function isValidMoneyProvided(dineroProporcionado, totalGeneral) {
-  if (!dineroProporcionado || isNaN(dineroProporcionado)) {
+  if (dineroProporcionado === null || dineroProporcionado === undefined || isNaN(dineroProporcionado)) {
     return false;
   }
   return parseFloat(dineroProporcionado) >= totalGeneral;
@@ -314,13 +328,4 @@ export function validateServiceOrder(orderData, orders = [], totalGeneral = 0, s
     isValid: Object.keys(errors).length === 0,
     errors
   };
-} 
-
-// ===== VALIDACIONES DE ROLES (EXTRA) =====
-
-// Permite letras (incluyendo acentos y Ñ/ñ), números y espacios. Excluye caracteres especiales.
-export function isValidAlphaNumericSpace(value) {
-  if (value === null || value === undefined || value.trim() === '') return true; // Considerar válido si vacío, para que la validación de 'requerido' lo maneje.
-  const regex = /^[A-Za-z0-9\u00C0-\u00FF\sñÑ]+$/;
-  return regex.test(value);
-} 
+}

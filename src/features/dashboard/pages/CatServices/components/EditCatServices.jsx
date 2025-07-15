@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 
-const EditCatServices = ({ onClose, category, onEdit }) => {
+const EditCatServices = ({ onClose, category, onEdit, existingCategories = [] }) => {
     const [form, setForm] = useState({
         id: category?.id || null,
         Categoria: category?.name || "",
         Descripcion: category?.description || "",
         estado: category?.isActive ? "Activo" : "Inactivo"
     });
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         setForm({
@@ -15,15 +16,58 @@ const EditCatServices = ({ onClose, category, onEdit }) => {
             Descripcion: category?.description || "",
             estado: category?.isActive ? "Activo" : "Inactivo"
         });
+        setErrors({}); // Limpiar errores al cambiar de categoría
     }, [category]);
+
+    // Función para normalizar texto (remover tildes)
+    const normalizeText = (text) => {
+        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    };
+
+    const validate = () => {
+        const newErrors = {};
+        
+        if (!form.Categoria.trim()) {
+            newErrors.Categoria = 'La categoría es obligatoria';
+        } else {
+            // Verificar si ya existe una categoría con el mismo nombre (ignorando mayúsculas y tildes)
+            // Excluir la categoría actual que se está editando
+            const normalizedNewName = normalizeText(form.Categoria.trim());
+            const categoryExists = existingCategories.some(existingCategory => 
+                existingCategory.id !== form.id && // No comparar con la categoría actual
+                normalizeText(existingCategory.name) === normalizedNewName
+            );
+            
+            if (categoryExists) {
+                newErrors.Categoria = 'Ya existe una categoría con este nombre';
+            }
+        }
+        
+        if (!form.Descripcion.trim()) {
+            newErrors.Descripcion = 'La descripción es obligatoria';
+        }
+        
+        if (!form.estado) {
+            newErrors.estado = 'El estado es obligatorio';
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
+        
+        // Limpiar error del campo cuando el usuario empiece a escribir
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: '' }));
+        }
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!validate()) return;
         onEdit({
             id: form.id,
             name: form.Categoria,
@@ -57,6 +101,7 @@ const EditCatServices = ({ onClose, category, onEdit }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.Categoria && <p className="text-red-500 text-xs mt-1">{errors.Categoria}</p>}
                         </div>
                         <div>
                             <label htmlFor="descripcion" className="block text-sm font-medium text-text-main mb-1">Descripción <span className="text-red-500">*</span></label>
@@ -69,6 +114,7 @@ const EditCatServices = ({ onClose, category, onEdit }) => {
                                 className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
                                 required
                             />
+                            {errors.Descripcion && <p className="text-red-500 text-xs mt-1">{errors.Descripcion}</p>}
                         </div>
                         <div>
                             <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
@@ -82,6 +128,7 @@ const EditCatServices = ({ onClose, category, onEdit }) => {
                                 <option value="Activo">Activo</option>
                                 <option value="Inactivo">Inactivo</option>
                             </select>
+                            {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
                         </div>
                     </div>
                     <div className="flex justify-end space-x-4 mt-8">

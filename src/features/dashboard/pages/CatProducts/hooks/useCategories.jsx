@@ -2,11 +2,12 @@ import { useState, createContext, useContext } from 'react';
 import PropTypes from 'prop-types';
 
 const initialCategories = [
-  { id: 1, name: "Shampoo", description: "Productos para limpiar y nutrir el cabello.", isActive: true },
-  { id: 2, name: "Acondicionador", description: "Productos para suavizar y desenredar el cabello.", isActive: false },
-  { id: 3, name: "Mascarilla", description: "Tratamientos intensivos para reparar y fortalecer el cabello.", isActive: true },
-  { id: 4, name: "Gel y Estilizado", description: "Productos para peinar y dar forma al cabello.", isActive: true },
-  { id: 5, name: "Aceites y Sueros", description: "Aceites y sueros para dar brillo y suavidad al cabello.", isActive: true },
+  { id: 1, name: "Extensiones", description: "Cabello natural y sintético en diferentes largos, colores y texturas.", isActive: true },
+  { id: 2, name: "Shampoo", description: "Productos para limpiar y nutrir el cabello.", isActive: true },
+  { id: 3, name: "Acondicionador", description: "Productos para suavizar y desenredar el cabello.", isActive: true },
+  { id: 4, name: "Mascarilla", description: "Tratamientos intensivos para reparar y fortalecer el cabello.", isActive: true },
+  { id: 5, name: "Gel y Estilizado", description: "Productos para peinar y dar forma al cabello.", isActive: true },
+  { id: 6, name: "Aceites y Sueros", description: "Aceites y sueros para dar brillo y suavidad al cabello.", isActive: true },
 ];
 
 const CategoriesContext = createContext();
