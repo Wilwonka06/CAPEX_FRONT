@@ -1,6 +1,7 @@
-import { validateCustomer } from './ValidateCustomerService';
+import { validateCustomer } from '../../../../../shared/validations';
 
-export const createCustomer = async (customerData, customers) => {
+// Servicio simulado para crear un cliente
+export async function createCustomer(customerData, customers = []) {
   // Validación interna usando ValidateCustomerService
   const validation = validateCustomer(customerData, customers);
   
@@ -10,23 +11,21 @@ export const createCustomer = async (customerData, customers) => {
     throw new Error(firstError);
   }
 
-  // Simular delay de API
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // Generar nuevo ID (máximo actual + 1)
-  const maxId = customers.length > 0 ? Math.max(...customers.map(c => c.id)) : 0;
-  const newId = maxId + 1;
-
-  const newCustomer = {
-    id: newId,
-    documentType: customerData.documentType,
-    documentNumber: customerData.documentNumber,
-    firstName: customerData.firstName,
-    lastName: customerData.lastName,
-    email: customerData.email,
-    phone: customerData.phone,
-    status: 'Activo'
-  };
-
-  return newCustomer;
-}; 
+  // Busca el máximo id actual y suma 1
+  const maxId = customers.length ? Math.max(...customers.map(c => c.id)) : 0;
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        id: maxId + 1,
+        firstName: customerData.firstName,
+        lastName: customerData.lastName,
+        documentType: customerData.documentType,
+        documentNumber: customerData.documentNumber,
+        email: customerData.email,
+        phone: customerData.phone,
+        status: 'Activo'
+      });
+    }, 500);
+  });
+} 

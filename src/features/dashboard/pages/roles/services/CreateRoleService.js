@@ -1,4 +1,4 @@
-import { validateRole } from './ValidateRoleService';
+import { validateRole } from '../../../../../shared/validations';
 
 // Solo validación, la persistencia real debe hacerse en ModuleDataService.js
 export function validateAndFormatRole(role, roles = []) {

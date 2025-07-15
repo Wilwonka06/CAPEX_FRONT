@@ -3,7 +3,9 @@ import React, { useState } from "react";
 const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [quantities, setQuantities] = useState({});
+  const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [selectedProductForQuantity, setSelectedProductForQuantity] = useState(null);
+  const [quantity, setQuantity] = useState(1);
 
   const availableProducts = [
     { id: 1, name: "Shampoo", price: 15000, category: "Cuidado Capilar" },
@@ -18,37 +20,43 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   );
 
   const handleProductSelect = (product) => {
-    const quantity = quantities[product.id] || 1;
-    const productWithQuantity = { 
-      ...product, 
-      quantity,
-      subtotal: product.price * quantity,
-      uniqueId: Date.now()
-    };
-    
     const isAlreadySelected = selectedProducts.some(p => p.id === product.id);
     if (!isAlreadySelected) {
-      onProductsChange([...selectedProducts, productWithQuantity]);
+      setSelectedProductForQuantity(product);
+      setQuantity(1);
+      setShowQuantityModal(true);
     }
     setSearchTerm("");
     setIsOpen(false);
+  };
+
+  const confirmProductSelection = () => {
+    if (selectedProductForQuantity && quantity > 0) {
+      const productWithQuantity = { 
+        ...selectedProductForQuantity, 
+        quantity,
+        subtotal: selectedProductForQuantity.price * quantity,
+        uniqueId: Date.now()
+      };
+      
+      onProductsChange([...selectedProducts, productWithQuantity]);
+      setShowQuantityModal(false);
+      setSelectedProductForQuantity(null);
+      setQuantity(1);
+    }
+  };
+
+  const cancelProductSelection = () => {
+    setShowQuantityModal(false);
+    setSelectedProductForQuantity(null);
+    setQuantity(1);
   };
 
   const removeProduct = (uniqueId) => {
     onProductsChange(selectedProducts.filter(p => p.uniqueId !== uniqueId));
   };
 
-  const updateQuantity = (uniqueId, newQuantity) => {
-    const updatedQuantity = Math.max(1, newQuantity);
-    onProductsChange(selectedProducts.map(p => 
-      p.uniqueId === uniqueId ? { 
-        ...p, 
-        quantity: updatedQuantity,
-        subtotal: p.price * updatedQuantity
-      } : p
-    ));
-  };
-
+  const isFormValid = quantity > 0;
   const totalProducts = selectedProducts.reduce((total, product) => total + product.subtotal, 0);
 
   return (
@@ -63,7 +71,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
-            className="w-full border border-accent bg-background text-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
             placeholder="Buscar productos..."
           />
           <i className="bi bi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -72,40 +80,16 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
       {/* Dropdown de productos */}
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-accent rounded shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
           {filteredProducts.map(product => (
-            <div key={product.id} className="border-b last:border-b-0">
-              <div className="px-3 py-2 hover:bg-gray-100">
-                <div className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <span className="text-sm">{product.name}</span>
-                      <span className="text-gray-600 text-sm">${product.price}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-600">Cantidad:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={quantities[product.id] || 1}
-                      onChange={(e) => setQuantities(prev => ({
-                        ...prev,
-                        [product.id]: parseInt(e.target.value) || 1
-                      }))}
-                      className="w-16 border rounded px-2 py-1 text-xs"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  <button
-                    onClick={() => handleProductSelect(product)}
-                    className="bg-primary-dark text-white px-3 py-1 rounded text-xs hover:bg-primary transition"
-                  >
-                    Agregar
-                  </button>
-                </div>
+            <div
+              key={product.id}
+              onClick={() => handleProductSelect(product)}
+              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+            >
+              <div className="flex justify-between">
+                <span>{product.name}</span>
+                <span className="text-gray-600">${product.price}</span>
               </div>
             </div>
           ))}
@@ -117,18 +101,115 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
         </div>
       )}
 
+      {/* Modal para cantidad y detalles del producto */}
+      {showQuantityModal && selectedProductForQuantity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in flex flex-col border border-gray-200">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-accent m-0">Detalles del Producto</h2>
+              </div>
+              <button
+                onClick={cancelProductSelection}
+                className="text-gray-400 hover:text-black text-xl font-bold"
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Contenido */}
+            <div className="p-8 bg-white">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">Producto</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                    {selectedProductForQuantity.name}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">Categoría</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                    {selectedProductForQuantity.category}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">Precio unitario</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                    ${selectedProductForQuantity.price}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-black mb-1">
+                    Cantidad <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-16 text-center border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                      min="1"
+                    />
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-3">
+                  <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-bold text-green-600">
+                    ${(selectedProductForQuantity.price * quantity).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={cancelProductSelection}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-black hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmProductSelection}
+                  disabled={!isFormValid}
+                  className={`px-4 py-2 rounded-md text-white ${isFormValid ? 'bg-accent hover:bg-accent-dark' : 'bg-gray-300 cursor-not-allowed'} transition-colors`}
+                >
+                  Agregar Producto
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Lista de productos seleccionados - SIEMPRE VISIBLE */}
       <div className="mt-4">
-        <h4 className="text-sm font-medium mb-2">Lista de Productos:</h4>
-        <div className="border rounded overflow-hidden">
+        <h4 className="text-xs font-medium mb-2">Lista de Productos:</h4>
+        <div className="border border-gray-300 rounded-md overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-2 py-2 text-left border-r">Categoría</th>
-                <th className="px-2 py-2 text-left border-r">Producto</th>
-                <th className="px-2 py-2 text-left border-r">Cantidad</th>
-                <th className="px-2 py-2 text-left border-r">Subtotal</th>
-                <th className="px-2 py-2 text-left">Acciones</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Categoría</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Producto</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
+                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Subtotal</th>
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-700">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -140,26 +221,10 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 </tr>
               ) : (
                 selectedProducts.map((product) => (
-                  <tr key={product.uniqueId} className="border-t">
+                  <tr key={product.uniqueId} className="border-t hover:bg-gray-50">
                     <td className="px-2 py-2 border-r">{product.category}</td>
                     <td className="px-2 py-2 border-r">{product.name}</td>
-                    <td className="px-2 py-2 border-r text-center">
-                      <div className="flex items-center justify-center space-x-1">
-                        <button
-                          onClick={() => updateQuantity(product.uniqueId, product.quantity - 1)}
-                          className="w-5 h-5 border border-accent rounded flex items-center justify-center hover:bg-accent-light text-xs"
-                        >
-                          -
-                        </button>
-                        <span className="mx-2">{product.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(product.uniqueId, product.quantity + 1)}
-                          className="w-5 h-5 border border-accent rounded flex items-center justify-center hover:bg-accent-light text-xs"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
+                    <td className="px-2 py-2 border-r text-center">{product.quantity}</td>
                     <td className="px-2 py-2 border-r">${product.subtotal?.toLocaleString()}</td>
                     <td className="px-2 py-2 text-center">
                       <button
@@ -176,16 +241,14 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
             </tbody>
           </table>
         </div>
-        
         {/* Total de productos */}
-        <div className="mt-2 text-sm bg-green-50 p-2 rounded">
+        <div className="mt-2 text-sm bg-green-50 p-2 rounded-md border border-green-100">
           <span className="font-medium">TOTAL DE PRODUCTOS: </span>
           <span className="font-bold text-green-600">
             ${totalProducts.toLocaleString()}
           </span>
         </div>
       </div>
-
       {/* Overlay para cerrar dropdown */}
       {isOpen && (
         <div 
