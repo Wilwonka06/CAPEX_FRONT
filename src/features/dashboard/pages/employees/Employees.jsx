@@ -241,12 +241,9 @@ const EmployeesPage = () => {
                           <td className="py-3 px-4">{emp.apellido}</td>
                           <td className="py-3 px-4">{emp.documento}</td>
                           <td className="py-3 px-4">
-                            <button
-                              onClick={() => toggleEstado(emp.id)}
-                              className={`px-3 py-1 rounded-full text-xs font-semibold focus:outline-none transition ${emp.estado ? 'bg-black' : 'bg-gray-200 text-gray-600'}`}
-                            >
-                              <span className={emp.estado ? 'text-white' : 'text-gray-600'}>{emp.estado ? 'Activo' : 'Inactivo'}</span>
-                            </button>
+                            <span className={emp.estado ? 'text-green-800 font-semibold' : 'text-red-700 font-semibold'}>
+                              {emp.estado ? 'Activo' : 'Inactivo'}
+                            </span>
                           </td>
                           <td className="py-4 px-4 text-sm font-medium text-right">
                             <div className="flex gap-2 justify-end items-center">

@@ -263,12 +263,10 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-medium text-text-main mb-1">Imagen</label>
-                                {formData.imagen && (
+                                {formData.imagen && typeof formData.imagen === 'string' && formData.imagen.startsWith('data:image') && (
                                     <div className="mb-3">
                                         <label className="block text-xs font-medium text-text-main/80 mb-1">Imagen actual:</label>
-                                        <div className="w-full px-3 py-2 border border-gray-300 rounded-md text-text-main text-sm bg-gray-50">
-                                            {formData.imagen instanceof File ? formData.imagen.name : 'Imagen cargada'}
-                                        </div>
+                                        <img src={formData.imagen} alt="Imagen actual" className="w-32 h-32 object-cover rounded border border-gray-300" />
                                     </div>
                                 )}
                                 <input

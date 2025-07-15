@@ -53,13 +53,25 @@ const AddServices = ({ onClose, onAdd, categories = [], services = [] }) => {
                 ...prev,
                 [name]: numericValue
             }));
+        } else if (type === "file") {
+            // Convertir imagen a base64
+            const file = files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setFormData((prev) => ({
+                        ...prev,
+                        imagen: reader.result // base64
+                    }));
+                };
+                reader.readAsDataURL(file);
+            }
         } else {
             setFormData((prev) => ({
                 ...prev,
-                [name]: type === "file" ? files[0] : value
+                [name]: value
             }));
         }
-        
         // Limpiar error del campo cuando el usuario empiece a escribir
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
@@ -111,7 +123,7 @@ const AddServices = ({ onClose, onAdd, categories = [], services = [] }) => {
                 duracion: formData.duracion,
                 precio: formData.precio,
                 estado: formData.estado,
-                imagen: formData.imagen
+                imagen: formData.imagen // base64
             };
             
             onAdd(newService);
