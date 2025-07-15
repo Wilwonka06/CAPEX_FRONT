@@ -248,10 +248,10 @@ const Dashboard = () => {
           </h3>
           <TopServicesChart data={topServicios} />
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
             Productos Más Vendidos <span className="text-gray-500 font-normal">{mesesES[month]} {year}</span>
-          </h3>
+        </h3>
           <TopProductsChart data={topProductos} />
         </div>
       </div>

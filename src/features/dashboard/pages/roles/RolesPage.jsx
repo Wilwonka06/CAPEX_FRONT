@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import CreateRole from "./components/CreateRole";
 import EditRole from "./components/EditRole";
 import ViewRole from "./components/ViewRole";
@@ -8,7 +7,6 @@ import DeleteRole from "./components/DeleteRole";
 import Paginator from "./components/Paginator";
 import { createRole, updateRole, deleteRole, getRoles } from '../../../../shared/services/ModuleDataService';
 import SearchRole from "./components/SearchRole";
-import { getRoles } from '../../../../shared/services/ModuleDataService';
 import { normalizeText } from '../../../../shared/normalizers.js';
 
 
@@ -25,19 +23,14 @@ const RolesPage = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '', show: false });
   const [searchTerm, setSearchTerm] = useState("");
-  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     const fetchRoles = async () => {
-      setLoadingData(true);
       try {
         const fetchedRoles = await getRoles();
         setRoles(fetchedRoles);
-      } catch (error) {
-        console.error("Error al cargar roles:", error);
+      } catch {
         // Opcional: mostrar un mensaje de error al usuario
-      } finally {
-        setLoadingData(false);
       }
     };
     fetchRoles();
@@ -136,7 +129,7 @@ const RolesPage = () => {
       setRoles(updatedRoles);
       const newStatus = updatedRole.estado;
       showMessage(`Estado del rol cambiado a ${newStatus}`, 'success');
-    } catch (error) {
+    } catch {
       showMessage('Error al cambiar el estado del rol', 'error');
     }
   };

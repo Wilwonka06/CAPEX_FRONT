@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isValidEmail, isValidPassword, isValidName, isPasswordMatch, isValidPhone } from '../../../shared/validations';
+import { isValidEmail, isValidPassword, isValidCustomerName, validatePasswordConfirmation, isValidPhone } from '../../../shared/validations';
 import { getUsers, addUser } from '../../../shared/services/ModuleDataService';
 import { toast } from 'react-toastify';
 import PasswordEye from '../../../shared/components/PasswordEye';
@@ -31,7 +31,7 @@ const RegisterPage = () => {
   const validate = (name, value) => {
     switch (name) {
       case 'nombre':
-        return isValidName(value) ? '' : 'Nombre inválido';
+        return isValidCustomerName(value) ? '' : 'Nombre inválido';
       case 'correo':
         if (!isValidEmail(value)) return 'Correo inválido';
         if (users.some(u => u.correo === value)) return 'Correo ya registrado';
@@ -54,7 +54,7 @@ const RegisterPage = () => {
       case 'password':
         return value ? (isValidPassword(value) ? '' : 'Contraseña débil (mínimo 6 caracteres)') : 'Campo obligatorio';
       case 'confirmPassword':
-        return isPasswordMatch(form.password, value) ? '' : 'No coincide';
+        return validatePasswordConfirmation(form.password, value).confirmarContrasena || '';
       default:
         return value.trim() ? '' : 'Campo obligatorio';
     }

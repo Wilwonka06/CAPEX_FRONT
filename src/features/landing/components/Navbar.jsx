@@ -13,8 +13,6 @@ const Navbar = () => {
     const navigate = useNavigate();
     const profileRef = useRef();
 
-    // Estado para controlar el menú desplegable de productos
-    const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
     const { cart } = useCart();
 
     // Función para alternar el menú móvil
@@ -57,14 +55,6 @@ const Navbar = () => {
         setShowProfile(false);
         navigate('/login');
     }
-    }
-    }
-
-    // Función para alternar el menú desplegable de productos
-    const toggleProductsDropdown = () => {
-        setIsProductsDropdownOpen(!isProductsDropdownOpen);
-
-    };
 
     return (
         <nav className="bg-background p-2 shadow-lg">
@@ -98,37 +88,12 @@ const Navbar = () => {
                     <Link to="/landing/catalogo" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
                         Productos
                     </Link>
-                    {/* Menú desplegable de Productos */}
-                    <div className="relative w-full md:w-auto">
-                        <button
-                            className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:ring-2 hover:ring-primary focus:outline-none"
-                            onClick={() => setShowProfile(v => !v)}
-                            title={currentUser.nombre}
-                        >
-                            {currentUser.foto || currentUser.avatar ? (
-                                <img src={currentUser.foto || currentUser.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
-                            ) : (
-                                <i className="bi bi-person text-2xl"></i>
-                            )}
-                        </button>
-                        {showProfile && (
-                            <ProfileMenu
-                                user={currentUser}
-                                onClose={() => setShowProfile(false)}
-                                onLogout={handleLogout}
-                                showOrdersOption={true}
-                            />
-                        )}
-                    </>
-                ) : (
-                    <Link to="/login" className="bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md hover:bg-primary">
-                        Iniciar Sesión
+                    <Link to="/landing/citas" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
+                        Agendar Cita
                     </Link>
-                        </div>
-                    </div>
-                    {isClient && (
-                        <Link to="/landing/citas-cliente" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
-                            Citas
+                    {!currentUser && (
+                        <Link to="/login" className="bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md hover:bg-primary">
+                            Iniciar Sesión
                         </Link>
                     )}
                 </div>

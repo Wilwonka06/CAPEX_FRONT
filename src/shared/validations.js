@@ -1,4 +1,3 @@
-
 // Función de normalización robusta (remueve tildes, convierte a minúsculas y elimina espacios extra)
 export function normalizeText(str) {
   return str
@@ -7,6 +6,7 @@ export function normalizeText(str) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remueve tildes y diacríticos
     .replace(/\s+/g, ' '); // Normaliza espacios múltiples a uno solo
+}
 
 export function isDuplicateProductName(nombre, productos) {
   const normalizedNombre = normalizeText(nombre);
@@ -686,11 +686,6 @@ export function isDuplicateCustomerDocument(documentType, documentNumber, custom
 // Valida nombre de cliente (requerido, mínimo 2 caracteres)
 export function isValidCustomerName(name) {
   return name && name.trim().length >= 2;
-}
-
-// Valida número de documento (requerido, mínimo 5 caracteres)
-export function isValidDocumentNumber(documentNumber) {
-  return documentNumber && documentNumber.trim().length >= 5;
 }
 
 // Valida teléfono de cliente (requerido, mínimo 7 caracteres)
