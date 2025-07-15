@@ -11,6 +11,7 @@ import { editRole } from "./services/EditRoleService";
 import SearchRole from "./components/SearchRole";
 import { getRoles } from '../../../../shared/services/ModuleDataService';
 import { normalizeText } from '../../../../shared/normalizers.js';
+import Swal from 'sweetalert2';
 
 const itemsPerPage = 5;
 
@@ -45,10 +46,15 @@ const RolesPage = () => {
 
   // Función para mostrar mensajes de feedback
   const showMessage = (text, type = 'success') => {
-    setMessage({ text, type, show: true });
-    setTimeout(() => {
-      setMessage({ text: '', type: '', show: false });
-    }, 3000);
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: type === 'success' ? 'success' : 'error',
+      title: text,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+    });
   };
 
   // Filtrado de roles por búsqueda
@@ -101,9 +107,21 @@ const RolesPage = () => {
     // Aquí deberías hacer la llamada a tu API para obtener los datos de la página seleccionada
   };
 
+  // handleEditClick ahora pide confirmación
   const handleEditClick = (role) => {
-    setSelectedRole(role);
-    setIsEditModalOpen(true);
+    Swal.fire({
+      title: '¿Editar rol?',
+      text: '¿Deseas editar la información de este rol?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, editar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setSelectedRole(role);
+        setIsEditModalOpen(true);
+      }
+    });
   };
 
   const handleViewClick = (role) => {
@@ -111,9 +129,21 @@ const RolesPage = () => {
     setIsViewModalOpen(true);
   };
 
+  // handleDeleteClick ahora pide confirmación
   const handleDeleteClick = (role) => {
-    setSelectedRole(role);
-    setIsDeleteModalOpen(true);
+    Swal.fire({
+      title: '¿Eliminar rol?',
+      text: 'Esta acción eliminará el rol permanentemente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setSelectedRole(role);
+        setIsDeleteModalOpen(true);
+      }
+    });
   };
 
   const handleDeleteRole = async (roleId) => {
@@ -129,6 +159,7 @@ const RolesPage = () => {
     }
   };
 
+  // handleToggleStatus ahora solo cambia el estado, sin SweetAlert2
   const handleToggleStatus = async (roleId) => {
     try {
       // Simulación de cambio de estado
@@ -138,8 +169,8 @@ const RolesPage = () => {
           ? { ...role, estado: role.estado === 'Activo' ? 'Inactivo' : 'Activo' }
           : role
       ));
-      const updatedRole = roles.find(r => r.id === roleId);
-      const newStatus = updatedRole.estado === 'Activo' ? 'Inactivo' : 'Activo';
+      const role = roles.find(r => r.id === roleId);
+      const newStatus = role.estado === 'Activo' ? 'Inactivo' : 'Activo';
       showMessage(`Estado del rol cambiado a ${newStatus}`, 'success');
     } catch (error) {
       showMessage('Error al cambiar el estado del rol', 'error');
