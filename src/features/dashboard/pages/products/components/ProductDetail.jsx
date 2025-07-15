@@ -1,4 +1,4 @@
-import { useState } from "react";
+import PropTypes from "prop-types";
 
 const ProductDetail = ({ product, isOpen, onClose }) => {
   if (!isOpen || !product) return null;
@@ -51,12 +51,41 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
                     <span className="font-semibold text-gray-800 text-sm">{product.color}</span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Tipo de producto</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.tipoProducto || 'No especificado'}</span>
+                  </div>
+                  {/* Volumen solo si es Cuidado capilar */}
+                  {product.tipoProducto === 'Cuidado capilar' && (
+                    <div className="flex justify-between px-4 py-2">
+                      <span className="text-xs text-gray-500">Volumen (ml)</span>
+                      <span className="font-semibold text-gray-800 text-sm">{product.volumen ? `${product.volumen} ml` : 'No especificado'}</span>
+                    </div>
+                  )}
+                  {/* Textura solo si es Extensiones */}
+                  {product.tipoProducto === 'Extensiones' && (
+                    <div className="flex justify-between px-4 py-2">
+                      <span className="text-xs text-gray-500">Textura</span>
+                      <span className="font-semibold text-gray-800 text-sm">{product.textura || 'No especificado'}</span>
+                    </div>
+                  )}
+                  {/* Tipo de cabello ideal si existe */}
+                  {product.tipoCabelloIdeal && (
+                    <div className="flex justify-between px-4 py-2">
+                      <span className="text-xs text-gray-500">Tipo de cabello ideal</span>
+                      <span className="font-semibold text-gray-800 text-sm">{product.tipoCabelloIdeal}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between px-4 py-2">
+                    <span className="text-xs text-gray-500">Largo (mtr)</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.tamanio ? `${product.tamanio}m` : 'No especificado'}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Fecha de Registro</span>
                     <span className="font-semibold text-gray-800 text-sm">{product.fechaRegistro}</span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Precio</span>
-                    <span className="font-semibold text-gray-800 text-sm">${product.precio?.toFixed(2)} {product.cantidad}</span>
+                    <span className="font-semibold text-gray-800 text-sm">${product.precio?.toFixed(2)} </span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Cantidad en Stock</span>
@@ -79,6 +108,12 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
       </div>
     </div>
   );
+};
+
+ProductDetail.propTypes = {
+  product: PropTypes.object,
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default ProductDetail; 

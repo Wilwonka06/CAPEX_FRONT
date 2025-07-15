@@ -73,7 +73,15 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (Object.keys(errors).length === 0 && onEdit) onEdit(formData, privileges);
+    if (Object.keys(errors).length === 0 && onEdit) {
+      onEdit({
+        id: role.id,
+        name: formData.name,
+        description: formData.description,
+        estado: role.estado,
+        privileges: privileges
+      });
+    }
   };
 
   const handleClose = () => {

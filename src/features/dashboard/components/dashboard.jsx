@@ -2,6 +2,7 @@
 import React from 'react';
 
 const Dashboard = () => {
+  console.log("Dashboard montado");
   const stats = [
     {
       title: 'Total Usuarios',

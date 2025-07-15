@@ -83,13 +83,10 @@ const SeeEmployee = ({ employee, onClose }) => {
       {activeTab === 'programacion' && employee && Array.isArray(employee.schedulings) && employee.schedulings.length > 0 && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-2 text-text-main">Programaciones</h3>
-          {employee.schedulings.map((prog, idx) => (
-            <SeeScheduling
-              key={prog.id || idx}
-              scheduling={prog}
-              onClose={() => {}}
-            />
-          ))}
+          <SeeScheduling
+            schedulings={employee.schedulings}
+            onClose={onClose}
+          />
         </div>
       )}
     </div>
