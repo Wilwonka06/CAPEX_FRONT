@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import AddServices from './components/AddServices'
 import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../../../../shared/Paginator";
 import { initialCategories } from '../CatServices/CatServices';
 import SearchProduct from '../../../../shared/Search';
+import Swal from 'sweetalert2';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -71,14 +74,18 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) =>
 );
 
 const Services = () => {
-  const [services, setServices] = useState([
-    { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
-    { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
-    { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: false, description: 'Masaje corporal relajante', estado: 'Inactivo' },
-    { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
-    { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
-    { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: false, description: 'Tratamiento nutritivo para el cabello', estado: 'Inactivo' },
-  ]);
+  const [services, setServices] = useState(() => {
+    const stored = localStorage.getItem('services');
+    if (stored) return JSON.parse(stored);
+    return [
+      { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
+      { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
+      { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: false, description: 'Masaje corporal relajante', estado: 'Inactivo' },
+      { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
+      { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
+      { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: false, description: 'Tratamiento nutritivo para el cabello', estado: 'Inactivo' },
+    ];
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -86,6 +93,10 @@ const Services = () => {
   const [isSeeModalOpen, setIsSeeModalOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [categories, setCategories] = useState(initialCategories);
+
+  useEffect(() => {
+    localStorage.setItem('services', JSON.stringify(services));
+  }, [services]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -97,29 +108,86 @@ const Services = () => {
   };
 
   const toggleServiceStatus = (id) => {
-    setServices(
-      services.map((service) =>
-        service.id === id ? { ...service, active: !service.active, estado: service.active ? 'Inactivo' : 'Activo' } : service
-      )
-    );
+    const service = services.find(s => s.id === id);
+    const newStatus = service.active ? 'Inactivo' : 'Activo';
+    Swal.fire({
+      title: `¿Estás seguro de cambiar el estado a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setServices(
+          services.map((service) =>
+            service.id === id ? { ...service, active: !service.active, estado: newStatus } : service
+          )
+        );
+        toast.success(`Estado del servicio cambiado a ${newStatus}`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const handleAddService = (newService) => {
-    setServices([
-      ...services,
-      { ...newService, id: Date.now(), active: newService.estado === 'Activo' }
-    ]);
-    setIsAddModalOpen(false);
+    const mappedService = {
+      id: Date.now(),
+      name: newService.name,
+      category: newService.Categoria,
+      description: newService.Descripcion,
+      duration: newService.duracion + ' min',
+      price: '$' + newService.precio,
+      active: newService.estado === 'Activo',
+      estado: newService.estado,
+      imagen: newService.imagen
+    };
+    
+    setServices([...services, mappedService]);
+    // No cerrar el modal aquí, dejar que el componente hijo lo maneje
   };
 
   const handleEditService = (editedService) => {
-    setServices(
-      services.map((service) =>
-        service.id === editedService.id ? { ...editedService, active: editedService.estado === 'Activo' } : service
-      )
-    );
-    setIsEditModalOpen(false);
-    setSelectedService(null);
+    Swal.fire({
+      title: '¿Guardar cambios en el servicio?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const mappedService = {
+          id: editedService.id,
+          name: editedService.name,
+          category: editedService.Categoria,
+          description: editedService.Descripcion,
+          duration: editedService.duracion + ' min',
+          price: '$' + editedService.precio,
+          active: editedService.estado === 'Activo',
+          estado: editedService.estado,
+          imagen: editedService.imagen
+        };
+        setServices(
+          services.map((service) =>
+            service.id === editedService.id ? mappedService : service
+          )
+        );
+        setSelectedService(null);
+        toast.success('Servicio editado exitosamente!', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const handleSeeService = (service) => {
@@ -133,9 +201,25 @@ const Services = () => {
   };
 
   const handleDeleteService = (service) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`)) {
-      setServices(services.filter((s) => s.id !== service.id));
-    }
+    Swal.fire({
+      title: `¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setServices(services.filter((s) => s.id !== service.id));
+        toast.success(`Servicio eliminado exitosamente!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const filteredServices = services.filter(
@@ -208,9 +292,20 @@ const Services = () => {
         </div>
       </div>
       {/* Modales */}
-      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} />}
-      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} />}
+      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} services={services} />}
+      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} services={services} />}
       {isSeeModalOpen && selectedService && <SeeServices onClose={() => { setIsSeeModalOpen(false); setSelectedService(null); }} service={selectedService} />}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 }

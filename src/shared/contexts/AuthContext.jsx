@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 
 const AuthContext = createContext();
 
@@ -58,10 +59,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Función de logout
-  const logout = () => {
-    localStorage.removeItem('currentUser');
-    setCurrentUser(null);
-    window.location.href = '/login';
+  const logout = async () => {
+    const result = await Swal.fire({
+      title: '¿Deseas cerrar sesión?',
+      text: 'Tendrás que volver a iniciar sesión para acceder nuevamente.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar',
+    });
+    if (result.isConfirmed) {
+      localStorage.removeItem('currentUser');
+      setCurrentUser(null);
+      window.location.href = '/login';
+    }
   };
 
   // Función para verificar autenticación

@@ -14,7 +14,13 @@ const DetailServices = ({ service, onClose }) => {
       <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl relative border border-accent flex flex-col md:flex-row overflow-hidden">
         {/* Imagen del servicio */}
         <div className="md:w-1/2 w-full h-44 md:h-auto flex items-center justify-center relative bg-gray-100">
-          {service.img ? (
+          {(typeof service.imagen === 'string' && service.imagen.startsWith('data:image')) ? (
+            <img
+              src={service.imagen}
+              alt={service.name}
+              className="w-full h-full object-cover"
+            />
+          ) : service.img ? (
             <img
               src={service.img}
               alt={service.name}

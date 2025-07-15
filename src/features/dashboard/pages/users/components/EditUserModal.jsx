@@ -58,7 +58,11 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       case 'telefono':
         return isValidPhone(value) ? '' : 'Teléfono inválido';
       case 'documento':
-        if (!isValidNumber(value)) return 'Documento inválido';
+        if (form.tipoDocumento === 'Pasaporte') {
+          if (!/^[a-zA-Z0-9]{6,12}$/.test(value)) return 'Pasaporte inválido (6-12 caracteres alfanuméricos)';
+        } else {
+          if (!isValidNumber(value)) return 'Documento inválido';
+        }
         if (form.tipoDocumento && users.some(u => u.tipoDocumento === form.tipoDocumento && u.documento === value && u.id !== form.id)) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
       case 'tipoDocumento':

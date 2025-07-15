@@ -1,50 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import { validateCategoryForm, validateCategory, validateCategoryDescription } from "../../../../../shared/validations";
 
 const AddCatServices = ({ onClose, onAdd, existingCategories = [] }) => {
-    const [form, setForm] = useState({
+    const [formData, setFormData] = useState({
         Categoria: "",
         Descripcion: "",
         estado: "Activo"
     });
     const [errors, setErrors] = useState({});
 
-    // Función para normalizar texto (remover tildes)
-    const normalizeText = (text) => {
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    };
-
-    const validate = () => {
-        const newErrors = {};
-        
-        if (!form.Categoria.trim()) {
-            newErrors.Categoria = 'La categoría es obligatoria';
-        } else {
-            // Verificar si ya existe una categoría con el mismo nombre (ignorando mayúsculas y tildes)
-            const normalizedNewName = normalizeText(form.Categoria.trim());
-            const categoryExists = existingCategories.some(category => 
-                normalizeText(category.name) === normalizedNewName
-            );
-            
-            if (categoryExists) {
-                newErrors.Categoria = 'Ya existe una categoría con este nombre';
-            }
-        }
-        
-        if (!form.Descripcion.trim()) {
-            newErrors.Descripcion = 'La descripción es obligatoria';
-        }
-        
-        if (!form.estado) {
-            newErrors.estado = 'El estado es obligatorio';
-        }
-        
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
         
         // Limpiar error del campo cuando el usuario empiece a escribir
         if (errors[name]) {
@@ -52,14 +20,63 @@ const AddCatServices = ({ onClose, onAdd, existingCategories = [] }) => {
         }
     };
 
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        let error = '';
+        
+        switch (name) {
+            case 'Categoria':
+                const categoriaErrors = validateCategory(value, existingCategories);
+                error = categoriaErrors.categoria || '';
+                break;
+            case 'Descripcion':
+                const descripcionErrors = validateCategoryDescription(value);
+                error = descripcionErrors.descripcion || '';
+                break;
+            default:
+                break;
+        }
+        
+        if (error) {
+            setErrors(prev => ({ ...prev, [name]: error }));
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!validate()) return;
-        onAdd({
-            name: form.Categoria,
-            description: form.Descripcion,
-            estado: form.estado
-        });
+        
+        const formErrors = validateCategoryForm(formData, existingCategories);
+        setErrors(formErrors);
+        
+        if (Object.keys(formErrors).length === 0) {
+          const newCategory = {
+            id: Date.now().toString(),
+            name: formData.Categoria,
+            Descripcion: formData.Descripcion,
+            estado: formData.estado
+          };
+          
+          onAdd(newCategory);
+          setFormData({
+            Categoria: "",
+            Descripcion: "",
+            estado: "Activo"
+          });
+          setErrors({});
+          
+          // Mostrar alerta de éxito
+          toast.success('Categoría agregada exitosamente!', {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+          
+          // Cerrar el modal después de mostrar la alerta
+          onClose();
+        }
     };
 
     return (
@@ -84,8 +101,9 @@ const AddCatServices = ({ onClose, onAdd, existingCategories = [] }) => {
                             <input
                                 type="text"
                                 name="Categoria"
-                                value={form.Categoria}
+                                value={formData.Categoria}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
                                     errors.Categoria ? 'border-red-500' : 'border-gray-300'
                                 }`}
@@ -97,8 +115,9 @@ const AddCatServices = ({ onClose, onAdd, existingCategories = [] }) => {
                             <label className="block text-xs font-medium text-text-main mb-1">Descripción <span className='text-red-500'>*</span></label>
                             <textarea
                                 name="Descripcion"
-                                value={form.Descripcion}
+                                value={formData.Descripcion}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none ${
                                     errors.Descripcion ? 'border-red-500' : 'border-gray-300'
                                 }`}
@@ -111,7 +130,7 @@ const AddCatServices = ({ onClose, onAdd, existingCategories = [] }) => {
                             <label className="block text-xs font-medium text-text-main mb-1">Estado <span className='text-red-500'>*</span></label>
                             <select
                                 name="estado"
-                                value={form.estado}
+                                value={formData.estado}
                                 onChange={handleChange}
                                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm bg-gray-100 cursor-not-allowed ${
                                     errors.estado ? 'border-red-500' : 'border-gray-300'
