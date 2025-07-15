@@ -1,21 +1,27 @@
 import DetailServices from './components/DetailServices';
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Paginator from '../../../../shared/Paginator';
+
+const EMPLOYEES_KEY = 'capex_employees';
+const SERVICES_KEY = 'services';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return text.normalize('NFD').replace(/[ -\u036f]/g, '').toLowerCase();
 };
 
 const ServicesPage = () => {
-  const servicios = [
-    { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo', img: "https://media.istockphoto.com/id/1887700422/photo/hairdresser-creating-a-beautiful-finish-with-drying.jpg?b=1&s=612x612&w=0&k=20&c=iFoFnwfX4RjCHVdcYpZJLeyWjHB_mKdaXxZ7dFgqfoQ=" },
-    { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo', img: "https://media.istockphoto.com/id/1887700422/photo/hairdresser-creating-a-beautiful-finish-with-drying.jpg?b=1&s=612x612&w=0&k=20&c=iFoFnwfX4RjCHVdcYpZJLeyWjHB_mKdaXxZ7dFgqfoQ=" },
-    { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: false, description: 'Masaje corporal relajante', estado: 'Inactivo', img: "https://media.istockphoto.com/id/1887700422/photo/hairdresser-creating-a-beautiful-finish-with-drying.jpg?b=1&s=612x612&w=0&k=20&c=iFoFnwfX4RjCHVdcYpZJLeyWjHB_mKdaXxZ7dFgqfoQ=" },
-    { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo', img: "https://media.istockphoto.com/id/1887700422/photo/hairdresser-creating-a-beautiful-finish-with-drying.jpg?b=1&s=612x612&w=0&k=20&c=iFoFnwfX4RjCHVdcYpZJLeyWjHB_mKdaXxZ7dFgqfoQ=" },
-    { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo', img: "https://media.istockphoto.com/id/1887700422/photo/hairdresser-creating-a-beautiful-finish-with-drying.jpg?b=1&s=612x612&w=0&k=20&c=iFoFnwfX4RjCHVdcYpZJLeyWjHB_mKdaXxZ7dFgqfoQ=" },
-    { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: false, description: 'Tratamiento nutritivo para el cabello', estado: 'Inactivo', img: "https://media.istockphoto.com/id/1887700422/photo/hairdresser-creating-a-beautiful-finish-with-drying.jpg?b=1&s=612x612&w=0&k=20&c=iFoFnwfX4RjCHVdcYpZJLeyWjHB_mKdaXxZ7dFgqfoQ=" },
-  ];
+  // Cargar servicios desde localStorage
+  const [servicios, setServicios] = useState([]);
+  useEffect(() => {
+    const stored = localStorage.getItem('services');
+    if (stored) {
+      setServicios(JSON.parse(stored));
+    } else {
+      setServicios([]);
+    }
+  }, []);
+
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState(null);
@@ -63,8 +69,13 @@ const ServicesPage = () => {
             key={servicio.id}
             className="bg-white border border-background rounded-lg overflow-hidden shadow-md flex flex-col w-full h-[350px] gap-x-6"
           >
+            {console.log('Servicio:', servicio.name, 'Imagen:', servicio.imagen)}
             <img
-              src={servicio.img}
+              src={
+                servicio.imagen
+                  ? servicio.imagen
+                  : (servicio.img || 'https://via.placeholder.com/300x160?text=Sin+Imagen')
+              }
               alt={servicio.name}
               className="w-full h-[160px] object-cover"
             />

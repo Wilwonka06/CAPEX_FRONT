@@ -56,6 +56,7 @@ const Navbar = () => {
         setShowProfile(false);
         navigate('/login');
     }
+    }
 
     // Función para alternar el menú desplegable de productos
     const toggleProductsDropdown = () => {
@@ -73,7 +74,44 @@ const Navbar = () => {
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold shadow">
                             {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}
                         </span>
+        <nav>
+            <div className="hidden md:flex md:space-x-4 items-center relative" ref={profileRef}>
+                {/* Carrito */}
+                <Link to="/landing/cart" className="relative mr-2 group">
+                    <FaShoppingCart className="text-2xl text-primary group-hover:text-primary-dark transition" />
+                    {cart.length > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold shadow">
+                            {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}
+                        </span>
                     )}
+                </Link>
+                {currentUser ? (
+                    <>
+                        <button
+                            className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:ring-2 hover:ring-primary focus:outline-none"
+                            onClick={() => setShowProfile(v => !v)}
+                            title={currentUser.nombre}
+                        >
+                            {currentUser.foto || currentUser.avatar ? (
+                                <img src={currentUser.foto || currentUser.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
+                            ) : (
+                                <i className="bi bi-person text-2xl"></i>
+                            )}
+                        </button>
+                        {showProfile && (
+                            <ProfileMenu
+                                user={currentUser}
+                                onClose={() => setShowProfile(false)}
+                                onLogout={handleLogout}
+                                showOrdersOption={true}
+                            />
+                        )}
+                    </>
+                ) : (
+                    <Link to="/login" className="bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md hover:bg-primary">
+                        Iniciar Sesión
+                    </Link>
+                )}
                 </Link>
                 {currentUser ? (
                     <>
