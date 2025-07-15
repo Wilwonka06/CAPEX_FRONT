@@ -1,23 +1,20 @@
 import React, { useState } from 'react';
 import UserProfileModal from '../../../shared/components/UserProfileModal';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const AdminNavbar = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('currentUser')));
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleEdit = () => {
     setShowProfileModal(false);
     navigate('/dashboard/perfil');
   };
 
-  const handleLogout = () => {
-    setShowProfileModal(false);
-    localStorage.removeItem('currentUser');
-    window.dispatchEvent(new Event('user-auth-changed'));
-    navigate('/login');
-  };
+  // handleLogout ya no es necesario, usamos logout del contexto
 
   return (
     <nav className="bg-white border-b border-gray-100 px-8 py-3 flex items-center justify-end">
@@ -41,7 +38,7 @@ const AdminNavbar = () => {
           user={currentUser}
           onClose={() => setShowProfileModal(false)}
           onEdit={handleEdit}
-          onLogout={handleLogout}
+          onLogout={logout}
         />
       )}
     </nav>

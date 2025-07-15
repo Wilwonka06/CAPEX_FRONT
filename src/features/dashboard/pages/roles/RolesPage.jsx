@@ -8,6 +8,9 @@ import DeleteRole from "./components/DeleteRole";
 import Paginator from "./components/Paginator";
 import { createRole, updateRole, deleteRole, getRoles } from '../../../../shared/services/ModuleDataService';
 import SearchRole from "./components/SearchRole";
+import { getRoles } from '../../../../shared/services/ModuleDataService';
+import { normalizeText } from '../../../../shared/normalizers.js';
+
 
 const itemsPerPage = 5;
 
@@ -49,12 +52,35 @@ const RolesPage = () => {
   };
 
   // Filtrado de roles por búsqueda
-  const filteredRoles = roles.filter(
-    (role) =>
-      role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      role.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (role.estado === 'Activo' ? 'activo' : 'inactivo').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRoles = roles.filter((role) => {
+    const term = normalizeText(searchTerm);
+    if (!term) return true; // Si no hay término, mostrar todos
+    const idMatch = normalizeText(role.id).includes(term);
+    const nameMatch = normalizeText(role.name).includes(term);
+    const descMatch = normalizeText(role.description).includes(term);
+    const estado = normalizeText(role.estado);
+
+    // Si el usuario busca explícitamente 'activo' (parcial o completo), solo mostrar activos
+    if (/^act/i.test(term)) {
+      return estado.startsWith('activo');
+    }
+    // Si el usuario busca explícitamente 'inactivo' (parcial o completo), solo mostrar inactivos
+    if (/^inac/i.test(term)) {
+      return estado.startsWith('inactivo');
+    }
+    // Si el usuario busca 'no activo', mostrar inactivos
+    if (term.includes('no activo')) {
+      return estado === 'inactivo';
+    }
+    // Si el usuario busca 'no inactivo', mostrar activos
+    if (term.includes('no inactivo')) {
+      return estado === 'activo';
+    }
+
+    // Búsqueda general
+    const estadoMatch = estado.includes(term);
+    return idMatch || nameMatch || descMatch || estadoMatch;
+  });
 
   // Cálculo de paginación basado en roles filtrados
   const totalPages = Math.max(1, Math.ceil(filteredRoles.length / itemsPerPage));
@@ -176,7 +202,7 @@ const RolesPage = () => {
               <SearchRole searchTerm={searchTerm} handleSearch={handleSearch} />
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                className="bg-black hover:bg-gray-800 text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
               >
                 <i className="bi bi-plus-circle mr-2"></i>
                 Nuevo Rol

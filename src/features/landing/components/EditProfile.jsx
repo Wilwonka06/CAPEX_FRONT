@@ -44,6 +44,18 @@ const EditProfile = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    // Validar documento según tipo
+    if (form.tipoDocumento === 'Pasaporte') {
+      if (!/^[a-zA-Z0-9]{6,12}$/.test(form.documento)) {
+        setError('Pasaporte inválido (6-12 caracteres alfanuméricos)');
+        return;
+      }
+    } else {
+      if (!/^[0-9]{1,12}$/.test(form.documento)) {
+        setError('Documento inválido (máx 12 dígitos, solo números)');
+        return;
+      }
+    }
     if (form.password || form.confirmPassword) {
       if (!isValidPassword(form.password)) {
         setError('La contraseña no es válida.');

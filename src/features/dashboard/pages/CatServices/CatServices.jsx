@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import AddCatServices from './components/AddCatServices';
 import EditCatServices from './components/EditCatServices';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
+import Swal from 'sweetalert2';
 
 // --- Componentes Locales ---
 
@@ -35,18 +38,15 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onSee }) 
         {categories.map((category) => (
           <tr key={category.id} className="border-b border-gray-200 hover:bg-gray-50">
             <td className="py-3 px-4 font-medium">{category.name}</td>
-            <td className="py-3 px-4 text-text-main/80">{category.description}</td>
+            <td className="py-3 px-4 text-text-main/80">{category.Descripcion || category.description}</td>
             <td className="py-3 px-4">
               <StatusToggle 
-                isActive={category.isActive} 
+                isActive={category.isActive || category.estado === 'Activo'} 
                 onToggle={() => onToggleStatus(category.id)}
               />
             </td>
             <td className="py-4 px-4 text-sm font-medium text-right">
               <div className="flex justify-end items-center gap-2">
-                <button onClick={() => onSee && onSee(category)} title="Ver" className="bg-transparent p-0 m-0 border-none focus:outline-none">
-                  <i className="bi bi-eye text-xl" style={{ color: '#b8864b' }}></i>
-                </button>
                 <button onClick={() => onEdit(category)} title="Editar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
                   <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
                 </button>
@@ -95,29 +95,76 @@ const CatServices = () => {
   };
 
   const toggleCategoryStatus = (id) => {
-    setCategories(
-      categories.map((cat) =>
-        cat.id === id ? { ...cat, isActive: !cat.isActive } : cat
-      )
-    );
+    const category = categories.find(cat => cat.id === id);
+    const newStatus = category.isActive ? 'Inactivo' : 'Activo';
+    Swal.fire({
+      title: `¿Estás seguro de cambiar el estado a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setCategories(
+          categories.map((cat) =>
+            cat.id === id ? { ...cat, isActive: !cat.isActive } : cat
+          )
+        );
+        toast.success(`Estado de la categoría cambiado a ${newStatus}`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const handleAddCategory = (newCategory) => {
     setCategories([
       ...categories,
-      { ...newCategory, id: Date.now(), isActive: newCategory.estado === 'Activo' }
+      { 
+        ...newCategory, 
+        id: Date.now(), 
+        isActive: newCategory.estado === 'Activo',
+        description: newCategory.Descripcion // Mantener compatibilidad
+      }
     ]);
-    setIsAddModalOpen(false);
+    // No cerrar el modal aquí, dejar que el componente hijo lo maneje
   };
 
   const handleEditCategory = (editedCategory) => {
-    setCategories(
-      categories.map((cat) =>
-        cat.id === editedCategory.id ? { ...editedCategory, isActive: editedCategory.estado === 'Activo' } : cat
-      )
-    );
-    setIsEditModalOpen(false);
-    setSelectedCategory(null);
+    Swal.fire({
+      title: '¿Guardar cambios en la categoría?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setCategories(
+          categories.map((cat) =>
+            cat.id === editedCategory.id ? { 
+              ...editedCategory, 
+              isActive: editedCategory.estado === 'Activo',
+              description: editedCategory.Descripcion // Mantener compatibilidad
+            } : cat
+          )
+        );
+        setIsEditModalOpen(false);
+        setSelectedCategory(null);
+        toast.success('Categoría editada exitosamente!', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const handleEditClick = (category) => {
@@ -126,16 +173,32 @@ const CatServices = () => {
   };
 
   const handleDeleteCategory = (category) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar la categoría "${category.name}"?`)) {
-      setCategories(categories.filter((cat) => cat.id !== category.id));
-    }
+    Swal.fire({
+      title: `¿Estás seguro de que deseas eliminar la categoría "${category.name}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setCategories(categories.filter((cat) => cat.id !== category.id));
+        toast.success(`Categoría eliminada exitosamente!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    });
   };
 
   const filteredCategories = categories.filter(
     (cat) =>
       normalizeText(cat.name).includes(normalizeText(searchTerm)) ||
-      normalizeText(cat.description).includes(normalizeText(searchTerm)) ||
-      (cat.isActive ? 'Activo' : 'Inactivo').includes(searchTerm)
+      normalizeText(cat.Descripcion || cat.description || '').includes(normalizeText(searchTerm)) ||
+      normalizeText(cat.estado || (cat.isActive ? 'Activo' : 'Inactivo')).includes(normalizeText(searchTerm))
   );
 
   const itemsPerPage = 3;
@@ -199,6 +262,17 @@ const CatServices = () => {
       {/* Modales */}
       {isAddModalOpen && <AddCatServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddCategory} existingCategories={categories} />}
       {isEditModalOpen && selectedCategory && <EditCatServices onClose={() => { setIsEditModalOpen(false); setSelectedCategory(null); }} category={selectedCategory} onEdit={handleEditCategory} existingCategories={categories} />}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
     </div>
   );
 };

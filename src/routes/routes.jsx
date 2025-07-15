@@ -11,8 +11,13 @@ import Landing from '../features/landing/Landing';
 // Pages Dashboard
 import CategoriasProductos from '../features/dashboard/pages/CatProducts/CatProducts';
 import CategoriasServicios from '../features/dashboard/pages/CatServices/CatServices';
+
 import Appointments from '../features/dashboard/pages/appointments/Appointments';
-import Clientes from '../features/dashboard/pages/Customers/Customer';
+
+
+import Citas from '../features/dashboard/pages/Quotes/Quotes';
+import Clientes from '../features/dashboard/pages/customers/Customer';
+
 import Compras from '../features/dashboard/pages/Shopping/Shopping';
 import Dashboard from '../features/dashboard/components/Dashboard';
 import Empleados from '../features/dashboard/pages/employees/Employees';  
@@ -32,10 +37,8 @@ import CuidadoCapilar from '../features/landing/pages/products/pages/CuidadoCapi
 import Extensiones from '../features/landing/pages/products/pages/Extensiones';
 import Home from '../features/landing/components/Home';
 import Orders from '../features/landing/pages/orders/Orders';
-import Products from '../features/landing/pages/products/Products';
 import ClientAppointments from '../features/landing/pages/ClientAppointments/ClientAppointments';
 import ProductDetailPageCliente from '../features/landing/pages/products/pages/ProductDetailPageCliente';
-import Quotes from '../features/landing/pages/quotes/Quotes';
 import ServicesPage from '../features/landing/pages/ServicesPage/ServicesPage';
 import Checkout from '../features/landing/pages/checkout/Checkout';
 import ThankYou from '../features/landing/pages/checkout/ThankYou';
@@ -239,10 +242,6 @@ const router = createBrowserRouter([
             element: <Orders />
           },
           {
-            path: 'productos',
-            element: <Products />
-          },
-          {
             path: 'productos/:id',
             element: <ProductDetailPageCliente />
           },
@@ -270,10 +269,7 @@ const router = createBrowserRouter([
             path: 'extensiones',
             element: <Extensiones />
           },
-          {
-            path: 'quotes',
-            element: <Quotes />
-          }
+         
         ]
       },
       // Redirección para compatibilidad
