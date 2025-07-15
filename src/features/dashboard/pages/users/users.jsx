@@ -148,8 +148,17 @@ const Users = () => {
     toast.success('Usuario editado correctamente', { position: 'top-right' });
   };
   const handleDeleteUser = (userId) => {
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    toast.info('Usuario eliminado', { position: 'top-right' });
+    const userToDelete = users.find(u => u.id === userId);
+    if (userToDelete) {
+      const confirmDelete = window.confirm(
+        `¿Estás seguro de que quieres eliminar al usuario "${userToDelete.nombre}"?\n\nEsta acción no se puede deshacer.`
+      );
+      
+      if (confirmDelete) {
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        toast.success('Usuario eliminado correctamente', { position: 'top-right' });
+      }
+    }
   };
 
   // Abrir modales
