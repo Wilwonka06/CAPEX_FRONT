@@ -42,7 +42,7 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   }, [isOpen]);
 
   useEffect(() => {
-    setErrors(validateRole(formData, privileges, roles));
+    setErrors(validateRole(formData, privileges, roles).errors);
   }, [formData, privileges, roles]);
 
   const handleChange = (e) => {
@@ -78,7 +78,7 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
       privilegios: true
       // agrega aquí cualquier otro campo que quieras validar
     });
-    const validationErrors = validateRole(formData, privileges, roles);
+    const validationErrors = validateRole(formData, privileges, roles).errors;
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length === 0 && onCreate) {
       onCreate(formData, privileges);

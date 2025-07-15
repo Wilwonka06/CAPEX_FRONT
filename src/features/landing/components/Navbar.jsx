@@ -32,6 +32,7 @@ const Navbar = () => {
             window.removeEventListener('storage', handleUserChange);
         };
     }, []);
+    
     // Cerrar el menú de perfil al hacer clic fuera
     useEffect(() => {
         if (!showProfile) return;
@@ -54,7 +55,12 @@ const Navbar = () => {
         window.dispatchEvent(new Event('user-auth-changed'));
         setShowProfile(false);
         navigate('/login');
-    }
+    };
+
+    // Función para alternar el menú desplegable de productos
+    const toggleProductsDropdown = () => {
+        setIsProductsDropdownOpen(!isProductsDropdownOpen);
+    };
 
     return (
         <nav className="bg-background p-2 shadow-lg">

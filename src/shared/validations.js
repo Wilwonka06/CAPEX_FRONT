@@ -688,6 +688,10 @@ export function isValidCustomerName(name) {
   return name && name.trim().length >= 2;
 }
 
+export function isValidPassword(password) {
+  return typeof password === 'string' && password.length >= 6;
+}
+
 // Valida teléfono de cliente (requerido, mínimo 7 caracteres)
 export function isValidCustomerPhone(phone) {
   // Ya que en el formulario se usa isNumeric, esta validación se enfoca en la longitud y si es requerido.
@@ -709,10 +713,15 @@ export function isNumeric(value) {
 }
 
 // ===== VALIDACIONES DE CONTRASEÑA (para clientes) =====
-export function isValidPassword(password) {
-  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
-  return regex.test(password);
+// export function isValidPassword(password) {
+//   // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
+//   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+//   return regex.test(password);
+// }
+
+// Valida si dos contraseñas coinciden
+export function isPasswordMatch(password, confirmPassword) {
+  return password === confirmPassword;
 }
 
 // Validación completa de cliente
@@ -837,4 +846,9 @@ export function validateServiceOrder(orderData, orders = [], totalGeneral = 0, s
     isValid: Object.keys(errors).length === 0,
     errors
   };
+}
+
+// Valida que el nombre tenga al menos 2 caracteres y no sea solo espacios
+export function isValidName(name) {
+  return name && name.trim().length >= 2;
 }

@@ -79,7 +79,6 @@ const router = createBrowserRouter([
     path: "/dashboard/perfil",
     element: <EditProfilePage />,
   },
-
   // Rutas protegidas
   {
     element: <RequireAuth />,
@@ -88,7 +87,6 @@ const router = createBrowserRouter([
         path: "/",
         element: <Navigate to="/dashboard" replace />,
       },
-      // Dashboard con rutas protegidas por privilegios
       {
         path: "/dashboard",
         element: <Layout />,

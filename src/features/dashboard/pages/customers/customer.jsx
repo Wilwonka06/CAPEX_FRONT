@@ -9,6 +9,7 @@ import { editCustomer } from "./services/EditCustomerService.js";
 import SearchCustomer from "./components/SearchCustomer.jsx";
 import Paginator from "./components/Paginator.jsx";
 import { normalizeText } from '../../../../shared/normalizers.js';
+import Swal from 'sweetalert2';
 
 const initialCustomers = [
   {
@@ -89,10 +90,15 @@ const CustomersPage = () => {
 
   // Función para mostrar mensajes de feedback
   const showMessage = (text, type = 'success') => {
-    setMessage({ text, type, show: true });
-    setTimeout(() => {
-      setMessage({ text: '', type: '', show: false });
-    }, 3000);
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: type === 'success' ? 'success' : 'error',
+      title: text,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+    });
   };
 
   // Filtrado de clientes por búsqueda
@@ -161,9 +167,21 @@ const CustomersPage = () => {
     setCurrentPage(page);
   };
 
+  // handleEditClick ahora solo usa SweetAlert2
   const handleEditClick = (customer) => {
-    setSelectedCustomer(customer);
-    setIsEditModalOpen(true);
+    Swal.fire({
+      title: '¿Editar cliente?',
+      text: '¿Deseas editar la información de este cliente?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, editar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setSelectedCustomer(customer);
+        setIsEditModalOpen(true);
+      }
+    });
   };
 
   const handleViewClick = (customer) => {
@@ -171,9 +189,21 @@ const CustomersPage = () => {
     setIsViewModalOpen(true);
   };
 
+  // handleDeleteClick ahora solo usa SweetAlert2
   const handleDeleteClick = (customer) => {
-    setSelectedCustomer(customer);
-    setIsDeleteModalOpen(true);
+    Swal.fire({
+      title: '¿Eliminar cliente?',
+      text: 'Esta acción eliminará el cliente permanentemente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Ejecutar eliminación directamente
+        handleDeleteCustomer(customer.id);
+      }
+    });
   };
 
   const handleDeleteCustomer = async (customerId) => {
@@ -189,6 +219,7 @@ const CustomersPage = () => {
     }
   };
 
+  // handleToggleStatus ahora solo cambia el estado, sin SweetAlert2
   const handleToggleStatus = async (customerId) => {
     try {
       // Simulación de cambio de estado
@@ -198,8 +229,8 @@ const CustomersPage = () => {
           ? { ...customer, status: customer.status === 'Activo' ? 'Inactivo' : 'Activo' }
           : customer
       ));
-      const updatedCustomer = customers.find(c => c.id === customerId);
-      const newStatus = updatedCustomer.status === 'Activo' ? 'Inactivo' : 'Activo';
+      const customer = customers.find(c => c.id === customerId);
+      const newStatus = customer.status === 'Activo' ? 'Inactivo' : 'Activo';
       showMessage(`Estado del cliente cambiado a ${newStatus}`, 'success');
     } catch (error) {
       showMessage('Error al cambiar el estado del cliente', 'error');

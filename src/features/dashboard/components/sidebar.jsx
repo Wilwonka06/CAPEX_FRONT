@@ -1,4 +1,5 @@
 // components/Sidebar.jsx
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -13,33 +14,38 @@ const Sidebar = () => {
     sales: true
   });
   const [isLocked, setIsLocked] = useState(true);
+  const [loadingData] = useState(false); // Añadido para evitar error
   const location = useLocation();
 
   // Función para verificar si el usuario tiene permisos para un módulo
   const hasPermission = (module, action = 'Visualizar') => {
+    // Esto es una simulación. En un caso real, deberías cargar los permisos del usuario logueado.
     const user = JSON.parse(localStorage.getItem('currentUser'));
-    if (!user || !user.privileges) return false;
+    if (!user || !user.privileges) {
+      // Si no hay usuario o privilegios, por defecto no tiene permiso para nada excepto Dashboard
+      if (module === 'Dashboard') return true; // Dashboard es siempre visible
+      return false;
+    }
+    // Verificar si el módulo existe y si la acción específica es true
     return user.privileges[module] && user.privileges[module][action];
   };
 
   // Función para filtrar los menús según los permisos del usuario
   const getFilteredMenuGroups = () => {
-    const user = JSON.parse(localStorage.getItem('currentUser'));
-    if (!user) return [];
-
+    // Define TODOS los grupos y sus ítems con su 'module' asociado
     const allMenuGroups = [
       {
         id: 'main',
         name: 'Dashboard',
         icon: 'bi-speedometer2',
-        path: '/dashboard',
-        module: 'Dashboard'
+        path: '/dashboard', // Asegura la consistencia con las rutas de Dashboard
+        module: 'Dashboard' // Módulo asociado para permisos
       },
       {
         id: 'config',
         title: 'Configuración',
         icon: 'bi-gear-fill',
-        module: 'Gestión de Usuarios',
+        module: 'Gestión de Usuarios', // O un módulo específico para configuración si lo tienes
         items: [
           { name: 'Roles', icon: 'bi-shield-check', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
         ]
@@ -92,112 +98,112 @@ const Sidebar = () => {
       }
     ];
 
-    // Filtrar grupos según permisos
+    // Filtrar grupos y sus ítems si el usuario no tiene privilegios de Admin
     return allMenuGroups.filter(group => {
-      // Si el grupo tiene items, verificar que al menos uno tenga permisos
+      // Si el grupo es Dashboard, siempre es visible
+      if (group.id === 'main') return true;
+
+      // Si el grupo tiene sub-items, verificar si al menos uno de sus items tiene permisos
       if (group.items) {
-        const hasAnyPermission = group.items.some(item => hasPermission(item.module));
-        return hasAnyPermission;
+        const hasAnyItemPermission = group.items.some(item => hasPermission(item.module, 'Visualizar'));
+        return hasAnyItemPermission;
       }
-      // Si es un grupo simple, verificar permisos directamente
-      return hasPermission(group.module);
+      // Si es un grupo sin sub-items (como Dashboard, pero ya lo manejamos), verificar permisos directos
+      return hasPermission(group.module, 'Visualizar');
     }).map(group => {
-      // Si el grupo tiene items, filtrar solo los que tienen permisos
+      // Si el grupo tiene items, filtrar solo los que tienen permisos de Visualizar
       if (group.items) {
         return {
           ...group,
-          items: group.items.filter(item => hasPermission(item.module))
+          items: group.items.filter(item => hasPermission(item.module, 'Visualizar'))
         };
       }
       return group;
     });
   };
 
-  const menuGroups = getFilteredMenuGroups();
+  // Usar memoización o useCallback si getFilteredMenuGroups es costoso
+  const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, localStorage.getItem('currentUser')]); // Re-calcular si la ubicación o el usuario cambian
 
   const handleMouseEnter = () => {
-    if (!isLocked && !isExpanded) {
+    if (!isLocked && !isExpanded) { // Solo expandir si no está bloqueado y no está ya expandido
       setIsExpanded(true);
     }
   };
 
   const handleMouseLeave = () => {
-    if (!isLocked && isExpanded) {
+    if (!isLocked && isExpanded) { // Solo contraer si no está bloqueado y está expandido
       setIsExpanded(false);
+      // Colapsar todos los grupos si el sidebar se contrae automáticamente
       setExpandedGroups({});
     }
   };
 
   const toggleLock = () => {
     setIsLocked(!isLocked);
-    if (!isLocked) {
+    if (isLocked) { // Si se va a desbloquear, contraer si no está expandido por hover
       setIsExpanded(false);
+      setExpandedGroups({}); // Colapsar todos los grupos al desbloquear
+    } else { // Si se va a bloquear, expandir para mostrar el contenido
+      setIsExpanded(true);
     }
   };
 
+  // Función para encontrar el ID del grupo padre de una ruta
   const getGroupIdByPath = (pathname) => {
     for (const group of menuGroups) {
+      if (group.path === pathname) return group.id; // Si es un link directo
       if (group.items) {
         for (const item of group.items) {
           if (item.path === pathname) return group.id;
         }
-      } else if (group.path === pathname) {
-        return group.id;
       }
     }
     return null;
   };
 
-  useEffect(() => {
-    // Al cargar, abrir solo el grupo correspondiente a la ruta actual
-    const currentGroup = getGroupIdByPath(location.pathname);
-    setExpandedGroups(currentGroup ? { [currentGroup]: true } : {});
-  }, [location.pathname]);
-
-  // Mantener la categoría abierta si una opción está seleccionada
+  // Efecto para expandir el grupo de la ruta actual al cargar o cambiar de ruta
   useEffect(() => {
     const currentGroup = getGroupIdByPath(location.pathname);
     if (currentGroup) {
-      setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
-    }
-  }, [location.pathname]);
-
-  // Guardar el grupo abierto al cerrar el sidebar
-  useEffect(() => {
-    if (!isExpanded && isLocked) {
-      // Guardar en localStorage el grupo abierto
-      const openGroup = Object.keys(expandedGroups).find(k => expandedGroups[k]);
-      if (openGroup) {
-        localStorage.setItem('sidebarOpenGroup', openGroup);
+      // Solo expandir si no está ya bloqueado y se permite la expansión automática
+      // O si está bloqueado y queremos que siempre muestre el grupo activo
+      if (isLocked || isExpanded) { // Si está bloqueado o expandido por hover, mantener/abrir grupo activo
+         setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
       }
     }
-  }, [isExpanded, isLocked, expandedGroups]);
+  }, [location.pathname, isLocked, isExpanded]); // Depende de location, isLocked, isExpanded
 
-  // Al abrir el sidebar, restaurar el grupo abierto
-  useEffect(() => {
-    if ((isExpanded || isLocked) && Object.keys(expandedGroups).length === 0) {
-      const lastOpen = localStorage.getItem('sidebarOpenGroup');
-      if (lastOpen) {
-        setExpandedGroups({ [lastOpen]: true });
-      }
-    }
-  }, [isExpanded, isLocked]);
-
+  // Manejar el estado de expansión de grupos
   const toggleGroup = (groupId) => {
+    // Solo permitir el toggle si el sidebar está expandido (por hover o bloqueo)
     if (isExpanded || isLocked) {
       setExpandedGroups(prev => {
-        // Si ya está abierto, ciérralo; si no, abre solo ese
-        if (prev[groupId]) {
-          return { ...prev, [groupId]: false };
-        } else {
-          return { [groupId]: true };
+        // Si el grupo ya está abierto, lo cierra. Si no, lo abre y cierra los demás.
+        const newState = {};
+        if (!prev[groupId]) { // Si no estaba abierto, ábrelo
+          newState[groupId] = true;
         }
+        return newState;
       });
     }
   };
 
+
   const isActiveRoute = (path) => {
+    // Ajustar para que si la ruta es '/' y el sidebar no está expandido/bloqueado, no se marque
+    // Esto es para que el icono del dashboard no se vea "activo" cuando el sidebar está minimizado
+    // y no hay una ruta activa específica dentro de él.
+    if (path === '/dashboard' && location.pathname === '/') return true; // Dashboard es el index del layout
     return location.pathname === path;
+  };
+
+  // Función de Logout ( Placeholder )
+  const handleLogout = () => {
+    // Aquí puedes limpiar localStorage, redirigir al login, etc.
+    localStorage.removeItem('currentUser'); // Eliminar información del usuario
+    // Redirigir al login o a la página principal
+    window.location.href = '/'; // O usar useNavigate() si está disponible
   };
 
   return (
@@ -212,11 +218,12 @@ const Sidebar = () => {
       <div className="p-4 border-b border-accent/50 flex items-center justify-between">
         <div className="flex items-center">
           {(isExpanded || isLocked) ? (
-            <span className="ml-3 font-semibold text-white text-3xl whitespace-nowrap">
+            <span className="ml-3 font-semibold text-background text-3xl whitespace-nowrap">
               CAP<span className='text-yellow-700'>EX</span>
             </span>
           ) : (
-            <span className=" font-bold text-white text-3xl bg-yellow-700 rounded-full w-10 h-10 flex items-center justify-center">
+            // Icono más pequeño para el estado colapsado
+            <span className="font-bold text-white text-3xl bg-yellow-700 rounded-full w-10 h-10 flex items-center justify-center">
               C
             </span>
           )}
@@ -225,9 +232,9 @@ const Sidebar = () => {
           <button
             onClick={toggleLock}
             className={`p-1 rounded transition-colors ${
-              isLocked 
-                ? 'text-white/80 hover:text-white' 
-                : 'text-white/80 hover:text-white'
+              isLocked
+                ? 'text-background/80 hover:text-background'
+                : 'text-background/80 hover:text-background'
             }`}
             title={isLocked ? 'Desbloquear sidebar' : 'Bloquear sidebar'}
           >
@@ -245,79 +252,95 @@ const Sidebar = () => {
           WebkitScrollbar: { display: 'none' }
         }}
       >
-        {menuGroups.map((group) => (
-          <div key={group.id} className="mb-2">
-            {/* Group Header - Solo mostrar si tiene items o si es un link directo */}
-            {group.items ? (
-              <div
-                className={`flex items-center px-4 py-2 text-white/80 hover:bg-white/10 hover:text-white rounded-lg cursor-pointer transition-colors ${
-                  (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
-                }`}
-                onClick={() => toggleGroup(group.id)}
-              >
-                <div className="flex items-center">
-                  <i className={`${group.icon} text-lg`}></i>
-                  {(isExpanded || isLocked) && (
-                    <span className="ml-3 text-sm font-medium whitespace-nowrap">
-                      {group.title}
-                    </span>
-                  )}
-                </div>
-                {(isExpanded || isLocked) && (
-                  <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
-                )}
-              </div>
-            ) : (
-              // Para elementos sin subcategorías, mostrar directamente como link
-              <Link
-                to={group.path}
-                className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
-                  (isExpanded || isLocked) ? '' : 'justify-center'
-                } ${
-                  isActiveRoute(group.path)
-                    ? 'bg-white/20 text-white rounded-xl'
-                    : 'text-white/90 hover:bg-white/10 hover:text-white rounded-xl'
-                }`}
-                title={!(isExpanded || isLocked) ? group.name : ''}
-              >
-                <i className={`${group.icon} text-base`}></i>
-                {(isExpanded || isLocked) && (
-                  <span className="ml-3 text-xs whitespace-nowrap ">
-                    {group.name}
-                  </span>
-                )}
-              </Link>
-            )}
-
-            {/* Group Items - Solo mostrar si el grupo tiene items */}
-            {group.items && (expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
-              <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
-                {Array.isArray(group.items) && group.items.map((item, index) => (
-                  <Link
-                    key={index}
-                    to={item.path}
-                    className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
-                      (isExpanded || isLocked) ? '' : 'justify-center'
-                    } ${
-                      isActiveRoute(item.path)
-                        ? 'bg-white/20 text-white rounded-xl '
-                        : 'text-white/90 hover:bg-white/10 hover:text-white rounded-xl'
-                    }`}
-                    title={!(isExpanded || isLocked) ? item.name : ''}
-                  >
-                    <i className={`${item.icon} text-base`}></i>
+        {loadingData ? (
+          <div className="text-white/70 text-center py-4">Cargando menú...</div>
+        ) : (
+          menuGroups.map((group) => (
+            <div key={group.id} className="mb-2">
+              {/* Group Header o Link directo */}
+              {group.items ? (
+                <div
+                  className={`flex items-center px-4 py-2 text-background/80 hover:bg-background/10 hover:text-background rounded-lg cursor-pointer transition-colors ${
+                    (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
+                  }`}
+                  onClick={() => toggleGroup(group.id)}
+                >
+                  <div className="flex items-center">
+                    <i className={`${group.icon} text-lg`}></i>
                     {(isExpanded || isLocked) && (
-                      <span className="ml-3 text-sm whitespace-nowrap">
-                        {item.name}
+                      <span className="ml-3 text-sm font-medium whitespace-nowrap">
+                        {group.title}
                       </span>
                     )}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+                  </div>
+                  {(isExpanded || isLocked) && group.items.length > 0 && ( // Solo mostrar chevron si hay items para expandir/contraer
+                    <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
+                  )}
+                </div>
+              ) : (
+                // Para elementos sin subcategorías, mostrar directamente como link
+                <Link
+                  to={group.path}
+                  className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                    (isExpanded || isLocked) ? '' : 'justify-center'
+                  } ${
+                    isActiveRoute(group.path)
+                      ? 'bg-background/20 text-background rounded-xl'
+                      : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
+                  }`}
+                  title={!(isExpanded || isLocked) ? group.name : ''}
+                >
+                  <i className={`${group.icon} text-base`}></i>
+                  {(isExpanded || isLocked) && (
+                    <span className="ml-3 text-sm whitespace-nowrap ">
+                      {group.name}
+                    </span>
+                  )}
+                </Link>
+              )}
+
+              {/* Group Items - Solo mostrar si el grupo tiene items Y está expandido (o si el sidebar está minimizado y debe mostrar iconos) */}
+              {group.items && (expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
+                <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
+                  {Array.isArray(group.items) && group.items.map((item, index) => (
+                    // Asegurarse de que el ítem tenga permiso para ser mostrado
+                    hasPermission(item.module, 'Visualizar') && (
+                      <Link
+                        key={index}
+                        to={item.path}
+                        className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                          (isExpanded || isLocked) ? '' : 'justify-center'
+                        } ${
+                          isActiveRoute(item.path)
+                            ? 'bg-background/20 text-background rounded-xl '
+                            : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
+                        }`}
+                        title={!(isExpanded || isLocked) ? item.name : ''}
+                      >
+                        <i className={`${item.icon} text-base`}></i>
+                        {(isExpanded || isLocked) && (
+                          <span className="ml-3 text-sm whitespace-nowrap">
+                            {item.name}
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </nav>
+
+      {/* Footer fijo */}
+      <div className="p-4 border-t border-accent/50 flex items-center justify-center">
+        <button className="w-full text-background py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors hover:bg-background/10"
+                onClick={handleLogout}>
+          <i className="bi bi-box-arrow-right text-base"></i>
+          {(isExpanded || isLocked) && <span>Cerrar sesión</span>}
+        </button>
+      </div>
     </div>
   );
 };
