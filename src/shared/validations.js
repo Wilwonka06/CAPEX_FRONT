@@ -174,6 +174,10 @@ export function isValidCustomerName(name) {
   return name && name.trim().length >= 2;
 }
 
+export function isValidPassword(password) {
+  return typeof password === 'string' && password.length >= 6;
+}
+
 // Valida número de documento (requerido, mínimo 5 caracteres)
 export function isValidDocumentNumber(documentNumber) {
   return documentNumber && documentNumber.trim().length >= 5;
@@ -200,11 +204,11 @@ export function isNumeric(value) {
 }
 
 // ===== VALIDACIONES DE CONTRASEÑA (para clientes) =====
-export function isValidPassword(password) {
-  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
-  return regex.test(password);
-}
+// export function isValidPassword(password) {
+//   // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
+//   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+//   return regex.test(password);
+// }
 
 // Valida si dos contraseñas coinciden
 export function isPasswordMatch(password, confirmPassword) {

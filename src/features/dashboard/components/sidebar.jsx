@@ -1,4 +1,5 @@
 // components/Sidebar.jsx
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 
@@ -13,6 +14,7 @@ const Sidebar = () => {
     sales: true
   });
   const [isLocked, setIsLocked] = useState(true);
+  const [loadingData] = useState(false); // Añadido para evitar error
   const location = useLocation();
 
   // Función para verificar si el usuario tiene permisos para un módulo

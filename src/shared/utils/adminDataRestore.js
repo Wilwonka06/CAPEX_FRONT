@@ -59,7 +59,7 @@ export const restoreAdminData = () => {
       id: Date.now(), // Usar timestamp para evitar conflictos de ID
       nombre: 'Administrador',
       correo: 'admin@admin.com',
-      password: 'admin123',
+      password: 'Admin123!', // Cambiado para cumplir validación
       rol: 'Administrador',
       estado: 'Activo',
       isAdmin: true,
