@@ -48,19 +48,12 @@ const Scheduling = () => {
   };
 
   // Filtrar empleados basado en el término de búsqueda
-  const filteredEmployees = employees.filter(emp => {
-    const hasMatchingSchedulings = (emp.schedulings || []).some(ev =>
-      normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
-      normalizeText(ev.title || '').includes(normalizeText(searchTerm)) ||
-      normalizeText(ev.fechaInicio || '').includes(normalizeText(searchTerm)) ||
-      normalizeText(ev.fechaFin || '').includes(normalizeText(searchTerm)) ||
-      normalizeText(ev.horaInicio || '').includes(normalizeText(searchTerm)) ||
-      normalizeText(ev.horaFin || '').includes(normalizeText(searchTerm)) ||
-      normalizeText(ev.repeticion || '').includes(normalizeText(searchTerm)) ||
-      normalizeText(ev.dias?.join(', ') || '').includes(normalizeText(searchTerm))
-    );
-    return hasMatchingSchedulings;
-  });
+  const filteredEmployees = searchTerm.trim()
+    ? employees.filter(emp =>
+        normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
+        normalizeText(emp.apellido).includes(normalizeText(searchTerm))
+      )
+    : employees;
 
   // Expansión robusta de programaciones
   function expandirProgramacion(prog, idBase) {

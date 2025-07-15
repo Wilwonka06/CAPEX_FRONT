@@ -83,7 +83,7 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
   // Carga eventos desde localStorage o employees
   // ------------------------------
   const loadEvents = () => {
-    const empleadosActuales = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || employees || [];
+    const empleadosActuales = employees || [];
     console.log("Empleados cargados:", empleadosActuales);
   
     const events = empleadosActuales.flatMap(emp =>
@@ -121,7 +121,7 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
     const handleStorageChange = () => loadEvents();
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [employees]); // Ahora depende de employees
 
   // ------------------------------
   // Tu lógica de clicks y handlers
