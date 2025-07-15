@@ -206,6 +206,11 @@ export function isValidPassword(password) {
   return regex.test(password);
 }
 
+// Valida si dos contraseñas coinciden
+export function isPasswordMatch(password, confirmPassword) {
+  return password === confirmPassword;
+}
+
 // Validación completa de cliente
 export function validateCustomer(customerData, customers = [], excludeId = null, isSubmit = false) {
   const errors = {};
@@ -328,4 +333,9 @@ export function validateServiceOrder(orderData, orders = [], totalGeneral = 0, s
     isValid: Object.keys(errors).length === 0,
     errors
   };
+}
+
+// Valida que el nombre tenga al menos 2 caracteres y no sea solo espacios
+export function isValidName(name) {
+  return name && name.trim().length >= 2;
 }

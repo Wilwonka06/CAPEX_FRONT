@@ -76,11 +76,11 @@ const Navbar = () => {
         window.dispatchEvent(new Event('user-auth-changed'));
         setShowProfile(false);
         navigate('/login');
+    };
 
     // Función para alternar el menú desplegable de productos
     const toggleProductsDropdown = () => {
         setIsProductsDropdownOpen(!isProductsDropdownOpen);
-
     };
 
     return (
@@ -112,15 +112,13 @@ const Navbar = () => {
                     <Link to="/landing/servicespage" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary ">
                         Servicios
                     </Link>
-                    <Link to="/dashboard/productos" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
                     {/* Menú desplegable de Productos */}
                     <div className="relative w-full md:w-auto">
                         <button
                             onClick={toggleProductsDropdown}
                             className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary  flex items-center justify-center gap-2"
                         >
-
-                        Productos
+                            Productos
                             <svg 
                                 className={`w-4 h-4 transition-transform duration-200 ${isProductsDropdownOpen ? 'rotate-180' : ''}`} 
                                 fill="none" 
@@ -130,10 +128,8 @@ const Navbar = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                         </button>
-                        
                         {/* Dropdown de Productos */}
                         <div className={`${isProductsDropdownOpen ? 'block' : 'hidden'} absolute left-0 right-0 md:left-auto md:right-auto md:min-w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1`}>
-                            
                             <Link 
                                 to="/landing/extensiones" 
                                 className="block px-4 py-2 text-text-main hover:bg-accent-light hover:text-primary transition-colors duration-200  text-sm"
@@ -147,7 +143,7 @@ const Navbar = () => {
                                 onClick={() => setIsProductsDropdownOpen(false)}
                             >
                                 Cuidado Capilar
-                    </Link>
+                            </Link>
                         </div>
                     </div>
                     {isClient && (
