@@ -16,10 +16,10 @@ const StatusToggle = ({ isActive, onToggle }) => (
   <label onClick={(e) => { e.stopPropagation(); }} className="flex items-center cursor-pointer">
     <div className="relative">
       <input type="checkbox" className="sr-only" checked={isActive} onChange={onToggle} />
-      <div className={`block w-11 h-6 rounded-full ${isActive ? 'bg-primary' : 'bg-gray-300'}`}></div>
+      <div className={`block w-11 h-6 rounded-full ${isActive ? 'bg-black' : 'bg-gray-300'}`}></div>
       <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'translate-x-full' : ''}`}></div>
     </div>
-    <div className="ml-3 text-text-main/80 font-medium">{isActive ? 'Activo' : 'Inactivo'}</div>
+    <div className="ml-3 text-black font-medium">{isActive ? 'Activo' : 'Inactivo'}</div>
   </label>
 );
 
@@ -51,15 +51,15 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) =>
               />
             </td>
             <td className="py-4 px-4 text-sm font-medium text-right">
-              <div className="flex justify-end space-x-2">
-                <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" onClick={() => onSee(service)} title="Visualizar">
-                  <i className="bi bi-eye text-amber-500 text-sm"></i>
+              <div className="flex justify-end items-center gap-2">
+                <button onClick={() => onSee(service)} title="Visualizar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
+                  <i className="bi bi-eye text-xl" style={{ color: '#b8864b' }}></i>
                 </button>
-                <button className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" onClick={() => onEdit(service)} title="Editar">
-                  <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
+                <button onClick={() => onEdit(service)} title="Editar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
+                  <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
                 </button>
-                <button className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" onClick={() => onDelete(service)} title="Eliminar">
-                  <i className="bi bi-trash text-red-500 text-sm"></i>
+                <button onClick={() => onDelete(service)} title="Eliminar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
+                  <i className="bi bi-trash text-xl" style={{ color: '#ef4444' }}></i>
                 </button>
               </div>
             </td>
@@ -157,41 +157,47 @@ const Services = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-text-main">Gestión de Servicios</h1>
-            <p className="text-text-main/60 mt-1">Administra los servicios que ofreces en tu tienda.</p>
+          <div className="p-6 pb-0">
+            <h1 className="text-2xl font-bold text-text-main mb-1">Gestión de Servicios</h1>
+            <p className="text-text-main/60">Administra los servicios que ofreces en tu tienda.</p>
           </div>
-          
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="p-6 pt-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-2">
               <div className="relative w-full max-w-sm">
-                <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar servicios..." />
+                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
+                <input
+                  type="text"
+                  placeholder="Buscar servicios..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+                />
               </div>
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors"
+                className="bg-text-main hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm"
               >
                 <i className="bi bi-plus-lg text-lg"></i>
                 Nuevo Servicio
               </button>
             </div>
-
-            <ServicesTable 
-              services={paginatedServices} 
+            <ServicesTable
+              services={paginatedServices}
               onToggleStatus={toggleServiceStatus}
               onSee={handleSeeService}
               onEdit={handleEditClick}
               onDelete={handleDeleteService}
             />
-
             {totalPages > 1 && (
               <>
-                <Paginator
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                />
-                <div className="text-center mt-4">
+                <div className="flex justify-center mt-4">
+                  <Paginator
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+                <div className="text-center mt-2">
                   <p className="text-sm text-text-main/70">
                     Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, filteredServices.length)} de {filteredServices.length} servicios
                   </p>
