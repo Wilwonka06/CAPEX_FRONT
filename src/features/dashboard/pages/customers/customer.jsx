@@ -8,6 +8,7 @@ import { createCustomer } from "./services/CreateCustomerService.js";
 import { editCustomer } from "./services/EditCustomerService.js";
 import SearchCustomer from "./components/SearchCustomer.jsx";
 import Paginator from "./components/Paginator.jsx";
+import { normalizeText } from '../../../../shared/normalizers.js';
 
 const initialCustomers = [
   {
@@ -95,11 +96,52 @@ const CustomersPage = () => {
   };
 
   // Filtrado de clientes por búsqueda
-  const filteredCustomers = customers.filter((customer) =>
-    Object.values(customer).some((value) =>
-      value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const filteredCustomers = customers.filter((customer) => {
+    const term = normalizeText(searchTerm); // The search term is normalized once
+    if (!term) return true; // If no term, show all
+
+    // Verificar si el término es un número entero
+    const isNumericSearch = /^\d+$/.test(term);
+    
+    // Si es un número y coincide exactamente con el ID, solo mostrar ese cliente
+    if (isNumericSearch) {
+      const searchId = parseInt(term, 10);
+      // Comparación estricta con el ID convertido a número
+      if (searchId === customer.id) {
+        return true;
+      }
+      
+      // Si el término es un número pero no coincide exactamente con el ID,
+      // no continuar con la búsqueda parcial para IDs
+      if (term.length === String(customer.id).length) {
+        return false;
+      }
+    }
+    
+    // --- CRITICAL FIX HERE: Apply normalizeText to ID and Document Number ---
+    const idMatch = normalizeText(customer.id).includes(term); // Pass ID through normalizeText
+    const docNumberMatch = normalizeText(customer.documentNumber).includes(term); // Pass Document Number through normalizeText
+    // --- END OF CRITICAL FIX ---
+
+    const docTypeMatch = normalizeText(customer.documentType).includes(term);
+    const firstNameMatch = normalizeText(customer.firstName).includes(term);
+    const lastNameMatch = normalizeText(customer.lastName).includes(term);
+    const emailMatch = normalizeText(customer.email).includes(term);
+    const phoneMatch = normalizeText(customer.phone).includes(term);
+    const estado = normalizeText(customer.status);
+
+    // Keep the strict filter logic if the term matches 'activo', 'inactivo', etc.
+    if (["activo", "inactivo", "no activo", "no inactivo"].includes(term)) {
+      if (term === "activo") return estado === "activo";
+      if (term === "inactivo") return estado === "inactivo";
+      if (term === "no activo") return estado === "inactivo";
+      if (term === "no inactivo") return estado === "activo";
+    }
+
+    // General (partial) search for other text fields
+    const estadoMatch = estado.includes(term);
+    return idMatch || docTypeMatch || docNumberMatch || firstNameMatch || lastNameMatch || emailMatch || phoneMatch || estadoMatch;
+  });
 
   // Cálculo de paginación basado en clientes filtrados
   const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / itemsPerPage));
@@ -220,6 +262,33 @@ const CustomersPage = () => {
         </div>
       )}
 
+      {/* Modal CreateCustomer overlay */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <CreateCustomer
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onCreate={handleCreateCustomer}
+            loading={loading}
+            customers={customers}
+          />
+        </div>
+      )}
+
+      {/* Modal EditCustomer overlay */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <EditCustomer
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            customer={selectedCustomer}
+            onEdit={handleEditCustomer}
+            loading={loading}
+            customers={customers}
+          />
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
@@ -231,7 +300,7 @@ const CustomersPage = () => {
               <SearchCustomer searchTerm={searchTerm} handleSearch={handleSearch} />
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
               >
                 <i className="bi bi-plus-circle mr-2"></i>
                 Nuevo Cliente
@@ -241,6 +310,7 @@ const CustomersPage = () => {
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-50 hover:bg-gray-100">
+                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
                     <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tipo Documento</th>
                     <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Número Documento</th>
                     <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nombre</th>
@@ -254,6 +324,7 @@ const CustomersPage = () => {
                 <tbody className="divide-y divide-gray-200">
                   {paginatedCustomers.map((customer) => (
                     <tr key={customer.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="py-4 px-4 text-sm text-gray-900">{customer.id}</td>
                       <td className="py-4 px-4 text-sm text-gray-900">{customer.documentType}</td>
                       <td className="py-4 px-4 text-sm text-gray-900">{customer.documentNumber}</td>
                       <td className="py-4 px-4 text-sm text-gray-900">{customer.firstName}</td>
@@ -314,21 +385,6 @@ const CustomersPage = () => {
           </div>
         </div>
 
-        <CreateCustomer
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreate={handleCreateCustomer}
-          loading={loading}
-          customers={customers}
-        />
-        <EditCustomer
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          customer={selectedCustomer}
-          onEdit={handleEditCustomer}
-          loading={loading}
-          customers={customers}
-        />
         <ViewCustomer
           isOpen={isViewModalOpen}
           onClose={() => setIsViewModalOpen(false)}

@@ -22,23 +22,23 @@ const ViewRole = ({ isOpen, onClose, role }) => {
       <ViewProductCard title="Detalle del rol" onClose={onClose}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Nombre</label>
-            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{role.name || role.nombre}</div>
+            <label className="block text-sm font-medium mb-1">Nombre</label>
+            <div className="w-full px-3 py-2 border rounded-md bg-white text-black text-sm">{role.name || role.nombre}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Descripción</label>
-            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">{role.description || role.descripcion}</div>
+            <label className="block text-sm font-medium mb-1">Descripción</label>
+            <div className="w-full px-3 py-2 border rounded-md bg-white text-black text-sm">{role.description || role.descripcion}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Estado</label>
-            <div className="w-full px-3 py-2 border border-accent rounded-md bg-background text-text-main">
+            <label className="block text-sm font-medium mb-1">Estado</label>
+            <div className="w-full px-3 py-2 border rounded-md bg-white text-black text-sm">
               {role.estado || role.status || 'Activo'}
             </div>
           </div>
         </div>
         <div>
-          <label className="block text-text-main text-sm font-bold mb-2">Privilegios</label>
-          <PrivilegesTable value={role.privileges || {}} onChange={() => {}} disabled />
+          <label className="block text-sm font-bold mb-2">Privilegios</label>
+          <PrivilegesTable value={role.privileges || {}} onChange={() => {}} />
         </div>
         <div className="flex justify-end pt-6">
           <button

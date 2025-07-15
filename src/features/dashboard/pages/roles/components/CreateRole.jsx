@@ -23,13 +23,21 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   });
   const [privileges, setPrivileges] = useState({});
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [showErrors, setShowErrors] = useState(false);
+  const [wasSubmitted, setWasSubmitted] = useState(false);
 
   // Resetear formulario cuando se abre/cierra el modal
   useEffect(() => {
     if (!isOpen) {
-      setFormData({ nombre: '', descripcion: '' });
+      setFormData({
+        nombre: '',
+        descripcion: ''
+      });
       setPrivileges({});
       setErrors({});
+      setTouched({});
+      setShowErrors(false);
     }
   }, [isOpen]);
 
@@ -43,6 +51,7 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
       ...prevState,
       [name]: value
     }));
+    setTouched(prev => ({ ...prev, [name]: true }));
   };
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
@@ -55,9 +64,25 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
     }));
   };
 
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (Object.keys(errors).length === 0 && onCreate) onCreate(formData, privileges);
+    setShowErrors(true);
+    setTouched({
+      nombre: true,
+      descripcion: true, // si quieres mostrar errores de descripción en el futuro
+      privilegios: true
+      // agrega aquí cualquier otro campo que quieras validar
+    });
+    const validationErrors = validateRole(formData, privileges, roles);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length === 0 && onCreate) {
+      onCreate(formData, privileges);
+    }
   };
 
   const handleClose = () => {
@@ -74,60 +99,49 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Nombre</label>
+              <label className="block text-sm font-medium mb-1">Nombre</label>
               <input
                 type="text"
                 name="nombre"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                 value={formData.nombre}
                 onChange={handleChange}
-                required
-                disabled={loading}
+                onBlur={handleBlur}
               />
-              {errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
+              {(touched.nombre || showErrors) && errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Descripción (opcional)</label>
+              <label className="block text-sm font-medium mb-1">Descripción (opcional)</label>
               <input
                 type="text"
                 name="descripcion"
-                className="w-full px-3 py-2 border border-accent rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background text-text-main"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                 value={formData.descripcion}
                 onChange={handleChange}
-                disabled={loading}
+                onBlur={handleBlur}
               />
             </div>
           </div>
           <div>
             <label className="block text-text-main text-sm font-bold mb-2">Privilegios</label>
-            <PrivilegesTable value={privileges} onChange={handlePrivilegeChange} disabled={loading} />
-            {errors.privilegios && <p className="text-red-600 text-xs mt-1">{errors.privilegios}</p>}
+            <PrivilegesTable value={privileges} onChange={handlePrivilegeChange} />
+            {showErrors && errors.privilegios && <p className="text-red-600 text-xs mt-1">{errors.privilegios}</p>}
           </div>
           <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
               onClick={handleClose}
               className="px-4 py-2 rounded-md border bg-gray-100 text-gray-700 hover:bg-gray-200"
-              disabled={loading}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary-dark transition flex items-center"
-              disabled={loading || Object.keys(errors).length > 0}
+              className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center"
+              disabled={loading}
             >
-              {loading ? (
-                <>
-                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
-                  Creando...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-plus-circle mr-2"></i>
-                  Crear Rol
-                </>
-              )}
+              <i className="bi bi-plus-circle mr-2"></i>
+              Crear Rol
             </button>
           </div>
         </form>
