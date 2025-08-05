@@ -59,6 +59,20 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const isFormValid = quantity > 0;
   const totalProducts = selectedProducts.reduce((total, product) => total + product.subtotal, 0);
 
+  // Funciones simples para evitar problemas de hooks
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setIsOpen(true);
+  };
+
+  const handleSearchFocus = () => {
+    setIsOpen(true);
+  };
+
+  const handleQuantityChange = (e) => {
+    setQuantity(Math.max(1, parseInt(e.target.value) || 1));
+  };
+
   return (
     <div className="relative">
       <div className="flex items-center space-x-2">
@@ -66,11 +80,8 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setIsOpen(true);
-            }}
-            onFocus={() => setIsOpen(true)}
+            onChange={handleSearchChange}
+            onFocus={handleSearchFocus}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
             placeholder="Buscar productos..."
           />
@@ -157,7 +168,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                     <input
                       type="number"
                       value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={handleQuantityChange}
                       className="w-16 text-center border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                       min="1"
                     />

@@ -7,7 +7,7 @@ const mapsLink = 'https://goo.gl/maps/6Qw6Qw6Qw6Qw6Qw6A';
 
 const ContactSection = () => (
   <section className="py-16 bg-[#1E1E1E]">
-    <h2 className="text-3xl font-bold text-center mb-10 text-white">
+    <h2 className="text-3xl font-bold text-center mb-10 text-white font-montserrat">
       Contáctanos y <span className="text-[#FACC15]">visítanos</span>
     </h2>
     <div className="flex flex-col md:flex-row gap-10 max-w-5xl mx-auto items-center">
@@ -17,17 +17,17 @@ const ContactSection = () => (
         <div className="flex items-start gap-4">
           <FaMapMarkerAlt className="text-[#FACC15] text-2xl mt-1" />
           <div>
-            <div className="text-xs uppercase tracking-wider text-[#FACC15] font-semibold mb-1">Dirección</div>
-            <div className="font-bold text-lg mb-1">{direccion}</div>
-            <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="text-[#FACC15] underline text-sm hover:text-yellow-400 transition">Ver en Google Maps</a>
+            <div className="text-xs uppercase tracking-wider text-[#FACC15] font-semibold mb-1 font-nunito">Dirección</div>
+            <div className="font-bold text-lg mb-1 font-lato">{direccion}</div>
+            <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="text-[#FACC15] underline text-sm hover:text-yellow-400 transition font-lato">Ver en Google Maps</a>
           </div>
         </div>
         {/* Horario */}
         <div className="flex items-start gap-4">
           <FaClock className="text-[#FACC15] text-2xl mt-1" />
           <div>
-            <div className="text-xs uppercase tracking-wider text-[#FACC15] font-semibold mb-1">Horario</div>
-            <ul className="ml-2 mt-1 text-sm">
+            <div className="text-xs uppercase tracking-wider text-[#FACC15] font-semibold mb-1 font-nunito">Horario</div>
+            <ul className="ml-2 mt-1 text-sm font-lato">
               <li>Lunes a Miércoles: 9:30 a. m. - 6:40 p. m.</li>
               <li>Jueves: 9:30 a. m. - 5:00 p. m.</li>
               <li>Viernes y Sábado: 9:30 a. m. - 6:40 p. m.</li>
@@ -39,9 +39,9 @@ const ContactSection = () => (
         <div className="flex items-start gap-4">
           <FaPhoneAlt className="text-[#FACC15] text-2xl mt-1" />
           <div>
-            <div className="text-xs uppercase tracking-wider text-[#FACC15] font-semibold mb-1">Teléfono</div>
-            <div className="font-bold text-lg text-white mb-2">{telefono}</div>
-            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#FACC15] text-[#1E1E1E] font-semibold px-4 py-2 rounded-full shadow hover:bg-yellow-400 transition-all text-sm">
+            <div className="text-xs uppercase tracking-wider text-[#FACC15] font-semibold mb-1 font-nunito">Teléfono</div>
+            <div className="font-bold text-lg text-white mb-2 font-lato">{telefono}</div>
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#FACC15] text-[#1E1E1E] font-semibold px-4 py-2 rounded-full shadow hover:bg-yellow-400 transition-all text-sm font-poppins">
               <FaWhatsapp className="text-xl" /> WhatsApp
             </a>
           </div>

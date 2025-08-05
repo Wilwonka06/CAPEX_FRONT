@@ -9,6 +9,7 @@ import SalesTable from './components/SalesTable';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
 
 // Mock de clientes (idéntico a customers)
 const customersMock = [
@@ -29,6 +30,7 @@ const SalesProducts = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filteredSales, setFilteredSales] = useState([]);
+  const { setTitle } = useOutletContext();
 
   const itemsPerPage = 5;
 
@@ -40,15 +42,19 @@ const SalesProducts = () => {
     }
     const lowerTerm = searchTerm.toLowerCase();
     setFilteredSales(
-      sales.filter(sale =>
-        (sale.id?.toString() || '').includes(lowerTerm) ||
-        ((sale.numeroVenta || '').toLowerCase().includes(lowerTerm)) ||
-        ((sale.customerName || sale.clienteNombre || '').toLowerCase().includes(lowerTerm)) ||
-        ((sale.status || sale.estado || '').toLowerCase().includes(lowerTerm)) ||
-        ((sale.date || sale.fecha || '').toLowerCase().includes(lowerTerm)) ||
-        (sale.total?.toString() || sale.valor?.toString() || '').includes(lowerTerm) ||
-        ((sale.metodoPago || '').toLowerCase().includes(lowerTerm))
-      )
+      sales.filter(sale => {
+        const cliente = customersMock.find(c => c.id === sale.clienteId);
+        const clienteNombre = cliente ? `${cliente.firstName} ${cliente.lastName}`.toLowerCase() : '';
+        return (
+          (sale.id?.toString() || '').includes(lowerTerm) ||
+          ((sale.numeroVenta || '').toLowerCase().includes(lowerTerm)) ||
+          clienteNombre.includes(lowerTerm) ||
+          ((sale.status || sale.estado || '').toLowerCase().includes(lowerTerm)) ||
+          ((sale.date || sale.fecha || '').toLowerCase().includes(lowerTerm)) ||
+          (sale.total?.toString() || sale.valor?.toString() || '').includes(lowerTerm) ||
+          ((sale.metodoPago || '').toLowerCase().includes(lowerTerm))
+        );
+      })
     );
   }, [searchTerm, sales]);
 
@@ -150,6 +156,11 @@ const SalesProducts = () => {
     }
   };
 
+  useEffect(() => {
+    setTitle('Venta de Productos');
+    return () => setTitle('');
+  }, [setTitle]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -166,7 +177,7 @@ const SalesProducts = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            <h1 className="text-2xl font-bold">Venta de Productos</h1>
+            {/* El título ahora se muestra en el navbar */}
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -207,8 +218,8 @@ const SalesProducts = () => {
 
             {/* Información de paginación */}
             <div className="mt-4 text-center text-sm text-gray-600">
-              Mostrando {Math.min(filteredSales.length, startIndex + 1)} a {Math.min(filteredSales.length, startIndex + itemsPerPage)} de {filteredSales.length} ventas.
-            </div>
+{/*               Mostrando {Math.min(filteredSales.length, startIndex + 1)} a {Math.min(filteredSales.length, startIndex + itemsPerPage)} de {filteredSales.length} ventas.
+ */}            </div>
           </div>
         </div>
       </div>

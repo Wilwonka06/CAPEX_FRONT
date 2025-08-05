@@ -189,7 +189,6 @@ ProductsTable.propTypes = {
       id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
       nombre: PropTypes.string.isRequired,
       descripcion: PropTypes.string.isRequired,
-      color: PropTypes.string.isRequired,
       cantidad: PropTypes.number.isRequired,
       categoria: PropTypes.string.isRequired,
       precio: PropTypes.number.isRequired,

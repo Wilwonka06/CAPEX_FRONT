@@ -26,7 +26,6 @@ const OrderDetail = ({ order }) => {
         {/* Acciones */}
         <div className="flex flex-col gap-2 items-end justify-between">
           <button className="bg-primary text-white px-4 py-2 rounded font-semibold text-xs shadow hover:bg-primary-dark transition">Descargar Factura</button>
-          <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-semibold text-xs shadow hover:bg-gray-300 transition">Contactar Soporte</button>
         </div>
       </div>
       {/* Lista de productos */}

@@ -2,7 +2,9 @@ import { useState, useMemo } from 'react';
 import { useProducts } from '../../../dashboard/pages/products/hooks/useProducts';
 import { useCategories } from '../../../dashboard/pages/CatProducts/hooks/useCategories';
 import { useNavigate } from 'react-router-dom';
-import { FaFilter, FaSearch, FaTimes, FaStar, FaShoppingCart } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaTimes } from 'react-icons/fa';
+import cartIcon from '../../../../shared/images/cart.png';
+import { useCartToast } from '../../components/CartToastContext';
 
 const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
 
@@ -10,6 +12,7 @@ const Catalogo = () => {
   const { products } = useProducts();
   const { categories } = useCategories();
   const navigate = useNavigate();
+  const { showCartToast } = useCartToast();
   
   // Categorías activas
   const categoriasActivas = categories.filter(cat => cat.isActive).map(cat => cat.name);
@@ -137,12 +140,7 @@ const Catalogo = () => {
     <div className="min-h-screen bg-gradient-to-br from-white to-gray-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-[#1E1E1E] mb-2">Catálogo de Productos</h1>
-            <p className="text-gray-600 text-lg">Extensiones y productos premium para el cuidado de tu cabello</p>
-          </div>
-        </div>
+        
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -152,6 +150,9 @@ const Catalogo = () => {
           <span className="mx-1">/</span>
           <span className="text-[#1E1E1E] font-semibold">Productos</span>
         </nav>
+        <div className="max-w-7xl mx-auto px-2 py-4">
+          <h1 className="text-4xl font-bold text-[#1E1E1E] mb-2">Catálogo de Productos</h1>
+        </div>
         {/* Barra de herramientas */}
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
           {/* Búsqueda */}
@@ -290,34 +291,29 @@ const Catalogo = () => {
                 <h3 className="font-semibold mb-3 text-gray-800">Rango de Precio</h3>
                 <div className="space-y-3">
                   <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={filtroPrecio[0]}
-                      onChange={e => setFiltroPrecio([parseInt(e.target.value), filtroPrecio[1]])}
-                      className="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm"
-                      placeholder="Mín"
-                    />
-                    <input
-                      type="number"
-                      value={filtroPrecio[1]}
-                      onChange={e => setFiltroPrecio([filtroPrecio[0], parseInt(e.target.value)])}
-                      className="w-1/2 px-3 py-2 border border-gray-300 rounded text-sm"
-                      placeholder="Máx"
-                    />
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    ${formatNumber(filtroPrecio[0])} - ${formatNumber(filtroPrecio[1])}
+                    <div className="flex flex-col w-1/2">
+                      <label className="text-xs text-gray-500 mb-1 ml-1">Desde</label>
+                      <input
+                        type="number"
+                        value={filtroPrecio[0]}
+                        onChange={e => setFiltroPrecio([parseInt(e.target.value), filtroPrecio[1]])}
+                        className="px-3 py-2 border border-gray-300 rounded text-sm"
+                        placeholder="Mín"
+                      />
+                    </div>
+                    <div className="flex flex-col w-1/2">
+                      <label className="text-xs text-gray-500 mb-1 ml-1">Hasta</label>
+                      <input
+                        type="number"
+                        value={filtroPrecio[1]}
+                        onChange={e => setFiltroPrecio([filtroPrecio[0], parseInt(e.target.value)])}
+                        className="px-3 py-2 border border-gray-300 rounded text-sm"
+                        placeholder="Máx"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Botón limpiar */}
-              <button
-                onClick={limpiarFiltros}
-                className="w-full py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
-              >
-                Limpiar Filtros
-              </button>
             </div>
           </aside>
 
@@ -349,7 +345,7 @@ const Catalogo = () => {
                 productosFiltrados.map(prod => (
                   <div
                     key={prod.id}
-                    className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col cursor-pointer group hover:shadow-2xl transition-all"
+                    className="flex flex-col cursor-pointer group transition-all"
                     onClick={() => navigate(`/landing/productos/${prod.id}`)}
                   >
                     {/* Imagen ocupa todo el ancho superior, sin perder calidad */}
@@ -365,8 +361,17 @@ const Catalogo = () => {
                     <div className="p-5 flex flex-col gap-2 flex-1 justify-between">
                       <h3 className="font-semibold text-lg text-[#1E1E1E] mb-1 truncate group-hover:text-[#FACC15] transition-colors">{prod.nombre}</h3>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xl font-bold text-[#FACC15]">${formatNumber(prod.precio)}</span>
-                        <span className="text-xs text-gray-500">{prod.cantidad} disponibles</span>
+                        <span className="text-sm font-bold text-[#FACC15]">${formatNumber(prod.precio)}</span>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            showCartToast(prod);
+                          }}
+                          className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center"
+                          title="Agregar al carrito"
+                        >
+                          <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
                   </div>

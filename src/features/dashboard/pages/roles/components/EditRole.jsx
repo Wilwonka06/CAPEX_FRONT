@@ -29,8 +29,8 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
   useEffect(() => {
     if (role && isOpen) {
       setFormData({
-        name: role.name,
-        description: role.description
+        name: role.name ?? role.nombre ?? '',
+        description: role.description ?? role.descripcion ?? ''
       });
       if (role.privileges) setPrivileges(role.privileges);
     }
@@ -49,7 +49,11 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
   useEffect(() => {
     // Excluye el rol actual de la validación de nombre único
     const otherRoles = roles.filter(r => r.id !== role?.id);
-    setErrors(validateRole({ nombre: formData.name }, privileges, otherRoles));
+    setErrors(validateRole(
+      { nombre: formData.name, descripcion: formData.description },
+      privileges,
+      otherRoles
+    ));
   }, [formData, privileges, roles, role]);
 
   const handleChange = (e) => {
@@ -81,6 +85,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
         estado: role.estado,
         privileges: privileges
       });
+      if (onClose) onClose();
     }
   };
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ProfileMenu from './ProfileMenu';
 import { useCart } from './CartContext';
-import { FaShoppingCart } from 'react-icons/fa';
+import cartIcon from '../../../shared/images/cart.png';
 
 
 const Navbar = () => {
@@ -67,10 +67,8 @@ const Navbar = () => {
             <div className="container mx-auto flex justify-between items-center flex-wrap">
                 {/* Logo o Nombre de la Marca */}
                 <div className="text-text-main text-2xl font-bold rounded-md flex items-center">
-                    {/* Imagen de ejemplo - reemplaza con tu logo real */}
-                    <img src="https://placehold.co/32x32/D2B48C/1E1E1E?text=M" alt="Logo" className="rounded-full mr-2" />
-                    <Link to="/" className="p-2 rounded-md transition-colors duration-300 text-primary hover:text-primary">
-                        CAPEX
+                    <Link to="/Landing" className="p-2 rounded-md transition-colors duration-300 text-primary hover:text-primary">
+                        <h2 className='text-text-main'>CAP<span className='text-yellow-500'>EX</span></h2>
                     </Link>
                 </div>
 
@@ -88,7 +86,7 @@ const Navbar = () => {
                     id="navigation-menu"
                     className={`${isMobileMenuOpen ? 'flex flex-col' : 'hidden'} md:flex md:flex-row md:space-x-8 mt-4 md:mt-0 w-full md:w-auto items-center justify-center`}
                 >
-                    <Link to="/landing/servicespage" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary ">
+                    <Link to="/landing/servicios" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary ">
                         Servicios
                     </Link>
                     <Link to="/landing/catalogo" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
@@ -108,9 +106,9 @@ const Navbar = () => {
                 <div className="hidden md:flex md:space-x-4 items-center relative" ref={profileRef}>
                     {/* Carrito */}
                     <Link to="/landing/cart" className="relative mr-2 group">
-                        <FaShoppingCart className="text-2xl text-primary group-hover:text-primary-dark transition" />
+                    <img src={cartIcon} alt="Carrito" className="w-6 h-6" />
                         {cart.length > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold shadow">{cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}</span>
+                            <span className="absolute -top-2 -right-2 bg-white text-black text-xs rounded-full px-0.5 py-0.3 ">{cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}</span>
                         )}
                     </Link>
                     {currentUser ? (

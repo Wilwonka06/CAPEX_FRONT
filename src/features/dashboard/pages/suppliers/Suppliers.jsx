@@ -9,6 +9,7 @@ import { useSuppliers } from "./hooks/useSuppliers";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
 
 const SuppliersPage = () => {
   const { suppliers, addSupplier, editSupplier, deleteSupplier, toggleSupplierStatus } = useSuppliers();
@@ -18,6 +19,12 @@ const SuppliersPage = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [filteredSuppliers, setFilteredSuppliers] = useState([]);
+  const { setTitle } = useOutletContext();
+
+  useEffect(() => {
+    setTitle('Gestión de Proveedores');
+    return () => setTitle('');
+  }, [setTitle]);
 
   // Filtrar proveedores por término de búsqueda
   useEffect(() => {
@@ -143,9 +150,6 @@ const SuppliersPage = () => {
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6">
-            <h1 className="text-2xl font-bold">Gestión de Proveedores</h1>
-          </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar proveedores..." />

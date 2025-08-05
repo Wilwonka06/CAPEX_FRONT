@@ -9,6 +9,17 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
 
+function limpiarPrecio(valor) {
+  // Si el valor es null, undefined o vacío, devolver 0
+  if (valor === null || valor === undefined || valor === '') return 0;
+  // Si ya es número, devolverlo
+  if (typeof valor === 'number') return valor;
+  // Si es string, limpiar y convertir
+  const limpio = String(valor).replace(/[^\d]/g, '');
+  return limpio ? Number(limpio) : 0;
+}
+
+
 const ClientAppointments = () => {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('misCitas');
@@ -178,16 +189,18 @@ const ClientAppointments = () => {
   };
 
   const addService = (service) => {
+    const precio = limpiarPrecio(service.price ?? service.precio ?? 0);
     const newService = {
-      id: Date.now(), // Unique ID for each service in the form
-      servicioId: service.id, // The actual service ID from the backend
-      nombre: service.name, // The name of the service
-      profesional: '', // Will be filled by the user
-      inicio: '08:00', // Default start time
-      fin: '09:00', // Default end time
-      duracion: 60, // Default duration
-      precio: service.price, // The price of the service
-      cantidad: 1 // Default quantity
+      id: Date.now(),
+      servicioId: service.id,
+      nombre: service.name,
+      descripcion: service.descripcion || '',
+      profesional: '',
+      inicio: '08:00',
+      fin: '09:00',
+      duracion: service.duracion || 60,
+      precio: precio,
+      cantidad: 1
     };
     setFormData(prev => ({
       ...prev,
@@ -496,15 +509,15 @@ const ClientAppointments = () => {
                           <span><i className="bi bi-play"></i> Inicio: {s.inicio}</span>
                         </div>
                         </div>
-                      <div className="font-bold text-2xl text-[#a0522d] md:text-right mt-2 md:mt-0">${s.precio?.toLocaleString('es-CO')}</div>
+                      <div className="font-bold text-2xl text-[#a0522d] md:text-right mt-2 md:mt-0">${Number(s.precio || 0).toLocaleString('es-CO')}</div>
                     </div>
                   ))}
                 </div>
                 {/* Resumen y acciones */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mt-2">
                   <div className="flex gap-6 text-[#a0522d] text-sm">
-                    <span>Duración Total: {a.servicios && a.servicios.length > 0 ? `${Math.floor(a.servicios.reduce((acc, s) => acc + (s.duracion || 0), 0)/60)}h ${a.servicios.reduce((acc, s) => acc + (s.duracion || 0), 0)%60}min` : ''}</span>
-                    <span>Precio Total: ${a.servicios && a.servicios.reduce((acc, s) => acc + (s.precio || 0), 0).toLocaleString('es-CO')}</span>
+                    <span>Duración Total: {a.servicios && a.servicios.length > 0 ? `${Math.floor(a.servicios.reduce((acc, s) => acc + (Number(s.duracion) || 0), 0)/60)}h ${a.servicios.reduce((acc, s) => acc + (Number(s.duracion) || 0), 0)%60}min` : ''}</span>
+                    <span>Precio Total: ${a.servicios && a.servicios.reduce((acc, s) => acc + (Number(s.precio || 0) * (Number(s.cantidad) || 1)), 0).toLocaleString('es-CO')}</span>
                   </div>
                   <div className="flex gap-2 justify-end">
                     {a.estado === 'Agendada' && (
@@ -590,7 +603,7 @@ const ClientAppointments = () => {
                       <div className="font-semibold text-center">{serv.name}</div>
                       <div className="text-xs text-gray-500 mb-1 text-center">{serv.descripcion || ''}</div>
                       <div className="text-xs text-gray-500 mb-1">{serv.duracion ? `${Math.floor(serv.duracion/60)}h ${serv.duracion%60}min` : ''}</div>
-                      <div className="font-bold mb-2">${serv.price.toLocaleString()}</div>
+                      <div className="font-bold mb-2">${limpiarPrecio(serv.price ?? serv.precio ?? 0).toLocaleString()}</div>
                       <button type="button" className="bg-primary text-white px-2 py-1 rounded text-xs" onClick={() => addService(serv)}>Agregar</button>
                     </div>
                   ))}
@@ -692,7 +705,7 @@ const ClientAppointments = () => {
                           <i className="bi bi-clock"></i>
                           {serv.duracion ? `${Math.floor(serv.duracion/60)}h ${serv.duracion%60}min` : ''}
                         </div>
-                        <div className="font-bold text-lg">${(serv.precio * serv.cantidad).toLocaleString()}</div>
+                        <div className="font-bold text-lg">${(Number(serv.precio || 0) * (Number(serv.cantidad) || 1)).toLocaleString()}</div>
                       </div>
                       {errors[`servicio_${idx}_duracion`] && <p className="text-red-500 text-xs mt-1">{errors[`servicio_${idx}_duracion`]}</p>}
                     </div>
@@ -706,7 +719,7 @@ const ClientAppointments = () => {
               <div className="text-sm mb-1">Fecha: <span className="font-medium">{formData.fecha || '-'}</span></div>
               <div className="text-sm mb-1">Hora inicio: <span className="font-medium">{formData.servicios[0]?.inicio || '-'}</span> - Hora fin: <span className="font-medium">{formData.servicios[formData.servicios.length-1]?.fin || '-'}</span></div>
               <div className="text-sm mb-1">Duración total: <span className="font-medium">{formData.servicios.reduce((acc, s) => acc + (Number(s.duracion) || 0), 0)} min</span></div>
-              <div className="text-sm mb-1">Precio total: <span className="font-medium">${formData.servicios.reduce((acc, s) => acc + (Number(s.precio) * (Number(s.cantidad) || 1)), 0).toLocaleString()}</span></div>
+              <div className="text-sm mb-1">Precio total: <span className="font-medium">${formData.servicios.reduce((acc, s) => acc + (Number(s.precio || 0) * (Number(s.cantidad) || 1)), 0).toLocaleString()}</span></div>
               <div className="flex gap-2 mt-4">
                 <button type="button" className="bg-gray-200 text-gray-700 px-4 py-2 rounded" onClick={() => setActiveTab('misCitas')}>Cancelar</button>
                 <button type="button" className="bg-primary text-white px-4 py-2 rounded" onClick={handleSubmit} disabled={loading}>Pedir cita</button>
@@ -816,7 +829,7 @@ const ClientAppointments = () => {
                         <i className="bi bi-clock"></i>
                         {serv.duracion ? `${Math.floor(serv.duracion/60)}h ${serv.duracion%60}min` : ''}
                       </div>
-                      <div className="font-bold text-lg">${(serv.precio * serv.cantidad).toLocaleString()}</div>
+                      <div className="font-bold text-lg">${(Number(serv.precio || 0) * (Number(serv.cantidad) || 1)).toLocaleString()}</div>
                     </div>
                     {errors[`servicio_${idx}_duracion`] && <p className="text-red-500 text-xs mt-1">{errors[`servicio_${idx}_duracion`]}</p>}
                   </div>
@@ -830,7 +843,9 @@ const ClientAppointments = () => {
                     onChange={e => {
                       const selected = services.find(s => s.id === Number(e.target.value));
                       if (selected) {
-                        setRescheduleData(prev => ({ ...prev, servicios: [{
+                        setRescheduleData(prev => ({
+                          ...prev,
+                          servicios: [{
                           id: Date.now(),
                           servicioId: selected.id,
                           nombre: selected.name,
@@ -839,9 +854,10 @@ const ClientAppointments = () => {
                           inicio: '08:00',
                           fin: '09:00',
                           duracion: selected.duracion || 60,
-                          precio: selected.price,
+                            precio: limpiarPrecio(selected.price ?? selected.precio ?? 0),
                           cantidad: 1
-                        }, ...prev.servicios] }));
+                          }, ...prev.servicios]
+                        }));
                       }
                     }}
                   >

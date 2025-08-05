@@ -4,6 +4,23 @@ import { updateAppointment, APPOINTMENT_STATES } from '../../../../../shared/ser
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+function limpiarPrecio(valor) {
+  return Number(String(valor).replace(/[^\d]/g, '')) || 0;
+}
+
+// Colores personalizados para los estados (debe coincidir con Appointments.jsx)
+const ESTADO_COLORES = {
+  'Agendada': { bg: '#FACC15', text: '#7C5700' },
+  'Confirmada': { bg: '#60A5FA', text: '#1E3A8A' },
+  'Reprogramada': { bg: '#F59E42', text: '#7C3F00' },
+  'En Ejecucion': { bg: '#A78BFA', text: '#4B006E' },
+  'Finalizada': { bg: '#34D399', text: '#065F46' },
+  'Cancelada': { bg: '#F87171', text: '#991B1B' },
+  'Cancelada por cliente': { bg: '#F87171', text: '#991B1B' },
+  'Pagada': { bg: '#22D3EE', text: '#0E7490' },
+  'No asistió': { bg: '#D1D5DB', text: '#374151' },
+};
+
 const getEstadoColor = (estado) => {
   switch (estado) {
     case 'Agendada': return 'text-yellow-600';
@@ -32,8 +49,9 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
     horaInicio = inicios.sort()[0];
     horaFin = fines.sort().reverse()[0];
     duracionTotal = cita.servicios.reduce((acc, s) => acc + (parseInt(s.duracion) || 0), 0);
-    valorTotal = cita.servicios.reduce((acc, s) => acc + (parseInt(s.precio) * (parseInt(s.cantidad) || 1)), 0);
+    valorTotal = cita.servicios.reduce((acc, s) => acc + (limpiarPrecio(s.precio) * (parseInt(s.cantidad) || 1)), 0);
   }
+  
 
   const handleCancelar = async () => {
     setLoadingCancel(true);
@@ -58,10 +76,10 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   const esCancelada = cita.estado === 'Cancelada' || cita.estado === 'Cancelada por cliente';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none font-inter">
       <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-xl relative animate-fade-in max-h-[90vh] flex flex-col mt-8`}>
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-100 rounded-t-2xl flex items-center justify-between px-8 py-5">
-          <h2 className="text-2xl font-bold text-text-main m-0">Detalles de la cita</h2>
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-5">
+          <h2 className="text-2xl font-bold text-primary m-0">Detalles de la cita</h2>
           <div className="flex items-center gap-2">
             {/* Ícono de editar solo si no está cancelada */}
             {!esCancelada && (
@@ -70,7 +88,6 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
                 onClick={() => { onEdit(cita); onClose(); }}
                 title="Editar cita"
               >
-                {/* Ícono lápiz Heroicons */}
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 3.487a2.25 2.25 0 013.182 3.182L7.5 19.213l-4.182.545.545-4.182 12.999-12.09z" />
                 </svg>
@@ -81,9 +98,8 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
         </div>
         <div className="overflow-y-auto p-8 flex-1 space-y-6">
           <div className="flex items-center gap-2 mb-2">
-            <span className={`font-semibold ${getEstadoColor(cita.estado)}`}>{cita.estado}</span>
+            <span className="font-semibold text-xs px-2 py-1 rounded-full" style={{ background: (ESTADO_COLORES[cita.estado]?.bg || '#e5e7eb'), color: (ESTADO_COLORES[cita.estado]?.text || '#374151'), border: '1px solid #e5e7eb' }}>{cita.estado}</span>
             <span className="text-xs text-gray-400">{fechaStr}</span>
-            {/* Descripción eliminada */}
           </div>
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="font-semibold mb-2 text-text-main">Información del Cliente</div>
@@ -119,7 +135,7 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
             <div className="text-lg font-bold text-text-main">Valor Total: <span className="text-primary">${valorTotal}</span></div>
           </div>
         </div>
-        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-100 rounded-b-2xl flex justify-end gap-2 px-8 py-5">
+        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-2xl flex justify-end gap-2 px-8 py-5">
           {/* Botón cancelar solo si !esCancelada */}
           {!esCancelada && (
             <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 font-semibold" onClick={handleCancelar} disabled={loadingCancel}>

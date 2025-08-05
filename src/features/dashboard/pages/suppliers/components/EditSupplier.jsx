@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import Swal from 'sweetalert2';
 import { isDuplicateSupplierEmail, isValidEmail, isValidNIT, isValidPhone, isValidSupplierType } from "../../../../../shared/validations";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import '../../users/components/phoneinput-search.css';
 
 const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   const [formData, setFormData] = useState({
@@ -17,6 +20,23 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   const [errors, setErrors] = useState({});
   const [isEmailValid, setIsEmailValid] = useState(true);
 
+  const parseTelefono = (telefono) => {
+    if (!telefono) return { countryCode: 'co', dialCode: '+57', number: '' };
+    const match = telefono.match(/^(\+\d+)-(\d{4,15})$/);
+    if (match) {
+      return {
+        countryCode: 'co',
+        dialCode: match[1],
+        number: match[2]
+      };
+    }
+    return { countryCode: 'co', dialCode: '+57', number: '' };
+  };
+
+  const initialTelefono = supplier && supplier.telefono ? supplier.telefono : '';
+  const [country, setCountry] = useState({ countryCode: parseTelefono(initialTelefono).countryCode, dialCode: parseTelefono(initialTelefono).dialCode });
+  const [numero, setNumero] = useState(parseTelefono(initialTelefono).number);
+
   useEffect(() => {
     if (supplier) {
       setFormData({
@@ -31,82 +51,73 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
       setOriginalCorreo(supplier.correo || "");
       setErrors({});
       setIsEmailValid(true);
+      setCountry({ countryCode: parseTelefono(supplier.telefono || '').countryCode, dialCode: parseTelefono(supplier.telefono || '').dialCode });
+      setNumero(parseTelefono(supplier.telefono || '').number);
     }
   }, [supplier]);
 
   const validateField = (name, value) => {
     switch (name) {
       case 'nit':
-        if (value && !isValidNIT(value)) {
-          return 'El NIT debe comenzar con una letra seguida de números';
-        }
-        break;
+        if (!value.trim()) return 'El NIT es requerido';
+        if (!isValidNIT(value)) return 'El NIT debe comenzar con una letra seguida de números';
+        return '';
+      case 'nombre':
+        if (!value.trim()) return 'El nombre es requerido';
+        return '';
+      case 'contacto':
+        if (!value.trim()) return 'El contacto es requerido';
+        return '';
+      case 'direccion':
+        if (!value.trim()) return 'La dirección es requerida';
+        return '';
       case 'telefono':
-        if (value && !isValidPhone(value)) {
-          return 'El teléfono debe tener formato: +código de país + números (7-15 dígitos)';
-        }
-        break;
+        if (!numero) return 'El teléfono es requerido';
+        if (numero.length < 7 || numero.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
+        return '';
       case 'correo':
-        if (value && !isValidEmail(value)) {
-          return 'Formato de correo electrónico inválido';
-        }
-        break;
+        if (!value.trim()) return 'El correo es requerido';
+        if (!isValidEmail(value)) return 'Formato de correo electrónico inválido';
+        if (suppliers.some(s => s.correo === value && s.id !== supplier.id)) return 'Ya existe un proveedor con ese correo electrónico';
+        return '';
       case 'tipo':
-        if (value && !isValidSupplierType(value)) {
-          return 'El tipo debe ser N (Natural) o J (Jurídico)';
-        }
-        break;
+        if (!value.trim()) return 'El tipo es requerido';
+        if (!isValidSupplierType(value)) return 'El tipo debe ser N (Natural) o J (Jurídico)';
+        return '';
       default:
-        break;
+        return '';
     }
-    return "";
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
-    }
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     const error = validateField(name, value);
-    if (error) {
-      setErrors(prev => ({ ...prev, [name]: error }));
-    }
-    if (name === 'correo' && value) {
-      if (isDuplicateSupplierEmail(value, suppliers, supplier)) {
-        alert('Ya existe un proveedor con ese correo electrónico.');
-        setFormData(prev => ({ ...prev, correo: originalCorreo }));
-        setIsEmailValid(false);
-      } else {
-        setIsEmailValid(true);
-      }
-    }
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handlePhoneChange = (value, countryData) => {
+    setNumero(value);
+    setCountry({ countryCode: countryData.countryCode, dialCode: '+' + countryData.dialCode });
+    const error = validateField('telefono', value);
+    setErrors(prev => ({ ...prev, telefono: error }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validar todos los campos
     const newErrors = {};
     Object.keys(formData).forEach(key => {
-      const error = validateField(key, formData[key]);
-      if (error) {
-        newErrors[key] = error;
-      }
+      newErrors[key] = validateField(key, formData[key]);
     });
-    if (!formData.nit.trim()) newErrors.nit = 'El NIT es requerido';
-    if (!formData.nombre.trim()) newErrors.nombre = 'El nombre es requerido';
-    if (!formData.contacto.trim()) newErrors.contacto = 'El contacto es requerido';
-    if (!formData.direccion.trim()) newErrors.direccion = 'La dirección es requerida';
-    if (!formData.telefono.trim()) newErrors.telefono = 'El teléfono es requerido';
-    if (!formData.correo.trim()) newErrors.correo = 'El correo es requerido';
-    if (!formData.tipo.trim()) newErrors.tipo = 'El tipo es requerido';
-    if (formData.correo && isDuplicateSupplierEmail(formData.correo, suppliers, supplier)) {
-      newErrors.correo = 'Ya existe un proveedor con ese correo electrónico';
-    }
-    if (Object.keys(newErrors).length > 0) {
+    newErrors.telefono = validateField('telefono', numero);
+    if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       return;
     }
@@ -125,6 +136,7 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
       const updatedSupplier = {
         ...supplier,
         ...formData,
+        telefono: country.dialCode + '-' + numero,
         tipo: formData.tipo.toUpperCase(),
       };
       if (onSave) onSave(updatedSupplier);
@@ -178,6 +190,7 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   required
+                  disabled
                 />
                 {errors.nit && <p className="text-red-500 text-xs mt-1">{errors.nit}</p>}
               </div>
@@ -245,12 +258,18 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
                 <input
                   type="text"
                   name="telefono"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  className="hidden"
                   value={formData.telefono}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Ej: +573001234567"
-                  required
+                  readOnly
+                />
+                <PhoneInput
+                  country={country.countryCode}
+                  value={numero}
+                  onChange={handlePhoneChange}
+                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  inputProps={{ name: 'telefono', required: true }}
+                  specialLabel=""
+                  placeholder="Ej: 3001234567"
                 />
                 {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
               </div>

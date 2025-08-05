@@ -34,16 +34,17 @@ const TopServicesChart = ({ data }) => {
         <button
           onClick={handleDownloadExcel}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow transition font-medium text-sm"
+          title="Descargar top servicios del mes seleccionado"
         >
           <i className="bi bi-download"></i> Descargar informe
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={320}>
         <BarChart
           data={data}
           layout="vertical"
           margin={{ top: 10, right: 30, left: 40, bottom: 10 }}
-          barCategoryGap={20}
+          barCategoryGap={10}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis type="number" tick={{ fill: '#333' }} />

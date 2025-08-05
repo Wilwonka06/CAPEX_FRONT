@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { validateCustomer } from "../../../../../shared/validations"
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import '../../users/components/phoneinput-search.css';
 
-export default function EditCustomer({ isOpen, onClose, onUpdate, loading = false, customer, customers = [] }) {
+export default function EditCustomer({ isOpen, onClose, onUpdate, loading = false, setLoading, customer, customers = [] }) {
   const [formData, setFormData] = useState({
     documentType: "",
     documentNumber: "",
@@ -203,13 +206,14 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
                 <label className="block text-xs font-medium text-black mb-1">
                   Teléfono <span className="text-red-500">*</span>
                 </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                <PhoneInput
+                  country={'co'}
+                  value={formData.phone}
+                  onChange={value => handleInputChange({ target: { name: 'phone', value } })}
+                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white ${touched.phone && errors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                  inputProps={{ name: 'phone', required: true, autoComplete: 'off' }}
+                  specialLabel=""
+                  placeholder="Ej: 3001234567"
                 />
                 {touched.phone && errors.phone && <p className="text-red-600 text-xs mt-1">{errors.phone}</p>}
               </div>

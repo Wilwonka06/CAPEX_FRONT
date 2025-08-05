@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import AddCatServices from './components/AddCatServices';
@@ -6,52 +6,77 @@ import EditCatServices from './components/EditCatServices';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
+import CategoryDetail from './components/CategoryDetail';
+import PropTypes from "prop-types";
+import { useServiceCategories, ServiceCategoriesProvider } from '../services/hooks/useServiceCategories';
 
-// --- Componentes Locales ---
-
-// Interruptor de Estado
-const StatusToggle = ({ isActive, onToggle }) => (
-  <label onClick={(e) => { e.stopPropagation(); }} className="flex items-center cursor-pointer">
-    <div className="relative">
-      <input type="checkbox" className="sr-only" checked={isActive} onChange={onToggle} />
-      <div className={`block w-11 h-6 rounded-full ${isActive ? 'bg-black' : 'bg-gray-300'}`}></div>
-      <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'translate-x-full' : ''}`}></div>
-    </div>
-    <div className="ml-3 text-black font-medium">{isActive ? 'Activo' : 'Inactivo'}</div>
-  </label>
-);
-
-
-// Tabla de Categorías
-const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onSee }) => (
-  <div className="overflow-x-auto">
-    <table className="min-w-full text-sm text-left">
-      <thead className="bg-gray-50 text-text-main/80 uppercase">
-        <tr>
-          <th className="py-3 px-4 font-semibold">Categoría</th>
-          <th className="py-3 px-4 font-semibold">Descripción</th>
-          <th className="py-3 px-4 font-semibold">Estado</th>
-          <th className="py-3 px-4 font-semibold text-right">Acciones</th>
+// --- Tabla de Categorías (diseño igual a productos) ---
+const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView }) => (
+  <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+    <table className="min-w-full">
+      <thead>
+        <tr className="bg-gray-50 hover:bg-gray-100">
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DESCRIPCIÓN</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ESTADO</th>
+          <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
         </tr>
       </thead>
-      <tbody className="bg-white text-text-main">
+      <tbody className="divide-y divide-gray-200">
         {categories.map((category) => (
-          <tr key={category.id} className="border-b border-gray-200 hover:bg-gray-50">
-            <td className="py-3 px-4 font-medium">{category.name}</td>
-            <td className="py-3 px-4 text-text-main/80">{category.Descripcion || category.description}</td>
-            <td className="py-3 px-4">
-              <StatusToggle 
-                isActive={category.isActive || category.estado === 'Activo'} 
-                onToggle={() => onToggleStatus(category.id)}
-              />
+          <tr key={category.id} className="hover:bg-gray-50 transition-colors duration-150">
+            <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.id}</td>
+            <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{category.Categoria}</td>
+            <td className="py-4 px-4 text-xs text-gray-600 max-w-[250px] truncate">{category.Descripcion}</td>
+            <td className="py-4 px-4 text-xs">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => onToggleStatus(category.id)}
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none  ${
+                    category.estado === 'Activo' ? 'bg-text-main' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      category.estado === 'Activo' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    category.estado === 'Activo'
+                      ? ' text-gray-800'
+                      : ' text-gray-600 '
+                  }`}
+                >
+                  {category.estado === 'Activo' ? "Activo" : "Inactivo"}
+                </span>
+              </div>
             </td>
             <td className="py-4 px-4 text-sm font-medium text-right">
-              <div className="flex justify-end items-center gap-2">
-                <button onClick={() => onEdit(category)} title="Editar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
-                  <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
+              <div className="flex justify-end space-x-2">
+                <button 
+                  className="h-8 w-8 p-0 flex items-center justify-center"
+                  onClick={() => onView(category)}
+                  title="Ver detalles"
+                >
+                  <i className="bi bi-eye text-primary text-lg"></i>
                 </button>
-                <button onClick={() => onDelete(category)} title="Eliminar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
-                  <i className="bi bi-trash text-xl" style={{ color: '#ef4444' }}></i>
+                <button 
+                  className="h-8 w-8 p-0 flex items-center justify-center"
+                  onClick={() => onEdit(category)}
+                  title="Editar"
+                >
+                  <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
+                </button>
+                <button 
+                  className="h-8 w-8 p-0 flex items-center justify-center"
+                  onClick={() => onDelete(category.id)}
+                  title="Eliminar"
+                >
+                  <i className="bi bi-trash text-red-500 text-lg"></i>
                 </button>
               </div>
             </td>
@@ -62,220 +87,181 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onSee }) 
   </div>
 );
 
-// --- Datos de Muestra ---
-const initialCategories = [
-  { id: 1, name: 'Peluquería', description: 'Servicios relacionados con el corte y cuidado del cabello.', isActive: true },
-  { id: 2, name: 'Manicura y Pedicura', description: 'Cuidado de manos y pies, esmaltado y tratamientos.', isActive: true },
-  { id: 3, name: 'Tratamientos Faciales', description: 'Limpieza, hidratación y cuidado de la piel del rostro.', isActive: false },
-  { id: 4, name: 'Masajes y Bienestar', description: 'Terapias corporales para relajación y bienestar.', isActive: true },
-  { id: 5, name: 'Depilación', description: 'Servicios de depilación con cera, láser y otros métodos.', isActive: true },
-];
-
-// Función para normalizar texto (remover tildes)
-const normalizeText = (text) => {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+CategoryTable.propTypes = {
+  categories: PropTypes.array.isRequired,
+  onToggleStatus: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onView: PropTypes.func.isRequired,
 };
 
-// --- Componente Principal ---
-const CatServices = () => {
-  const [categories, setCategories] = useState(initialCategories);
+const CatServicesContent = () => {
+  const { setTitle } = useOutletContext();
+  const { categories, addCategory, editCategory, deleteCategory, toggleCategoryStatus } = useServiceCategories();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
+  useEffect(() => {
+    setTitle('Gestión de Categorías de Servicios');
+    return () => setTitle('');
+  }, [setTitle]);
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+  useEffect(() => {
     setCurrentPage(1);
-  };
-
-  const toggleCategoryStatus = (id) => {
-    const category = categories.find(cat => cat.id === id);
-    const newStatus = category.isActive ? 'Inactivo' : 'Activo';
-    Swal.fire({
-      title: `¿Estás seguro de cambiar el estado a ${newStatus}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, cambiar',
-      cancelButtonText: 'Cancelar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setCategories(
-          categories.map((cat) =>
-            cat.id === id ? { ...cat, isActive: !cat.isActive } : cat
-          )
-        );
-        toast.success(`Estado de la categoría cambiado a ${newStatus}`, {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    });
-  };
-
-  const handleAddCategory = (newCategory) => {
-    setCategories([
-      ...categories,
-      { 
-        ...newCategory, 
-        id: Date.now(), 
-        isActive: newCategory.estado === 'Activo',
-        description: newCategory.Descripcion // Mantener compatibilidad
-      }
-    ]);
-    // No cerrar el modal aquí, dejar que el componente hijo lo maneje
-  };
-
-  const handleEditCategory = (editedCategory) => {
-    Swal.fire({
-      title: '¿Guardar cambios en la categoría?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, guardar',
-      cancelButtonText: 'Cancelar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setCategories(
-          categories.map((cat) =>
-            cat.id === editedCategory.id ? { 
-              ...editedCategory, 
-              isActive: editedCategory.estado === 'Activo',
-              description: editedCategory.Descripcion // Mantener compatibilidad
-            } : cat
-          )
-        );
-        setIsEditModalOpen(false);
-        setSelectedCategory(null);
-        toast.success('Categoría editada exitosamente!', {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    });
-  };
-
-  const handleEditClick = (category) => {
-    setSelectedCategory(category);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDeleteCategory = (category) => {
-    Swal.fire({
-      title: `¿Estás seguro de que deseas eliminar la categoría "${category.name}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setCategories(categories.filter((cat) => cat.id !== category.id));
-        toast.success(`Categoría eliminada exitosamente!`, {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    });
-  };
+  }, [searchTerm, categories]);
 
   const filteredCategories = categories.filter(
     (cat) =>
-      normalizeText(cat.name).includes(normalizeText(searchTerm)) ||
-      normalizeText(cat.Descripcion || cat.description || '').includes(normalizeText(searchTerm)) ||
-      normalizeText(cat.estado || (cat.isActive ? 'Activo' : 'Inactivo')).includes(normalizeText(searchTerm))
+      (cat.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cat.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cat.isActive ? 'activo' : 'inactivo').includes(searchTerm.toLowerCase())
   );
 
-  const itemsPerPage = 3;
+  // Paginación
+  const itemsPerPage = 5;
   const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
 
+  // CRUD usando contexto
+  const handleAddCategory = (newCategory) => {
+    addCategory(newCategory);
+    toast.success('Categoría agregada exitosamente', { position: 'top-right' });
+  };
+
+  const handleEditCategory = (editedCategory) => {
+    editCategory(editedCategory);
+    setShowEditModal(false);
+        setSelectedCategory(null);
+    toast.success('Categoría editada exitosamente', { position: 'top-right' });
+  };
+
+  const handleEditClick = (category) => {
+    setSelectedCategory(category);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas eliminar la categoría "${category?.name}"? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+      if (result.isConfirmed) {
+      deleteCategory(categoryId);
+      toast.success('Categoría eliminada exitosamente', { position: 'top-right' });
+    }
+  };
+
+  const handleToggleStatus = async (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    const newStatus = category.isActive ? 'Inactivo' : 'Activo';
+    const result = await Swal.fire({
+      title: '¿Confirmar cambio de estado?',
+      text: `¿Estás seguro de que deseas cambiar el estado de "${category?.name}" a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (result.isConfirmed) {
+      toggleCategoryStatus(categoryId);
+      toast.success(`Estado cambiado a ${newStatus}`, { position: 'top-right' });
+    }
+  };
+
+  const handleViewDetail = (category) => {
+    setSelectedCategory(category);
+    setShowDetailModal(true);
+  };
+
+  // Adaptar los datos para la tabla (name -> Categoria, description -> Descripcion, isActive -> estado)
+  const tableCategories = paginatedCategories.map(cat => ({
+    id: cat.id,
+    Categoria: cat.name,
+    Descripcion: cat.description,
+    estado: cat.isActive ? 'Activo' : 'Inactivo',
+  }));
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen font-inter">
+      <div className="max-w-4xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6 pb-0">
-            <h1 className="text-2xl font-bold text-text-main mb-1">Gestión de Categorías de Servicios</h1>
-            <p className="text-text-main/60">Administra las categorías para los servicios de tu tienda.</p>
-          </div>
-          <div className="p-6 pt-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-2">
-              <div className="relative w-full max-w-sm">
-                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-                <input
-                  type="text"
-                  placeholder="Buscar categoría..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-                />
-              </div>
+          <div className="p-6">
+            {/* Barra de búsqueda y botón de crear */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <SearchProduct searchTerm={searchTerm} handleSearch={e => setSearchTerm(e.target.value)} placeholder="Buscar categorías..." />
               <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="bg-text-main hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm"
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                onClick={() => setShowAddModal(true)}
               >
-                <i className="bi bi-plus-lg text-lg"></i>
+                <i className="bi bi-plus-circle mr-2"></i>
                 Nueva Categoría
               </button>
             </div>
+            {/* Tabla de categorías */}
             <CategoryTable
-              categories={paginatedCategories}
-              onToggleStatus={toggleCategoryStatus}
-              onEdit={handleEditClick}
-              onDelete={handleDeleteCategory}
+              categories={tableCategories}
+              onToggleStatus={handleToggleStatus}
+              onEdit={cat => handleEditClick(cat)}
+              onDelete={cat => handleDeleteCategory(cat.id)}
+              onView={cat => handleViewDetail(cat)}
             />
+            {/* Paginación */}
             {totalPages > 1 && (
-              <>
-                <div className="flex justify-center mt-4">
                   <Paginator
                     currentPage={currentPage}
                     totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                </div>
-                <div className="text-center mt-2">
-                  <p className="text-sm text-text-main/70">
-                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, filteredCategories.length)} de {filteredCategories.length} categorías
-                  </p>
-                </div>
-              </>
+                onPageChange={setCurrentPage}
+              />
             )}
           </div>
         </div>
       </div>
       {/* Modales */}
-      {isAddModalOpen && <AddCatServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddCategory} existingCategories={categories} />}
-      {isEditModalOpen && selectedCategory && <EditCatServices onClose={() => { setIsEditModalOpen(false); setSelectedCategory(null); }} category={selectedCategory} onEdit={handleEditCategory} existingCategories={categories} />}
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
+      {showAddModal && (
+        <AddCatServices
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAddCategory}
+          existingCategories={categories}
+        />
+      )}
+      {showEditModal && selectedCategory && (
+        <EditCatServices
+          onClose={() => setShowEditModal(false)}
+          category={selectedCategory}
+          onEdit={handleEditCategory}
+          existingCategories={categories}
+        />
+      )}
+      {showDetailModal && selectedCategory && (
+        <CategoryDetail
+          onClose={() => setShowDetailModal(false)}
+          category={selectedCategory}
+          isOpen={showDetailModal}
+        />
+      )}
+      <ToastContainer />
     </div>
   );
 };
 
+const CatServices = () => (
+  <ServiceCategoriesProvider>
+    <CatServicesContent />
+  </ServiceCategoriesProvider>
+);
+
 export default CatServices;
-export { initialCategories };

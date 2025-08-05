@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
@@ -13,6 +13,7 @@ const ResetPassword = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [confirmError, setConfirmError] = useState('');
 
   const isFormValid = password.trim() && confirm.trim() && isValidPassword(password.trim()) && password.trim() === confirm.trim();
 
@@ -70,13 +71,25 @@ const ResetPassword = () => {
                 type={showConfirm ? 'text' : 'password'}
                 className="w-full border rounded pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                 value={confirm}
-                onChange={e => setConfirm(e.target.value)}
+                onChange={e => {
+                  setConfirm(e.target.value);
+                  if (password && e.target.value && password !== e.target.value) {
+                    setConfirmError('Las contraseñas no coinciden.');
+                  } else {
+                    setConfirmError('');
+                  }
+                }}
                 required
               />
               <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
+              {confirmError && (
+                <div className="text-red-500 text-xs mt-1">{confirmError}</div>
+              )}
             </div>
           </div>
-          {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+          {error && error !== 'Las contraseñas no coinciden.' && (
+            <div className="text-red-500 text-sm text-center">{error}</div>
+          )}
           {success && <div className="text-green-600 text-sm text-center">{success}</div>}
           <div className="flex justify-center gap-4 mt-4">
             <button

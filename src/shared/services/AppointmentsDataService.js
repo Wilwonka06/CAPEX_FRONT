@@ -90,33 +90,69 @@ export const getAppointments = () => {
 };
 
 export const addAppointment = (appointment) => {
-  return new Promise((resolve) => {
-    getAppointments().then((appointments) => {
-      const newAppointment = { ...appointment, id: Date.now(), reprogramaciones: 0 };
-      const updatedAppointments = [...appointments, newAppointment];
-      saveAppointmentsToStorage(updatedAppointments);
-      resolve(newAppointment);
-    });
+  return new Promise((resolve, reject) => {
+    try {
+      // Validar estructura mínima
+      if (!appointment || !appointment.cliente || !appointment.telefono || !appointment.fecha || !Array.isArray(appointment.servicios) || appointment.servicios.length === 0) {
+        console.error('addAppointment: Datos incompletos', appointment);
+        return reject(new Error('Datos incompletos para la cita.'));
+      }
+      getAppointments().then((appointments) => {
+        const newAppointment = { ...appointment, id: Date.now(), reprogramaciones: 0 };
+        const updatedAppointments = [...appointments, newAppointment];
+        try {
+          saveAppointmentsToStorage(updatedAppointments);
+          console.log('addAppointment: Guardado exitoso', newAppointment);
+          resolve(newAppointment);
+        } catch (err) {
+          console.error('addAppointment: Error guardando en localStorage', err);
+          reject(new Error('Error guardando la cita en almacenamiento local.'));
+        }
+      }).catch(err => {
+        console.error('addAppointment: Error obteniendo citas', err);
+        reject(new Error('Error obteniendo citas previas.'));
+      });
+    } catch (err) {
+      console.error('addAppointment: Error inesperado', err);
+      reject(new Error('Error inesperado al guardar la cita.'));
+    }
   });
 };
 
 export const updateAppointment = (updatedAppointment) => {
-  return new Promise((resolve) => {
-    getAppointments().then((appointments) => {
-      const updatedAppointments = appointments.map(a => {
-        if (a.id === updatedAppointment.id) {
-          // Si el estado cambia a 'Reprogramada', incrementa el contador
-          if (updatedAppointment.estado === 'Reprogramada') {
-            const nuevasReprogramaciones = (a.reprogramaciones || 0) + 1;
-            return { ...updatedAppointment, reprogramaciones: nuevasReprogramaciones };
+  return new Promise((resolve, reject) => {
+    try {
+      if (!updatedAppointment || !updatedAppointment.id) {
+        console.error('updateAppointment: Falta el ID de la cita', updatedAppointment);
+        return reject(new Error('Falta el ID de la cita a actualizar.'));
+      }
+      getAppointments().then((appointments) => {
+        const updatedAppointments = appointments.map(a => {
+          if (a.id === updatedAppointment.id) {
+            if (updatedAppointment.estado === 'Reprogramada') {
+              const nuevasReprogramaciones = (a.reprogramaciones || 0) + 1;
+              return { ...updatedAppointment, reprogramaciones: nuevasReprogramaciones };
+            }
+            return { ...updatedAppointment, reprogramaciones: a.reprogramaciones || 0 };
           }
-          return { ...updatedAppointment, reprogramaciones: a.reprogramaciones || 0 };
+          return a;
+        });
+        try {
+          saveAppointmentsToStorage(updatedAppointments);
+          console.log('updateAppointment: Guardado exitoso', updatedAppointment);
+          resolve(updatedAppointment);
+        } catch (err) {
+          console.error('updateAppointment: Error guardando en localStorage', err);
+          reject(new Error('Error guardando la cita actualizada en almacenamiento local.'));
         }
-        return a;
+      }).catch(err => {
+        console.error('updateAppointment: Error obteniendo citas', err);
+        reject(new Error('Error obteniendo citas previas.'));
       });
-      saveAppointmentsToStorage(updatedAppointments);
-      resolve(updatedAppointment);
-    });
+    } catch (err) {
+      console.error('updateAppointment: Error inesperado', err);
+      reject(new Error('Error inesperado al actualizar la cita.'));
+    }
   });
 };
 

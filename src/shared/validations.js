@@ -50,11 +50,11 @@ export function isDuplicateEmployeeDocument(documento, empleados, empleadoActual
 export function isDuplicateCategoryName(nombre, categorias, categoriaActual = null) {
   const normalizedNombre = normalizeText(nombre);
   return categorias.some(c => {
-    // Si estamos editando, excluir la categoría actual
     if (categoriaActual && c.id === categoriaActual.id) {
       return false;
     }
-    return normalizeText(c.name) === normalizedNombre;
+    // Soporta tanto 'name' como 'Categoria'
+    return normalizeText(c.name || c.Categoria) === normalizedNombre;
   });
 }
 
@@ -599,7 +599,7 @@ export function isValidDecimal(value) {
 
 // Verifica si ya existe un rol con el mismo nombre (insensible a mayúsculas)
 export function isDuplicateRoleName(nombre, roles, rolActual = null) {
-  const normalizar = (str) => str.trim().toLowerCase();
+  const normalizar = (str) => (str ?? '').trim().toLowerCase();
   return roles.some(r => {
     // Si estamos editando, excluir el rol actual
     if (rolActual && r.id === rolActual.id) {
@@ -662,7 +662,7 @@ export function validateRole(formData, privileges, roles = [], rolActual = null)
 
 // Verifica si ya existe un cliente con el mismo email
 export function isDuplicateCustomerEmail(email, customers, customerActual = null) {
-  const normalizar = (str) => str.trim().toLowerCase();
+  const normalizar = (str) => (str ?? '').trim().toLowerCase();
   return customers.some(c => {
     // Si estamos editando, excluir el cliente actual
     if (customerActual && c.id === customerActual.id) {
@@ -808,9 +808,9 @@ export function isValidServiceOrderClientName(clientName) {
   return clientName && clientName.trim().length >= 2;
 }
 
-// Valida que la orden tenga al menos un servicio o producto
+// Valida que la orden tenga al menos un servicio (productos son opcionales)
 export function hasServiceOrderItems(servicios = [], productos = []) {
-  return (servicios.length > 0) || (productos.length > 0);
+  return servicios.length > 0;
 }
 
 // Valida dinero proporcionado para órdenes pagadas
@@ -830,9 +830,9 @@ export function validateServiceOrder(orderData, orders = [], totalGeneral = 0, s
     errors.clientName = 'El nombre del cliente es requerido y debe tener al menos 2 caracteres';
   }
 
-  // Validación de servicios y productos
+  // Validación de servicios (productos son opcionales)
   if (!hasServiceOrderItems(orderData.servicios, orderData.productos)) {
-    errors.items = 'Debe agregar al menos un servicio o producto';
+    errors.items = 'Debe agregar al menos un servicio';
   }
 
   // Validación de dinero proporcionado si el status es "Pagado"
@@ -851,4 +851,36 @@ export function validateServiceOrder(orderData, orders = [], totalGeneral = 0, s
 // Valida que el nombre tenga al menos 2 caracteres y no sea solo espacios
 export function isValidName(name) {
   return name && name.trim().length >= 2;
+}
+
+// ===== VALIDACIONES PERSONALIZADAS PARA USUARIOS =====
+
+// Valida documento según tipo
+export function validateUserDocument(tipo, documento) {
+  if (!documento) return 'El documento es obligatorio';
+  if (tipo === 'PPT') {
+    if (!/^[A-Z]{3}\d{6}$/.test(documento)) {
+      return 'PPT: 3 letras mayúsculas seguidas de 6 dígitos (ej: ABC123456)';
+    }
+  } else if (tipo === 'CC' || tipo === 'TI') {
+    if (!/^\d{7,15}$/.test(documento)) {
+      return 'Debe tener solo números (7 a 15 dígitos)';
+    }
+  } else {
+    return 'Selecciona un tipo de documento válido';
+  }
+  return '';
+}
+
+// Valida teléfono (solo números, 4 a 15 dígitos)
+export function validateUserPhone(telefono) {
+  if (!telefono) return 'El teléfono es obligatorio';
+  if (!/^\d{4,15}$/.test(telefono)) {
+    return 'El teléfono debe tener entre 4 y 15 dígitos, solo números';
+  }
+  return '';
+}
+
+function normalizar(valor) {
+  return (valor ?? '').trim().toLowerCase();
 }

@@ -3,6 +3,13 @@ import PropTypes from 'prop-types';
 import { addAppointment, updateAppointment, APPOINTMENT_STATES } from '../../../../../shared/services/AppointmentsDataService';
 import { getProfessionals } from '../../../../../shared/services/ProfessionalsDataService';
 import { getServices } from '../../../../../shared/services/ServicesDataService';
+import { getAppointments } from '../../../../../shared/services/AppointmentsDataService';
+import Swal from 'sweetalert2';
+
+function limpiarPrecio(valor) {
+  return Number(String(valor).replace(/[^\d]/g, '')) || 0;
+}
+
 
 const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   // Estados para el buscador
@@ -43,6 +50,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         ...cita,
         id: cita.id, // Asegura que el id esté presente
         fecha: cita.fecha || fecha || '',
+        estado: 'Reprogramada', // Cambiar estado a Reprogramada cuando se edita
         servicios: (cita.servicios || []).map(s => ({
           ...s,
           fin: calcularHoraFin(s.inicio, s.duracion)
@@ -86,8 +94,9 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
           profesional: '',
           inicio: '08:00',
           fin: calcularHoraFin('08:00', service.duration),
-          duracion: service.duration,
-          precio: service.price,
+          duracion: parseInt(service.duration?.toString().replace(/[^\d]/g, '') || 0, 10),
+          precio: parseInt(service.price?.toString().replace(/[^\d]/g, '') || 0, 10),
+
           cantidad: 1
         },
         ...prev.servicios
@@ -111,25 +120,46 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       const newServicios = [...prev.servicios];
       newServicios[index] = { ...newServicios[index], [field]: value };
       // Si cambia hora inicio o duración, recalcular hora fin
-      if (field === 'inicio' || field === 'duracion') {
+      if (['inicio', 'duracion', 'cantidad'].includes(field)) {
         const inicio = field === 'inicio' ? value : newServicios[index].inicio;
         const duracion = field === 'duracion' ? value : newServicios[index].duracion;
-        newServicios[index].fin = calcularHoraFin(inicio, duracion);
-      }
+        const cantidad = field === 'cantidad' ? value : newServicios[index].cantidad;
+        const duracionTotal = Number(duracion) * Number(cantidad || 1);
+        newServicios[index].fin = calcularHoraFin(inicio, duracionTotal);
+      }      
       return { ...prev, servicios: newServicios };
     });
   };
 
   // Calcular hora fin a partir de inicio y duración
   function calcularHoraFin(inicio, duracion) {
+    if (!inicio || !/^\d{2}:\d{2}$/.test(inicio)) return '';
     const [h, m] = inicio.split(':').map(Number);
-    const totalMin = h * 60 + m + Number(duracion);
+    const totalMin = h * 60 + m + Number(duracion || 0);
     const newH = Math.floor(totalMin / 60);
     const newM = totalMin % 60;
     return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
+  }  
+
+  // Validación de teléfono
+  function validarTelefono(telefono) {
+    const soloNumeros = /^[0-9]{7,10}$/;
+    if (!telefono) return 'El teléfono es requerido';
+    if (!soloNumeros.test(telefono)) return 'El teléfono debe tener solo números (7 a 10 dígitos)';
+    return '';
   }
 
-  // Validación de solapamiento de servicios para el mismo profesional
+  // Validación de fecha
+  function validarFecha(fecha) {
+    if (!fecha) return 'La fecha es requerida';
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+    const fechaCita = new Date(fecha);
+    if (fechaCita < hoy) return 'No puedes agendar una cita en una fecha pasada';
+    return '';
+  }
+
+  // Validación de solapamiento de servicios para el mismo profesional (en el formulario)
   function haySolapamientoServicios(servicios) {
     for (let i = 0; i < servicios.length; i++) {
       for (let j = i + 1; j < servicios.length; j++) {
@@ -151,6 +181,59 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }
     return false;
   }
+
+  // Validación de choque con otras citas del mismo empleado en el mismo día
+  async function hayChoqueConOtrasCitas(servicio, fecha, idCitaActual) {
+    const todasCitas = await getAppointments();
+    const citasMismoDia = todasCitas.filter(c => c.fecha === fecha && c.id !== idCitaActual);
+    for (const cita of citasMismoDia) {
+      for (const s of cita.servicios || []) {
+        if (s.profesional === servicio.profesional) {
+          // Comparar horarios
+          const inicioA = parseInt(servicio.inicio.split(':')[0]) * 60 + parseInt(servicio.inicio.split(':')[1]);
+          const finA = parseInt(servicio.fin.split(':')[0]) * 60 + parseInt(servicio.fin.split(':')[1]);
+          const inicioB = parseInt(s.inicio.split(':')[0]) * 60 + parseInt(s.inicio.split(':')[1]);
+          const finB = parseInt(s.fin.split(':')[0]) * 60 + parseInt(s.fin.split(':')[1]);
+          if (inicioA < finB && inicioB < finA) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // Validaciones instantáneas
+  useEffect(() => {
+    const newErrors = {};
+    newErrors.cliente = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
+    newErrors.telefono = validarTelefono(formData.telefono);
+    newErrors.fecha = validarFecha(formData.fecha);
+    if (formData.servicios.length === 0) newErrors.servicios = 'Debe agregar al menos un servicio';
+    if (haySolapamientoServicios(formData.servicios)) newErrors.servicios = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
+    setErrors(newErrors);
+  }, [formData]);
+
+  // Validación de choque con otras citas (por cada servicio)
+  useEffect(() => {
+    async function validarChoques() {
+      const newErrors = { ...errors };
+      for (let i = 0; i < formData.servicios.length; i++) {
+        const s = formData.servicios[i];
+        if (s.profesional && s.inicio && s.fin) {
+          const choca = await hayChoqueConOtrasCitas(s, formData.fecha, cita?.id);
+          if (choca) {
+            newErrors[`servicio_${i}`] = 'Este horario choca con otra cita del mismo profesional en este día.';
+          } else {
+            delete newErrors[`servicio_${i}`];
+          }
+        }
+      }
+      setErrors(newErrors);
+    }
+    validarChoques();
+    // eslint-disable-next-line
+  }, [formData.servicios, formData.fecha]);
 
   // Generar opciones de hora disponibles para un servicio
   function getHorasDisponibles(idx, profesional, duracion) {
@@ -181,25 +264,13 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     return horas;
   }
 
-  // Validaciones
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.cliente.trim()) newErrors.cliente = 'El nombre del cliente es requerido';
-    if (!formData.telefono.trim()) newErrors.telefono = 'El teléfono es requerido';
-    if (!formData.fecha) newErrors.fecha = 'La fecha es requerida';
-    if (formData.servicios.length === 0) newErrors.servicios = 'Debe agregar al menos un servicio';
-    if (haySolapamientoServicios(formData.servicios)) newErrors.servicios = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   // Calcular duración total, hora inicio/fin global y valor total
   const calcularResumen = () => {
     if (formData.servicios.length === 0) return { duracion: 0, inicio: '', fin: '', total: 0 };
     const inicios = formData.servicios.map(s => s.inicio).sort();
     const fines = formData.servicios.map(s => s.fin).sort().reverse();
     const duracion = formData.servicios.reduce((acc, s) => acc + Number(s.duracion || 0), 0);
-    const total = formData.servicios.reduce((acc, s) => acc + (Number(s.precio) * (Number(s.cantidad) || 1)), 0);
+    const total = formData.servicios.reduce((acc, s) => acc + (limpiarPrecio(s.precio) * (Number(s.cantidad) || 1)), 0);
     return {
       duracion,
       inicio: inicios[0],
@@ -212,39 +283,73 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   // Guardar cita
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    let newErrors = {};
+    newErrors.cliente = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
+    newErrors.telefono = validarTelefono(formData.telefono);
+    newErrors.fecha = validarFecha(formData.fecha);
+    if (formData.servicios.length === 0) newErrors.servicios = 'Debe agregar al menos un servicio';
+    if (haySolapamientoServicios(formData.servicios)) newErrors.servicios = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
+    for (let i = 0; i < formData.servicios.length; i++) {
+      const s = formData.servicios[i];
+      if (s.profesional && s.inicio && s.fin) {
+        const choca = await hayChoqueConOtrasCitas(s, formData.fecha, cita?.id);
+        console.log('Validando choque para servicio', i, '->', choca);
+        if (choca) {
+          newErrors[`servicio_${i}`] = 'Este horario choca con otra cita del mismo profesional en este día.';
+        } else {
+          delete newErrors[`servicio_${i}`];
+        }
+      }
+    }
+    setErrors(newErrors);
+    console.log('Errores finales:', newErrors);
+    if (Object.values(newErrors).some(Boolean)) {
+      Swal.fire('Error', 'Por favor corrige los errores en el formulario antes de guardar.', 'error');
+      return;
+    }
     setLoading(true);
     try {
+      console.log('Intentando guardar cita...', cita ? 'EDITAR' : 'NUEVA', formData);
+      let result;
       if (cita) {
-        await updateAppointment({ ...formData, id: cita.id }); // Asegura que el id se envíe
+        result = await updateAppointment({ ...formData, id: cita.id });
+        console.log('Resultado updateAppointment:', result);
+        Swal.fire('¡Cita editada!', 'La cita se editó correctamente.', 'success');
       } else {
-        await addAppointment({ ...formData });
+        result = await addAppointment({ ...formData });
+        console.log('Resultado addAppointment:', result);
+        Swal.fire('¡Cita registrada!', 'La cita se registró correctamente.', 'success');
       }
+      console.log('Llamando onSave...');
       onSave();
+      console.log('Llamando onClose...');
       onClose();
+      console.log('Modal cerrado');
     } catch (error) {
+      Swal.fire('Error', 'Ocurrió un error al guardar la cita.', 'error');
       console.error('Error al guardar la cita:', error);
     } finally {
       setLoading(false);
+      console.log('Fin del submit');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none font-inter">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col mt-8">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-100 rounded-t-2xl flex items-center justify-between px-8 py-5">
-          <h2 className="text-2xl font-bold text-text-main m-0">{cita ? 'Editar' : 'Crear'} Cita</h2>
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-5">
+          <h2 className="text-2xl font-bold text-primary m-0">{cita ? 'Editar' : 'Crear'} Cita</h2>
           <button className="text-gray-400 hover:text-primary text-2xl font-bold" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-8 flex-1">
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-8 flex-1 space-y-4">
           {/* Buscador de servicios */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar Servicio <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-medium text-text-main mb-1">Buscar Servicio <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={serviceQuery}
               onChange={e => setServiceQuery(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Buscar por nombre de servicio..."
             />
             {filteredServices.length > 0 && (
@@ -265,6 +370,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                 ))}
               </div>
             )}
+            {errors.servicios && <span className="text-red-500 text-xs block mt-1">{errors.servicios}</span>}
           </div>
 
           {/* Servicios seleccionados */}
@@ -321,16 +427,15 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Duración</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Duración (min)</label>
                       <input
                         type="number"
                         value={service.duracion}
-                        onChange={e => updateService(idx, 'duracion', e.target.value)}
-                        className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        min="1"
+                        disabled
+                        className="w-full px-2 py-1 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
                       />
-                      <span className="text-xs text-gray-500">min</span>
                     </div>
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
                       <input
@@ -343,9 +448,10 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Precio</label>
-                      <div className="font-semibold">${service.precio * (service.cantidad || 1)}</div>
+                      <div className="font-semibold">${Number(service.precio) * (Number(service.cantidad) || 1)}</div>
                     </div>
                   </div>
+                  {errors[`servicio_${idx}`] && <span className="text-red-500 text-xs block mt-1">{errors[`servicio_${idx}`]}</span>}
                 </div>
               ))}
             </div>
@@ -369,7 +475,11 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               <input
                 type="tel"
                 value={formData.telefono}
-                onChange={e => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setFormData(prev => ({ ...prev, telefono: val }));
+                }}
+                maxLength={10}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
                 placeholder="Número de teléfono"
               />
@@ -406,9 +516,15 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               <input type="text" value={resumen.inicio} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Hora finalización</label>
-              <input type="text" value={resumen.fin} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
-            </div>
+  <label className="block text-xs font-medium text-gray-700 mb-1">Hora fin</label>
+  <input
+    type="text"
+    value={resumen.fin || ''}
+    disabled
+    className="w-full px-2 py-1 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+  />
+</div>
+
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Duración total</label>
               <input type="text" value={resumen.duracion + ' min'} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
@@ -419,21 +535,9 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition disabled:opacity-50"
-            >
-              {loading ? 'Guardando...' : (cita ? 'Actualizar' : 'Guardar')}
-            </button>
+          <div className="flex justify-end gap-2 mt-6">
+            <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition">{loading ? 'Guardando...' : (cita ? 'Guardar cambios' : 'Crear cita')}</button>
           </div>
         </form>
       </div>

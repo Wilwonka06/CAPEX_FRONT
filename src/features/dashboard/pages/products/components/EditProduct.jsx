@@ -21,13 +21,12 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     precio: "",
     cantidad: "",
     categoria: "",
-    color: "",
     fotos: [],
     tipoProducto: "",
-    // Eliminados: tamanio, volumen, tipoCabelloIdeal, textura, origen
   });
   const [previews, setPreviews] = useState([]);
   const [especificaciones, setEspecificaciones] = useState([{ concepto: "", valor: "", otroConcepto: "" }]);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (product) {
@@ -39,7 +38,6 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         precio: product.precio?.toString() || "",
         cantidad: product.cantidad?.toString() || "",
         categoria: product.categoria || "",
-        color: product.color || "",
         fotos: productFotos,
         tipoProducto: product.tipoProducto || "",
       });
@@ -147,15 +145,22 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.nombre.trim()) {
+    let errors = {};
+    if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
+    if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
+    if (!formData.precio) errors.precio = "El precio es obligatorio";
+    if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
+    if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
     const otrosProductos = products.filter(p => p.id !== product.id);
     if (isDuplicateProductName(formData.nombre, otrosProductos)) {
-      window.alert('Ya existe un producto con ese nombre.');
-      setFormData((prev) => ({ ...prev, nombre: product.nombre }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
+    setFieldErrors({});
     if (formData.nombre.trim() && formData.descripcion.trim() && formData.precio && formData.tipoProducto.trim()) {
       // Procesar las fotos
       const fotosUrls = formData.fotos.map(foto => {
@@ -172,7 +177,6 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         precio: parseFloat(formData.precio),
         cantidad: parseInt(formData.cantidad),
         categoria: formData.categoria,
-        color: formData.color,
         fotos: fotosUrls,
         tipoProducto: formData.tipoProducto,
         especificaciones: especificaciones
@@ -192,12 +196,12 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
       precio: "",
       cantidad: "",
       categoria: "",
-      color: "",
       fotos: [],
       tipoProducto: "",
     });
     setPreviews([]);
     setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
+    setFieldErrors({});
   };
 
   const handleBlurNombre = (e) => {
@@ -205,8 +209,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     // Excluir el producto actual de la validación
     const otrosProductos = products.filter(p => p.id !== product.id);
     if (isDuplicateProductName(value, otrosProductos)) {
-      window.alert('Ya existe un producto con ese nombre.');
-      setFormData((prev) => ({ ...prev, nombre: product.nombre }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
     }
   };
 
@@ -303,6 +306,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                 onBlur={handleBlurNombre}
                 required
               />
+              {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
@@ -322,19 +326,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Color
-                </label>
-              <input
-                type="text"
-                name="color"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                value={formData.color}
-                onChange={handleChange}
-                required
-              />
+              {fieldErrors.categoria && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoria}</p>}
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
@@ -351,6 +343,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                   <option value="Extensiones">Extensiones</option>
                   <option value="Cuidado capilar">Cuidado capilar</option>
                 </select>
+                {fieldErrors.tipoProducto && <p className="text-xs text-red-500 mt-1">{fieldErrors.tipoProducto}</p>}
             </div>
             {/* Especificaciones Técnicas (antes de la descripción) */}
             <div className="bg-gray-50 rounded-lg p-4 border mb-4">
@@ -406,6 +399,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
                 required
               />
+              {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
@@ -449,6 +443,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
               required
               rows={3}
             />
+            {fieldErrors.descripcion && <p className="text-xs text-red-500 mt-1">{fieldErrors.descripcion}</p>}
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <button

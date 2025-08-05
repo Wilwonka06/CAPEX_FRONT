@@ -1,5 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import cartIcon from '../../../shared/images/cart.png';
+import { useCartToast } from '../components/CartToastContext';
+import { useCart } from '../components/CartContext';
 
 const productos = [
   {
@@ -36,33 +39,54 @@ const productos = [
   },
 ];
 
-const FeaturedProducts = () => (
+const FeaturedProducts = () => {
+  const { showCartToast } = useCartToast();
+  const { addToCart } = useCart();
+
+  return (
   <section className="py-16 bg-[#1E1E1E]">
     <div className="max-w-6xl mx-auto px-4">
-      <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-white">
+      <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-white font-montserrat">
         Productos <span className="text-[#FACC15]">destacados</span>
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
         {productos.map((prod) => (
           <div
             key={prod.id}
-            className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center text-center border border-[#FACC15] hover:shadow-2xl transition-all"
+              className="flex flex-col cursor-pointer group transition-all"
           >
+              <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
             <img
               src={prod.foto}
               alt={prod.nombre}
-              className="w-24 h-24 object-cover rounded-full border-4 border-[#FACC15] mb-4 bg-white"
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
-            <h3 className="text-lg font-semibold text-[#1E1E1E] mb-2">{prod.nombre}</h3>
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{prod.descripcion}</p>
-            <span className="text-xl font-bold text-[#FACC15] mb-2 block">${prod.precio.toLocaleString('es-MX', {minimumFractionDigits:2})}</span>
-            <span className="text-xs text-gray-500 mb-4">{prod.categoria}</span>
+              </div>
+              <div className="p-5 flex flex-col gap-2 flex-1 justify-between">
+                <h3 className="font-semibold text-lg text-[#1E1E1E] mb-1 truncate group-hover:text-[#FACC15] transition-colors">{prod.nombre}</h3>
+            <p className="text-sm text-gray-600 mb-2 line-clamp-2 font-lato">{prod.descripcion}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm font-bold text-[#FACC15]">${prod.precio.toLocaleString('es-MX', {minimumFractionDigits:2})}</span>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      addToCart(prod, 1);
+                      showCartToast(prod);
+                    }}
+                    className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center"
+                    title="Agregar al carrito"
+                  >
+                    <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
+                  </button>
+                </div>
+                <span className="text-xs text-gray-500 mb-1 font-lato">{prod.categoria}</span>
+              </div>
           </div>
         ))}
       </div>
       <div className="flex justify-center mt-10">
-        <Link to="/catalogo">
-          <button className="bg-[#FACC15] text-[#1E1E1E] font-semibold px-8 py-3 rounded-full shadow-lg hover:bg-yellow-400 transition-all text-lg">
+        <Link to="/landing/catalogo">
+          <button className="bg-[#FACC15] text-[#1E1E1E] font-semibold px-8 py-3 rounded-full shadow-lg hover:bg-yellow-400 transition-all text-lg font-poppins">
             Ver más productos
           </button>
         </Link>
@@ -70,5 +94,6 @@ const FeaturedProducts = () => (
       </div>
     </section>
   );
+};
 
 export default FeaturedProducts; 

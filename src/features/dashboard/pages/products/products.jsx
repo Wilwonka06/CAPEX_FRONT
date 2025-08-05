@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProductsTable from "./components/ProductsTable";
 import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
@@ -7,11 +7,19 @@ import { useProducts } from "./hooks/useProducts";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
 
 const ProductsPage = () => {
   const { products, addProduct, editProduct, deleteProduct } = useProducts();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const { setTitle } = useOutletContext();
+
+  useEffect(() => {
+    setTitle('Gestión de Productos');
+    // Limpia el título al desmontar si lo deseas
+    return () => setTitle('');
+  }, [setTitle]);
 
   // Función para manejar el cambio de página
   const handlePageChange = (page) => {
@@ -27,20 +35,20 @@ const ProductsPage = () => {
   // Filtrar productos según término de búsqueda
   const filteredProducts = products.filter(
     (product) =>
-      product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.color.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.cantidad.toString().includes(searchTerm) ||
-      product.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.precio.toString().includes(searchTerm) ||
-      product.fechaRegistro.includes(searchTerm)
+      (product.nombre ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.color ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.cantidad ?? '').toString().includes(searchTerm) ||
+      (product.categoria ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.precio ?? '').toString().includes(searchTerm) ||
+      (product.fechaRegistro ?? '').includes(searchTerm)
   );
 
   // Función para crear un nuevo producto
   const handleCreateProduct = (newProduct) => {
     try {
-    addProduct(newProduct);
+      addProduct(newProduct);
       toast.success('Producto creado exitosamente', { position: 'top-right' });
-    } catch (error) {
+    } catch {
       toast.error('Error al crear el producto', { position: 'top-right' });
     }
   };
@@ -60,9 +68,9 @@ const ProductsPage = () => {
 
     if (result.isConfirmed) {
       try {
-    editProduct(updatedProduct);
+        editProduct(updatedProduct);
         toast.success('Producto actualizado exitosamente', { position: 'top-right' });
-      } catch (error) {
+      } catch {
         toast.error('Error al actualizar el producto', { position: 'top-right' });
       }
     }
@@ -84,9 +92,9 @@ const ProductsPage = () => {
 
     if (result.isConfirmed) {
       try {
-    deleteProduct(productId);
+        deleteProduct(productId);
         toast.success('Producto eliminado exitosamente', { position: 'top-right' });
-      } catch (error) {
+      } catch {
         toast.error('Error al eliminar el producto', { position: 'top-right' });
       }
     }
@@ -103,10 +111,7 @@ const ProductsPage = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
-          <div className="p-6">
-            <h1 className="text-2xl font-bold">Gestión de Productos</h1>
-          </div>
-          
+          {/* El título ahora se muestra en el navbar */}
           <div className="p-6">
             {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">

@@ -10,6 +10,7 @@ import ChangeStatus from "./components/ChangeStatus";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
 
 const LOCAL_STORAGE_KEY = 'categorias_productos';
 const CATEGORIES_PER_PAGE = 5;
@@ -57,6 +58,7 @@ const CatProductsPage = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { setTitle } = useOutletContext();
 
   // Cargar categorías al iniciar
   useEffect(() => {
@@ -214,14 +216,17 @@ const CatProductsPage = () => {
     setSelectedCategory(null);
   };
 
+  useEffect(() => {
+    setTitle('Gestión de Categorías de Productos');
+    return () => setTitle('');
+  }, [setTitle]);
+
   return (
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
-          <div className=" p-6">
-            <h1 className="text-2xl font-bold">Gestión de Categorías de Productos</h1>
-          </div>
+          {/* El título ahora se muestra en el navbar */}
           
           <div className="p-6">
             {/* Barra de búsqueda y botón de crear */}

@@ -3,7 +3,7 @@ import UserProfileModal from '../../../shared/components/UserProfileModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
-const AdminNavbar = () => {
+const AdminNavbar = ({ title }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('currentUser')));
   const navigate = useNavigate();
@@ -17,7 +17,13 @@ const AdminNavbar = () => {
   // handleLogout ya no es necesario, usamos logout del contexto
 
   return (
-    <nav className="bg-white border-b border-gray-100 px-8 py-3 flex items-center justify-end">
+    <nav className="bg-white border-b border-gray-100 px-8 py-3 flex items-center justify-between">
+      {/* Título del módulo */}
+      <div className="flex-1">
+        {title && (
+          <h1 className="text-xl font-bold text-gray-800">{title}</h1>
+        )}
+      </div>
       <div className="flex items-center gap-4">
         {currentUser && (
           <button

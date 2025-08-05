@@ -6,8 +6,12 @@ import {
   isValidPhone, 
   isValidSupplierType 
 } from "../../../../../shared/validations";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import '../../users/components/phoneinput-search.css';
+import PropTypes from 'prop-types';
 
-const CreateSupplier = ({ onCreate, suppliers = [] }) => {
+const CreateSupplier = ({ onCreate, suppliers = [], isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     nit: "",
@@ -20,6 +24,11 @@ const CreateSupplier = ({ onCreate, suppliers = [] }) => {
   });
   const [errors, setErrors] = useState({});
   const [isEmailValid, setIsEmailValid] = useState(true);
+  const [numero, setNumero] = useState('');
+  const [country, setCountry] = useState({ countryCode: 'co', dialCode: '+57' });
+
+  // Determinar si el modal debe estar abierto
+  const modalOpen = externalOpen !== undefined ? externalOpen : open;
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -27,131 +36,112 @@ const CreateSupplier = ({ onCreate, suppliers = [] }) => {
     setFormData({ nit: "", nombre: "", contacto: "", direccion: "", telefono: "", correo: "", tipo: "" });
     setErrors({});
     setIsEmailValid(true);
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    
-    // Limpiar errores al escribir
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: "" }));
-    }
+    if (externalOnClose) externalOnClose();
   };
 
   const validateField = (name, value) => {
     switch (name) {
       case 'nit':
-        if (value && !isValidNIT(value)) {
-          return 'El NIT debe comenzar con una letra seguida de números';
-        }
-        break;
+        if (!value.trim()) return 'El NIT es requerido';
+        if (!isValidNIT(value)) return 'El NIT debe comenzar con una letra seguida de números';
+        if (suppliers.some(s => s.nit === value)) return 'Ya existe un proveedor con ese NIT';
+        return '';
+      case 'nombre':
+        if (!value.trim()) return 'El nombre es requerido';
+        return '';
+      case 'contacto':
+        if (!value.trim()) return 'El contacto es requerido';
+        return '';
+      case 'direccion':
+        if (!value.trim()) return 'La dirección es requerida';
+        return '';
       case 'telefono':
-        if (value && !isValidPhone(value)) {
-          return 'El teléfono debe tener formato: +código de país + números (7-15 dígitos)';
-        }
-        break;
+        if (!numero) return 'El teléfono es requerido';
+        if (numero.length < 7 || numero.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
+        return '';
       case 'correo':
-        if (value && !isValidEmail(value)) {
-          return 'Formato de correo electrónico inválido';
-        }
-        break;
+        if (!value.trim()) return 'El correo es requerido';
+        if (!isValidEmail(value)) return 'Formato de correo electrónico inválido';
+        if (suppliers.some(s => s.correo === value)) return 'Ya existe un proveedor con ese correo electrónico';
+        return '';
       case 'tipo':
-        if (value && !isValidSupplierType(value)) {
-          return 'El tipo debe ser N (Natural) o J (Jurídico)';
-        }
-        break;
+        if (!value.trim()) return 'El tipo es requerido';
+        if (!isValidSupplierType(value)) return 'El tipo debe ser N (Natural) o J (Jurídico)';
+        return '';
       default:
-        break;
+        return '';
     }
-    return "";
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     const error = validateField(name, value);
-    
-    if (error) {
-      setErrors(prev => ({ ...prev, [name]: error }));
-    }
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
 
-    // Validación especial para correo (duplicado)
-    if (name === 'correo' && value) {
-      if (isDuplicateSupplierEmail(value, suppliers)) {
-        window.alert('Ya existe un proveedor con ese correo electrónico.');
-        setFormData(prev => ({ ...prev, correo: '' }));
-        setIsEmailValid(false);
-      } else {
-        setIsEmailValid(true);
-      }
-    }
+  const handlePhoneChange = (value, countryData) => {
+    setNumero(value);
+    setCountry({ countryCode: countryData.countryCode, dialCode: '+' + countryData.dialCode });
+    const error = validateField('telefono', value);
+    setErrors(prev => ({ ...prev, telefono: error }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
     // Validar todos los campos
     const newErrors = {};
     Object.keys(formData).forEach(key => {
-      const error = validateField(key, formData[key]);
-      if (error) {
-        newErrors[key] = error;
-      }
+      newErrors[key] = validateField(key, formData[key]);
     });
-
-    // Validar campos requeridos
-    if (!formData.nit.trim()) newErrors.nit = 'El NIT es requerido';
-    if (!formData.nombre.trim()) newErrors.nombre = 'El nombre es requerido';
-    if (!formData.contacto.trim()) newErrors.contacto = 'El contacto es requerido';
-    if (!formData.direccion.trim()) newErrors.direccion = 'La dirección es requerida';
-    if (!formData.telefono.trim()) newErrors.telefono = 'El teléfono es requerido';
-    if (!formData.correo.trim()) newErrors.correo = 'El correo es requerido';
-    if (!formData.tipo.trim()) newErrors.tipo = 'El tipo es requerido';
-
-    // Validar correo duplicado
-    if (formData.correo && isDuplicateSupplierEmail(formData.correo, suppliers)) {
-      newErrors.correo = 'Ya existe un proveedor con ese correo electrónico';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
+    newErrors.telefono = validateField('telefono', numero);
+    if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       return;
     }
-
     // Si todo está válido, crear el proveedor
-      const newSupplier = {
-        ...formData,
-        id: Date.now(),
-        isActive: true,
+    const newSupplier = {
+      ...formData,
+      telefono: country.dialCode + '-' + numero,
+      id: Date.now(),
+      isActive: true,
       tipo: formData.tipo.toUpperCase(),
-      };
-    
-      if (onCreate) onCreate(newSupplier);
-      handleClose();
+    };
+    if (onCreate) onCreate(newSupplier);
+    handleClose();
   };
 
   return (
     <>
-      <button
-        className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
-        onClick={handleOpen}
-      >
-        <i className="bi bi-plus-circle mr-2"></i>
-        Crear proveedor
-      </button>
-      {open && (
+      {/* Solo mostrar el botón si no se controla externamente */}
+      {externalOpen === undefined && (
+        <button
+          className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+          onClick={handleOpen}
+        >
+          <i className="bi bi-plus-circle mr-2"></i>
+          Crear proveedor
+        </button>
+      )}
+      {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
             {/* Header fijo */}
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
               <h2 className="text-xl font-bold text-primary m-0">Crear nuevo proveedor</h2>
-            <button
+              <button
                 className="text-gray-400 hover:text-primary text-xl font-bold"
-              onClick={handleClose}
-              aria-label="Cerrar"
-            >
-              ×
-            </button>
+                onClick={handleClose}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
             </div>
             {/* Contenido con scroll */}
             <div className="overflow-y-auto p-8 flex-1">
@@ -248,14 +238,18 @@ const CreateSupplier = ({ onCreate, suppliers = [] }) => {
                     <input 
                       type="text" 
                       name="telefono" 
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                        errors.telefono ? 'border-red-500' : 'border-gray-300'
-                      }`}
+                      className="hidden"
                       value={formData.telefono} 
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      placeholder="Ej: +573001234567"
-                      required 
+                      readOnly
+                    />
+                    <PhoneInput
+                      country={country.countryCode}
+                      value={numero}
+                      onChange={handlePhoneChange}
+                      inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                      inputProps={{ name: 'telefono', required: true }}
+                      specialLabel=""
+                      placeholder="Ej: 3001234567"
                     />
                     {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
               </div>
@@ -299,6 +293,13 @@ const CreateSupplier = ({ onCreate, suppliers = [] }) => {
       )}
     </>
   );
+};
+
+CreateSupplier.propTypes = {
+  onCreate: PropTypes.func.isRequired,
+  suppliers: PropTypes.array,
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func,
 };
 
 export default CreateSupplier; 

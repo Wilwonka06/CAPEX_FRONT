@@ -34,11 +34,12 @@ const TopProductsChart = ({ data }) => {
         <button
           onClick={handleDownloadExcel}
           className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded shadow transition font-medium text-sm"
+          title="Descargar top productos del mes seleccionado"
         >
           <i className="bi bi-download"></i> Descargar informe
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={260}>
+      <ResponsiveContainer width="100%" height={320}>
         <BarChart
           data={data}
           layout="vertical"
@@ -46,8 +47,8 @@ const TopProductsChart = ({ data }) => {
           barCategoryGap={20}
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis type="number" tick={{ fill: '#333' }} />
-          <YAxis dataKey="nombre" type="category" tick={{ fill: '#333', fontWeight: 500 }} width={200} />
+          <XAxis type="number" tick={{ fill: '#333' }} domain={[0, 'dataMax']} />
+          <YAxis dataKey="nombre" type="category" tick={{ fill: '#333', fontWeight: 500 }} width={220} />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="cantidad" fill="#a78bfa" radius={[0, 8, 8, 0]}>
             <LabelList dataKey="cantidad" position="right" fill="#111" fontWeight={700} />

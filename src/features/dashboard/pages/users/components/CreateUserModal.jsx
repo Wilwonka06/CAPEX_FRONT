@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import PasswordEye from '../../../../../shared/components/PasswordEye';
-import { isValidEmail, isValidPhone, isValidNumber, isValidPassword } from '../../../../../shared/validations';
+import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
 import { getRoles } from '../../../../../shared/services/ModuleDataService';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import './phoneinput-search.css';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=128';
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
@@ -72,6 +75,11 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState('');
   const [error, setError] = useState({});
+  const [country, setCountry] = useState({
+    countryCode: 'co',
+    dialCode: '+57',
+  });
+  const [numero, setNumero] = useState('');
 
   useEffect(() => {
     getRoles().then(roles => {
@@ -87,11 +95,10 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
         if (users.some(u => u.correo === value)) return 'Correo ya registrado';
         return '';
       case 'telefono':
-        return isValidPhone(value) ? '' : 'Teléfono inválido';
+        // Validar usando el valor de 'numero' (input del usuario)
+        return validateUserPhone(numero);
       case 'documento':
-        if (!isValidNumber(value)) return 'Documento inválido';
-        if (form.tipoDocumento && users.some(u => u.tipoDocumento === form.tipoDocumento && u.documento === value)) return 'Ya existe un usuario con ese tipo y número de documento';
-        return '';
+        return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
         if (!value.trim()) return 'Campo obligatorio';
         if (form.documento && users.some(u => u.tipoDocumento === value && u.documento === form.documento)) return 'Ya existe un usuario con ese tipo y número de documento';
@@ -167,8 +174,10 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     const userRoles = allRoles.filter(r => form.roles.includes(r.name));
     const privileges = mergePrivileges(userRoles);
     // Crear usuario
+    const telefonoFinal = country.dialCode + '-' + numero;
     const newUser = {
       ...form,
+      telefono: telefonoFinal,
       avatar,
       avatarCompressed,
       privileges,
@@ -234,7 +243,60 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <input type="text" name="telefono" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.telefono} onChange={handleChange} onBlur={handleBlur} required />
+                <div className="flex gap-1 items-start">
+                  <PhoneInput
+                    country={country.countryCode}
+                    value={country.dialCode}
+                    onChange={(value, data) => {
+                      setCountry({
+                        countryCode: data.countryCode,
+                        dialCode: '+' + data.dialCode
+                      });
+                    }}
+                    inputProps={{
+                      name: 'prefijo',
+                      readOnly: true,
+                      className: 'w-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 cursor-pointer',
+                      style: { backgroundColor: '#f9fafb' }
+                    }}
+                    specialLabel=""
+                    containerClass="w-28"
+                    inputClass="w-full"
+                    buttonClass=""
+                    dropdownClass=""
+                    enableSearch
+                    disableCountryCode={false}
+                    disableDropdown={false}
+                    countryCodeEditable={false}
+                    disableSearchIcon={false}
+                    onlyCountries={['co','mx','cl','ar','pe','ve','ec','us','es']}
+                  />
+                  <input
+                    type="text"
+                    name="numero"
+                    value={numero}
+                    onChange={e => {
+                      // Solo permitir dígitos
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setNumero(val.slice(0, 15));
+                      // Validación en tiempo real
+                      let err = '';
+                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      setError(prev => ({ ...prev, telefono: err }));
+                    }}
+                    onBlur={e => {
+                      const val = e.target.value;
+                      let err = '';
+                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      setError(prev => ({ ...prev, telefono: err }));
+                    }}
+                    className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    placeholder="Número sin prefijo"
+                    required
+                    autoComplete="off"
+                    maxLength={15}
+                  />
+                </div>
                 {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
               </div>
               <div>
@@ -265,13 +327,17 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
               <div className="relative">
                 <label className="block text-xs font-medium text-text-main mb-1">Contraseña <span className="text-red-500">*</span></label>
                 <input type={showPassword ? 'text' : 'password'} name="password" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.password} onChange={handleChange} onBlur={handleBlur} required />
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
                 <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
+                </div>
                 {error.password && <span className="text-red-500 text-xs">{error.password}</span>}
               </div>
               <div className="relative">
                 <label className="block text-xs font-medium text-text-main mb-1">Confirmar contraseña <span className="text-red-500">*</span></label>
                 <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} required />
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
                 <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
+                </div>
                 {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
               </div>
               <div>

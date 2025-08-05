@@ -9,6 +9,9 @@ export default {
       fontFamily: {
         'inter': ['Inter', 'sans-serif'],
         'montserrat': ['Montserrat', 'sans-serif'],
+        'poppins': ['Poppins', 'sans-serif'],
+        'nunito': ['Nunito', 'sans-serif'],
+        'lato': ['Lato', 'sans-serif'],
         'roboto': ['Roboto', 'sans-serif'],
       },
       colors: {

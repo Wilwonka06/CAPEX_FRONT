@@ -31,13 +31,13 @@ const TransformationsCarousel = () => {
   return (
     <section className="py-16 bg-[#1E1E1E]">
       <div className="max-w-4xl mx-auto px-4">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-white">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-white font-montserrat">
           Transformaciones <span className="text-[#FACC15]">reales</span>
         </h2>
         <div className="relative flex flex-col md:flex-row items-center justify-center gap-8 bg-[#232323] rounded-2xl p-8 shadow-lg border border-[#FACC15]">
           {/* Antes */}
           <div className="flex flex-col items-center">
-            <span className="text-[#FACC15] font-semibold mb-2">Antes</span>
+            <span className="text-[#FACC15] font-semibold mb-2 font-nunito">Antes</span>
             <img src={actual.antes} alt="Antes" className="w-40 h-40 object-cover rounded-xl border-4 border-[#FACC15] mb-2" />
           </div>
           {/* Flechas */}
@@ -53,11 +53,11 @@ const TransformationsCarousel = () => {
           </button>
           {/* Después */}
           <div className="flex flex-col items-center">
-            <span className="text-[#FACC15] font-semibold mb-2">Después</span>
+            <span className="text-[#FACC15] font-semibold mb-2 font-nunito">Después</span>
             <img src={actual.despues} alt="Después" className="w-40 h-40 object-cover rounded-xl border-4 border-[#FACC15] mb-2" />
           </div>
         </div>
-        <p className="text-center text-white mt-6 text-lg font-medium">{actual.descripcion}</p>
+        <p className="text-center text-white mt-6 text-lg font-medium font-lato">{actual.descripcion}</p>
         {/* Indicadores */}
         <div className="flex justify-center gap-2 mt-4">
           {transformaciones.map((_, i) => (

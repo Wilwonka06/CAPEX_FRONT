@@ -91,7 +91,6 @@ const ThankYou = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 py-10 px-2 flex flex-col items-center">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-10  flex flex-col items-center">
-        <div className="text-7xl mb-4 animate-bounce text-[#FACC15]">🎉</div>
         <h1 className="text-3xl font-bold mb-4 text-[#1E1E1E] text-center">¡Gracias por tu compra!</h1>
         <p className="text-gray-700 text-lg mb-6 text-center">Tu pedido ha sido registrado exitosamente. Pronto recibirás la confirmación y el seguimiento en tu correo electrónico.</p>
         {/* Botón para descargar PDF */}

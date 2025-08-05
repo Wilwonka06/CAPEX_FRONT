@@ -101,7 +101,7 @@ const EditProfile = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex items-center p-4">
         <button onClick={() => navigate(-1)} className="text-2xl text-primary mr-2">&lt;</button>
-        <h1 className="text-xl font-bold text-text-main">Editar perfil</h1>
+        <h1 className="text-xl font-bold text-text-main font-montserrat">Editar perfil</h1>
       </div>
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto bg-white rounded-lg shadow p-8 flex flex-col items-center">
         <div className="flex flex-col items-center mb-6">
@@ -112,7 +112,7 @@ const EditProfile = () => {
               <i className="bi bi-person text-6xl text-gray-400"></i>
             )}
           </div>
-          <button type="button" className="text-primary hover:underline text-sm" onClick={() => fileInputRef.current.click()}>
+          <button type="button" className="text-primary hover:underline text-sm font-lato" onClick={() => fileInputRef.current.click()}>
             Cambiar foto
           </button>
           <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handlePhotoChange} />
@@ -120,55 +120,55 @@ const EditProfile = () => {
         <div className="flex w-full flex-col md:flex-row gap-8">
           {/* Datos personales */}
           <div className="flex-1 flex flex-col gap-3">
-            <h2 className="font-semibold text-text-main mb-2">Datos personales</h2>
+            <h2 className="font-semibold text-text-main mb-2 font-nunito">Datos personales</h2>
             <div>
-              <label className="block text-sm font-medium">Nombre completo</label>
-              <input name="nombre" value={form.nombre} onChange={handleChange} className="w-full border rounded px-3 py-2" required />
+              <label className="block text-sm font-medium font-lato">Nombre completo</label>
+              <input name="nombre" value={form.nombre} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" required />
             </div>
             <div>
-              <label className="block text-sm font-medium">Tipo de documento</label>
-              <select name="tipoDocumento" value={form.tipoDocumento} onChange={handleChange} className="w-full border rounded px-3 py-2">
+              <label className="block text-sm font-medium font-lato">Tipo de documento</label>
+              <select name="tipoDocumento" value={form.tipoDocumento} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato">
                 {tiposDocumento.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium">Documento</label>
-              <input name="documento" value={form.documento} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+              <label className="block text-sm font-medium font-lato">Documento</label>
+              <input name="documento" value={form.documento} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" />
             </div>
             <div>
-              <label className="block text-sm font-medium">Fecha de nacimiento</label>
-              <input type="date" name="fechaNacimiento" value={form.fechaNacimiento} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+              <label className="block text-sm font-medium font-lato">Fecha de nacimiento</label>
+              <input type="date" name="fechaNacimiento" value={form.fechaNacimiento} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" />
             </div>
             <div>
-              <label className="block text-sm font-medium">Contraseña (opcional)</label>
-              <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full border rounded px-3 py-2" autoComplete="new-password" />
+              <label className="block text-sm font-medium font-lato">Contraseña (opcional)</label>
+              <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" autoComplete="new-password" />
             </div>
             <div>
-              <label className="block text-sm font-medium">*Confirmar contraseña</label>
-              <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} className="w-full border rounded px-3 py-2" autoComplete="new-password" />
+              <label className="block text-sm font-medium font-lato">*Confirmar contraseña</label>
+              <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" autoComplete="new-password" />
             </div>
           </div>
           {/* Información de contacto */}
           <div className="flex-1 flex flex-col gap-3">
-            <h2 className="font-semibold text-text-main mb-2">Información de contacto</h2>
+            <h2 className="font-semibold text-text-main mb-2 font-nunito">Información de contacto</h2>
             <div>
-              <label className="block text-sm font-medium">Correo</label>
-              <input name="correo" value={form.correo} onChange={handleChange} className="w-full border rounded px-3 py-2" required />
+              <label className="block text-sm font-medium font-lato">Correo</label>
+              <input name="correo" value={form.correo} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" required />
             </div>
             <div>
-              <label className="block text-sm font-medium">Teléfono</label>
-              <input name="telefono" value={form.telefono} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+              <label className="block text-sm font-medium font-lato">Teléfono</label>
+              <input name="telefono" value={form.telefono} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" />
             </div>
             <div>
-              <label className="block text-sm font-medium">Dirección</label>
-              <input name="direccion" value={form.direccion} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+              <label className="block text-sm font-medium font-lato">Dirección</label>
+              <input name="direccion" value={form.direccion} onChange={handleChange} className="w-full border rounded px-3 py-2 font-lato" />
             </div>
           </div>
         </div>
-        {error && <div className="text-red-500 text-sm text-center mt-4">{error}</div>}
-        {success && <div className="text-green-600 text-sm text-center mt-4">{success}</div>}
+        {error && <div className="text-red-500 text-sm text-center mt-4 font-lato">{error}</div>}
+        {success && <div className="text-green-600 text-sm text-center mt-4 font-lato">{success}</div>}
         <div className="w-full flex justify-end mt-6">
-          <button type="submit" className="px-6 py-2 bg-primary text-white rounded shadow hover:bg-primary-dark transition font-semibold">Actualizar datos</button>
+          <button type="submit" className="px-6 py-2 bg-primary text-white rounded shadow hover:bg-primary-dark transition font-semibold font-poppins">Actualizar datos</button>
         </div>
       </form>
     </div>

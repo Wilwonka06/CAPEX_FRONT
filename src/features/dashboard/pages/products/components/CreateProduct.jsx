@@ -18,7 +18,7 @@ const CONCEPTOS_ESPECIFICACION = [
 
 const MAX_IMAGES = 3;
 
-const CreateProduct = ({ onCreate, products = [] }) => {
+const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
   const [open, setOpen] = useState(false);
   const { categories: useCategoriesCategories } = useCategories();
   const [formData, setFormData] = useState({
@@ -27,7 +27,6 @@ const CreateProduct = ({ onCreate, products = [] }) => {
     precio: "",
     cantidad: "",
     categoria: "",
-    color: "",
     fotos: [],
     tipoProducto: "",
   });
@@ -36,6 +35,10 @@ const CreateProduct = ({ onCreate, products = [] }) => {
   const [especificaciones, setEspecificaciones] = useState([
     { concepto: "", valor: "", otroConcepto: "" }
   ]);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  // Determinar si el modal debe estar abierto
+  const modalOpen = externalOpen !== undefined ? externalOpen : open;
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -46,13 +49,14 @@ const CreateProduct = ({ onCreate, products = [] }) => {
       precio: "",
       cantidad: "",
       categoria: "",
-      color: "",
       fotos: [],
       tipoProducto: "",
     });
     setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
     setPreviews([]);
     setError("");
+    setFieldErrors({});
+    if (externalOnClose) externalOnClose();
   };
 
   const handleChange = (e) => {
@@ -160,16 +164,21 @@ const CreateProduct = ({ onCreate, products = [] }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError("");
-    if (!formData.nombre.trim()) {
-      // Si el campo nombre está vacío, no enviar
+    let errors = {};
+    if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
+    if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
+    if (!formData.precio) errors.precio = "El precio es obligatorio";
+    if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
+    if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
     if (isDuplicateProductName(formData.nombre, products)) {
-      window.alert("Ya existe un producto con ese nombre.");
-      setFormData((prev) => ({ ...prev, nombre: "" }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
+    setFieldErrors({});
     if (
       formData.nombre.trim() &&
       formData.categoria.trim() &&
@@ -206,8 +215,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
   const handleBlurNombre = (e) => {
     const value = e.target.value;
     if (isDuplicateProductName(value, products)) {
-      window.alert("Ya existe un producto con ese nombre.");
-      setFormData((prev) => ({ ...prev, nombre: "" }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
     }
   };
 
@@ -222,15 +230,17 @@ const CreateProduct = ({ onCreate, products = [] }) => {
 
   return (
     <>
-      <button
-        className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
-        onClick={handleOpen}
-      >
-        <i className="bi bi-plus-circle mr-2"></i>
-        Nuevo Producto
-      </button>
-
-      {open && (
+      {/* Solo mostrar el botón si no se controla externamente */}
+      {externalOpen === undefined && (
+        <button
+          className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+          onClick={handleOpen}
+        >
+          <i className="bi bi-plus-circle mr-2"></i>
+          Nuevo Producto
+        </button>
+      )}
+      {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 rounded-md">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
             {/* Header fijo */}
@@ -238,17 +248,17 @@ const CreateProduct = ({ onCreate, products = [] }) => {
               <h2 className="text-xl font-bold text-primary m-0">
                 Crear nuevo producto
               </h2>
-            <button
+              <button
                 className="text-gray-400 hover:text-primary text-xl font-bold"
-              onClick={handleClose}
-              aria-label="Cerrar"
-            >
-              ×
-            </button>
+                onClick={handleClose}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
             </div>
             {/* Contenido con scroll */}
             <div className="overflow-y-auto p-8 flex-1">
-            <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
                     Fotos del Producto <span className="text-gray-500 text-xs">(Máximo {MAX_IMAGES})</span>
@@ -323,6 +333,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                       onBlur={handleBlurNombre}
                     required
                   />
+                  {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -342,18 +353,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    Color
-                  </label>
-                  <input
-                    type="text"
-                    name="color"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                      value={formData.color}
-                    onChange={handleChange}
-                  />
+                  {fieldErrors.categoria && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoria}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -370,6 +370,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                     <option value="Extensiones">Extensiones</option>
                     <option value="Cuidado capilar">Cuidado capilar</option>
                   </select>
+                  {fieldErrors.tipoProducto && <p className="text-xs text-red-500 mt-1">{fieldErrors.tipoProducto}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -384,6 +385,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                     required
                       onKeyDown={isNumberInputValid}
                   />
+                  {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -455,6 +457,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                   required
                   rows={3}
                 />
+                {fieldErrors.descripcion && <p className="text-xs text-red-500 mt-1">{fieldErrors.descripcion}</p>}
               </div>
               
               <div className="flex justify-end gap-2 mt-6">
@@ -472,7 +475,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                   Guardar
                 </button>
               </div>
-            </form>
+              </form>
             </div>
           </div>
         </div>
@@ -483,8 +486,10 @@ const CreateProduct = ({ onCreate, products = [] }) => {
 };
 
 CreateProduct.propTypes = {
-  onCreate: PropTypes.func,
+  onCreate: PropTypes.func.isRequired,
   products: PropTypes.array,
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func,
 };
 
 export default CreateProduct;

@@ -1,0 +1,26 @@
+/* Icono de lupa en el input de búsqueda del dropdown de react-phone-input-2 */
+.iti__search-box {
+  position: relative;
+}
+.iti__search-box input[type="search"] {
+  padding-left: 2rem !important;
+}
+.iti__search-box::before {
+  content: "";
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="gray" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zm-5.442 1.398a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>');
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Ajuste para que la bandera y el código no tapen el número */
+.react-phone-input-2 .form-control {
+  padding-left: 3.2rem !important;
+} 

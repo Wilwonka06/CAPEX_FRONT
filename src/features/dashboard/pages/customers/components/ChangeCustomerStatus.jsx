@@ -21,17 +21,17 @@ const ChangeCustomerStatus = ({ status = 'Activo', onToggle }) => {
     <div className="flex items-center space-x-2">
       <button
         onClick={handleToggle}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
           isActive ? 'bg-text-main' : 'bg-gray-300'
         } cursor-pointer`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-            isActive ? 'translate-x-6' : 'translate-x-1'
+          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+            isActive ? 'translate-x-5' : 'translate-x-1'
           }`}
         />
       </button>
-      <span className={`text-sm font-semibold ${isActive ? 'text-green-600' : 'text-gray-500'}`}>{isActive ? 'Activo' : 'Inactivo'}</span>
+      <span className={`text-xs`}>{isActive ? 'Activo' : 'Inactivo'}</span>
     </div>
   );
 };

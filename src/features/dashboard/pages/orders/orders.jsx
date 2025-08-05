@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import OrderDetailModal from "./components/OrderDetailModal";
 import EditOrderModal from "./components/EditOrderModal";
 import { useSales } from '../SaleProducts/context/SalesContext';
@@ -7,6 +7,7 @@ import Paginator from '../../../../shared/Paginator';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
 
 // Datos mock de clientes (idénticos a los de customers/customer.jsx)
 const customersMock = [
@@ -76,6 +77,12 @@ export default function OrdersPage() {
   const [detailOrder, setDetailOrder] = useState(null);
   const [editOrder, setEditOrder] = useState(null);
   const { sales, setSales } = useSales();
+  const { setTitle } = useOutletContext();
+
+  useEffect(() => {
+    setTitle('Gestión de Pedidos');
+    return () => setTitle('');
+  }, [setTitle]);
 
   // Búsqueda
   const filteredOrders = orders.filter((order) => {
@@ -150,7 +157,7 @@ export default function OrdersPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            <h1 className="text-2xl font-bold">Gestión de Pedidos</h1>
+            {/* El título ahora se muestra en el navbar */}
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">

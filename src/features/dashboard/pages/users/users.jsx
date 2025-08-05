@@ -9,6 +9,7 @@ import { getRoles } from '../../../../shared/services/ModuleDataService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
 
 const LOCAL_STORAGE_KEY = 'usuarios';
 const USERS_PER_PAGE = 5;
@@ -79,6 +80,7 @@ const DEFAULT_USERS = [
 ];
 
 const Users = () => {
+  const { setTitle } = useOutletContext();
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -243,13 +245,20 @@ const Users = () => {
     setSearchTerm(term);
   };
 
+  useEffect(() => {
+    setTitle('Gestión de Usuarios');
+    return () => setTitle('');
+  }, [setTitle]);
+
   return (
+    <div className="min-h-screen font-inter">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
     <div className="p-6">
-    <h1 className="text-3xl font-bold mb-10">Gestión de Usuarios</h1>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Search searchTerm={searchTerm} handleSearch={e => handleSearch(e.target.value)} placeholder="Buscar usuario..." />
         <button
-          className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
           onClick={openCreateModal}
         >
           <i className="bi bi-plus-circle mr-2"></i>
@@ -269,6 +278,9 @@ const Users = () => {
           onPageChange={setCurrentPage}
         />
       )}
+          </div>
+        </div>
+      </div>
       {showCreateModal && (
         <CreateUserModal
           onClose={closeModals}

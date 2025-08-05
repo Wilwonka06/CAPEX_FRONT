@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GeneralCalendar from './components/GeneralCalendar';
+import { useOutletContext } from 'react-router-dom';
 
 const EMPLOYEES_KEY = 'capex_employees';
 
@@ -34,6 +35,7 @@ function migrarEmpleados() {
 }
 
 const Scheduling = () => {
+  const { setTitle } = useOutletContext();
   const [employees, setEmployees] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -42,6 +44,11 @@ const Scheduling = () => {
     const stored = localStorage.getItem(EMPLOYEES_KEY);
     setEmployees(stored ? JSON.parse(stored) : []);
   }, []);
+
+  useEffect(() => {
+    setTitle('Agendamiento de Servicios');
+    return () => setTitle('');
+  }, [setTitle]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -116,7 +123,6 @@ const Scheduling = () => {
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">Agendamiento de Servicios</h1>
       <div className="flex justify-end mb-8">
         <div className="relative w-full max-w-xs pr-4">
           <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
