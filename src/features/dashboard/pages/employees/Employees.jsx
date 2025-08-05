@@ -8,6 +8,7 @@ import EditEmployee from "../../../dashboard/pages/employees/components/EditEmpl
 import SeeEmployee from "../../../dashboard/pages/employees/components/SeeEmployee";
 import AddScheduling from "./components/AddScheduling";
 import EditScheduling from "./components/EditScheduling";
+import { useOutletContext } from 'react-router-dom';
 
 const initialEmployees = [
   { id: 1, nombre: "Ana", apellido: "García", documento: "12345678", estado: true, schedulings: [] },
@@ -22,6 +23,7 @@ const normalizeText = (text) =>
   text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 const EmployeesPage = () => {
+  const { setTitle } = useOutletContext();
   const [employees, setEmployees] = useState(() => {
     const stored = localStorage.getItem(EMPLOYEES_KEY);
     return stored ? JSON.parse(stored) : initialEmployees;
@@ -38,6 +40,11 @@ const EmployeesPage = () => {
   useEffect(() => {
     localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(employees));
   }, [employees]);
+
+  useEffect(() => {
+    setTitle('Gestión de Empleados');
+    return () => setTitle('');
+  }, [setTitle]);
 
   // Toast de prueba para verificar que funciona
   useEffect(() => {
@@ -141,9 +148,8 @@ const EmployeesPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen  p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-text-main mb-6">Gestión de Empleados</h1>
         <div className="flex flex-col lg:flex-row gap-6">
           {(showForm || editEmployee || seeEmployee) && (
             <div className="lg:w-2/3">

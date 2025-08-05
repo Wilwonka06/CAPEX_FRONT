@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SearchProduct from '../../../../shared/Search';
 import CreatePurchaseModal from './components/CreatePurchaseModal';
 import PurchaseDetailModal from './components/PurchaseDetailModal';
 import PurchasesTable from './components/PurchasesTable';
 import { useProducts } from '../products/hooks/useProducts';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
 
 // Mock de proveedores y productos para selects
 // const mockSuppliers = [ ... ];
@@ -44,6 +48,12 @@ export default function Shopping() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailCompra, setDetailCompra] = useState(null);
   const { products } = useProducts();
+  const { setTitle } = useOutletContext();
+
+  useEffect(() => {
+    setTitle('Gestión de Compras');
+    return () => setTitle('');
+  }, [setTitle]);
 
   // Filtro de búsqueda
   const filteredPurchases = purchases.filter((p) => {
@@ -67,6 +77,7 @@ export default function Shopping() {
 
   // Descargar Excel (últimos 10 registros)
   const handleDownloadExcel = () => {
+    try {
     const last10 = purchases.slice(-10);
     const csv = [
       ["ID", "Fecha Registro", "Fecha Compra", "Proveedor", "NIT", "Total", "Estado"],
@@ -79,17 +90,45 @@ export default function Shopping() {
     a.download = "compras_ultimos10.csv";
     a.click();
     URL.revokeObjectURL(url);
+      toast.success('Archivo descargado exitosamente', { position: 'top-right' });
+    } catch {
+      toast.error('Error al descargar el archivo', { position: 'top-right' });
+    }
   };
 
-  // Función para anular compra
-  const handleAnularCompra = (id) => {
+  // Función para anular compra con confirmación
+  const handleAnularCompra = async (id) => {
+    const compra = purchases.find(c => c.id === id);
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas anular la compra #${compra?.id}? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, anular',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
     setPurchases(prev => prev.map(c => c.id === id ? { ...c, estado: "Anulada" } : c));
+        toast.success('Compra anulada exitosamente', { position: 'top-right' });
+      } catch {
+        toast.error('Error al anular la compra', { position: 'top-right' });
+      }
+    }
   };
 
   // Función para crear una nueva compra
   const handleCreatePurchase = (newPurchase) => {
+    try {
     setPurchases(prevPurchases => [newPurchase, ...prevPurchases]);
     setIsCreateOpen(false);
+      toast.success('Compra registrada exitosamente', { position: 'top-right' });
+    } catch {
+      toast.error('Error al registrar la compra', { position: 'top-right' });
+    }
   };
 
   return (
@@ -97,11 +136,15 @@ export default function Shopping() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            <h1 className="text-2xl font-bold">Gestión de Compras</h1>
+            {/* El título ahora se muestra en el navbar */}
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchProduct onSearch={setSearchTerm} placeholder="Buscar compras..." />
+              <SearchProduct 
+                searchTerm={searchTerm} 
+                handleSearch={e => setSearchTerm(e.target.value)} 
+                placeholder="Buscar compras..." 
+              />
               <button className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={() => setIsCreateOpen(true)}>
                 <i className="bi bi-plus-circle mr-2"></i> Registrar compra
               </button>
@@ -134,6 +177,7 @@ export default function Shopping() {
         isOpen={!!detailCompra} 
         onClose={() => setDetailCompra(null)} 
       />
+      <ToastContainer />
     </div>
   );
 }

@@ -22,13 +22,30 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
           <div className="flex flex-col md:flex-row gap-8">
             {/* Columna Izquierda: Imagen y nombre */}
             <div className="flex flex-col items-center md:w-1/2 w-full">
+              {/* Imagen principal */}
               <div className="w-60 h-60 bg-gray-50 rounded-lg flex items-center justify-center mb-4 shadow-lg p-0">
                 <img
-                  src={product.foto}
+                  src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
                   alt={product.nombre}
                   className="w-full h-full object-cover rounded-lg m-0"
                 />
               </div>
+              
+              {/* Galería de imágenes adicionales */}
+              {product.fotos && product.fotos.length > 1 && (
+                <div className="flex gap-2 mb-4">
+                  {product.fotos.slice(1).map((foto, index) => (
+                    <div key={index} className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center shadow-md">
+                      <img
+                        src={foto}
+                        alt={`${product.nombre} - Imagen ${index + 2}`}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <div className="text-lg font-bold text-gray-800 text-center mb-2">{product.nombre}</div>
               
             </div>
@@ -54,31 +71,21 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
                     <span className="text-xs text-gray-500">Tipo de producto</span>
                     <span className="font-semibold text-gray-800 text-sm">{product.tipoProducto || 'No especificado'}</span>
                   </div>
-                  {/* Volumen solo si es Cuidado capilar */}
-                  {product.tipoProducto === 'Cuidado capilar' && (
+                  {/* Especificaciones técnicas dinámicas */}
+                  {product.especificaciones && product.especificaciones.length > 0 ? (
+                    product.especificaciones.map((esp, idx) => (
+                      <div key={idx} className="flex justify-between px-4 py-2">
+                        <span className="text-xs text-gray-500">{esp.concepto}</span>
+                        <span className="font-semibold text-gray-800 text-sm">{esp.valor}</span>
+                    </div>
+                    ))
+                  ) : (
                     <div className="flex justify-between px-4 py-2">
-                      <span className="text-xs text-gray-500">Volumen (ml)</span>
-                      <span className="font-semibold text-gray-800 text-sm">{product.volumen ? `${product.volumen} ml` : 'No especificado'}</span>
+                      <span className="text-xs text-gray-500">Características</span>
+                      <span className="font-semibold text-gray-800 text-sm text-gray-500">No especificadas</span>
                     </div>
                   )}
-                  {/* Textura solo si es Extensiones */}
-                  {product.tipoProducto === 'Extensiones' && (
-                    <div className="flex justify-between px-4 py-2">
-                      <span className="text-xs text-gray-500">Textura</span>
-                      <span className="font-semibold text-gray-800 text-sm">{product.textura || 'No especificado'}</span>
-                    </div>
-                  )}
-                  {/* Tipo de cabello ideal si existe */}
-                  {product.tipoCabelloIdeal && (
-                    <div className="flex justify-between px-4 py-2">
-                      <span className="text-xs text-gray-500">Tipo de cabello ideal</span>
-                      <span className="font-semibold text-gray-800 text-sm">{product.tipoCabelloIdeal}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between px-4 py-2">
-                    <span className="text-xs text-gray-500">Largo (mtr)</span>
-                    <span className="font-semibold text-gray-800 text-sm">{product.tamanio ? `${product.tamanio}m` : 'No especificado'}</span>
-                  </div>
+
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Fecha de Registro</span>
                     <span className="font-semibold text-gray-800 text-sm">{product.fechaRegistro}</span>

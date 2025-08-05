@@ -8,7 +8,17 @@ import {
 } from "../../../../../shared/validations";
 import { useCategories } from '../../CatProducts/hooks/useCategories';
 
-const CreateProduct = ({ onCreate, products = [] }) => {
+const CONCEPTOS_ESPECIFICACION = [
+  "Color",
+  "Material",
+  "Contenido",
+  "Tipo de Cabello",
+  // Puedes agregar más conceptos aquí
+];
+
+const MAX_IMAGES = 3;
+
+const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
   const [open, setOpen] = useState(false);
   const { categories: useCategoriesCategories } = useCategories();
   const [formData, setFormData] = useState({
@@ -17,17 +27,18 @@ const CreateProduct = ({ onCreate, products = [] }) => {
     precio: "",
     cantidad: "",
     categoria: "",
-    color: "",
-    tamanio: "",
-    foto: "",
+    fotos: [],
     tipoProducto: "",
-    volumen: "",
-    tipoCabelloIdeal: "",
-    textura: "",
-    origen: "",
   });
-  const [preview, setPreview] = useState("");
+  const [previews, setPreviews] = useState([]);
   const [error, setError] = useState("");
+  const [especificaciones, setEspecificaciones] = useState([
+    { concepto: "", valor: "", otroConcepto: "" }
+  ]);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  // Determinar si el modal debe estar abierto
+  const modalOpen = externalOpen !== undefined ? externalOpen : open;
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
@@ -38,15 +49,14 @@ const CreateProduct = ({ onCreate, products = [] }) => {
       precio: "",
       cantidad: "",
       categoria: "",
-      color: "",
-      tamanio: "",
-      foto: "",
+      fotos: [],
       tipoProducto: "",
-      volumen: "",
-      tipoCabelloIdeal: "",
-      textura: "",
-      origen: "",
     });
+    setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
+    setPreviews([]);
+    setError("");
+    setFieldErrors({});
+    if (externalOnClose) externalOnClose();
   };
 
   const handleChange = (e) => {
@@ -89,10 +99,16 @@ const CreateProduct = ({ onCreate, products = [] }) => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, foto: file }));
-      setPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
+      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+      
+      setFormData((prev) => ({ 
+        ...prev, 
+        fotos: [...prev.fotos, ...newImages] 
+      }));
+      setPreviews((prev) => [...prev, ...newPreviews]);
     }
   };
 
@@ -102,42 +118,83 @@ const CreateProduct = ({ onCreate, products = [] }) => {
 
   const handleDrop = (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      setFormData((prev) => ({ ...prev, foto: file }));
-      setPreview(URL.createObjectURL(file));
+    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+    if (files.length > 0) {
+      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
+      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+      
+      setFormData((prev) => ({ 
+        ...prev, 
+        fotos: [...prev.fotos, ...newImages] 
+      }));
+      setPreviews((prev) => [...prev, ...newPreviews]);
     }
   };
 
-  const removeImage = () => {
-    setFormData((prev) => ({ ...prev, foto: "" }));
-    setPreview("");
+  const removeImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      fotos: prev.fotos.filter((_, i) => i !== index)
+    }));
+    setPreviews((prev) => {
+      const newPreviews = prev.filter((_, i) => i !== index);
+      // Liberar memoria de la URL del objeto
+      URL.revokeObjectURL(prev[index]);
+      return newPreviews;
+    });
+  };
+
+  const handleAddEspecificacion = () => {
+    setEspecificaciones([...especificaciones, { concepto: "", valor: "", otroConcepto: "" }]);
+  };
+
+  const handleChangeEspecificacion = (idx, field, value) => {
+    const nuevas = [...especificaciones];
+    nuevas[idx][field] = value;
+    // Si se cambia el concepto y no es 'otro', limpiar otroConcepto
+    if (field === "concepto" && value !== "otro") {
+      nuevas[idx].otroConcepto = "";
+    }
+    setEspecificaciones(nuevas);
+  };
+
+  const handleRemoveEspecificacion = (idx) => {
+    setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError("");
-    if (!formData.nombre.trim()) {
-      // Si el campo nombre está vacío, no enviar
+    let errors = {};
+    if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
+    if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
+    if (!formData.precio) errors.precio = "El precio es obligatorio";
+    if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
+    if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
     if (isDuplicateProductName(formData.nombre, products)) {
-      window.alert("Ya existe un producto con ese nombre.");
-      setFormData((prev) => ({ ...prev, nombre: "" }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
+    setFieldErrors({});
     if (
       formData.nombre.trim() &&
       formData.categoria.trim() &&
       formData.precio &&
       formData.descripcion.trim() &&
       formData.tipoProducto.trim() &&
-      (formData.tipoProducto !== "Extensiones" || formData.textura.trim())
+      (formData.tipoProducto !== "Extensiones" || formData.textura?.trim())
     ) {
-      let fotoUrl = formData.foto;
-      if (formData.foto instanceof File) {
-        fotoUrl = URL.createObjectURL(formData.foto);
-      }
+      // Procesar las fotos
+      const fotosUrls = formData.fotos.map(foto => {
+        if (foto instanceof File) {
+          return URL.createObjectURL(foto);
+        }
+        return foto;
+      });
+
       const newProduct = {
         ...formData,
         id: Date.now(), // ID temporal
@@ -145,7 +202,10 @@ const CreateProduct = ({ onCreate, products = [] }) => {
         cantidad: formData.cantidad ? parseInt(formData.cantidad) : 0,
         tamanio: formData.tamanio ? parseFloat(formData.tamanio) : null,
         fechaRegistro: new Date().toISOString().split("T")[0],
-        foto: fotoUrl,
+        fotos: fotosUrls, // Usar array de fotos
+        especificaciones: especificaciones
+          .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
+          .map(e => ({ concepto: e.concepto === "otro" ? e.otroConcepto : e.concepto, valor: e.valor }))
       };
       if (onCreate) onCreate(newProduct);
       handleClose();
@@ -155,8 +215,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
   const handleBlurNombre = (e) => {
     const value = e.target.value;
     if (isDuplicateProductName(value, products)) {
-      window.alert("Ya existe un producto con ese nombre.");
-      setFormData((prev) => ({ ...prev, nombre: "" }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
     }
   };
 
@@ -171,15 +230,17 @@ const CreateProduct = ({ onCreate, products = [] }) => {
 
   return (
     <>
-      <button
-        className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
-        onClick={handleOpen}
-      >
-        <i className="bi bi-plus-circle mr-2"></i>
-        Nuevo Producto
-      </button>
-
-      {open && (
+      {/* Solo mostrar el botón si no se controla externamente */}
+      {externalOpen === undefined && (
+        <button
+          className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+          onClick={handleOpen}
+        >
+          <i className="bi bi-plus-circle mr-2"></i>
+          Nuevo Producto
+        </button>
+      )}
+      {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 rounded-md">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
             {/* Header fijo */}
@@ -187,67 +248,75 @@ const CreateProduct = ({ onCreate, products = [] }) => {
               <h2 className="text-xl font-bold text-primary m-0">
                 Crear nuevo producto
               </h2>
-            <button
+              <button
                 className="text-gray-400 hover:text-primary text-xl font-bold"
-              onClick={handleClose}
-              aria-label="Cerrar"
-            >
-              ×
-            </button>
+                onClick={handleClose}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
             </div>
             {/* Contenido con scroll */}
             <div className="overflow-y-auto p-8 flex-1">
-            <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Foto del Producto
+                    Fotos del Producto <span className="text-gray-500 text-xs">(Máximo {MAX_IMAGES})</span>
                   </label>
                   <div className="space-y-3">
-                    <div
-                      className="relative w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      onClick={() =>
-                        document.getElementById("file-input").click()
-                      }
-                    >
-                      {preview ? (
-                        <div className="relative w-full h-full flex items-center justify-center">
-                          <img
-                            src={preview}
-                            alt="Vista previa"
-                            className="max-h-28 max-w-full object-contain rounded-lg mx-auto"
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeImage();
-                            }}
-                            className="absolute top-1 right-1 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : (
+                    {/* Área de carga de imágenes */}
+                    {formData.fotos.length < MAX_IMAGES && (
+                      <div
+                        className="relative w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        onClick={() =>
+                          document.getElementById("file-input").click()
+                        }
+                      >
                         <div className="text-center">
                           <i className="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
                           <p className="text-sm text-gray-500 mb-1">
-                            Arrastra y suelta una imagen aquí
+                            Arrastra y suelta imágenes aquí
                           </p>
                           <p className="text-xs text-gray-400">
-                            o haz clic para seleccionar
+                            o haz clic para seleccionar ({formData.fotos.length}/{MAX_IMAGES})
                           </p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                    
+                    {/* Input de archivo */}
                     <input
                       id="file-input"
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleFileChange}
                       className="hidden"
                     />
+
+                    {/* Vista previa de imágenes */}
+                    {previews.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {previews.map((preview, index) => (
+                          <div key={index} className="relative">
+                            <img
+                              src={preview}
+                              alt={`Vista previa ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg border"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-sm"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -264,6 +333,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                       onBlur={handleBlurNombre}
                     required
                   />
+                  {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -283,18 +353,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    Color
-                  </label>
-                  <input
-                    type="text"
-                    name="color"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                      value={formData.color}
-                    onChange={handleChange}
-                  />
+                  {fieldErrors.categoria && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoria}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -311,94 +370,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                     <option value="Extensiones">Extensiones</option>
                     <option value="Cuidado capilar">Cuidado capilar</option>
                   </select>
-                </div>
-                {/* Volumen solo si es Cuidado capilar */}
-                {formData.tipoProducto === "Cuidado capilar" && (
-                  <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
-                      Volumen (ml)
-                    </label>
-                    <input
-                      type="text"
-                      name="volumen"
-                      value={formatNumber(formData.volumen)}
-                      onChange={e => handleChange({ target: { name: 'volumen', value: cleanNumber(e.target.value) } })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                      placeholder="Opcional"
-                    />
-                  </div>
-                )}
-                {/* Textura solo si es Extensiones */}
-                {formData.tipoProducto === "Extensiones" && (
-                  <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
-                      Textura <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="textura"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                      value={formData.textura}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Seleccionar textura</option>
-                      <option value="Ondulado">Ondulado</option>
-                      <option value="Rizo">Rizo</option>
-                      <option value="Liso">Liso</option>
-                    </select>
-                  </div>
-                )}
-                {/* Origen solo si es Extensiones */}
-                {formData.tipoProducto === "Extensiones" && (
-                  <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
-                      Origen <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="origen"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                      value={formData.origen || ""}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Seleccionar origen</option>
-                      <option value="Natural">Natural</option>
-                      <option value="Sintética">Sintética</option>
-                    </select>
-                  </div>
-                )}
-                {/* Tipo de cabello ideal solo si es Cuidado capilar */}
-                {formData.tipoProducto === "Cuidado capilar" && (
-                  <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
-                      Tipo de cabello ideal
-                    </label>
-                    <select
-                      name="tipoCabelloIdeal"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                      value={formData.tipoCabelloIdeal || ""}
-                      onChange={handleChange}
-                    >
-                      <option value="">Seleccionar tipo</option>
-                      <option value="Cabello seco">Cabello seco</option>
-                      <option value="Cabello graso">Cabello graso</option>
-                      <option value="Cabello teñido">Cabello teñido</option>
-                      <option value="Cabello rizado">Cabello rizado</option>
-                    </select>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    Largo (mtr)
-                  </label>
-                  <input
-                    type="text"
-                    name="tamanio"
-                    value={formatNumber(formData.tamanio)}
-                    onChange={e => handleChange({ target: { name: 'tamanio', value: cleanNumber(e.target.value) } })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                    placeholder="Opcional"
-                  />
+                  {fieldErrors.tipoProducto && <p className="text-xs text-red-500 mt-1">{fieldErrors.tipoProducto}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -413,6 +385,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                     required
                       onKeyDown={isNumberInputValid}
                   />
+                  {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -430,6 +403,48 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                   />
                 </div>
               </div>
+              {/* Especificaciones Técnicas */}
+              <div className="bg-gray-50 rounded-lg p-4 border mb-4">
+                <div className="font-semibold text-text-main mb-2">Especificaciones Técnicas</div>
+                <hr className="mb-4" />
+                {especificaciones.map((esp, idx) => (
+                  <div key={idx} className="flex flex-wrap gap-2 items-center mb-2">
+                    <select
+                      className="px-2 py-1 border rounded text-sm min-w-[140px] max-w-[180px]"
+                      value={esp.concepto}
+                      onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
+                    >
+                      <option value="">Seleccione concepto</option>
+                      {CONCEPTOS_ESPECIFICACION.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                      <option value="otro">Otro…</option>
+                    </select>
+                    {esp.concepto === "otro" && (
+                      <input
+                        type="text"
+                        className="flex-1 min-w-[120px] max-w-[180px] px-2 py-1 border rounded text-sm"
+                        placeholder="Nuevo concepto"
+                        value={esp.otroConcepto}
+                        onChange={e => handleChangeEspecificacion(idx, "otroConcepto", e.target.value)}
+                      />
+                    )}
+                    <input
+                      type="text"
+                      className="flex-1 min-w-[120px] max-w-[220px] px-2 py-1 border rounded text-sm"
+                      placeholder="Valor"
+                      value={esp.valor}
+                      onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}
+                    />
+                    <button type="button" className="text-gray-400 hover:text-red-500" onClick={() => handleRemoveEspecificacion(idx)}>
+                      <i className="bi bi-trash"></i>
+                    </button>
+                  </div>
+                ))}
+                <button type="button" className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2" onClick={handleAddEspecificacion}>
+                  <i className="bi bi-plus"></i> Agregar especificación
+                </button>
+              </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
                     Descripción <span className="text-red-500">*</span>
@@ -442,7 +457,9 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                   required
                   rows={3}
                 />
+                {fieldErrors.descripcion && <p className="text-xs text-red-500 mt-1">{fieldErrors.descripcion}</p>}
               </div>
+              
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   type="button"
@@ -458,7 +475,7 @@ const CreateProduct = ({ onCreate, products = [] }) => {
                   Guardar
                 </button>
               </div>
-            </form>
+              </form>
             </div>
           </div>
         </div>
@@ -469,8 +486,10 @@ const CreateProduct = ({ onCreate, products = [] }) => {
 };
 
 CreateProduct.propTypes = {
-  onCreate: PropTypes.func,
+  onCreate: PropTypes.func.isRequired,
   products: PropTypes.array,
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func,
 };
 
 export default CreateProduct;

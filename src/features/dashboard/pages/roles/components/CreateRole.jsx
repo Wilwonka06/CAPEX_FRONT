@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import PrivilegesTable from './PrivilegesTable';
 import { validateRole } from '../services/ValidateRoleService';
 
-const CreateProductCard = ({ children, title, onClose }) => (
+const CreateRolesCard = ({ children, title, onClose }) => (
   <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
     <button
       className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
@@ -16,7 +16,7 @@ const CreateProductCard = ({ children, title, onClose }) => (
   </div>
 );
 
-const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
+const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: ''
@@ -25,15 +25,10 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showErrors, setShowErrors] = useState(false);
-  const [wasSubmitted, setWasSubmitted] = useState(false);
 
-  // Resetear formulario cuando se abre/cierra el modal
   useEffect(() => {
     if (!isOpen) {
-      setFormData({
-        nombre: '',
-        descripcion: ''
-      });
+      setFormData({ nombre: '', descripcion: '' });
       setPrivileges({});
       setErrors({});
       setTouched({});
@@ -47,10 +42,7 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+    setFormData(prevState => ({ ...prevState, [name]: value }));
     setTouched(prev => ({ ...prev, [name]: true }));
   };
 
@@ -72,12 +64,7 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setShowErrors(true);
-    setTouched({
-      nombre: true,
-      descripcion: true, // si quieres mostrar errores de descripción en el futuro
-      privilegios: true
-      // agrega aquí cualquier otro campo que quieras validar
-    });
+    setTouched({ nombre: true, descripcion: true, privilegios: true });
     const validationErrors = validateRole(formData, privileges, roles).errors;
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length === 0 && onCreate) {
@@ -95,7 +82,7 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <CreateProductCard title="Crear nuevo rol" onClose={handleClose}>
+      <CreateRolesCard title="Crear nuevo rol" onClose={handleClose}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -145,9 +132,9 @@ const CreateRole = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
             </button>
           </div>
         </form>
-      </CreateProductCard>
+      </CreateRolesCard>
     </div>
   );
 };
 
-export default CreateRole;
+export default CreateRoles;

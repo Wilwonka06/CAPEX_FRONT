@@ -42,8 +42,29 @@ const SalesContext = createContext();
 
 export function SalesProvider({ children }) {
   const [sales, setSales] = useState(ventasMock);
+
+  // Agregar una venta
+  const createSale = (newSale) => {
+    setSales(prev => [
+      { ...newSale },
+      ...prev
+    ]);
+  };
+
+  // Actualizar una venta por id
+  const updateSale = (saleId, updatedData) => {
+    setSales(prev => prev.map(sale =>
+      sale.id === saleId ? { ...sale, ...updatedData } : sale
+    ));
+  };
+
+  // Eliminar una venta por id
+  const deleteSale = (saleId) => {
+    setSales(prev => prev.filter(sale => sale.id !== saleId));
+  };
+
   return (
-    <SalesContext.Provider value={{ sales, setSales, customersMock }}>
+    <SalesContext.Provider value={{ sales, setSales, customersMock, createSale, updateSale, deleteSale }}>
       {children}
     </SalesContext.Provider>
   );

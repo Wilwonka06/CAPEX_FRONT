@@ -5,9 +5,23 @@ import AddServices from './components/AddServices'
 import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../../../../shared/Paginator";
-import { initialCategories } from '../CatServices/CatServices';
 import SearchProduct from '../../../../shared/Search';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
+import PropTypes from "prop-types";
+import { useServiceCategories, ServiceCategoriesProvider } from './hooks/useServiceCategories';
+
+const LOCAL_STORAGE_KEY = 'servicios';
+const SERVICES_PER_PAGE = 5;
+
+const initialServices = [
+  { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
+  { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
+  { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: true, description: 'Masaje corporal relajante', estado: 'Activo' },
+  { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
+  { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
+  { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: true, description: 'Tratamiento nutritivo para el cabello', estado: 'Activo' },
+];
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -28,41 +42,74 @@ const StatusToggle = ({ isActive, onToggle }) => (
 
 // Componente para la tabla de servicios
 const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) => (
-  <div className="overflow-x-auto">
-    <table className="min-w-full text-sm text-left">
-      <thead className="bg-gray-50 text-text-main/80 uppercase">
-        <tr>
-          <th className="py-3 px-4 font-semibold">Servicio</th>
-          <th className="py-3 px-4 font-semibold">Categoría</th>
-          <th className="py-3 px-4 font-semibold">Duración</th>
-          <th className="py-3 px-4 font-semibold">Precio</th>
-          <th className="py-3 px-4 font-semibold">Estado</th>
-          <th className="py-3 px-4 font-semibold text-right">Acciones</th>
+  <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+    <table className="min-w-full">
+      <thead>
+        <tr className="bg-gray-50 hover:bg-gray-100">
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DURACIÓN</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PRECIO</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ESTADO</th>
+          <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
         </tr>
       </thead>
-      <tbody className="bg-white text-text-main">
+      <tbody className="divide-y divide-gray-200">
         {services.map((service) => (
-          <tr key={service.id} className="border-b border-gray-200 hover:bg-gray-50">
-            <td className="py-3 px-4">{service.name}</td>
-            <td className="py-3 px-4 text-text-main/80">{service.category}</td>
-            <td className="py-3 px-4 text-text-main/80">{service.duration}</td>
-            <td className="py-3 px-4 text-text-main/80">{service.price}</td>
-            <td className="py-3 px-4">
-              <StatusToggle 
-                isActive={service.active} 
-                onToggle={() => onToggleStatus(service.id)}
-              />
+          <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
+            <td className="py-4 px-4 text-xs font-medium text-gray-900">{service.id}</td>
+            <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.name}</td>
+            <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">{service.category}</td>
+            <td className="py-4 px-4 text-xs text-gray-600">{service.duration}</td>
+            <td className="py-4 px-4 text-xs text-gray-600">{service.price}</td>
+            <td className="py-4 px-4 text-xs">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => onToggleStatus(service.id)}
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none  ${
+                    service.active ? 'bg-text-main' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      service.active ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    service.active
+                      ? ' text-gray-800'
+                      : ' text-gray-600 '
+                  }`}
+                >
+                  {service.active ? "Activo" : "Inactivo"}
+                </span>
+              </div>
             </td>
             <td className="py-4 px-4 text-sm font-medium text-right">
-              <div className="flex justify-end items-center gap-2">
-                <button onClick={() => onSee(service)} title="Visualizar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
-                  <i className="bi bi-eye text-xl" style={{ color: '#b8864b' }}></i>
+              <div className="flex justify-end space-x-2">
+                <button 
+                  className="h-8 w-8 p-0 flex items-center justify-center"
+                  onClick={() => onSee(service)}
+                  title="Ver detalles"
+                >
+                  <i className="bi bi-eye text-primary text-lg"></i>
                 </button>
-                <button onClick={() => onEdit(service)} title="Editar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
-                  <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
+                <button 
+                  className="h-8 w-8 p-0 flex items-center justify-center"
+                  onClick={() => onEdit(service)}
+                  title="Editar"
+                >
+                  <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
                 </button>
-                <button onClick={() => onDelete(service)} title="Eliminar" className="bg-transparent p-0 m-0 border-none focus:outline-none">
-                  <i className="bi bi-trash text-xl" style={{ color: '#ef4444' }}></i>
+                <button 
+                  className="h-8 w-8 p-0 flex items-center justify-center"
+                  onClick={() => onDelete(service)}
+                  title="Eliminar"
+                >
+                  <i className="bi bi-trash text-red-500 text-lg"></i>
                 </button>
               </div>
             </td>
@@ -73,30 +120,133 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) =>
   </div>
 );
 
-const Services = () => {
-  const [services, setServices] = useState(() => {
-    const stored = localStorage.getItem('services');
-    if (stored) return JSON.parse(stored);
-    return [
-      { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
-      { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
-      { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: false, description: 'Masaje corporal relajante', estado: 'Inactivo' },
-      { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
-      { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
-      { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: false, description: 'Tratamiento nutritivo para el cabello', estado: 'Inactivo' },
-    ];
-  });
+ServicesTable.propTypes = {
+  services: PropTypes.array.isRequired,
+  onToggleStatus: PropTypes.func.isRequired,
+  onSee: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
+
+const ServicesContent = () => {
+  const { setTitle } = useOutletContext();
+  const { categories } = useServiceCategories();
+  const [services, setServices] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isSeeModalOpen, setIsSeeModalOpen] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
-  const [categories, setCategories] = useState(initialCategories);
 
+  // Cargar servicios al iniciar
   useEffect(() => {
-    localStorage.setItem('services', JSON.stringify(services));
+    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    let parsed = [];
+    try {
+      parsed = JSON.parse(stored);
+    } catch (e) {
+      parsed = [];
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      setServices(initialServices);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialServices));
+    } else {
+      setServices(parsed);
+    }
+  }, []);
+
+  // Guardar servicios en localStorage cuando cambian
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(services));
   }, [services]);
+
+  // Filtrar servicios por término de búsqueda
+  const filteredServices = services.filter(
+    (service) =>
+      (service.id?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.duration || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.price || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.active ? "activo" : "inactivo").includes(searchTerm.toLowerCase())
+  );
+
+  // Paginación
+  const totalPages = Math.ceil(filteredServices.length / SERVICES_PER_PAGE);
+  const startIndex = (currentPage - 1) * SERVICES_PER_PAGE;
+  const paginatedServices = filteredServices.slice(startIndex, startIndex + SERVICES_PER_PAGE);
+
+  // Resetear página al cambiar el filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, services]);
+
+  // CRUD
+  const handleAddService = (newService) => {
+    setServices((prev) => [...prev, newService]);
+    toast.success('Servicio creado exitosamente', { position: 'top-right' });
+  };
+
+  const handleEditService = async (editedService) => {
+    const result = await Swal.fire({
+      title: '¿Confirmar edición?',
+      text: `¿Estás seguro de que deseas editar el servicio "${editedService.name}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, editar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (result.isConfirmed) {
+      setServices((prev) => prev.map(s => s.id === editedService.id ? editedService : s));
+      setShowEditModal(false);
+      setSelectedService(null);
+      toast.success('Servicio actualizado exitosamente', { position: 'top-right' });
+    }
+  };
+
+  const handleDeleteService = async (service) => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas eliminar el servicio "${service?.name}"? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (result.isConfirmed) {
+      setServices((prev) => prev.filter(s => s.id !== service.id));
+      toast.success('Servicio eliminado exitosamente', { position: 'top-right' });
+    }
+  };
+
+  const handleToggleStatus = async (serviceId) => {
+    const service = services.find(s => s.id === serviceId);
+    const newStatus = service.active ? 'Inactivo' : 'Activo';
+    const result = await Swal.fire({
+      title: '¿Confirmar cambio de estado?',
+      text: `¿Estás seguro de que deseas cambiar el estado de "${service?.name}" a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (result.isConfirmed) {
+      setServices((prev) => prev.map(s =>
+        s.id === serviceId
+          ? { ...s, active: !s.active, estado: newStatus }
+          : s
+      ));
+      toast.success(`Estado cambiado a ${newStatus}`, { position: 'top-right' });
+    }
+  };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -104,210 +254,94 @@ const Services = () => {
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1);
   };
 
-  const toggleServiceStatus = (id) => {
-    const service = services.find(s => s.id === id);
-    const newStatus = service.active ? 'Inactivo' : 'Activo';
-    Swal.fire({
-      title: `¿Estás seguro de cambiar el estado a ${newStatus}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, cambiar',
-      cancelButtonText: 'Cancelar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setServices(
-          services.map((service) =>
-            service.id === id ? { ...service, active: !service.active, estado: newStatus } : service
-          )
-        );
-        toast.success(`Estado del servicio cambiado a ${newStatus}`, {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    });
+  const closeModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setShowDetailModal(false);
+    setSelectedService(null);
   };
 
-  const handleAddService = (newService) => {
-    const mappedService = {
-      id: Date.now(),
-      name: newService.name,
-      category: newService.Categoria,
-      description: newService.Descripcion,
-      duration: newService.duracion + ' min',
-      price: '$' + newService.precio,
-      active: newService.estado === 'Activo',
-      estado: newService.estado,
-      imagen: newService.imagen
-    };
-    
-    setServices([...services, mappedService]);
-    // No cerrar el modal aquí, dejar que el componente hijo lo maneje
-  };
-
-  const handleEditService = (editedService) => {
-    Swal.fire({
-      title: '¿Guardar cambios en el servicio?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, guardar',
-      cancelButtonText: 'Cancelar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const mappedService = {
-          id: editedService.id,
-          name: editedService.name,
-          category: editedService.Categoria,
-          description: editedService.Descripcion,
-          duration: editedService.duracion + ' min',
-          price: '$' + editedService.precio,
-          active: editedService.estado === 'Activo',
-          estado: editedService.estado,
-          imagen: editedService.imagen
-        };
-        setServices(
-          services.map((service) =>
-            service.id === editedService.id ? mappedService : service
-          )
-        );
-        setSelectedService(null);
-        toast.success('Servicio editado exitosamente!', {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    });
-  };
-
-  const handleSeeService = (service) => {
-    setSelectedService(service);
-    setIsSeeModalOpen(true);
-  };
-
-  const handleEditClick = (service) => {
-    setSelectedService(service);
-    setIsEditModalOpen(true);
-  };
-
-  const handleDeleteService = (service) => {
-    Swal.fire({
-      title: `¿Estás seguro de que deseas eliminar el servicio "${service.name}"?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setServices(services.filter((s) => s.id !== service.id));
-        toast.success(`Servicio eliminado exitosamente!`, {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    });
-  };
-
-  const filteredServices = services.filter(
-    (service) =>
-      normalizeText(service.name).includes(normalizeText(searchTerm)) ||
-      normalizeText(service.category).includes(normalizeText(searchTerm)) ||
-      normalizeText(service.duration).includes(normalizeText(searchTerm)) ||
-      normalizeText(service.price).includes(normalizeText(searchTerm)) ||
-      normalizeText(service.description).includes(normalizeText(searchTerm)) ||
-      (service.active ? 'Activo' : 'Inactivo').includes(searchTerm)
-  );
-
-  const itemsPerPage = 3;
-  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
+  useEffect(() => {
+    setTitle('Gestión de Servicios');
+    return () => setTitle('');
+  }, [setTitle]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen font-inter">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6 pb-0">
-            <h1 className="text-2xl font-bold text-text-main mb-1">Gestión de Servicios</h1>
-            <p className="text-text-main/60">Administra los servicios que ofreces en tu tienda.</p>
-          </div>
-          <div className="p-6 pt-4">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-2">
-              <div className="relative w-full max-w-sm">
-                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-                <input
-                  type="text"
-                  placeholder="Buscar servicios..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-                />
-              </div>
+          <div className="p-6">
+            {/* Barra de búsqueda y botón de crear */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar servicios..." />
               <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="bg-text-main hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm"
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                onClick={() => setShowAddModal(true)}
               >
-                <i className="bi bi-plus-lg text-lg"></i>
+                <i className="bi bi-plus-circle mr-2"></i>
                 Nuevo Servicio
               </button>
             </div>
+            {/* Tabla de servicios */}
             <ServicesTable
               services={paginatedServices}
-              onToggleStatus={toggleServiceStatus}
-              onSee={handleSeeService}
-              onEdit={handleEditClick}
+              onToggleStatus={handleToggleStatus}
+              onSee={(service) => {
+                setSelectedService(service);
+                setShowDetailModal(true);
+              }}
+              onEdit={(service) => {
+                setSelectedService(service);
+                setShowEditModal(true);
+              }}
               onDelete={handleDeleteService}
             />
+            {/* Paginación */}
             {totalPages > 1 && (
-              <>
-                <div className="flex justify-center mt-4">
                   <Paginator
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={handlePageChange}
                   />
-                </div>
-                <div className="text-center mt-2">
-                  <p className="text-sm text-text-main/70">
-                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, filteredServices.length)} de {filteredServices.length} servicios
-                  </p>
-                </div>
-              </>
             )}
           </div>
         </div>
       </div>
       {/* Modales */}
-      {isAddModalOpen && <AddServices onClose={() => setIsAddModalOpen(false)} onAdd={handleAddService} categories={categories} services={services} />}
-      {isEditModalOpen && selectedService && <EditServices onClose={() => { setIsEditModalOpen(false); setSelectedService(null); }} service={selectedService} onEdit={handleEditService} categories={categories} services={services} />}
-      {isSeeModalOpen && selectedService && <SeeServices onClose={() => { setIsSeeModalOpen(false); setSelectedService(null); }} service={selectedService} />}
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
+      {showAddModal && (
+        <AddServices
+          onClose={closeModals}
+          onAdd={handleAddService}
+          services={services}
+          categories={categories}
+        />
+      )}
+      {showEditModal && selectedService && (
+        <EditServices
+          onClose={closeModals}
+          service={selectedService}
+          onEdit={handleEditService}
+          services={services}
+          categories={categories}
+        />
+      )}
+      {showDetailModal && selectedService && (
+        <SeeServices
+          onClose={closeModals}
+          service={selectedService}
+        />
+      )}
+      <ToastContainer />
     </div>
   );
-}
+};
+
+const Services = () => (
+  <ServiceCategoriesProvider>
+    <ServicesContent />
+  </ServiceCategoriesProvider>
+);
 
 export default Services;

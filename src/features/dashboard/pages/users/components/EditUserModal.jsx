@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import PasswordEye from '../../../../../shared/components/PasswordEye';
-import { isValidEmail, isValidPhone, isValidNumber, isValidPassword } from '../../../../../shared/validations';
+import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
 import { getRoles } from '../../../../../shared/services/ModuleDataService';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import Swal from 'sweetalert2';
 
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
 const DOC_TYPES = ['CC', 'PPT','TI'];
@@ -44,6 +47,25 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const [preview, setPreview] = useState(user.avatarCompressed || '');
   const [error, setError] = useState({});
 
+  // Parsear teléfono guardado
+  const parseTelefono = (telefono) => {
+    if (!telefono) return { countryCode: 'co', dialCode: '+57', number: '' };
+    const match = telefono.match(/^(\+\d+)-(\d{4,15})$/);
+    if (match) {
+      return {
+        countryCode: 'co', // puedes mejorar esto si guardas el país
+        dialCode: match[1],
+        number: match[2]
+      };
+    }
+    return { countryCode: 'co', dialCode: '+57', number: '' };
+  };
+  const [country, setCountry] = useState({
+    countryCode: parseTelefono(user.telefono).countryCode,
+    dialCode: parseTelefono(user.telefono).dialCode,
+  });
+  const [numero, setNumero] = useState(parseTelefono(user.telefono).number);
+
   useEffect(() => {
     getRoles().then(roles => {
       setAvailableRoles(roles.filter(r => r.estado === 'Activo'));
@@ -56,15 +78,9 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       case 'correo':
         return isValidEmail(value) ? '' : 'Correo inválido';
       case 'telefono':
-        return isValidPhone(value) ? '' : 'Teléfono inválido';
+        return validateUserPhone(numero);
       case 'documento':
-        if (form.tipoDocumento === 'Pasaporte') {
-          if (!/^[a-zA-Z0-9]{6,12}$/.test(value)) return 'Pasaporte inválido (6-12 caracteres alfanuméricos)';
-        } else {
-          if (!isValidNumber(value)) return 'Documento inválido';
-        }
-        if (form.tipoDocumento && users.some(u => u.tipoDocumento === form.tipoDocumento && u.documento === value && u.id !== form.id)) return 'Ya existe un usuario con ese tipo y número de documento';
-        return '';
+        return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
         if (!value.trim()) return 'Campo obligatorio';
         if (form.documento && users.some(u => u.tipoDocumento === value && u.documento === form.documento && u.id !== form.id)) return 'Ya existe un usuario con ese tipo y número de documento';
@@ -147,12 +163,27 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       avatar = await compressImageToBase64(form.avatar, 300, 300, 0.92); // mejor calidad
     }
     // Actualizar usuario
+    const telefonoFinal = country.dialCode + '-' + numero;
     const updatedUser = {
       ...form,
+      telefono: telefonoFinal,
       avatar,
       avatarCompressed,
     };
-    onEdit(updatedUser);
+    // SweetAlert de confirmación
+    const result = await Swal.fire({
+      title: '¿Estás seguro de guardar los cambios?',
+      text: 'Esta acción actualizará la información del usuario.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (result.isConfirmed) {
+      onEdit(updatedUser);
+    }
   };
 
   const removeImage = () => {
@@ -213,7 +244,60 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <input type="text" name="telefono" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.telefono} onChange={handleChange} onBlur={handleBlur} required />
+                <div className="flex gap-1 items-start">
+                <PhoneInput
+                    country={country.countryCode}
+                    value={country.dialCode}
+                    onChange={(value, data) => {
+                      setCountry({
+                      countryCode: data.countryCode,
+                        dialCode: '+' + data.dialCode
+                    });
+                  }}
+                  inputProps={{
+                      name: 'prefijo',
+                      readOnly: true,
+                      className: 'w-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 cursor-pointer',
+                      style: { backgroundColor: '#f9fafb' }
+                  }}
+                  specialLabel=""
+                    containerClass="w-28"
+                  inputClass="w-full"
+                  buttonClass=""
+                  dropdownClass=""
+                  enableSearch
+                  disableCountryCode={false}
+                  disableDropdown={false}
+                  countryCodeEditable={false}
+                    disableSearchIcon={false}
+                    onlyCountries={['co','mx','cl','ar','pe','ve','ec','us','es']}
+                  />
+                  <input
+                    type="text"
+                    name="numero"
+                    value={numero}
+                    onChange={e => {
+                      // Solo permitir dígitos
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setNumero(val.slice(0, 15));
+                      // Validación en tiempo real
+                      let err = '';
+                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      setError(prev => ({ ...prev, telefono: err }));
+                    }}
+                    onBlur={e => {
+                      const val = e.target.value;
+                      let err = '';
+                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      setError(prev => ({ ...prev, telefono: err }));
+                    }}
+                    className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    placeholder="Número sin prefijo"
+                    required
+                    autoComplete="off"
+                    maxLength={15}
+                  />
+                </div>
                 {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
               </div>
               <div>
@@ -244,13 +328,17 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
               <div className="relative">
                 <label className="block text-xs font-medium text-text-main mb-1">Contraseña</label>
                 <input type={showPassword ? 'text' : 'password'} name="password" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.password} onChange={handleChange} onBlur={handleBlur} />
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
                 <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
+                </div>
                 {error.password && <span className="text-red-500 text-xs">{error.password}</span>}
               </div>
               <div className="relative">
                 <label className="block text-xs font-medium text-text-main mb-1">Confirmar contraseña</label>
                 <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} />
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
                 <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
+                </div>
                 {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
               </div>
               <div>

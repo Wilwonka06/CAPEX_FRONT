@@ -74,22 +74,15 @@ export const deleteServiceOrder = async (orderId, orders) => {
   return orders.filter(order => order.id !== orderId);
 };
 
-export const anularServiceOrder = async (orderId, services) => {
+export const anularServiceOrder = async (orderId) => {
   // Simular delay de red
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // Simular validación
-  const orderExists = services.find(service => service.id === orderId);
-  if (!orderExists) {
-    throw new Error("La orden de servicio no existe");
+  // Simular validación exitosa
+  if (!orderId) {
+    throw new Error("ID de orden requerido");
   }
 
-  // Simular anulación - cambiar estado a "Anulado"
-  const updatedServices = services.map(service => 
-    service.id === orderId 
-      ? { ...service, status: "Anulado" }
-      : service
-  );
-
-  return updatedServices;
+  // Simular anulación exitosa
+  return { success: true, message: "Orden anulada exitosamente" };
 }; 

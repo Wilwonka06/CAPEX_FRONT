@@ -3,6 +3,16 @@ import PropTypes from "prop-types";
 import { isDuplicateProductName } from '../../../../../shared/validations';
 import { useCategories } from '../../CatProducts/hooks/useCategories';
 
+const CONCEPTOS_ESPECIFICACION = [
+  "Color",
+  "Material",
+  "Contenido",
+  "Tipo de Cabello",
+  // Puedes agregar más conceptos aquí
+];
+
+const MAX_IMAGES = 3;
+
 const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
   const { categories: useCategoriesCategories } = useCategories();
   const [formData, setFormData] = useState({
@@ -11,35 +21,32 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     precio: "",
     cantidad: "",
     categoria: "",
-    color: "",
-    tamanio: "",
-    foto: "",
+    fotos: [],
     tipoProducto: "",
-    volumen: "",
-    tipoCabelloIdeal: "",
-    textura: "",
-    origen: "",
   });
-  const [preview, setPreview] = useState("");
+  const [previews, setPreviews] = useState([]);
+  const [especificaciones, setEspecificaciones] = useState([{ concepto: "", valor: "", otroConcepto: "" }]);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (product) {
+      const productFotos = product.fotos || (product.foto ? [product.foto] : []);
+      
       setFormData({
         nombre: product.nombre || "",
         descripcion: product.descripcion || "",
         precio: product.precio?.toString() || "",
         cantidad: product.cantidad?.toString() || "",
         categoria: product.categoria || "",
-        color: product.color || "",
-        tamanio: product.tamanio?.toString() || "",
-        foto: product.foto || "",
+        fotos: productFotos,
         tipoProducto: product.tipoProducto || "",
-        volumen: product.volumen?.toString() || "",
-        tipoCabelloIdeal: product.tipoCabelloIdeal || "",
-        textura: product.textura || "",
-        origen: product.origen || "",
       });
-      setPreview(product.foto || "");
+      setPreviews(productFotos);
+      setEspecificaciones(
+        product.especificaciones && product.especificaciones.length > 0
+          ? product.especificaciones.map(e => ({ ...e, otroConcepto: "" }))
+          : [{ concepto: "", valor: "", otroConcepto: "" }]
+      );
     }
   }, [product]);
 
@@ -74,10 +81,16 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, foto: file }));
-      setPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
+      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+      
+      setFormData((prev) => ({ 
+        ...prev, 
+        fotos: [...prev.fotos, ...newImages] 
+      }));
+      setPreviews((prev) => [...prev, ...newPreviews]);
     }
   };
 
@@ -87,36 +100,76 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
 
   const handleDrop = (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      setFormData((prev) => ({ ...prev, foto: file }));
-      setPreview(URL.createObjectURL(file));
+    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+    if (files.length > 0) {
+      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
+      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+      
+      setFormData((prev) => ({ 
+        ...prev, 
+        fotos: [...prev.fotos, ...newImages] 
+      }));
+      setPreviews((prev) => [...prev, ...newPreviews]);
     }
   };
 
-  const removeImage = () => {
-    setFormData((prev) => ({ ...prev, foto: "" }));
-    setPreview("");
+  const removeImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      fotos: prev.fotos.filter((_, i) => i !== index)
+    }));
+    setPreviews((prev) => {
+      const newPreviews = prev.filter((_, i) => i !== index);
+      // Liberar memoria de la URL del objeto si es un archivo nuevo
+      if (formData.fotos[index] instanceof File) {
+        URL.revokeObjectURL(prev[index]);
+      }
+      return newPreviews;
+    });
+  };
+
+  const handleAddEspecificacion = () => {
+    setEspecificaciones([...especificaciones, { concepto: "", valor: "", otroConcepto: "" }]);
+  };
+  const handleChangeEspecificacion = (idx, field, value) => {
+    const nuevas = [...especificaciones];
+    nuevas[idx][field] = value;
+    if (field === "concepto" && value !== "otro") {
+      nuevas[idx].otroConcepto = "";
+    }
+    setEspecificaciones(nuevas);
+  };
+  const handleRemoveEspecificacion = (idx) => {
+    setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.nombre.trim()) {
-      // Si el campo nombre está vacío, no enviar
+    let errors = {};
+    if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
+    if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
+    if (!formData.precio) errors.precio = "El precio es obligatorio";
+    if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
+    if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-    // Validar duplicado excluyendo el producto actual
     const otrosProductos = products.filter(p => p.id !== product.id);
     if (isDuplicateProductName(formData.nombre, otrosProductos)) {
-      window.alert('Ya existe un producto con ese nombre.');
-      setFormData((prev) => ({ ...prev, nombre: product.nombre }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
-    if (formData.nombre.trim() && formData.descripcion.trim() && formData.precio && formData.tipoProducto.trim() && (formData.tipoProducto !== "Extensiones" || formData.textura.trim())) {
-      let fotoUrl = formData.foto;
-      if (formData.foto instanceof File) {
-        fotoUrl = URL.createObjectURL(formData.foto);
-      }
+    setFieldErrors({});
+    if (formData.nombre.trim() && formData.descripcion.trim() && formData.precio && formData.tipoProducto.trim()) {
+      // Procesar las fotos
+      const fotosUrls = formData.fotos.map(foto => {
+        if (foto instanceof File) {
+          return URL.createObjectURL(foto);
+        }
+        return foto;
+      });
+
       const updatedProduct = {
         ...product,
         nombre: formData.nombre.trim(),
@@ -124,14 +177,11 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         precio: parseFloat(formData.precio),
         cantidad: parseInt(formData.cantidad),
         categoria: formData.categoria,
-        color: formData.color,
-        tamanio: formData.tamanio ? parseFloat(formData.tamanio) : null,
-        foto: fotoUrl,
+        fotos: fotosUrls,
         tipoProducto: formData.tipoProducto,
-        volumen: formData.volumen ? parseFloat(formData.volumen) : undefined,
-        tipoCabelloIdeal: formData.tipoCabelloIdeal,
-        textura: formData.textura,
-        origen: formData.origen,
+        especificaciones: especificaciones
+          .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
+          .map(e => ({ concepto: e.concepto === "otro" ? e.otroConcepto : e.concepto, valor: e.valor }))
       };
       onSave(updatedProduct);
       handleClose();
@@ -146,16 +196,12 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
       precio: "",
       cantidad: "",
       categoria: "",
-      color: "",
-      tamanio: "",
-      foto: "",
+      fotos: [],
       tipoProducto: "",
-      volumen: "",
-      tipoCabelloIdeal: "",
-      textura: "",
-      origen: "",
     });
-    setPreview("");
+    setPreviews([]);
+    setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
+    setFieldErrors({});
   };
 
   const handleBlurNombre = (e) => {
@@ -163,8 +209,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     // Excluir el producto actual de la validación
     const otrosProductos = products.filter(p => p.id !== product.id);
     if (isDuplicateProductName(value, otrosProductos)) {
-      window.alert('Ya existe un producto con ese nombre.');
-      setFormData((prev) => ({ ...prev, nombre: product.nombre }));
+      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
     }
   };
 
@@ -197,47 +242,54 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         <div className="overflow-y-auto p-8 flex-1">
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-text-main mb-1">Foto del Producto</label>
+              <label className="block text-xs font-medium text-text-main mb-1">
+                Fotos del Producto <span className="text-gray-500 text-xs">(Máximo {MAX_IMAGES})</span>
+              </label>
               <div className="space-y-3">
-                <div
-                  className="relative w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onClick={() => document.getElementById('edit-file-input').click()}
-                >
-                  {preview ? (
-                    <div className="relative w-full h-full flex items-center justify-center">
-                      <img 
-                        src={preview} 
-                        alt="Vista previa" 
-                        className="max-h-28 max-w-full object-contain rounded-lg mx-auto" 
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeImage();
-                        }}
-                        className="absolute top-1 right-1 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
+                {formData.fotos.length < MAX_IMAGES && (
+                  <div
+                    className="relative w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('edit-file-input').click()}
+                  >
                     <div className="text-center">
                       <i className="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
-                      <p className="text-sm text-gray-500 mb-1">Arrastra y suelta una imagen aquí</p>
-                      <p className="text-xs text-gray-400">o haz clic para seleccionar</p>
+                      <p className="text-sm text-gray-500 mb-1">Arrastra y suelta imágenes aquí</p>
+                      <p className="text-xs text-gray-400">o haz clic para seleccionar ({formData.fotos.length}/{MAX_IMAGES})</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+                
                 <input
                   id="edit-file-input"
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleFileChange}
                   className="hidden"
                 />
+
+                {previews.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {previews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Vista previa ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-sm"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,6 +306,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                 onBlur={handleBlurNombre}
                 required
               />
+              {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
@@ -273,19 +326,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Color
-                </label>
-              <input
-                type="text"
-                name="color"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                value={formData.color}
-                onChange={handleChange}
-                required
-              />
+              {fieldErrors.categoria && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoria}</p>}
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
@@ -302,94 +343,49 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                   <option value="Extensiones">Extensiones</option>
                   <option value="Cuidado capilar">Cuidado capilar</option>
                 </select>
+                {fieldErrors.tipoProducto && <p className="text-xs text-red-500 mt-1">{fieldErrors.tipoProducto}</p>}
             </div>
-            {/* Volumen solo si es Cuidado capilar */}
-            {formData.tipoProducto === "Cuidado capilar" && (
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Volumen (ml)
-                </label>
+            {/* Especificaciones Técnicas (antes de la descripción) */}
+            <div className="bg-gray-50 rounded-lg p-4 border mb-4">
+              <div className="font-semibold text-text-main mb-2">Especificaciones Técnicas</div>
+              <hr className="mb-4" />
+              {especificaciones.map((esp, idx) => (
+                <div key={idx} className="flex flex-wrap gap-2 items-center mb-2">
+                  <select
+                    className="px-2 py-1 border rounded text-sm min-w-[140px] max-w-[180px]"
+                    value={esp.concepto}
+                    onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
+                  >
+                    <option value="">Seleccione concepto</option>
+                    {CONCEPTOS_ESPECIFICACION.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                    <option value="otro">Otro…</option>
+                  </select>
+                  {esp.concepto === "otro" && (
                 <input
                   type="text"
-                  name="volumen"
-                  value={formatNumber(formData.volumen)}
-                  onChange={e => handleChange({ target: { name: 'volumen', value: cleanNumber(e.target.value) } })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                  placeholder="Opcional"
-                />
-              </div>
-            )}
-            {/* Textura solo si es Extensiones */}
-            {formData.tipoProducto === "Extensiones" && (
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Textura <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="textura"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                  value={formData.textura}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Seleccionar textura</option>
-                  <option value="Ondulado">Ondulado</option>
-                  <option value="Rizo">Rizo</option>
-                  <option value="Liso">Liso</option>
-                </select>
-              </div>
-            )}
-            {/* Origen solo si es Extensiones */}
-            {formData.tipoProducto === "Extensiones" && (
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Origen <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="origen"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                  value={formData.origen || ""}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Seleccionar origen</option>
-                  <option value="Natural">Natural</option>
-                  <option value="Sintética">Sintética</option>
-                </select>
-              </div>
-            )}
-            {/* Tipo de cabello ideal solo si es Cuidado capilar */}
-            {formData.tipoProducto === "Cuidado capilar" && (
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Tipo de cabello ideal
-                </label>
-                <select
-                  name="tipoCabelloIdeal"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                  value={formData.tipoCabelloIdeal || ""}
-                  onChange={handleChange}
-                >
-                  <option value="">Seleccionar tipo</option>
-                  <option value="Cabello seco">Cabello seco</option>
-                  <option value="Cabello graso">Cabello graso</option>
-                  <option value="Cabello teñido">Cabello teñido</option>
-                  <option value="Cabello rizado">Cabello rizado</option>
-                </select>
-              </div>
-            )}
-            <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Largo (mtr)
-                </label>
+                      className="flex-1 min-w-[120px] max-w-[180px] px-2 py-1 border rounded text-sm"
+                      placeholder="Nuevo concepto"
+                      value={esp.otroConcepto}
+                      onChange={e => handleChangeEspecificacion(idx, "otroConcepto", e.target.value)}
+                    />
+                  )}
               <input
                 type="text"
-                name="tamanio"
-                value={formatNumber(formData.tamanio)}
-                onChange={e => handleChange({ target: { name: 'tamanio', value: cleanNumber(e.target.value) } })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                placeholder="Opcional"
-              />
+                    className="flex-1 min-w-[120px] max-w-[220px] px-2 py-1 border rounded text-sm"
+                    placeholder="Valor"
+                    value={esp.valor}
+                    onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}
+                  />
+                  <button type="button" className="text-gray-400 hover:text-red-500" onClick={() => handleRemoveEspecificacion(idx)}>
+                    <i className="bi bi-trash"></i>
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2" onClick={handleAddEspecificacion}>
+                <i className="bi bi-plus"></i> Agregar especificación
+              </button>
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
@@ -403,6 +399,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
                 required
               />
+              {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
@@ -446,6 +443,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
               required
               rows={3}
             />
+            {fieldErrors.descripcion && <p className="text-xs text-red-500 mt-1">{fieldErrors.descripcion}</p>}
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <button

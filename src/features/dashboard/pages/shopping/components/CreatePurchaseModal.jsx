@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useProducts } from "../../products/hooks/useProducts";
 import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
+import CreateSupplier from '../../suppliers/components/CreateSupplier';
+import CreateProduct from '../../products/components/CreateProduct';
+import QuickCreateSupplierModal from './QuickCreateSupplierModal';
+import QuickCreateProductModal from './QuickCreateProductModal';
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const { products: productsList, editProduct } = useProducts();
@@ -32,6 +36,17 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
   // Estado para errores
   const [errores, setErrores] = useState({});
+
+  // Estado para modales de creación rápida
+  const [openSupplierModal, setOpenSupplierModal] = useState(false);
+  const [openProductModal, setOpenProductModal] = useState(false);
+  // Estado local para listas actualizadas
+  const [localSuppliers, setLocalSuppliers] = useState([]);
+  const [localProducts, setLocalProducts] = useState([]);
+
+  // Unificar listas para selects
+  const suppliersSelect = localSuppliers.length > 0 ? localSuppliers : suppliersList;
+  const productsSelect = localProducts.length > 0 ? localProducts : productsList;
 
   // Efecto para actualizar el NIT cuando cambia el proveedor
   useEffect(() => {
@@ -194,6 +209,35 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     onClose(); // Idealmente, resetear estado aquí también al cerrar
   };
 
+  if (openSupplierModal) {
+    return (
+      <CreateSupplier
+        isOpen={true}
+        onClose={() => setOpenSupplierModal(false)}
+        onCreate={nuevoProveedor => {
+          setLocalSuppliers(prev => [nuevoProveedor, ...suppliersSelect]);
+          setProveedorId(nuevoProveedor.id);
+          setOpenSupplierModal(false);
+        }}
+        suppliers={suppliersSelect}
+      />
+    );
+  }
+  if (openProductModal) {
+    return (
+      <CreateProduct
+        isOpen={true}
+        onClose={() => setOpenProductModal(false)}
+        onCreate={nuevoProducto => {
+          setLocalProducts(prev => [nuevoProducto, ...productsSelect]);
+          setProductoSeleccionado(nuevoProducto.id);
+          setOpenProductModal(false);
+        }}
+        products={productsSelect}
+      />
+    );
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -252,19 +296,30 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   <label className="block text-xs font-medium text-text-main mb-1">
                     Proveedor <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    className="w-full px-3 py-2 border rounded-md text-sm"
-                    value={proveedorId}
-                    onChange={(e) => setProveedorId(e.target.value)}
-                    required
-                  >
-                    <option value="">Seleccione proveedor</option>
-                    {suppliersList.filter(s => s.isActive).map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                      value={proveedorId}
+                      onChange={(e) => setProveedorId(e.target.value)}
+                      required
+                    >
+                      <option value="">Seleccione proveedor</option>
+                      {suppliersSelect.filter(s => s.isActive).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center"
+                      title="Registrar proveedor"
+                      style={{ border: 'none', background: 'none' }}
+                      onClick={() => setOpenSupplierModal(true)}
+                    >
+                      <i className="bi bi-plus-circle"></i>
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -298,22 +353,28 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
             <div className="p-6 border rounded-lg mb-6 space-y-4">
               <h3 className="text-md font-semibold text-text-main mb-4">Agregar Productos a la Compra</h3>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    Producto <span className="text-red-500">*</span>
-                  </label>
+                <div className="flex items-center gap-2 md:col-span-2">
                   <select
                     className="w-full px-3 py-2 border rounded-md text-sm"
                     value={productoSeleccionado}
                     onChange={(e) => setProductoSeleccionado(e.target.value)}
                   >
                     <option value="">Seleccionar producto</option>
-                    {productsList.map((p) => (
+                    {productsSelect.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nombre}
                       </option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center"
+                    title="Registrar producto"
+                    style={{ border: 'none', background: 'none' }}
+                    onClick={() => setOpenProductModal(true)}
+                  >
+                    <i className="bi bi-plus-circle"></i>
+                  </button>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -376,9 +437,10 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     <tr>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">CÓDIGO</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">NOMBRE</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">COSTO</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">PRECIO VENTA</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700 w-24">CANTIDAD</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">IVA (%)</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">PRECIO BASE</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">PRECIO C/IVA</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">SUBTOTAL</th>
                       <th className="py-2 px-3 text-center font-semibold text-gray-700">ACCIÓN</th>
@@ -393,6 +455,30 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           <td className="py-2 px-3">
                             <input
                               type="number"
+                              min="0"
+                              className="w-20 px-2 py-1 border rounded-md"
+                              value={item.costo}
+                              onChange={e => {
+                                const value = Number(e.target.value);
+                                setItemsCompra(prev => prev.map((it, i) => i === index ? { ...it, costo: value } : it));
+                              }}
+                            />
+                          </td>
+                          <td className="py-2 px-3">
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-20 px-2 py-1 border rounded-md"
+                              value={item.precioVenta}
+                              onChange={e => {
+                                const value = Number(e.target.value);
+                                setItemsCompra(prev => prev.map((it, i) => i === index ? { ...it, precioVenta: value } : it));
+                              }}
+                            />
+                          </td>
+                          <td className="py-2 px-3">
+                            <input
+                              type="number"
                               min="1"
                               className="w-20 px-2 py-1 border rounded-md"
                               value={item.cantidad}
@@ -400,7 +486,6 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                             />
                           </td>
                           <td className="py-2 px-3">{(item.iva * 100).toFixed(0)}%</td>
-                          <td className="py-2 px-3">${item.costo.toFixed(2)}</td>
                           <td className="py-2 px-3">${item.precioConIva}</td>
                           <td className="py-2 px-3">${(item.costo * item.cantidad).toFixed(2)}</td>
                           <td className="py-2 px-3 text-center">
@@ -412,7 +497,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="8" className="text-center py-4 text-gray-500">Aún no hay productos en la lista.</td>
+                        <td colSpan="9" className="text-center py-4 text-gray-500">Aún no hay productos en la lista.</td>
                       </tr>
                     )}
                   </tbody>

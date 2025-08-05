@@ -1,19 +1,21 @@
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 import { useCart } from '../../../components/CartContext';
-
-const TABS = [
-  { key: 'characteristics', label: 'Características' },
-  { key: 'description', label: 'Descripción' }
-];
+import { useNavigate } from 'react-router-dom';
+import CartToast from '../../../components/CartToast';
+import cartIcon from '../../../../../shared/images/cart.png';
+import { useCartToast } from '../../../components/CartToastContext';
 
 const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
 
 const ProductDetailCliente = ({ product, recommended = [] }) => {
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState('description');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { addToCart } = useCart();
+  const navigate = useNavigate();
+  const [showToast, setShowToast] = useState(false);
+  const [toastProduct, setToastProduct] = useState(null);
+  const { showCartToast } = useCartToast();
 
   if (!product) return null;
 
@@ -22,172 +24,149 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
     setTimeout(() => {
       addToCart(product, product.tipoProducto === 'Extensiones' ? 1 : quantity);
       setIsAddingToCart(false);
+      setToastProduct(product);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
     }, 400);
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-10 px-4">
-      {/* Migas de pan */}
-      <nav className="text-xs text-gray-500 mb-4 flex items-center gap-2">
-        <span className="hover:underline cursor-pointer">Home</span>
-        <span className="mx-1">/</span>
-        <span className="hover:underline cursor-pointer">{product.categoria || 'Categoría'}</span>
-        <span className="mx-1">/</span>
-        <span className="text-text-main font-semibold">{product.nombre}</span>
-      </nav>
-      <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row gap-10">
-        {/* Galería de imágenes */}
-        <div className="flex flex-col items-center md:w-1/2 w-full">
-          <div className="w-80 h-80 bg-gray-50 rounded-lg flex items-center justify-center mb-4 shadow-lg">
-            <img
-              src={product.foto}
-              alt={product.nombre}
-              className="w-full h-full object-contain rounded-lg"
+    <>
+      <CartToast show={showToast} product={toastProduct} onClose={() => setShowToast(false)} />
+      <div className="w-full max-w-5xl mx-auto py-10 px-4">
+        {/* Migas de pan */}
+        <nav className="text-xs text-gray-500 mb-4 flex items-center gap-2">
+          <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing'}>Home</span>
+          <span className="mx-1">/</span>
+          <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing/catalogo'}>Productos</span>
+          <span className="mx-1">/</span>
+          <span className="text-[#1E1E1E] font-semibold">{product.nombre}</span>
+        </nav>
+        <div className="flex flex-col md:flex-row gap-0 w-full">
+            {/* Imagen principal */}
+          <div className="md:w-1/2 w-full flex items-center justify-center aspect-[4/3] md:aspect-auto p-6">
+              <img
+                src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
+                alt={product.nombre}
+              className="w-full h-full object-cover object-center"
+              style={{ maxHeight: '50vh' }}
+              loading="lazy"
             />
           </div>
-        </div>
-        {/* Info principal */}
-        <div className="flex-1 flex flex-col gap-4">
-          <h1 className="text-3xl font-bold text-text-main mb-2 font-montserrat">{product.nombre}</h1>
-          {/* Selector de cantidad mejorado solo si NO es extensión */}
-          {product.tipoProducto !== 'Extensiones' ? (
-            <div className="mb-4">
-              <div className="flex justify-between items-end mb-1">
-                <span className="text-xs font-semibold text-gray-700">Cantidad</span>
-                <span className="text-xs text-gray-500">{formatNumber(product.cantidad)} disponibles</span>
-              </div>
-              <div className="flex items-center gap-2">
+          {/* Info principal */}
+          <div className="flex-1 flex flex-col gap-4 p-6">
+            <h1 className="text-3xl font-bold text-[#1E1E1E] mb-2 font-montserrat">{product.nombre}</h1>
+            <div className="flex items-center gap-4 mb-2">
+              <span className="text-2xl font-bold text-[#FACC15]">${formatNumber(product.precio?.toFixed(2))}</span>
+              <span className="text-xs text-gray-500">{product.cantidad} disponibles</span>
+                </div>
+            {/* Selector de cantidad y botón agregar al carrito en la misma fila si NO es extensión */}
+            {product.tipoProducto !== 'Extensiones' ? (
+              <div className="flex items-center gap-4 mb-2">
+                <div className="flex items-center border border-gray-400 rounded w-[110px] h-10 overflow-hidden">
+                  <button
+                    className="flex-1 h-full flex items-center justify-center text-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Disminuir"
+                    type="button"
+                    tabIndex={-1}
+                  >-</button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={product.cantidad || 99}
+                    value={quantity}
+                    onChange={e => setQuantity(Math.max(1, Math.min(Number(e.target.value), product.cantidad || 99)))}
+                    className="w-8 text-center border-0 focus:ring-0 text-base bg-transparent outline-none"
+                    style={{ appearance: 'textfield' }}
+                  />
+                  <button
+                    className="flex-1 h-full flex items-center justify-center text-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                    onClick={() => setQuantity(q => Math.min((product.cantidad || 99), q + 1))}
+                    disabled={quantity >= (product.cantidad || 99)}
+                    aria-label="Aumentar"
+                    type="button"
+                    tabIndex={-1}
+                  >+</button>
+                </div>
                 <button
-                  className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center text-xl font-bold hover:bg-gray-100 transition-colors disabled:opacity-50"
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
-                  aria-label="Disminuir"
-                >-</button>
-                <input
-                  type="number"
-                  min={1}
-                  max={product.cantidad || 99}
-                  value={quantity}
-                  onChange={e => setQuantity(Math.max(1, Math.min(Number(e.target.value), product.cantidad || 99)))}
-                  className="w-12 text-center border border-gray-300 rounded font-semibold text-base focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-                <button
-                  className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center text-xl font-bold hover:bg-gray-100 transition-colors disabled:opacity-50"
-                  onClick={() => setQuantity(q => Math.min((product.cantidad || 99), q + 1))}
-                  disabled={quantity >= (product.cantidad || 99)}
-                  aria-label="Aumentar"
-                >+</button>
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart || product.cantidad === 0}
+                  className={`bg-[#FACC15] text-[#1E1E1E] px-8 py-3 rounded-full font-bold text-base shadow hover:bg-yellow-400 transition flex items-center gap-1 w-fit ${isAddingToCart || product.cantidad === 0 ? 'opacity-60 cursor-not-allowed' : ''}`}
+                >
+                  {isAddingToCart ? 'Agregando...' : 'Añadir al carrito'}
+                </button>
               </div>
-            </div>
-          ) : (
-            <div className="mb-4">
-              <div className="flex justify-between items-end mb-1">
-                <span className="text-xs font-semibold text-gray-700">Cantidad</span>
-                <span className="text-xs text-gray-500">Disponible</span>
-              </div>
-            </div>
-          )}
-          {/* Precio y botón en extremos */}
-          <div className="flex justify-between items-center gap-4 mb-4">
-            <span className="text-2xl font-bold text-primary">${formatNumber(product.precio?.toFixed(2))}</span>
-            <button
-              onClick={handleAddToCart}
-              disabled={isAddingToCart || product.cantidad === 0}
-              className={`bg-text-main text-white px-6 py-3 rounded-md font-bold text-base shadow hover:bg-primary-dark transition flex items-center gap-1 ${isAddingToCart || product.cantidad === 0 ? 'opacity-60 cursor-not-allowed' : ''}`}
-            >
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-              </svg>
-              {isAddingToCart ? 'Agregando...' : 'Añadir al carrito'}
-            </button>
-          </div>
-          {/* Tabs */}
-          <div className="border-b border-gray-200 flex gap-8 mb-2">
-            {TABS.map(tab => (
+            ) : (
               <button
-                key={tab.key}
-                className={`pb-2 text-sm font-semibold transition-colors ${activeTab === tab.key ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-primary'}`}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={handleAddToCart}
+                disabled={isAddingToCart || product.cantidad === 0}
+                className={`bg-[#FACC15] text-[#1E1E1E] px-8 py-3 rounded-full font-bold text-base shadow hover:bg-yellow-400 transition flex items-center gap-1 w-fit ${isAddingToCart || product.cantidad === 0 ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
-                {tab.label}
+                {isAddingToCart ? 'Agregando...' : 'Añadir al carrito'}
               </button>
-            ))}
-          </div>
-          <div className="min-h-[80px] text-sm text-gray-700">
-            {activeTab === 'description' && (
-              <div>{product.descripcion}</div>
             )}
-            {activeTab === 'characteristics' && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border border-gray-200 rounded-lg bg-white">
-                  <tbody>
-                    <tr>
-                      <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Tipo</td>
-                      <td className="px-4 py-2">{product.tipoProducto}</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Categoría</td>
-                      <td className="px-4 py-2">{product.categoria}</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Color</td>
-                      <td className="px-4 py-2">{product.color}</td>
-                    </tr>
-                    {product.volumen && (
-                      <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Volumen</td>
-                        <td className="px-4 py-2">{product.volumen ? formatNumber(product.volumen) + ' ml' : ''}</td>
-                      </tr>
-                    )}
-                    {product.textura && (
-                      <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Textura</td>
-                        <td className="px-4 py-2">{product.textura}</td>
-                      </tr>
-                    )}
-                    {product.origen && (
-                      <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Origen</td>
-                        <td className="px-4 py-2">{product.origen}</td>
-                      </tr>
-                    )}
-                    {product.tipoCabelloIdeal && (
-                      <tr>
-                        <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Tipo de cabello ideal</td>
-                        <td className="px-4 py-2">{product.tipoCabelloIdeal}</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="px-4 py-2 font-semibold text-text-main whitespace-nowrap">Largo</td>
-                      <td className="px-4 py-2">{product.tamanio ? `${product.tamanio} m` : 'No especificado'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {/* Descripción */}
+            <div className="mt-4 text-gray-700 text-base">
+              {product.descripcion}
+            </div>
+            {/* Características */}
+            {product.especificaciones && product.especificaciones.length > 0 && (
+              <div className="mt-2">
+                <h3 className="text-sm font-semibold text-[#1E1E1E] mb-1">Características:</h3>
+                <ul className="list-disc ml-5 text-sm text-gray-700">
+                  {product.especificaciones.map((esp, idx) => (
+                    <li key={idx}><span className="font-semibold text-[#1E1E1E]">{esp.concepto}:</span> {esp.valor}</li>
+                  ))}
+                </ul>
+                </div>
+              )}
           </div>
         </div>
+        {/* Productos recomendados */}
+        {recommended.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-lg font-bold mb-4 text-[#1E1E1E]">También te puede interesar</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
+              {recommended.map(prod => (
+                <div
+                  key={prod.id}
+                  className="flex flex-col cursor-pointer group transition-all"
+                  onClick={() => navigate(`/landing/productos/${prod.id}`)}
+                >
+                  <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : prod.foto}
+                      alt={prod.nombre}
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-4 flex flex-col gap-2 flex-1 justify-between">
+                    <h3 className="font-semibold text-base text-[#1E1E1E] mb-1 truncate group-hover:text-[#FACC15] transition-colors">{prod.nombre}</h3>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-lg font-bold text-[#FACC15]">${formatNumber(prod.precio)}</span>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          addToCart(prod, 1);
+                          showCartToast(prod);
+                        }}
+                        className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center"
+                        title="Agregar al carrito"
+                      >
+                        <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      {/* Productos recomendados */}
-      {recommended.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-lg font-bold mb-4 text-text-main">También te puede interesar</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {recommended.map(prod => (
-              <div key={prod.id} className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
-                <img src={prod.foto} alt={prod.nombre} className="w-20 h-20 object-contain mb-2" />
-                <div className="text-xs text-center font-semibold mb-1 line-clamp-2">{prod.nombre}</div>
-                <div className="text-primary font-bold text-sm mb-1">${formatNumber(prod.precio?.toFixed(2))}</div>
-                {prod.descuento && (
-                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold mb-1">-{prod.descuento}%</span>
-                )}
-                <button className="mt-auto bg-primary text-white px-3 py-1 rounded text-xs font-semibold hover:bg-primary-dark transition">Ver producto</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 

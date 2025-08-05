@@ -3,13 +3,16 @@ import CreateCustomer from "./components/CreateCustomer.jsx";
 import EditCustomer from "./components/EditCustomer.jsx";
 import ViewCustomer from "./components/ViewCustomer.jsx";
 import DeleteCustomer from "./components/DeleteCustomer.jsx";
-import ChangeCustomerStatus from "./components/ChangeCustomerStatus.jsx";
 import { createCustomer } from "./services/CreateCustomerService.js";
 import { editCustomer } from "./services/EditCustomerService.js";
 import SearchCustomer from "./components/SearchCustomer.jsx";
-import Paginator from "./components/Paginator.jsx";
+import Paginator from "../../../../shared/Paginator.jsx";
 import { normalizeText } from '../../../../shared/normalizers.js';
 import Swal from 'sweetalert2';
+import { useOutletContext } from 'react-router-dom';
+import CustomerTable from "./components/CustomerTable.jsx";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const initialCustomers = [
   {
@@ -77,6 +80,7 @@ const initialCustomers = [
 const itemsPerPage = 5;
 
 const CustomersPage = () => {
+  const { setTitle } = useOutletContext();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -85,20 +89,20 @@ const CustomersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [customers, setCustomers] = useState(initialCustomers);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '', show: false });
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    setTitle('Gestión de Clientes');
+    return () => setTitle('');
+  }, [setTitle]);
 
   // Función para mostrar mensajes de feedback
   const showMessage = (text, type = 'success') => {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: type === 'success' ? 'success' : 'error',
-      title: text,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true,
-    });
+    if (type === 'success') {
+      toast.success(text, { position: 'top-right' });
+    } else {
+      toast.error(text, { position: 'top-right' });
+    }
   };
 
   // Filtrado de clientes por búsqueda
@@ -167,21 +171,10 @@ const CustomersPage = () => {
     setCurrentPage(page);
   };
 
-  // handleEditClick ahora solo usa SweetAlert2
+  // handleEditClick ahora abre el modal directamente
   const handleEditClick = (customer) => {
-    Swal.fire({
-      title: '¿Editar cliente?',
-      text: '¿Deseas editar la información de este cliente?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    }).then((result) => {
-      if (result.isConfirmed) {
         setSelectedCustomer(customer);
         setIsEditModalOpen(true);
-      }
-    });
   };
 
   const handleViewClick = (customer) => {
@@ -214,7 +207,7 @@ const CustomersPage = () => {
       setIsDeleteModalOpen(false);
       setSelectedCustomer(null);
       showMessage('Cliente eliminado exitosamente', 'success');
-    } catch (error) {
+    } catch {
       showMessage('Error al eliminar el cliente', 'error');
     }
   };
@@ -232,7 +225,7 @@ const CustomersPage = () => {
       const customer = customers.find(c => c.id === customerId);
       const newStatus = customer.status === 'Activo' ? 'Inactivo' : 'Activo';
       showMessage(`Estado del cliente cambiado a ${newStatus}`, 'success');
-    } catch (error) {
+    } catch {
       showMessage('Error al cambiar el estado del cliente', 'error');
     }
   };
@@ -252,8 +245,17 @@ const CustomersPage = () => {
     }
   };
 
-  // Editar cliente usando servicio
+  // Editar cliente usando servicio, con confirmación al guardar
   const handleEditCustomer = async (formData) => {
+    const result = await Swal.fire({
+      title: '¿Guardar cambios?',
+      text: '¿Deseas guardar los cambios realizados a este cliente?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!result.isConfirmed) return;
     setLoading(true);
     try {
       const updatedCustomer = await editCustomer({
@@ -278,20 +280,9 @@ const CustomersPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen p-6 font-inter">
+      <ToastContainer />
       {/* Mensaje de feedback */}
-      {message.show && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-          message.type === 'success' 
-            ? 'bg-primary text-white' 
-            : 'bg-primary-dark text-white'
-        }`}>
-          <div className="flex items-center space-x-2">
-            <i className={`bi ${message.type === 'success' ? 'bi-check-circle' : 'bi-exclamation-circle'}`}></i>
-            <span>{message.text}</span>
-          </div>
-        </div>
-      )}
 
       {/* Modal CreateCustomer overlay */}
       {isCreateModalOpen && (
@@ -301,6 +292,7 @@ const CustomersPage = () => {
             onClose={() => setIsCreateModalOpen(false)}
             onCreate={handleCreateCustomer}
             loading={loading}
+            setLoading={setLoading}
             customers={customers}
           />
         </div>
@@ -313,8 +305,9 @@ const CustomersPage = () => {
             isOpen={isEditModalOpen}
             onClose={() => setIsEditModalOpen(false)}
             customer={selectedCustomer}
-            onEdit={handleEditCustomer}
+            onUpdate={handleEditCustomer}
             loading={loading}
+            setLoading={setLoading}
             customers={customers}
           />
         </div>
@@ -323,80 +316,31 @@ const CustomersPage = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            <h1 className="text-2xl font-bold">Gestión de Clientes</h1>
-            <p className="mt-1">Administra los clientes registrados en el sistema</p>
+            {/* El título ahora se muestra en el navbar */}
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchCustomer searchTerm={searchTerm} handleSearch={handleSearch} />
+              <SearchCustomer searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar cliente..." />
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center text-xs"
               >
                 <i className="bi bi-plus-circle mr-2"></i>
                 Nuevo Cliente
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gray-50 hover:bg-gray-100">
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tipo Documento</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Número Documento</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nombre</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Apellido</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Correo Electrónico</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Teléfono</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Estado</th>
-                    <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {paginatedCustomers.map((customer) => (
-                    <tr key={customer.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="py-4 px-4 text-sm text-gray-900">{customer.id}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{customer.documentType}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{customer.documentNumber}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{customer.firstName}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{customer.lastName}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{customer.email}</td>
-                      <td className="py-4 px-4 text-sm text-gray-900">{customer.phone}</td>
-                      <td className="py-4 px-4">
-                        <ChangeCustomerStatus status={customer.status} onToggle={() => handleToggleStatus(customer.id)} />
-                      </td>
-                      <td className="py-4 px-4 text-sm font-medium text-right">
-                        <div className="flex justify-end space-x-2">
-                          <button 
-                            className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" 
-                            title="Ver"
-                            onClick={() => handleViewClick(customer)}
-                          >
-                            <i className="bi bi-eye text-primary text-sm"></i>
-                          </button>
-                          <button 
-                            className="h-8 w-8 p-0 border border-gray-300 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors" 
-                            title="Editar"
-                            onClick={() => handleEditClick(customer)}
-                          >
-                            <i className="bi bi-pencil-square text-amber-500 text-sm"></i>
-                          </button>
-                          <button
-                            className="h-8 w-8 p-0 border border-red-200 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
-                            title="Eliminar"
-                            onClick={() => handleDeleteClick(customer)}
-                          >
-                            <i className="bi bi-trash text-red-500 text-sm"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <CustomerTable
+                customers={paginatedCustomers}
+                onView={handleViewClick}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+                onToggleStatus={handleToggleStatus}
+              />
             </div>
 
             {/* Paginación */}
+            {totalPages > 1 && (
             <div className="mt-6">
               <Paginator
                 currentPage={currentPage}
@@ -404,14 +348,13 @@ const CustomersPage = () => {
                 onPageChange={handlePageChange}
               />
             </div>
+            )}
 
             {/* Mostrar información de paginación */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-text-main">
-                Mostrando <span className="font-medium">{filteredCustomers.length > 0 ? startIndex + 1 : 0}</span> a {" "}
-                <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredCustomers.length)}</span> {" "}
-                de <span className="font-medium">{filteredCustomers.length}</span> resultados
-              </p>
+              {/* <p className="text-sm text-text-main">
+                Mostrando <span className="font-medium">{filteredCustomers.length > 0 ? startIndex + 1 : 0}</span> a <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredCustomers.length)}</span> de <span className="font-medium">{filteredCustomers.length}</span> cliente{filteredCustomers.length !== 1 ? 's' : ''}
+              </p> */}
             </div>
           </div>
         </div>

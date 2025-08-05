@@ -2,18 +2,12 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import logo from '../../../shared/images/Logo.png';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [expandedGroups, setExpandedGroups] = useState({
-    main: true,
-    config: true,
-    users: true,
-    shoppings: true,
-    services: true,
-    sales: true
-  });
-  const [isLocked, setIsLocked] = useState(true);
+  // Inicializa expandedGroups vacío y actualízalo en useEffect
+  const [expandedGroups, setExpandedGroups] = useState({});
   const [loadingData] = useState(false); // Añadido para evitar error
   const location = useLocation();
 
@@ -125,29 +119,20 @@ const Sidebar = () => {
   // Usar memoización o useCallback si getFilteredMenuGroups es costoso
   const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, localStorage.getItem('currentUser')]); // Re-calcular si la ubicación o el usuario cambian
 
-  const handleMouseEnter = () => {
-    if (!isLocked && !isExpanded) { // Solo expandir si no está bloqueado y no está ya expandido
-      setIsExpanded(true);
-    }
-  };
+  // useEffect para abrir el grupo correspondiente a la ruta actual al montar o cuando cambian location o menuGroups
+  useEffect(() => {
+    const expanded = {};
+    menuGroups.forEach(group => {
+      if (group.items && group.items.some(item => isActiveRoute(item.path))) {
+        expanded[group.id] = true;
+      }
+    });
+    setExpandedGroups(expanded);
+    // eslint-disable-next-line
+  }, [location.pathname, menuGroups.length]);
 
-  const handleMouseLeave = () => {
-    if (!isLocked && isExpanded) { // Solo contraer si no está bloqueado y está expandido
-      setIsExpanded(false);
-      // Colapsar todos los grupos si el sidebar se contrae automáticamente
-      setExpandedGroups({});
-    }
-  };
-
-  const toggleLock = () => {
-    setIsLocked(!isLocked);
-    if (isLocked) { // Si se va a desbloquear, contraer si no está expandido por hover
-      setIsExpanded(false);
-      setExpandedGroups({}); // Colapsar todos los grupos al desbloquear
-    } else { // Si se va a bloquear, expandir para mostrar el contenido
-      setIsExpanded(true);
-    }
-  };
+  // Elimina onMouseEnter y onMouseLeave del contenedor principal
+  // Elimina las funciones handleMouseEnter y handleMouseLeave (ya no se usan)
 
   // Función para encontrar el ID del grupo padre de una ruta
   const getGroupIdByPath = (pathname) => {
@@ -166,27 +151,19 @@ const Sidebar = () => {
   useEffect(() => {
     const currentGroup = getGroupIdByPath(location.pathname);
     if (currentGroup) {
-      // Solo expandir si no está ya bloqueado y se permite la expansión automática
-      // O si está bloqueado y queremos que siempre muestre el grupo activo
-      if (isLocked || isExpanded) { // Si está bloqueado o expandido por hover, mantener/abrir grupo activo
+      // Solo expandir si se permite la expansión automática
+      if (isExpanded) { // Si está expandido por hover, mantener/abrir grupo activo
          setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
       }
     }
-  }, [location.pathname, isLocked, isExpanded]); // Depende de location, isLocked, isExpanded
+  }, [location.pathname, isExpanded]); // Depende de location, isExpanded
 
-  // Manejar el estado de expansión de grupos
+  // Cambia toggleGroup para abrir/cerrar solo el grupo seleccionado, sin cerrar los demás
   const toggleGroup = (groupId) => {
-    // Solo permitir el toggle si el sidebar está expandido (por hover o bloqueo)
-    if (isExpanded || isLocked) {
-      setExpandedGroups(prev => {
-        // Si el grupo ya está abierto, lo cierra. Si no, lo abre y cierra los demás.
-        const newState = {};
-        if (!prev[groupId]) { // Si no estaba abierto, ábrelo
-          newState[groupId] = true;
-        }
-        return newState;
-      });
-    }
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
   };
 
 
@@ -198,54 +175,38 @@ const Sidebar = () => {
     return location.pathname === path;
   };
 
-  // Función de Logout ( Placeholder )
-  const handleLogout = () => {
-    // Aquí puedes limpiar localStorage, redirigir al login, etc.
-    localStorage.removeItem('currentUser'); // Eliminar información del usuario
-    // Redirigir al login o a la página principal
-    window.location.href = '/'; // O usar useNavigate() si está disponible
-  };
-
   return (
     <div
-      className={`bg-text-main shadow-lg transition-all duration-300 ease-in-out font-inter ${
-        isExpanded || isLocked ? 'w-64' : 'w-16'
+      className={`bg-text-main shadow-lg transition-all duration-300 ease-in-out font-inter text-white ${
+        isExpanded ? 'w-64' : 'w-16'
       } flex flex-col h-full`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       {/* Header */}
-      <div className="p-4 border-b border-accent/50 flex items-center justify-between">
+      <div className="p-4 flex items-center justify-between">
         <div className="flex items-center">
-          {(isExpanded || isLocked) ? (
-            <span className="ml-3 font-semibold text-background text-3xl whitespace-nowrap">
-              CAP<span className='text-yellow-700'>EX</span>
+          {(isExpanded) ? (
+            <span className="ml-3 font-semibold text-background text-3xl whitespace-nowrap flex items-center justify-center">
+              <img src={logo} alt="Logo" className=" w-30 h-30 object-contain" />
             </span>
           ) : (
-            // Icono más pequeño para el estado colapsado
-            <span className="font-bold text-white text-3xl bg-yellow-700 rounded-full w-10 h-10 flex items-center justify-center">
-              C
+            // Logo circular para el estado colapsado
+            <span className=" w-10 h-10 flex items-center justify-center">
+              <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
             </span>
           )}
         </div>
-        {(isExpanded || isLocked) && (
-          <button
-            onClick={toggleLock}
-            className={`p-1 rounded transition-colors ${
-              isLocked
-                ? 'text-background/80 hover:text-background'
-                : 'text-background/80 hover:text-background'
-            }`}
-            title={isLocked ? 'Desbloquear sidebar' : 'Bloquear sidebar'}
-          >
-            <i className={`bi ${isLocked ? 'bi-lock-fill' : 'bi-unlock'}`}></i>
-          </button>
-        )}
+        {/* En el header, elimina el botón de candado y deja solo el botón de flechas */}
+        <button
+          onClick={() => setIsExpanded(prev => !prev)}
+          className="p-1 rounded transition-colors text-background/80 hover:text-background focus:outline-none"
+          title={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
+        >
+        </button>
       </div>
 
       {/* Menu con scroll */}
       <nav
-        className="flex-1 py-4 overflow-y-auto"
+        className="flex-1 py-4 overflow-y-auto text-white"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -260,38 +221,41 @@ const Sidebar = () => {
               {/* Group Header o Link directo */}
               {group.items ? (
                 <div
-                  className={`flex items-center px-4 py-2 text-background/80 hover:bg-background/10 hover:text-background rounded-lg cursor-pointer transition-colors ${
-                    (isExpanded || isLocked) ? 'justify-between' : 'justify-center'
+                  className={`flex items-center px-4 py-2 cursor-pointer transition-colors rounded-lg relative ${
+                    (isExpanded) ? 'justify-between' : 'justify-center'
+                  } ${
+                    group.items.some(item => isActiveRoute(item.path))
+                      ? ' bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm' // Grupo activo
+                      : 'text-background/80 hover:bg-background/10 hover:text-background'
                   }`}
-                  onClick={() => toggleGroup(group.id)}
+                  onClick={() => (isExpanded) && toggleGroup(group.id)}
                 >
                   <div className="flex items-center">
                     <i className={`${group.icon} text-lg`}></i>
-                    {(isExpanded || isLocked) && (
+                    {(isExpanded) && (
                       <span className="ml-3 text-sm font-medium whitespace-nowrap">
                         {group.title}
                       </span>
                     )}
                   </div>
-                  {(isExpanded || isLocked) && group.items.length > 0 && ( // Solo mostrar chevron si hay items para expandir/contraer
+                  {(isExpanded) && group.items.length > 0 && (
                     <i className={`bi bi-chevron-${expandedGroups[group.id] ? 'up' : 'down'} text-xs`}></i>
                   )}
                 </div>
               ) : (
-                // Para elementos sin subcategorías, mostrar directamente como link
                 <Link
                   to={group.path}
                   className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
-                    (isExpanded || isLocked) ? '' : 'justify-center'
+                    (isExpanded) ? '' : 'justify-center'
                   } ${
                     isActiveRoute(group.path)
-                      ? 'bg-background/20 text-background rounded-xl'
+                      ? 'border-l-4  bg-background/10'
                       : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                   }`}
-                  title={!(isExpanded || isLocked) ? group.name : ''}
+                  title={!(isExpanded) ? group.name : ''}
                 >
                   <i className={`${group.icon} text-base`}></i>
-                  {(isExpanded || isLocked) && (
+                  {(isExpanded) && (
                     <span className="ml-3 text-sm whitespace-nowrap ">
                       {group.name}
                     </span>
@@ -299,30 +263,28 @@ const Sidebar = () => {
                 </Link>
               )}
 
-              {/* Group Items - Solo mostrar si el grupo tiene items Y está expandido (o si el sidebar está minimizado y debe mostrar iconos) */}
-              {group.items && (expandedGroups[group.id] || (!isExpanded && !isLocked)) && (
-                <div className={`${(isExpanded || isLocked) ? 'ml-4' : ''}`}>
+              {/* Group Items - Solo mostrar si el sidebar está expandido o bloqueado */}
+              {(group.items && (isExpanded)) && (
+                <div
+                  className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  style={{ willChange: 'max-height, opacity' }}
+                >
                   {Array.isArray(group.items) && group.items.map((item, index) => (
-                    // Asegurarse de que el ítem tenga permiso para ser mostrado
                     hasPermission(item.module, 'Visualizar') && (
                       <Link
                         key={index}
                         to={item.path}
-                        className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
-                          (isExpanded || isLocked) ? '' : 'justify-center'
-                        } ${
+                        className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline relative ${
                           isActiveRoute(item.path)
-                            ? 'bg-background/20 text-background rounded-xl '
+                            ? 'text-yellow-500 bg-background/20 font-semibold rounded-lg shadow' // Amarillo fuerte y arqueado
                             : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                         }`}
-                        title={!(isExpanded || isLocked) ? item.name : ''}
+                        title={item.name}
                       >
                         <i className={`${item.icon} text-base`}></i>
-                        {(isExpanded || isLocked) && (
-                          <span className="ml-3 text-sm whitespace-nowrap">
-                            {item.name}
-                          </span>
-                        )}
+                        <span className="ml-3 text-sm whitespace-nowrap">
+                          {item.name}
+                        </span>
                       </Link>
                     )
                   ))}
@@ -332,13 +294,14 @@ const Sidebar = () => {
           ))
         )}
       </nav>
-
-      {/* Footer fijo */}
-      <div className="p-4 border-t border-accent/50 flex items-center justify-center">
-        <button className="w-full text-background py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors hover:bg-background/10"
-                onClick={handleLogout}>
-          <i className="bi bi-box-arrow-right text-base"></i>
-          {(isExpanded || isLocked) && <span>Cerrar sesión</span>}
+      {/* Botón de flechas para expandir/colapsar el menú */}
+      <div className="ml-2">
+        <button
+          onClick={() => setIsExpanded(prev => !prev)}
+          className="p-1 rounded transition-colors text-background/80 hover:text-background focus:outline-none"
+          title={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
+        >
+          <i className={`bi ${isExpanded ? 'bi-chevron-left' : 'bi-chevron-right'} text-2xl`}></i>
         </button>
       </div>
     </div>

@@ -6,11 +6,26 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { getAppointments, addAppointment, updateAppointment } from '../../../../shared/services/AppointmentsDataService';
 import { getProfessionals } from '../../../../shared/services/ProfessionalsDataService';
 import { getServices } from '../../../../shared/services/ServicesDataService';
+import { useOutletContext } from 'react-router-dom';
+import esLocale from '@fullcalendar/core/locales/es';
 
 import AppointmentDetailModal from './components/AppointmentDetailModal';
 import AppointmentEditModal from './components/AppointmentEditModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+// Colores personalizados para los estados
+const ESTADO_COLORES = {
+  'Agendada': { bg: '#FACC15', text: '#7C5700' }, // amarillo
+  'Confirmada': { bg: '#60A5FA', text: '#1E3A8A' }, // azul
+  'Reprogramada': { bg: '#F59E42', text: '#7C3F00' }, // naranja
+  'En Ejecucion': { bg: '#A78BFA', text: '#4B006E' }, // morado
+  'Finalizada': { bg: '#34D399', text: '#065F46' }, // verde
+  'Cancelada': { bg: '#F87171', text: '#991B1B' }, // rojo
+  'Cancelada por cliente': { bg: '#F87171', text: '#991B1B' }, // rojo
+  'Pagada': { bg: '#22D3EE', text: '#0E7490' }, // cyan
+  'No asistió': { bg: '#D1D5DB', text: '#374151' }, // gris
+};
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState([]);
@@ -21,11 +36,17 @@ const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   // Para pasar datos a los modales
   const [editData, setEditData] = useState(null);
+  const { setTitle } = useOutletContext();
 
   // Cargar citas al iniciar
   useEffect(() => {
     getAppointments().then(setAppointments);
   }, []);
+
+  useEffect(() => {
+    setTitle('Citas');
+    return () => setTitle('');
+  }, [setTitle]);
 
   // Refrescar citas tras crear/editar/cancelar
   const refreshAppointments = () => {
@@ -64,32 +85,47 @@ const Appointments = () => {
       horaInicio = inicios.sort()[0];
       horaFin = fines.sort().reverse()[0];
     }
-    // Color gris si está cancelada
-    const isCancelada = cita.estado === 'Cancelada' || cita.estado === 'Cancelada por cliente';
+    // Color según estado
+    const estadoColor = ESTADO_COLORES[cita.estado] || { bg: '#A0522D', text: '#fff' };
     return {
       id: cita.id,
       title: cita.cliente + ' - ' + (cita.servicios?.map(s => s.nombre).join(', ') || ''),
       start: `${cita.fecha}T${horaInicio}`,
       end: `${cita.fecha}T${horaFin}`,
       ...cita,
-      color: isCancelada ? '#9ca3af' : '#A0522D', // gris-400 o color estándar
-      textColor: isCancelada ? '#374151' : '#fff', // gris-700 o blanco
+      color: estadoColor.bg,
+      textColor: estadoColor.text,
     };
   });
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background p-6 font-inter">
+      <div className="w-full">
+        {/* Leyenda de estados */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg shadow p-4 border border-gray-200 flex flex-col items-center">
+            <span className="font-semibold text-text-main mb-2 text-center text-sm">¿Qué significa cada color?</span>
+            <div className="flex flex-wrap gap-4 justify-center">
+              {Object.entries(ESTADO_COLORES).map(([estado, color]) => (
+                <span key={estado} className="flex items-center gap-2 text-xs font-medium">
+                  <span className="inline-block w-4 h-4 rounded-full border border-gray-300" style={{ background: color.bg, borderColor: color.bg }}></span>
+                  <span className="text-text-main">{estado}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-primary">Citas</h1>
+          <div></div>
           <button
-            className="bg-primary text-white px-6 py-2 rounded-full shadow hover:bg-primary-dark font-semibold transition"
+            className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition ml-auto"
             onClick={() => setShowCreateModal(true)}
           >
-            + Nueva cita
+            <i className="bi bi-calendar-plus text-lg"></i>
+            Nueva cita
           </button>
         </div>
-        <div className="bg-white rounded-2xl shadow p-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2 overflow-x-auto text-xs">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
@@ -102,8 +138,25 @@ const Appointments = () => {
             dateClick={handleDateClick}
             eventClick={handleEventClick}
             height="auto"
-            locale="es"
-            // eventColor="#A0522D" // ahora se maneja por evento
+            locale={esLocale}
+            buttonText={{
+              today: 'Hoy',
+              month: 'Mes',
+              week: 'Semana',
+              day: 'Día',
+              list: 'Lista',
+              prev: 'Anterior',
+              next: 'Siguiente',
+            }}
+            dayHeaderFormat={{ weekday: 'short' }}
+            titleFormat={{ year: 'numeric', month: 'long' }}
+            contentHeight="auto"
+            handleWindowResize={true}
+            dayMaxEventRows={true}
+            slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+            dayCellClassNames={() => 'min-w-[90px]'}
+            slotLabelClassNames={() => 'whitespace-nowrap'}
+            allDayText="Todo el día"
           />
         </div>
         {/* Modales */}

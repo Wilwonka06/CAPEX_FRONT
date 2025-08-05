@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import { toast } from 'react-toastify';
 import { validateServiceForm, validateServiceName, validateServiceDescription, validateServiceDuration, validateServicePrice } from "../../../../../shared/validations";
+import Swal from 'sweetalert2';
+
+const MAX_IMAGES = 1;
 
 const EditServices = ({ onClose, service, onEdit, categories = [], services = [] }) => {
     const activeCategories = categories.filter(cat => cat.isActive);
@@ -14,7 +18,10 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
         estado: service?.estado || "Activo",
         imagen: service?.imagen || null
     });
+    const [previews, setPreviews] = useState(service?.imagen ? [service.imagen] : []);
     const [errors, setErrors] = useState({});
+    const [isNameValid, setIsNameValid] = useState(true);
+    const [nameError, setNameError] = useState("");
 
     useEffect(() => {
         setFormData({
@@ -27,17 +34,16 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
             estado: service?.estado || "Activo",
             imagen: service?.imagen || null
         });
-        setErrors({}); // Limpiar errores al cambiar de servicio
-        // eslint-disable-next-line
+        setPreviews(service?.imagen ? [service.imagen] : []);
+        setErrors({});
+        setNameError("");
+        setIsNameValid(true);
     }, [service, categories]);
 
     const handleKeyDown = (e) => {
-        // Prevenir cualquier letra en campos numéricos
         if (e.target.name === 'duracion' || e.target.name === 'precio') {
-            // Permitir solo números, backspace, delete, tab, escape, enter
             const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
             const isNumber = /^[0-9]$/.test(e.key);
-            
             if (!isNumber && !allowedKeys.includes(e.key)) {
                 e.preventDefault();
             }
@@ -46,36 +52,43 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
 
     const handleChange = (e) => {
         const { name, value, type, files } = e.target;
-        
-        // Para campos numéricos, solo permitir números
         if (name === 'duracion' || name === 'precio') {
             const numericValue = value.replace(/[^0-9]/g, '');
-            setFormData((prev) => ({
-                ...prev,
-                [name]: numericValue
-            }));
+            setFormData((prev) => ({ ...prev, [name]: numericValue }));
+        } else if (type === "file") {
+            const file = files[0];
+            if (file) {
+                setFormData((prev) => ({ ...prev, imagen: file }));
+                setPreviews([URL.createObjectURL(file)]);
+            }
         } else {
-            setFormData((prev) => ({
-                ...prev,
-                [name]: type === "file" ? files[0] : value
-            }));
+            setFormData((prev) => ({ ...prev, [name]: value }));
         }
-        
-        // Limpiar error del campo cuando el usuario empiece a escribir
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: '' }));
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+        if (name === 'Servicio') {
+            setNameError("");
+            setIsNameValid(true);
+        }
+    };
+
+    const handleNameBlur = () => {
+        const servicioErrors = validateServiceName(formData.Servicio, services, service);
+        if (!formData.Servicio.trim()) {
+            setNameError("El nombre es obligatorio");
+            setIsNameValid(false);
+        } else if (servicioErrors.servicio) {
+            setNameError(servicioErrors.servicio);
+            setIsNameValid(false);
+        } else {
+            setNameError("");
+            setIsNameValid(true);
         }
     };
 
     const handleBlur = (e) => {
         const { name, value } = e.target;
         let error = '';
-        
         switch (name) {
-            case 'Servicio':
-                const servicioErrors = validateServiceName(value, services, service);
-                error = servicioErrors.servicio || '';
-                break;
             case 'Descripcion':
                 const descripcionErrors = validateServiceDescription(value);
                 error = descripcionErrors.descripcion || '';
@@ -91,31 +104,64 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
             default:
                 break;
         }
-        
-        if (error) {
-            setErrors(prev => ({ ...prev, [name]: error }));
+        if (error) setErrors(prev => ({ ...prev, [name]: error }));
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+        if (files.length > 0) {
+            const file = files[0];
+            setFormData((prev) => ({ ...prev, imagen: file }));
+            setPreviews([URL.createObjectURL(file)]);
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleDragOver = (e) => {
         e.preventDefault();
-        
+    };
+
+    const removeImage = () => {
+        setFormData((prev) => ({ ...prev, imagen: null }));
+        setPreviews([]);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        let valid = true;
+        if (!formData.Servicio.trim()) {
+            setNameError("El nombre es obligatorio");
+            setIsNameValid(false);
+            valid = false;
+        }
+        if (!isNameValid) valid = false;
         const formErrors = validateServiceForm(formData, services, service);
         setErrors(formErrors);
-        
-        if (Object.keys(formErrors).length === 0) {
-            const updatedService = {
+        if (Object.keys(formErrors).length > 0) valid = false;
+        if (valid) {
+            const result = await Swal.fire({
+                title: '¿Guardar cambios en el servicio?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'Cancelar',
+            });
+            if (result.isConfirmed) {
+                let imagenUrl = formData.imagen;
+                if (formData.imagen instanceof File) {
+                    imagenUrl = URL.createObjectURL(formData.imagen);
+                }
+                onEdit({
                 id: formData.id,
-                name: formData.Servicio,
-                Categoria: formData.Categoria,
-                Descripcion: formData.Descripcion,
-                duracion: formData.duracion,
-                precio: formData.precio,
+                    name: formData.Servicio.trim(),
+                    category: formData.Categoria,
+                    description: formData.Descripcion,
+                    duration: formData.duracion + ' min',
+                    price: '$' + formData.precio,
+                    active: formData.estado === 'Activo',
                 estado: formData.estado,
-                imagen: formData.imagen
-            };
-            
-            onEdit(updatedService);
+                    imagen: imagenUrl
+                });
             setFormData({
                 id: null,
                 Servicio: "",
@@ -126,20 +172,12 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                 estado: "Activo",
                 imagen: null
             });
+                setPreviews([]);
             setErrors({});
-            
-            // Mostrar alerta de éxito
-            toast.success('Servicio actualizado exitosamente!', {
-                position: "top-right",
-                autoClose: 3000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-            });
-            
-            // Cerrar el modal después de mostrar la alerta
+                setNameError("");
+                setIsNameValid(true);
             onClose();
+            }
         }
     };
 
@@ -148,7 +186,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
                 {/* Header fijo */}
                 <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-                    <h2 className="text-xl font-bold text-primary m-0">Editar Servicio</h2>
+                    <h2 className="text-xl font-bold text-[#9C5B2B] m-0">Editar Servicio</h2>
                     <button
                         className="text-gray-400 hover:text-primary text-xl font-bold"
                         onClick={onClose}
@@ -159,23 +197,61 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                 </div>
                 {/* Contenido con scroll */}
                 <div className="overflow-y-auto p-8 flex-1">
-                    <form id="edit-service-form" onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form id="edit-service-form" onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
+                    {/* Columna Izquierda: Imagen y nombre */}
+                    <div className="flex flex-col items-center md:w-1/2 w-full gap-4">
+                      <div
+                        className="w-60 h-60 bg-gray-50 rounded-lg flex items-center justify-center mb-2 shadow-lg p-0 relative border-2 border-dashed border-gray-300 cursor-pointer hover:border-primary transition-colors"
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        onClick={() => document.getElementById("file-input-edit-service").click()}
+                      >
+                        {previews.length > 0 ? (
+                          <>
+                            <img
+                              src={previews[0]}
+                              alt={`Vista previa`}
+                              className="w-full h-full object-cover rounded-lg m-0"
+                            />
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); removeImage(); }}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-sm"
+                            >
+                              ×
+                            </button>
+                          </>
+                        ) : (
+                          <div className="text-center">
+                            <i className="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
+                            <p className="text-sm text-gray-500 mb-1">Arrastra y suelta una imagen aquí</p>
+                            <p className="text-xs text-gray-400">o haz clic para seleccionar (1 máx)</p>
+                          </div>
+                        )}
+                        <input
+                          id="file-input-edit-service"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleChange}
+                          className="hidden"
+                        />
+                      </div>
+                      <div className="text-lg font-bold text-gray-800 text-center mb-2">{formData.Servicio}</div>
+                    </div>
+                    {/* Columna Derecha: Campos principales */}
+                    <div className="flex flex-col gap-4 md:w-1/2 w-full">
                             <div>
-                                <label className="block text-xs font-medium text-text-main mb-1">Servicio <span className='text-red-500'>*</span></label>
+                        <label className="block text-xs font-medium text-text-main mb-1">Nombre del Servicio <span className='text-red-500'>*</span></label>
                                 <input
                                     type="text"
                                     name="Servicio"
                                     value={formData.Servicio}
                                     onChange={handleChange}
-                                    onBlur={handleBlur}
-                                    onKeyDown={handleKeyDown}
-                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                                        errors.Servicio ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                          onBlur={handleNameBlur}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${!isNameValid || nameError ? 'border-red-500' : 'border-gray-300'}`}
                                     required
                                 />
-                                {errors.Servicio && <p className="text-red-500 text-xs mt-1">{errors.Servicio}</p>}
+                        {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-text-main mb-1">Categoría <span className='text-red-500'>*</span></label>
@@ -183,9 +259,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                                     name="Categoria"
                                     value={formData.Categoria}
                                     onChange={handleChange}
-                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                                        errors.Categoria ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm border-gray-300`}
                                     required
                                 >
                                     {activeCategories.length === 0 && (
@@ -195,24 +269,22 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                                         <option key={cat.id} value={cat.name}>{cat.name}</option>
                                     ))}
                                 </select>
-                                {errors.Categoria && <p className="text-red-500 text-xs mt-1">{errors.Categoria}</p>}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-text-main mb-1">Descripción <span className='text-red-500'>*</span></label>
-                                <input
-                                    type="text"
+                        <textarea
                                     name="Descripcion"
                                     value={formData.Descripcion}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                                        errors.Descripcion ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none ${errors.Descripcion ? 'border-red-500' : 'border-gray-300'}`}
+                          rows={3}
                                     required
                                 />
-                                {errors.Descripcion && <p className="text-red-500 text-xs mt-1">{errors.Descripcion}</p>}
+                        {errors.Descripcion && <p className="text-xs text-red-500 mt-1">{errors.Descripcion}</p>}
                             </div>
-                            <div>
+                      <div className="flex gap-4">
+                        <div className="w-1/2">
                                 <label className="block text-xs font-medium text-text-main mb-1">Duración (min) <span className='text-red-500'>*</span></label>
                                 <input
                                     type="text"
@@ -221,15 +293,13 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     onKeyDown={handleKeyDown}
-                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                                        errors.duracion ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.duracion ? 'border-red-500' : 'border-gray-300'}`}
                                     required
                                     placeholder="Ej: 60"
                                 />
-                                {errors.duracion && <p className="text-red-500 text-xs mt-1">{errors.duracion}</p>}
+                          {errors.duracion && <p className="text-xs text-red-500 mt-1">{errors.duracion}</p>}
                             </div>
-                            <div>
+                        <div className="w-1/2">
                                 <label className="block text-xs font-medium text-text-main mb-1">Precio <span className='text-red-500'>*</span></label>
                                 <input
                                     type="text"
@@ -238,50 +308,18 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                                     onChange={handleChange}
                                     onBlur={handleBlur}
                                     onKeyDown={handleKeyDown}
-                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                                        errors.precio ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.precio ? 'border-red-500' : 'border-gray-300'}`}
                                     required
                                     placeholder="Ej: 50000"
                                 />
-                                {errors.precio && <p className="text-red-500 text-xs mt-1">{errors.precio}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-text-main mb-1">Estado <span className='text-red-500'>*</span></label>
-                                <select
-                                    name="estado"
-                                    value={formData.estado}
-                                    onChange={handleChange}
-                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                                        errors.estado ? 'border-red-500' : 'border-gray-300'
-                                    }`}
-                                >
-                                    <option value="Activo">Activo</option>
-                                    <option value="Inactivo">Inactivo</option>
-                                </select>
-                                {errors.estado && <p className="text-red-500 text-xs mt-1">{errors.estado}</p>}
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-medium text-text-main mb-1">Imagen</label>
-                                {formData.imagen && typeof formData.imagen === 'string' && formData.imagen.startsWith('data:image') && (
-                                    <div className="mb-3">
-                                        <label className="block text-xs font-medium text-text-main/80 mb-1">Imagen actual:</label>
-                                        <img src={formData.imagen} alt="Imagen actual" className="w-32 h-32 object-cover rounded border border-gray-300" />
-                                    </div>
-                                )}
-                                <input
-                                    type="file"
-                                    name="imagen"
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                                />
-                                <p className="text-xs text-text-main/60 mt-1">Deja vacío para mantener la imagen actual</p>
-                            </div>
+                          {errors.precio && <p className="text-xs text-red-500 mt-1">{errors.precio}</p>}
+                        </div>
+                      </div>
                         </div>
                     </form>
                 </div>
                 {/* Footer fijo */}
-                <div className="sticky bottom-0 bg-white rounded-b-lg flex justify-end px-8 py-4">
+                <div className="rounded-b-lg flex justify-end px-8 py-4">
                     <button
                         type="button"
                         className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
@@ -292,14 +330,27 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                     <button
                         type="submit"
                         form="edit-service-form"
-                        className="px-4 py-2 rounded-md font-semibold transition ml-2 text-sm bg-text-main text-white hover:bg-primary-dark"
+                        disabled={!isNameValid}
+                        className={`px-4 py-2 rounded-md font-semibold transition ml-2 text-sm ${
+                            isNameValid 
+                                ? 'bg-text-main text-white hover:bg-primary-dark' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
                     >
                         Guardar
                     </button>
                 </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default EditServices
+EditServices.propTypes = {
+    onClose: PropTypes.func.isRequired,
+    service: PropTypes.object,
+    onEdit: PropTypes.func.isRequired,
+    categories: PropTypes.array,
+    services: PropTypes.array
+};
+
+export default EditServices;

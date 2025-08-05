@@ -1,7 +1,7 @@
 import PrivilegesTable from './PrivilegesTable';
 
-const ViewProductCard = ({ children, title, onClose }) => (
-  <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
+const ViewRolesCard = ({ children, title, onClose }) => (
+  <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
     <button
       className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
       onClick={onClose}
@@ -14,12 +14,12 @@ const ViewProductCard = ({ children, title, onClose }) => (
   </div>
 );
 
-const ViewRole = ({ isOpen, onClose, role }) => {
+const ViewRoles = ({ isOpen, onClose, role }) => {
   if (!isOpen || !role) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <ViewProductCard title="Detalle del rol" onClose={onClose}>
+      <ViewRolesCard title="Detalle del rol" onClose={onClose}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium mb-1">Nombre</label>
@@ -38,7 +38,7 @@ const ViewRole = ({ isOpen, onClose, role }) => {
         </div>
         <div>
           <label className="block text-sm font-bold mb-2">Privilegios</label>
-          <PrivilegesTable value={role.privileges || {}} onChange={() => {}} />
+          <PrivilegesTable value={role.privileges || {}} onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })} />
         </div>
         <div className="flex justify-end pt-6">
           <button
@@ -49,9 +49,9 @@ const ViewRole = ({ isOpen, onClose, role }) => {
             Cerrar
           </button>
         </div>
-      </ViewProductCard>
+      </ViewRolesCard>
     </div>
   );
 };
 
-export default ViewRole; 
+export default ViewRoles;

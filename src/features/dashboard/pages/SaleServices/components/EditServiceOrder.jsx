@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import { validateServiceOrder } from "../../../../../shared/validations";
@@ -37,9 +37,9 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
     }
   }, [isOpen, order]);
 
-  // Validación en tiempo real
+  // Validación solo cuando se envían servicios/productos (no en tiempo real)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && (selectedServices.length > 0 || selectedProducts.length > 0)) {
       const orderData = {
         ...formData,
         servicios: selectedServices,
@@ -49,7 +49,11 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
       const validation = validateServiceOrder(orderData, services, totalGeneral, formData.status);
       setErrors(validation.errors);
     }
-  }, [formData, selectedServices, selectedProducts, totalGeneral, formData.status, services, isOpen]);
+  }, [selectedServices.length, selectedProducts.length, totalGeneral, services, isOpen]);
+
+  // Helpers para errores separados - solo servicios son obligatorios
+  const showServiceError = (showErrors || touched.clientName || touched.dineroProporcionado) && (!selectedServices || selectedServices.length === 0);
+  // Los productos son opcionales, no se muestran errores
 
   // Reset form cuando se cierra el modal
   useEffect(() => {
@@ -90,19 +94,21 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
     onEdit(orderData);
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    // Solo marcar como tocado, no validar en tiempo real
     setTouched(prev => ({ ...prev, [name]: true }));
-  };
+  }, []);
 
-  const handleBlur = (e) => {
+  const handleBlur = useCallback((e) => {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-  };
+    // No validar en tiempo real para evitar re-renderizados
+  }, []);
 
   const handleClose = () => {
     if (!loading) {
@@ -185,22 +191,19 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
             onServicesChange={setSelectedServices}
           />
           {showServiceError && (
-            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio o producto</p>
+            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio</p>
           )}
         </div>
 
-        {/* Productos */}
+        {/* Productos - Opcionales */}
         <div>
           <label className="block text-xs font-medium text-black mb-1">
-            Productos
+            Productos (Opcional)
           </label>
           <ProductSelector 
             selectedProducts={selectedProducts}
             onProductsChange={setSelectedProducts}
           />
-          {showProductError && (
-            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio o producto</p>
-          )}
         </div>
 
         {/* Resumen de totales */}

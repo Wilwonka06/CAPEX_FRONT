@@ -163,11 +163,13 @@ SuppliersTable.propTypes = {
   suppliers: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      nit: PropTypes.string,
       nombre: PropTypes.string.isRequired,
       contacto: PropTypes.string.isRequired,
       direccion: PropTypes.string.isRequired,
       telefono: PropTypes.string.isRequired,
       correo: PropTypes.string.isRequired,
+      tipo: PropTypes.string,
       isActive: PropTypes.bool.isRequired,
     })
   ).isRequired,

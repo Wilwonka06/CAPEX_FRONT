@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 const OrderProductItem = ({ producto }) => {
   return (
     <div className="flex items-center gap-4 bg-gray-50 rounded p-2 border border-gray-100">
-      <img src={producto.imagen || producto.foto || '/placeholder.png'} alt={producto.nombre} className="w-12 h-12 object-contain rounded bg-white border" />
+      <img src={producto.fotos && producto.fotos.length > 0 ? producto.fotos[0] : (producto.imagen || producto.foto || '/placeholder.png')} alt={producto.nombre} className="w-12 h-12 object-contain rounded bg-white border" />
       <div className="flex-1">
         <div className="font-semibold text-text-main text-sm">{producto.nombre}</div>
         {producto.color || producto.textura ? (

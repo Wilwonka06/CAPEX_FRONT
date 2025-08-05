@@ -1,9 +1,11 @@
 // components/Layout.jsx
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/sidebar';
 import AdminNavbar from './components/AdminNavbar';
+import { useState } from 'react';
 
 const Layout = () => {
+  const [title, setTitle] = useState('');
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -11,10 +13,10 @@ const Layout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Admin Navbar */}
-        <AdminNavbar />
+        <AdminNavbar title={title} />
         {/* Content Area */}
-        <main className="flex-1 p-6 overflow-y-auto">
-          <Outlet />
+        <main className="flex-1 p-6 overflow-y-auto bg-gray-200">  
+          <Outlet context={{ setTitle }} />
         </main>
       </div>
     </div>

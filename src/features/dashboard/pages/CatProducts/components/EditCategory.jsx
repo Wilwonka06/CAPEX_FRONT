@@ -7,6 +7,8 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
   const [description, setDescription] = useState("");
   const [originalName, setOriginalName] = useState("");
   const [isNameValid, setIsNameValid] = useState(true);
+  const [nameError, setNameError] = useState("");
+  const [descriptionError, setDescriptionError] = useState("");
 
   useEffect(() => {
     if (category) {
@@ -18,18 +20,32 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
   }, [category]);
 
   const handleNameBlur = () => {
-    if (name.trim() && isDuplicateCategoryName(name, categories, category)) {
-      alert("Ya existe una categoría con este nombre");
-      setName(originalName);
+    if (!name.trim()) {
+      setNameError("El nombre es obligatorio");
+      setIsNameValid(false);
+    } else if (isDuplicateCategoryName(name, categories, category)) {
+      setNameError("Ya existe una categoría con este nombre");
       setIsNameValid(false);
     } else {
+      setNameError("");
       setIsNameValid(true);
     }
   };
 
+  const handleDescriptionBlur = () => {
+    setDescriptionError("");
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (name.trim() && description.trim() && isNameValid) {
+    let valid = true;
+    if (!name.trim()) {
+      setNameError("El nombre es obligatorio");
+      setIsNameValid(false);
+      valid = false;
+    }
+    if (!isNameValid) valid = false;
+    if (valid) {
       onSave({
         ...category,
         name: name.trim(),
@@ -37,6 +53,16 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
       });
       handleClose();
     }
+  };
+
+  const handleNameChange = (e) => {
+    setName(e.target.value);
+    setNameError("");
+    setIsNameValid(true);
+  };
+
+  const handleDescriptionChange = (e) => {
+    setDescription(e.target.value);
   };
 
   const handleClose = () => {
@@ -71,21 +97,24 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
               <input
                 type="text"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                  !isNameValid ? 'border-red-500' : 'border-gray-300'
+                  !isNameValid || nameError ? 'border-red-500' : 'border-gray-300'
                 }`}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleNameChange}
                 onBlur={handleNameBlur}
                 required
               />
+              {nameError && (
+                <p className="text-xs text-red-500 mt-1">{nameError}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-text-main mb-1">Descripción </label>
               <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none border-gray-300`}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required
+                onChange={handleDescriptionChange}
+                onBlur={handleDescriptionBlur}
                 rows={3}
               />
             </div>

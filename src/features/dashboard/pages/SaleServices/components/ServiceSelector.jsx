@@ -71,6 +71,24 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const isFormValid = selectedEmployeeForService && quantity > 0;
   const totalServices = selectedServices.reduce((total, service) => total + service.subtotal, 0);
 
+  // Funciones simples para evitar problemas de hooks
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setIsOpen(true);
+  };
+
+  const handleSearchFocus = () => {
+    setIsOpen(true);
+  };
+
+  const handleQuantityChange = (e) => {
+    setQuantity(Math.max(1, parseInt(e.target.value) || 1));
+  };
+
+  const handleEmployeeChange = (e) => {
+    setSelectedEmployeeForService(e.target.value);
+  };
+
   return (
     <div className="relative">
       <div className="flex items-center space-x-2">
@@ -78,11 +96,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setIsOpen(true);
-            }}
-            onFocus={() => setIsOpen(true)}
+            onChange={handleSearchChange}
+            onFocus={handleSearchFocus}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
             placeholder="Buscar servicios..."
           />
@@ -176,7 +191,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                     <input
                       type="number"
                       value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={handleQuantityChange}
                       className="w-16 text-center border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                       min="1"
                     />
@@ -195,7 +210,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                   </label>
                   <select
                     value={selectedEmployeeForService}
-                    onChange={(e) => setSelectedEmployeeForService(e.target.value)}
+                    onChange={handleEmployeeChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                   >
                     <option value="">Seleccionar empleado</option>
