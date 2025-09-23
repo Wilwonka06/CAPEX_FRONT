@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api", // cambia al puerto donde corre tu backend
+  baseURL: "https://capex-back.onrender.com/api", // cambia al puerto donde corre tu backend
   headers: {
     "Content-Type": "application/json",
   },

@@ -1,12 +1,38 @@
 import axios from "axios";
 
-const BASE = "http://localhost:3000/api/categorias-servicios";
+const BASE = "https://capex-back.onrender.com/api/categorias-servicios";
 
 // Obtener todas
 export const getServiceCategories = async () => {
-  const res = await axios.get(BASE);
-  return res.data;
+  try {
+    const res = await axios.get(BASE, { timeout: 12000 });
+    const raw = res?.data;
+
+    // Normalización defensiva de la respuesta
+    let list = [];
+    if (Array.isArray(raw)) {
+      list = raw;
+    } else if (raw?.data && Array.isArray(raw.data)) {
+      list = raw.data;
+    } else if (raw?.results && Array.isArray(raw.results)) {
+      list = raw.results;
+    }
+
+    // Asegurar campos esperados por la UI
+    return list.map((item) => ({
+      id_categoria_servicio:
+        item.id_categoria_servicio ?? item.id ?? item.idCategoria ?? item.ID,
+      nombre: item.nombre ?? item.name ?? item.categoria ?? "",
+      descripcion: item.descripcion ?? item.description ?? "",
+      estado: item.estado ?? (item.isActive === false ? "Inactivo" : "Activo"),
+    }));
+  } catch (error) {
+    console.error("[API] getServiceCategories ERROR:", error?.message);
+    // Fallback vacío para que no quede colgado el loading
+    return [];
+  }
 };
+
 
 // Crear nueva
 export const createServiceCategory = async (category) => {

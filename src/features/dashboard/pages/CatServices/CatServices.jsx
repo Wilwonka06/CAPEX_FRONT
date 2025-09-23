@@ -15,18 +15,24 @@ const CatServices = () => {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [error, setError] = useState("");
 
   const loadCategories = async () => {
     setLoading(true);
+    setError("");
     try {
       const data = await getServiceCategories();
+      console.log("[DEBUG] Categorías cargadas:", data);
       setCategories(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error cargando categorías de servicios:", error);
+    } catch (err) {
+      console.error("Error cargando categorías de servicios:", err);
       setCategories([]);
+      setError("No se pudieron cargar las categorías.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
 
   useEffect(() => {
     loadCategories();
@@ -38,8 +44,7 @@ const CatServices = () => {
       await loadCategories();
       Swal.fire("Éxito", "Categoría creada correctamente", "success");
     } catch (error) {
-      console.error("Error en handleAdd:", error.response?.data || error);
-      throw error;
+      Swal.fire("Error", "No se pudo crear la categoría", "error");
     }
   };
 
@@ -76,9 +81,7 @@ const CatServices = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">
-          Categorías de Servicios
-        </h1>
+        <h1 className="text-2xl font-bold text-primary">Categorías de Servicios</h1>
         <button
           onClick={() => setShowAdd(true)}
           className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition"
@@ -89,6 +92,8 @@ const CatServices = () => {
 
       {loading ? (
         <p className="text-gray-600">Cargando categorías...</p>
+      ) : error ? (
+        <p className="text-red-600">{error}</p>
       ) : categories.length === 0 ? (
         <p className="text-gray-600">No hay categorías registradas.</p>
       ) : (
