@@ -1,12 +1,63 @@
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useProducts } from '../../../../dashboard/pages/products/hooks/useProducts';
+import productsService from '../../../../dashboard/pages/products/API/productsService';
 import ProductDetailCliente from '../components/ProductDetailCliente';
 
 const ProductDetailPageCliente = () => {
   const { id } = useParams();
-  const { products } = useProducts();
-  const product = products.find(p => String(p.id) === String(id));
-  const recommended = products.filter(p => String(p.id) !== String(id)).slice(0, 4);
+
+  // Estados para producto individual
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Estados para productos recomendados
+  const [recommended, setRecommended] = useState([]);
+
+  // Cargar producto individual
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!id) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await productsService.getById(id);
+        if (response.success) {
+          setProduct(response.data);
+        } else {
+          setError('Producto no encontrado');
+        }
+      } catch (err) {
+        setError('Error al cargar el producto');
+        console.error('Error loading product:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProduct();
+  }, [id]);
+
+  // Cargar productos recomendados
+  useEffect(() => {
+    const loadRecommended = async () => {
+      try {
+        const response = await productsService.getAll({ limit: 5 });
+        if (response.success) {
+          const filtered = response.data.filter(p => String(p.id) !== String(id)).slice(0, 4);
+          setRecommended(filtered);
+        }
+      } catch (err) {
+        console.error('Error loading recommended products:', err);
+      }
+    };
+
+    if (id) {
+      loadRecommended();
+    }
+  }, [id]);
 
   if (!product) {
     return (

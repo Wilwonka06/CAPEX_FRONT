@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { useProducts } from '../../../dashboard/pages/products/hooks/useProducts';
-import { useCategories } from '../../../dashboard/pages/CatProducts/hooks/useCategories';
+import { useState, useMemo, useEffect } from 'react';
+import productsService from '../../../dashboard/pages/products/API/productsService';
+import categoriesService from '../../../dashboard/pages/CatProducts/API/categoriesService';
 import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaSearch, FaTimes } from 'react-icons/fa';
 import cartIcon from '../../../../shared/images/cart.png';
@@ -9,14 +9,61 @@ import { useCartToast } from '../../components/CartToastContext';
 const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
 
 const Catalogo = () => {
-  const { products } = useProducts();
-  const { categories } = useCategories();
+  // Estados para productos
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(null);
+
+  // Estados para categorías
+  const [activeCategories, setActiveCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
   const navigate = useNavigate();
   const { showCartToast } = useCartToast();
-  
-  // Categorías activas
-  const categoriasActivas = categories.filter(cat => cat.isActive).map(cat => cat.name);
 
+  // Cargar productos al montar
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setProductsLoading(true);
+        const response = await productsService.getAll({ limit: 100 }); // Cargar más productos para catálogo
+        if (response.success) {
+          setProducts(response.data || []);
+        } else {
+          setProductsError('Error al cargar productos');
+        }
+      } catch (error) {
+        setProductsError('Error al cargar productos');
+        console.error('Error loading products:', error);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  // Cargar categorías activas
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await categoriesService.getActive();
+        if (response.success) {
+          setActiveCategories(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // Categorías activas - ajustar según estructura de API
+  const categoriasActivas = activeCategories.map(cat => cat.nombre);
   // Extraer valores únicos de especificaciones para filtros dinámicos
   const obtenerValoresUnicos = (concepto) => {
     const valores = [];
