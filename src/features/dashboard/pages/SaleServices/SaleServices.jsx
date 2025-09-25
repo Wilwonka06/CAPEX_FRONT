@@ -178,7 +178,7 @@ const SaleServices = () => {
       normalizeText(value).toLowerCase().includes(term.toLowerCase())
     );
     
-    // Mostrar todas las órdenes en ambas pestañas, incluyendo las anuladas
+    // Filtrar por estado según el tab seleccionado
     const matchesTab = tab === "En ejecucion"
       ? normalizeText(service.status).toLowerCase() === "en ejecucion" || normalizeText(service.status).toLowerCase() === "anulado"
       : normalizeText(service.status).toLowerCase() === "pagado" || normalizeText(service.status).toLowerCase() === "anulado";
@@ -199,6 +199,11 @@ const SaleServices = () => {
       setCurrentPage(totalPages);
     }
   }, [services, totalPages, currentPage]);
+
+  // Resetear página cuando se cambie de tab
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab]);
 
   const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
@@ -314,6 +319,32 @@ const SaleServices = () => {
             {/* El título ahora se muestra en el navbar */}
           </div>
           <div className="p-6">
+            {/* Botones de filtrado por estado */}
+            <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+              <button
+                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
+                  tab === "En ejecucion"
+                    ? "bg-white text-text-main shadow-sm border border-gray-200"
+                    : "text-gray-600 hover:text-text-main hover:bg-white/50"
+                }`}
+                onClick={() => setTab("En ejecucion")}
+              >
+                <i className={`bi bi-play-circle text-xs ${tab === "En ejecucion" ? "text-yellow-600" : "text-gray-500"}`}></i>
+                En ejecución
+              </button>
+              <button
+                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
+                  tab === "Pagadas"
+                    ? "bg-white text-text-main shadow-sm border border-gray-200"
+                    : "text-gray-600 hover:text-text-main hover:bg-white/50"
+                }`}
+                onClick={() => setTab("Pagadas")}
+              >
+                <i className={`bi bi-check-circle text-xs ${tab === "Pagadas" ? "text-green-600" : "text-gray-500"}`}></i>
+                Pagadas
+              </button>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar órdenes de servicio" />
               <button
