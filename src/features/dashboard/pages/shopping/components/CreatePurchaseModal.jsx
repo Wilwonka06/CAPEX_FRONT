@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { useProducts } from "../../products/hooks/useProducts";
-import { useSuppliers } from "../../suppliers/hooks/useSuppliers";
+import productsService from "../../products/API/productsService";
+import suppliersService from "../../suppliers/API/suppliersService";
 import CreateSupplier from '../../suppliers/components/CreateSupplier';
 import CreateProduct from '../../products/components/CreateProduct';
 import QuickCreateSupplierModal from './QuickCreateSupplierModal';
 import QuickCreateProductModal from './QuickCreateProductModal';
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
-  const { products: productsList, editProduct } = useProducts();
-  const { suppliers: suppliersList } = useSuppliers();
+  const [productsList, setProductsList] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // Estado para proveedores
+  const [suppliersList, setSuppliersList] = useState([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   
   // Estado del formulario principal
   const [proveedorId, setProveedorId] = useState("");
@@ -44,6 +48,40 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [localSuppliers, setLocalSuppliers] = useState([]);
   const [localProducts, setLocalProducts] = useState([]);
 
+  // Cargar proveedores y productos al montar
+  useEffect(() => {
+    const loadSuppliers = async () => {
+      try {
+        setLoadingSuppliers(true);
+        const response = await suppliersService.getActive();
+        if (response.success) {
+          setSuppliersList(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading suppliers:', error);
+      } finally {
+        setLoadingSuppliers(false);
+      }
+    };
+
+    const loadProducts = async () => {
+      try {
+        setLoadingProducts(true);
+        const response = await productsService.getAll({ limit: 100 });
+        if (response.success) {
+          setProductsList(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadSuppliers();
+    loadProducts();
+  }, []);
+
   // Unificar listas para selects
   const suppliersSelect = localSuppliers.length > 0 ? localSuppliers : suppliersList;
   const productsSelect = localProducts.length > 0 ? localProducts : productsList;
@@ -52,7 +90,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   useEffect(() => {
     const proveedor = suppliersList.find((s) => s.id === Number(proveedorId));
     setNit(proveedor ? proveedor.nit : "");
-  }, [proveedorId]);
+  }, [proveedorId, suppliersList]);
 
   // Efecto para cargar datos del producto cuando se selecciona
   useEffect(() => {
@@ -173,40 +211,38 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     setItemsCompra((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!proveedorId || itemsCompra.length === 0) {
       alert("Debe seleccionar un proveedor y agregar al menos un producto.");
       return;
     }
-    const proveedor = suppliersList.find((s) => s.id === Number(proveedorId));
 
-    // Actualizar la cantidad de los productos
-    itemsCompra.forEach(item => {
-      const productoOriginal = productsList.find(p => p.id === item.id);
-      if (productoOriginal) {
-        const productoActualizado = {
-          ...productoOriginal,
-          cantidad: productoOriginal.cantidad + item.cantidad
-        };
-        editProduct(productoActualizado);
+    try {
+      // Preparar datos para la API
+      const purchaseData = {
+        supplierId: Number(proveedorId),
+        fechaCompra: fechaCompra,
+        numeroFactura: '', // Opcional
+        detalles: itemsCompra.map(item => ({
+          productId: item.id,
+          cantidad: item.cantidad,
+          precioUnitario: item.costo,
+          descuento: 0, // Opcional
+        })),
+        observaciones: '', // Opcional
+      };
+
+      // El onCreate ahora debería llamar al servicio API
+      if (onCreate) {
+        await onCreate(purchaseData);
       }
-    });
 
-    const nuevaCompra = {
-      id: Date.now(),
-      fechaCompra: fechaCompra,
-      fechaRegistro: fechaRegistro,
-      proveedor: proveedor.nombre,
-      nit: nit,
-      items: itemsCompra,
-      subtotal,
-      totalIva,
-      total,
-      estado: "Registrada",
-    };
-    if (onCreate) onCreate(nuevaCompra);
-    onClose(); // Idealmente, resetear estado aquí también al cerrar
+      onClose();
+    } catch (error) {
+      console.error('Error creating purchase:', error);
+      alert('Error al crear la compra. Intente nuevamente.');
+    }
   };
 
   if (openSupplierModal) {

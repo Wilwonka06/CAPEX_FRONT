@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
   isDuplicateProductName,
@@ -6,7 +6,7 @@ import {
   isValidNumber,
   isValidDecimal,
 } from "../../../../../shared/validations";
-import { useCategories } from '../../CatProducts/hooks/useCategories';
+import categoriesService from '../../CatProducts/API/categoriesService';
 
 const CONCEPTOS_ESPECIFICACION = [
   "Color",
@@ -20,13 +20,14 @@ const MAX_IMAGES = 3;
 
 const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
   const [open, setOpen] = useState(false);
-  const { categories: useCategoriesCategories } = useCategories();
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
     precio: "",
     cantidad: "",
-    categoria: "",
+    categoryId: "",
     fotos: [],
     tipoProducto: "",
   });
@@ -36,6 +37,25 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     { concepto: "", valor: "", otroConcepto: "" }
   ]);
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Cargar categorías al montar
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await categoriesService.getActive();
+        if (response.success) {
+          setCategories(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   // Determinar si el modal debe estar abierto
   const modalOpen = externalOpen !== undefined ? externalOpen : open;
@@ -48,7 +68,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       descripcion: "",
       precio: "",
       cantidad: "",
-      categoria: "",
+      categoryId: "",
       fotos: [],
       tipoProducto: "",
     });
@@ -166,7 +186,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     e.preventDefault();
     let errors = {};
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
-    if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
+    if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
     if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
     if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
@@ -181,7 +201,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     setFieldErrors({});
     if (
       formData.nombre.trim() &&
-      formData.categoria.trim() &&
+      formData.categoryId &&
       formData.precio &&
       formData.descripcion.trim() &&
       formData.tipoProducto.trim() &&
@@ -195,8 +215,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
         return foto;
       });
 
+      const selectedCategory = categories.find(c => c.id_categoria_producto === parseInt(formData.categoryId));
       const newProduct = {
         ...formData,
+        categoria: selectedCategory ? selectedCategory.nombre : '',
         id: Date.now(), // ID temporal
         precio: parseFloat(formData.precio),
         cantidad: formData.cantidad ? parseInt(formData.cantidad) : 0,
@@ -340,20 +362,20 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                       Categoría <span className="text-red-500">*</span>
                   </label>
                   <select
-                    name="categoria"
+                    name="categoryId"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                      value={formData.categoria}
+                      value={formData.categoryId}
                     onChange={handleChange}
                     required
                   >
                     <option value="">Seleccionar categoría</option>
-                    {useCategoriesCategories.filter(c => c.isActive).map((cat) => (
-                      <option key={cat.id} value={cat.name}>
-                        {cat.name}
+                    {categories.filter(c => c.estado === 'activo').map((cat) => (
+                      <option key={cat.id_categoria_producto} value={cat.id_categoria_producto}>
+                        {cat.nombre}
                       </option>
                     ))}
                   </select>
-                  {fieldErrors.categoria && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoria}</p>}
+                  {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">

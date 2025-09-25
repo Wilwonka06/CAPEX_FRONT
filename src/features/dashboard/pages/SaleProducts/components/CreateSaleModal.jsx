@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { useProducts } from "../../products/hooks/useProducts";
+import productsService from "../../products/API/productsService";
 
 const paymentMethods = ["Efectivo", "Transferencia bancaria"];
 
@@ -11,7 +11,6 @@ export default function CreateSaleModal({
   customers,
   products,
 }) {
-  const { editProduct } = useProducts();
   // Estado del formulario principal
   const [numeroVenta] = useState(
     `VEN-${new Date()
@@ -133,14 +132,18 @@ export default function CreateSaleModal({
     setErrores({});
 
     // Actualizar la cantidad de los productos (decrementar stock)
-    itemsVenta.forEach(item => {
+    itemsVenta.forEach(async (item) => {
       const productoOriginal = products.find(p => p.id === item.id);
       if (productoOriginal) {
-        const productoActualizado = {
-          ...productoOriginal,
-          cantidad: productoOriginal.cantidad - item.cantidad
-        };
-        editProduct(productoActualizado);
+        try {
+          await productsService.updateStock(
+            item.id,
+            productoOriginal.stock - item.cantidad,
+            'set'
+          );
+        } catch (error) {
+          console.error('Error updating product stock:', error);
+        }
       }
     });
 
