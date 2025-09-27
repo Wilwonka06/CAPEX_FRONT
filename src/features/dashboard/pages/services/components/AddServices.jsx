@@ -1,31 +1,22 @@
-// src/pages/dashboard/services/components/AddServices.jsx
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
-  validateServiceForm,
   validateServiceName,
   validateServiceDescription,
   validateServiceDuration,
   validateServicePrice,
 } from "../../../../../shared/validations";
 import PropTypes from "prop-types";
-import Swal from "sweetalert2";
-import { createService } from "../api/servicesApi";
-import { getServiceCategories } from "../../CatServices/api/serviceCategoriesApi"; // 👈 importar API categorías
 
-const MAX_IMAGES = 1;
-
-const AddServices = ({ onClose, onAdd, services = [] }) => {
-  const [categories, setCategories] = useState([]);
+const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
   const activeCategories = categories.filter((cat) => cat.estado === "Activo");
-
+  
   const [formData, setFormData] = useState({
     nombre: "",
-    id_categoria_servicio: "",
+    id_categoria_servicio: activeCategories[0]?.id_categoria_servicio || activeCategories[0]?.id || "",
     descripcion: "",
     duracion: "",
     precio: "",
-    estado: "Activo",
     foto: null,
   });
 
@@ -34,25 +25,15 @@ const AddServices = ({ onClose, onAdd, services = [] }) => {
   const [isNameValid, setIsNameValid] = useState(true);
   const [nameError, setNameError] = useState("");
 
-  // 🔹 Cargar categorías al abrir modal
+  // Actualizar categoría por defecto cuando cambien las categorías
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await getServiceCategories();
-        setCategories(data);
-        if (data.length > 0) {
-          setFormData((prev) => ({
-            ...prev,
-            id_categoria_servicio: data[0].id_categoria_servicio || data[0].id || "",
-          }));
-        }
-      } catch (error) {
-        console.error("Error al cargar categorías:", error);
-        toast.error("Error al cargar categorías");
-      }
-    };
-    fetchCategories();
-  }, []);
+    if (activeCategories.length > 0 && !formData.id_categoria_servicio) {
+      setFormData((prev) => ({
+        ...prev,
+        id_categoria_servicio: activeCategories[0].id_categoria_servicio || activeCategories[0].id,
+      }));
+    }
+  }, [activeCategories, formData.id_categoria_servicio]);
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -83,19 +64,25 @@ const AddServices = ({ onClose, onAdd, services = [] }) => {
     }
   };
 
-  const toUIExistingServices = services.map((s) => ({ id: s.id, name: s.nombre ?? s.name }));
+  // Convertir servicios existentes para validación
+  const existingServices = services.map((s) => ({ 
+    id: s.id, 
+    name: s.nombre ?? s.name 
+  }));
 
   const handleNameBlur = () => {
-    const servicioErrors = validateServiceName(formData.nombre, toUIExistingServices);
     if (!formData.nombre.trim()) {
       setNameError("El nombre es obligatorio");
       setIsNameValid(false);
-    } else if (servicioErrors.nombre) {
-      setNameError(servicioErrors.nombre);
-      setIsNameValid(false);
     } else {
-      setNameError("");
-      setIsNameValid(true);
+      const servicioErrors = validateServiceName(formData.nombre, existingServices);
+      if (servicioErrors.nombre) {
+        setNameError(servicioErrors.nombre);
+        setIsNameValid(false);
+      } else {
+        setNameError("");
+        setIsNameValid(true);
+      }
     }
   };
 
@@ -140,7 +127,7 @@ const AddServices = ({ onClose, onAdd, services = [] }) => {
     }
     if (!isNameValid) valid = false;
 
-    // Validaciones de campos individuales en español
+    // Validaciones de campos individuales
     const descErr = validateServiceDescription(formData.descripcion);
     const durErr = validateServiceDuration(formData.duracion);
     const preErr = validateServicePrice(formData.precio);
@@ -156,53 +143,35 @@ const AddServices = ({ onClose, onAdd, services = [] }) => {
     if (!valid) return;
 
     try {
-      const idCat = formData.id_categoria_servicio ? Number(formData.id_categoria_servicio) : null;
-      const dur = formData.duracion ? Number(formData.duracion) : null;
-      const prec = formData.precio ? Number(formData.precio) : null;
-
-      const jsonPayload = {
-        nombre: formData.nombre,
-        id_categoria_servicio: idCat,
-        descripcion: formData.descripcion,
-        duracion: dur,
-        precio: prec,
+      // Preparar datos para envío
+      const serviceData = {
+        nombre: formData.nombre.trim(),
+        id_categoria_servicio: Number(formData.id_categoria_servicio),
+        descripcion: formData.descripcion.trim(),
+        duracion: Number(formData.duracion),
+        precio: Number(formData.precio),
         foto: formData.foto && !(formData.foto instanceof File) ? String(formData.foto) : '',
       };
 
-      const createdService = await createService(jsonPayload);
-      // Enriquecer con nombre de categoría para la tabla si el backend no lo devuelve
-      const selectedCat = categories.find(
-        (c) => (c.id_categoria_servicio || c.id) == (formData.id_categoria_servicio)
-      );
-      const enriched = selectedCat
-        ? { ...createdService, categoria: createdService.categoria || { nombre: selectedCat.nombre } }
-        : createdService;
-      onAdd(enriched);
+      // Llamar la función onAdd que se encarga de la llamada a la API
+      await onAdd(serviceData);
 
+      // Limpiar formulario después del éxito
       setFormData({
         nombre: "",
-        id_categoria_servicio: activeCategories[0]?.id || "",
+        id_categoria_servicio: activeCategories[0]?.id_categoria_servicio || activeCategories[0]?.id || "",
         descripcion: "",
         duracion: "",
         precio: "",
-        estado: "Activo",
         foto: null,
       });
       setPreviews([]);
       setErrors({});
       setNameError("");
       setIsNameValid(true);
-
-      toast.success("Servicio agregado exitosamente!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      onClose();
     } catch (error) {
-      // Mostrar mensaje específico del backend si existe
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      console.error("Error al agregar servicio:", error?.response?.status, backendMsg || error?.message);
-      Swal.fire("Error", backendMsg || "No se pudo guardar el servicio", "error");
+      console.error("Error en el formulario:", error);
+      // El error ya se maneja en el componente padre
     }
   };
 
@@ -272,7 +241,7 @@ const AddServices = ({ onClose, onAdd, services = [] }) => {
                 />
               </div>
               <div className="text-lg font-bold text-gray-800 text-center mb-2">
-                {formData.nombre}
+                {formData.nombre || "Nombre del servicio"}
               </div>
             </div>
 
@@ -429,6 +398,7 @@ AddServices.propTypes = {
   onClose: PropTypes.func.isRequired,
   onAdd: PropTypes.func.isRequired,
   services: PropTypes.array,
+  categories: PropTypes.array,
 };
 
 export default AddServices;
