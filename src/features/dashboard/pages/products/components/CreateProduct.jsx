@@ -217,17 +217,21 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
 
       const selectedCategory = categories.find(c => c.id_categoria_producto === parseInt(formData.categoryId));
       const newProduct = {
-        ...formData,
-        categoria: selectedCategory ? selectedCategory.nombre : '',
-        id: Date.now(), // ID temporal
+        nombre: formData.nombre,
+        descripcion: formData.descripcion,
+        categoryId: formData.categoryId,
         precio: parseFloat(formData.precio),
         cantidad: formData.cantidad ? parseInt(formData.cantidad) : 0,
-        tamanio: formData.tamanio ? parseFloat(formData.tamanio) : null,
-        fechaRegistro: new Date().toISOString().split("T")[0],
-        fotos: fotosUrls, // Usar array de fotos
+        stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
+        costo: 0,
+        iva: 0,
+        imagen: fotosUrls.length > 0 ? fotosUrls[0] : '',
         especificaciones: especificaciones
           .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
-          .map(e => ({ concepto: e.concepto === "otro" ? e.otroConcepto : e.concepto, valor: e.valor }))
+          .map(e => ({ 
+            nombre: e.concepto === "otro" ? e.otroConcepto : e.concepto, 
+            valor: e.valor 
+          }))
       };
       if (onCreate) onCreate(newProduct);
       handleClose();

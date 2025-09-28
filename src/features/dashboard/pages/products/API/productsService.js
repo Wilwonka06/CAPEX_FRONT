@@ -34,6 +34,30 @@ export const productsService = {
         : PRODUCTS_ENDPOINT;
 
       const response = await apiRequest.get(url);
+      
+      // Mapear la respuesta para que sea consistente con el frontend
+      if (response.success && response.data) {
+        const mappedProducts = response.data.map(product => ({
+          id_producto: product.id_producto,
+          id: product.id_producto, // Para compatibilidad
+          nombre: product.nombre,
+          stock: parseInt(product.stock) || 0,
+          precio_venta: parseFloat(product.precio_venta) || 0,
+          precio: parseFloat(product.precio_venta) || 0, // Para compatibilidad
+          fecha_registro: product.fecha_registro,
+          fechaRegistro: product.fecha_registro, // Para compatibilidad
+          url_foto: product.url_foto,
+          foto: product.url_foto, // Para compatibilidad
+          categoria: product.categoria,
+          caracteristicas: product.caracteristicas || []
+        }));
+        
+        return {
+          ...response,
+          data: mappedProducts
+        };
+      }
+      
       return response;
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -88,15 +112,19 @@ export const productsService = {
       // Mapear campos del front-end al back-end
       const mappedData = {
         nombre: productData.nombre,
-        id_categoria_producto: productData.categoryId,
-        precio_venta: productData.precio,
-        stock: productData.stock || 0,
-        costo: productData.costo || 0,
-        iva: productData.iva || 0,
-        url_foto: productData.imagen || productData.url_foto,
-        caracteristicas: productData.caracteristicas || []
+        id_categoria_producto: parseInt(productData.categoryId),
+        precio_venta: parseFloat(productData.precio),
+        stock: parseInt(productData.stock || productData.cantidad || 0),
+        costo: parseFloat(productData.costo || 0),
+        iva: parseFloat(productData.iva || 0),
+        url_foto: productData.imagen || productData.url_foto || '',
+        caracteristicas: (productData.caracteristicas || productData.especificaciones || []).map(caracteristica => ({
+          nombre: caracteristica.nombre,
+          valor: caracteristica.valor
+        }))
       };
 
+      console.log('API Service: Sending data to backend:', mappedData);
       const response = await apiRequest.post(PRODUCTS_ENDPOINT, mappedData);
       return response;
     } catch (error) {
