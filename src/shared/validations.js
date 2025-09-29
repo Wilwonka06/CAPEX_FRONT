@@ -141,43 +141,31 @@ export function validateSchedulingDays(dias, repeticion) {
 // Valida formulario completo de programación
 export function validateSchedulingForm(formData) {
   const errors = {};
-  
+
   // Validar fecha de inicio
   const fechaInicioErrors = validateSchedulingStartDate(formData.fechaInicio);
   if (fechaInicioErrors.fechaInicio) {
     errors.fechaInicio = fechaInicioErrors.fechaInicio;
   }
-  
+
   // Validar fecha de fin
   const fechaFinErrors = validateSchedulingEndDate(formData.fechaFin, formData.fechaInicio);
   if (fechaFinErrors.fechaFin) {
     errors.fechaFin = fechaFinErrors.fechaFin;
   }
-  
+
   // Validar hora de inicio
   const horaInicioErrors = validateSchedulingStartTime(formData.horaInicio);
   if (horaInicioErrors.horaInicio) {
     errors.horaInicio = horaInicioErrors.horaInicio;
   }
-  
+
   // Validar hora de fin
   const horaFinErrors = validateSchedulingEndTime(formData.horaFin, formData.horaInicio);
   if (horaFinErrors.horaFin) {
     errors.horaFin = horaFinErrors.horaFin;
   }
-  
-  // Validar repetición
-  const repeticionErrors = validateSchedulingRepetition(formData.repeticion);
-  if (repeticionErrors.repeticion) {
-    errors.repeticion = repeticionErrors.repeticion;
-  }
-  
-  // Validar días
-  const diasErrors = validateSchedulingDays(formData.dias, formData.repeticion);
-  if (diasErrors.dias) {
-    errors.dias = diasErrors.dias;
-  }
-  
+
   return errors;
 }
 
@@ -264,98 +252,104 @@ export function validatePasswordConfirmation(contrasena, confirmarContrasena) {
 // Valida formulario completo de empleado (crear)
 export function validateEmployeeForm(formData, empleados = []) {
   const errors = {};
-  
+
   // Validar nombre
   const nombreErrors = validateEmployeeName(formData.nombre);
   if (nombreErrors.nombre) {
     errors.nombre = nombreErrors.nombre;
   }
-  
-  // Validar apellido
-  const apellidoErrors = validateEmployeeLastName(formData.apellido);
-  if (apellidoErrors.apellido) {
-    errors.apellido = apellidoErrors.apellido;
-  }
-  
+
   // Validar tipo de documento
   if (!formData.tipoDocumento.trim()) {
     errors.tipoDocumento = 'El tipo de documento es obligatorio';
   } else if (!isValidDocumentType(formData.tipoDocumento)) {
     errors.tipoDocumento = 'Tipo de documento inválido';
   }
-  
+
   // Validar documento
   const documentoErrors = validateEmployeeDocument(formData.documento, empleados);
   if (documentoErrors.documento) {
     errors.documento = documentoErrors.documento;
   }
-  
+
+  // Validar teléfono
+  if (!formData.telefono.trim()) {
+    errors.telefono = 'El teléfono es obligatorio';
+  } else if (!isValidPhone(formData.telefono)) {
+    errors.telefono = 'El teléfono debe tener entre 7 y 15 dígitos';
+  }
+
   // Validar correo
   const correoErrors = validateEmployeeEmail(formData.correo, empleados);
   if (correoErrors.correo) {
     errors.correo = correoErrors.correo;
   }
-  
-  // Validar contraseña
-  const contrasenaErrors = validateEmployeePassword(formData.contrasena);
-  if (contrasenaErrors.contrasena) {
-    errors.contrasena = contrasenaErrors.contrasena;
+
+  // Validar dirección
+  if (!formData.direccion.trim()) {
+    errors.direccion = 'La dirección es obligatoria';
+  } else if (!isValidTextLength(formData.direccion, 5, 200)) {
+    errors.direccion = 'La dirección debe tener entre 5 y 200 caracteres';
   }
-  
-  // Validar confirmación de contraseña
-  const confirmacionErrors = validatePasswordConfirmation(formData.contrasena, formData.confirmarContrasena);
-  if (confirmacionErrors.confirmarContrasena) {
-    errors.confirmarContrasena = confirmacionErrors.confirmarContrasena;
-  }
-  
+
+  // Nota: Las contraseñas son auto-generadas con el número de documento, por lo que no se validan manualmente
+
   // Validar estado
   if (!formData.estado.trim()) {
     errors.estado = 'El estado es obligatorio';
   }
-  
+
   return errors;
 }
 
 // Valida formulario completo de empleado (editar)
 export function validateEmployeeEditForm(formData, empleados = [], empleadoActual = null) {
   const errors = {};
-  
+
   // Validar nombre
   const nombreErrors = validateEmployeeName(formData.nombre);
   if (nombreErrors.nombre) {
     errors.nombre = nombreErrors.nombre;
   }
-  
-  // Validar apellido
-  const apellidoErrors = validateEmployeeLastName(formData.apellido);
-  if (apellidoErrors.apellido) {
-    errors.apellido = apellidoErrors.apellido;
-  }
-  
+
   // Validar tipo de documento
   if (!formData.tipoDocumento.trim()) {
     errors.tipoDocumento = 'El tipo de documento es obligatorio';
   } else if (!isValidDocumentType(formData.tipoDocumento)) {
     errors.tipoDocumento = 'Tipo de documento inválido';
   }
-  
+
   // Validar documento
   const documentoErrors = validateEmployeeDocument(formData.documento, empleados, empleadoActual);
   if (documentoErrors.documento) {
     errors.documento = documentoErrors.documento;
   }
-  
+
+  // Validar teléfono
+  if (!formData.telefono.trim()) {
+    errors.telefono = 'El teléfono es obligatorio';
+  } else if (!isValidPhone(formData.telefono)) {
+    errors.telefono = 'El teléfono debe tener entre 7 y 15 dígitos';
+  }
+
   // Validar correo
   const correoErrors = validateEmployeeEmail(formData.correo, empleados, empleadoActual);
   if (correoErrors.correo) {
     errors.correo = correoErrors.correo;
   }
-  
+
+  // Validar dirección
+  if (!formData.direccion.trim()) {
+    errors.direccion = 'La dirección es obligatoria';
+  } else if (!isValidTextLength(formData.direccion, 5, 200)) {
+    errors.direccion = 'La dirección debe tener entre 5 y 200 caracteres';
+  }
+
   // Validar estado
   if (!formData.estado.trim()) {
     errors.estado = 'El estado es obligatorio';
   }
-  
+
   return errors;
 }
 
@@ -549,7 +543,7 @@ export function isValidSupplierType(tipo) {
 
 // Valida tipo de documento
 export function isValidDocumentType(tipo) {
-  return ['CC', 'TI', 'CE', 'PAS'].includes(tipo);
+  return ['Cedula de ciudadania', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte'].includes(tipo);
 }
 
 // Valida número de documento (solo números)
