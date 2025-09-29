@@ -14,20 +14,19 @@ import {
 
 const initialForm = {
   nombre: '',
-  apellido: '', // Cambiado a singular
-  tipoDocumento: 'CC',
+  tipoDocumento: 'Cedula de ciudadania',
   documento: '',
+  telefono: '',
   correo: '',
-  contrasena: '',
-  confirmarContrasena: '',
+  direccion: '',
   estado: 'Activo',
 };
 
 const tiposDocumento = [
-  { value: 'CC', label: 'Cédula de Ciudadanía' },
-  { value: 'TI', label: 'Tarjeta de Identidad' },
-  { value: 'CE', label: 'Cédula de Extranjería' },
-  { value: 'PAS', label: 'Pasaporte' },
+  { value: 'Cedula de ciudadania', label: 'Cédula de Ciudadanía' },
+  { value: 'Tarjeta de identidad', label: 'Tarjeta de Identidad' },
+  { value: 'Cedula de extranjeria', label: 'Cédula de Extranjería' },
+  { value: 'Pasaporte', label: 'Pasaporte' },
 ];
 
 const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees = [] }) => {
@@ -44,14 +43,12 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
 
   const isFormValid = () => {
     return form.nombre.trim() &&
-           form.apellido.trim() &&
            form.tipoDocumento.trim() &&
            form.documento.trim() &&
+           form.telefono.trim() &&
            form.correo.trim() &&
-           form.contrasena.trim() &&
-           form.confirmarContrasena.trim() &&
+           form.direccion.trim() &&
            form.estado.trim() &&
-           form.contrasena === form.confirmarContrasena &&
            Object.keys(errors).length === 0;
   };
 
@@ -64,7 +61,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
-    
+
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -74,15 +71,11 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     let error = '';
-    
+
     switch (name) {
       case 'nombre':
         const nombreErrors = validateEmployeeName(value);
         error = nombreErrors.nombre || '';
-        break;
-      case 'apellido':
-        const apellidoErrors = validateEmployeeLastName(value);
-        error = apellidoErrors.apellido || '';
         break;
       case 'documento':
         const documentoErrors = validateEmployeeDocument(value, employees);
@@ -92,18 +85,10 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
         const correoErrors = validateEmployeeEmail(value, employees);
         error = correoErrors.correo || '';
         break;
-      case 'contrasena':
-        const contrasenaErrors = validateEmployeePassword(value);
-        error = contrasenaErrors.contrasena || '';
-        break;
-      case 'confirmarContrasena':
-        const confirmacionErrors = validatePasswordConfirmation(form.contrasena, value);
-        error = confirmacionErrors.confirmarContrasena || '';
-        break;
       default:
         break;
     }
-    
+
     if (error) {
       setErrors(prev => ({ ...prev, [name]: error }));
     }
@@ -144,16 +129,15 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
     
     if (Object.keys(formErrors).length === 0) {
       const newEmployee = {
-        id: Date.now().toString(),
         nombre: form.nombre,
-        apellido: form.apellido, // Cambiado a singular
-        tipoDocumento: form.tipoDocumento,
+        tipo_documento: form.tipoDocumento,
         documento: form.documento,
+        telefono: form.telefono,
         correo: form.correo,
-        contrasena: form.contrasena,
+        direccion: form.direccion,
         estado: form.estado
       };
-      
+
       onSave(newEmployee);
       setForm(initialForm);
       setErrors({});
@@ -189,11 +173,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
             {errors.nombre && <p className="text-red-500 text-xs">{errors.nombre}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Apellido</label>
-            <input type="text" name="apellido" value={form.apellido} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
-            {errors.apellido && <p className="text-red-500 text-xs">{errors.apellido}</p>}
-          </div>
-          <div>
             <label className="block text-sm font-medium text-text-main mb-1">Tipo de Documento</label>
             <select name="tipoDocumento" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2">
               {tiposDocumento.map(tipo => (
@@ -208,19 +187,19 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
             {errors.documento && <p className="text-red-500 text-xs">{errors.documento}</p>}
           </div>
           <div>
+            <label className="block text-sm font-medium text-text-main mb-1">Teléfono</label>
+            <input type="tel" name="telefono" value={form.telefono} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
+            {errors.telefono && <p className="text-red-500 text-xs">{errors.telefono}</p>}
+          </div>
+          <div>
             <label className="block text-sm font-medium text-text-main mb-1">Correo</label>
             <input type="email" name="correo" value={form.correo} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
             {errors.correo && <p className="text-red-500 text-xs">{errors.correo}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Contraseña</label>
-            <input type="password" name="contrasena" value={form.contrasena} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
-            {errors.contrasena && <p className="text-red-500 text-xs">{errors.contrasena}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Confirmar Contraseña</label>
-            <input type="password" name="confirmarContrasena" value={form.confirmarContrasena} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
-            {errors.confirmarContrasena && <p className="text-red-500 text-xs">{errors.confirmarContrasena}</p>}
+            <label className="block text-sm font-medium text-text-main mb-1">Dirección</label>
+            <input type="text" name="direccion" value={form.direccion} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
+            {errors.direccion && <p className="text-red-500 text-xs">{errors.direccion}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Estado</label>

@@ -1,149 +1,133 @@
 import { useState, useEffect } from "react";
-import PropTypes from "prop-types";
-import { validateCategoryForm, validateCategory, validateCategoryDescription } from "../../../../../shared/validations";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
-const EditCatServices = ({ onClose, category, onEdit, existingCategories = [] }) => {
-  const [open, setOpen] = useState(true);
+const EditCatServices = ({ onClose, onEdit, category, existingCategories }) => {
   const [form, setForm] = useState({
-    id: category?.id || null,
-    Categoria: category?.Categoria || "",
-    Descripcion: category?.Descripcion || "",
-    estado: category?.estado || "Activo"
+    nombre: "",
+    descripcion: "",
+    estado: "Activo",
   });
-  const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    setForm({
-      id: category?.id || null,
-      Categoria: category?.Categoria || "",
-      Descripcion: category?.Descripcion || "",
-      estado: category?.estado || "Activo"
-    });
-    setErrors({});
+    if (category) {
+      setForm({
+        nombre: category.nombre || "",
+        descripcion: category.descripcion || "",
+        estado: category.estado || "Activo",
+      });
+    }
   }, [category]);
 
-  const handleClose = () => {
-    setOpen(false);
-    if (onClose) onClose();
-  };
-
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleBlur = (e) => {
-    const { name, value } = e.target;
-    let error = "";
-    if (name === "Categoria") {
-      const categoriaErrors = validateCategory(value, existingCategories, category);
-      error = categoriaErrors.categoria || "";
-    } else if (name === "Descripcion") {
-      const descripcionErrors = validateCategoryDescription(value);
-      error = descripcionErrors.descripcion || "";
+  const validateForm = () => {
+    if (!form.nombre.trim()) {
+      Swal.fire("Error", "El nombre es obligatorio", "error");
+      return false;
     }
-    if (error) setErrors((prev) => ({ ...prev, [name]: error }));
+    if (form.nombre.length > 20) {
+      Swal.fire("Error", "El nombre no puede tener más de 20 caracteres", "error");
+      return false;
+    }
+    if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(form.nombre)) {
+      Swal.fire("Error", "El nombre solo puede contener letras y espacios", "error");
+      return false;
+    }
+    if (
+      existingCategories.some(
+        (cat) =>
+          cat.id_categoria_servicio !== category.id_categoria_servicio &&
+          cat.nombre?.toLowerCase() === form.nombre.toLowerCase()
+      )
+    ) {
+      Swal.fire("Error", "Ya existe una categoría con ese nombre", "error");
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formErrors = validateCategoryForm(form, existingCategories, category);
-    setErrors(formErrors);
-    if (Object.keys(formErrors).length === 0) {
-      const result = await Swal.fire({
-        title: '¿Guardar cambios en la categoría?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, guardar',
-        cancelButtonText: 'Cancelar',
+    if (!validateForm()) return;
+
+    try {
+      await onEdit({
+        id_categoria_servicio: category.id_categoria_servicio,
+        ...form,
       });
-      if (result.isConfirmed) {
-        onEdit({
-          id: form.id,
-          name: form.Categoria,
-          description: form.Descripcion,
-          isActive: form.estado === "Activo"
-        });
-        handleClose();
-      }
+      onClose();
+    } catch (error) {
+      console.error("Error al actualizar categoría:", error.response?.data || error);
+      Swal.fire(
+        "Error",
+        error.response?.data?.error ||
+          JSON.stringify(error.response?.data) ||
+          "Error al actualizar categoría",
+        "error"
+      );
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Editar Categoría</h2>
-          <button
-            className="text-gray-400 hover:text-primary text-xl font-bold"
-            onClick={handleClose}
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
-        </div>
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1">
-          <form id="edit-category-form" onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-text-main mb-1">Categoría <span className='text-red-500'>*</span></label>
-              <input
-                type="text"
-                name="Categoria"
-                value={form.Categoria}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.Categoria ? 'border-red-500' : 'border-gray-300'}`}
-                required
-              />
-              {errors.Categoria && <p className="text-xs text-red-500 mt-1">{errors.Categoria}</p>}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-main mb-1">Descripción</label>
-              <textarea
-                name="Descripcion"
-                value={form.Descripcion}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none ${errors.Descripcion ? 'border-red-500' : 'border-gray-300'}`}
-                rows={3}
-              />
-              {errors.Descripcion && <p className="text-xs text-red-500 mt-1">{errors.Descripcion}</p>}
-            </div>
-          </form>
-        </div>
-        {/* Footer fijo */}
-        <div className="sticky bottom-0 bg-white rounded-b-lg flex justify-end px-8 py-4">
-          <button
-            type="button"
-            className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
-            onClick={handleClose}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            form="edit-category-form"
-            className={`px-4 py-2 rounded-md font-semibold transition ml-2 text-sm bg-text-main text-white hover:bg-primary-dark`}
-          >
-            Guardar
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-bold mb-4">Editar Categoría</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium">Nombre</label>
+            <input
+              type="text"
+              name="nombre"
+              value={form.nombre}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-md"
+              required
+              maxLength={20}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Descripción</label>
+            <textarea
+              name="descripcion"
+              value={form.descripcion}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-md"
+              maxLength={100}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Estado</label>
+            <select
+              name="estado"
+              value={form.estado}
+              onChange={handleChange}
+              className="w-full p-2 border rounded-md"
+            >
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Guardar cambios
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
-};
-
-EditCatServices.propTypes = {
-  onClose: PropTypes.func.isRequired,
-  category: PropTypes.object,
-  onEdit: PropTypes.func.isRequired,
-  existingCategories: PropTypes.array
 };
 
 export default EditCatServices;

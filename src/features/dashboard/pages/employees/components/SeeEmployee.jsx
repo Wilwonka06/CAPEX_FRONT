@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import SeeScheduling from './SeeScheduling';
 
 const tiposDocumento = {
-  CC: 'Cédula de Ciudadanía',
-  TI: 'Tarjeta de Identidad',
-  CE: 'Cédula de Extranjería',
-  PAS: 'Pasaporte',
+  'Cedula de ciudadania': 'Cédula de Ciudadanía',
+  'Tarjeta de identidad': 'Tarjeta de Identidad',
+  'Cedula de extranjeria': 'Cédula de Extranjería',
+  'Pasaporte': 'Pasaporte',
 };
 
 const SeeEmployee = ({ employee, onClose }) => {
@@ -47,10 +47,6 @@ const SeeEmployee = ({ employee, onClose }) => {
               <span className="block text-base font-semibold text-text-main">{employee.nombre}</span>
             </div>
             <div className="bg-background rounded-lg p-4 border border-accent-light">
-              <span className="block text-xs text-text-main/60 mb-1">Apellidos</span>
-              <span className="block text-base font-semibold text-text-main">{employee.apellido || employee.apellidos}</span>
-            </div>
-            <div className="bg-background rounded-lg p-4 border border-accent-light">
               <span className="block text-xs text-text-main/60 mb-1">Tipo de Documento</span>
               <span className="block text-base font-semibold text-text-main">{tiposDocumento[employee.tipoDocumento] || employee.tipoDocumento}</span>
             </div>
@@ -59,13 +55,21 @@ const SeeEmployee = ({ employee, onClose }) => {
               <span className="block text-base font-semibold text-text-main">{employee.documento}</span>
             </div>
             <div className="bg-background rounded-lg p-4 border border-accent-light">
+              <span className="block text-xs text-text-main/60 mb-1">Teléfono</span>
+              <span className="block text-base font-semibold text-text-main">{employee.telefono}</span>
+            </div>
+            <div className="bg-background rounded-lg p-4 border border-accent-light">
               <span className="block text-xs text-text-main/60 mb-1">Correo</span>
               <span className="block text-base font-semibold text-text-main">{employee.correo}</span>
             </div>
+            <div className="bg-background rounded-lg p-4 border border-accent-light">
+              <span className="block text-xs text-text-main/60 mb-1">Dirección</span>
+              <span className="block text-base font-semibold text-text-main">{employee.direccion}</span>
+            </div>
             <div className="bg-background rounded-lg p-4 border border-accent-light flex items-center gap-2">
               <span className="block text-xs text-text-main/60 mb-1">Estado</span>
-              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${employee.estado ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
-                {employee.estado ? 'Activo' : 'Inactivo'}
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${employee.estado === 'Activo' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+                {employee.estado === 'Activo' ? 'Activo' : 'Inactivo'}
               </span>
             </div>
           </div>

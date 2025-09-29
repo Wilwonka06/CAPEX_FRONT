@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { 
+import {
   validateSchedulingForm,
   validateSchedulingStartDate,
   validateSchedulingEndDate,
   validateSchedulingStartTime,
   validateSchedulingEndTime,
-  validateSchedulingRepetition,
   validateSchedulingDays
 } from '../../../../../shared/validations';
 
@@ -23,7 +22,6 @@ const diasSemana = [
 const initialProg = {
   fechaInicio: '',
   fechaFin: '',
-  repeticion: 'No se repite',
   dias: [],
   horaInicio: '08:00',
   horaFin: '09:00',
@@ -34,28 +32,47 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [errors, setErrors] = useState({});
 
-  // Selección automática si solo hay un empleado
-  useEffect(() => {
-    if (employees.length === 1) {
-      setSelectedEmployee(String(employees[0].id));
-    }
-  }, [employees]);
+  console.log("[DEBUG] AddScheduling RENDER:");
+  console.log("  - employees:", employees);
+  console.log("  - employees.length:", employees.length);
+  console.log("  - selectedEmployee:", selectedEmployee);
 
+  // Efecto para manejar cambios en employees
   useEffect(() => {
+    console.log("[DEBUG] useEffect [employees] triggered");
+    console.log("  - employees.length:", employees.length);
+    console.log("  - currentSelectedEmployee:", selectedEmployee);
+    
+    // Solo auto-seleccionar si hay empleados Y no hay uno seleccionado
+    if (employees && employees.length > 0 && !selectedEmployee) {
+      const firstId = String(employees[0].id);
+      console.log("  - Auto-selecting first employee ID:", firstId);
+      setSelectedEmployee(firstId);
+    }
+  }, [employees]); // Removí selectedEmployee de las dependencias para evitar loops
+
+  // Efecto para manejar el modo de edición
+  useEffect(() => {
+    console.log("[DEBUG] useEffect [editing] triggered");
     if (editing) {
+      console.log("  - Editing mode:", editing);
       setProg(editing);
-      setSelectedEmployee(editing.empleadoId || (employees.length === 1 ? String(employees[0].id) : ''));
+      if (editing.empleadoId) {
+        setSelectedEmployee(String(editing.empleadoId));
+      }
     } else {
       setProg(initialProg);
-      setSelectedEmployee(employees.length === 1 ? String(employees[0].id) : '');
+      // En modo agregar, auto-seleccionar si hay empleados
+      if (employees && employees.length > 0) {
+        setSelectedEmployee(String(employees[0].id));
+      }
     }
     setErrors({});
-  }, [editing, employees]);
+  }, [editing]);
 
-  // Validación en tiempo real
   const validateField = (field, value) => {
     let fieldErrors = {};
-    
+
     switch (field) {
       case 'fechaInicio':
         fieldErrors = validateSchedulingStartDate(value);
@@ -69,21 +86,18 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
       case 'horaFin':
         fieldErrors = validateSchedulingEndTime(value, prog.horaInicio);
         break;
-      case 'repeticion':
-        fieldErrors = validateSchedulingRepetition(value);
-        break;
       case 'dias':
         fieldErrors = validateSchedulingDays(prog.dias, value);
         break;
       case 'empleado':
-        if (!selectedEmployee) {
+        if (!value || value === '') {
           fieldErrors.empleado = 'Selecciona un empleado';
         }
         break;
       default:
         break;
     }
-    
+
     return fieldErrors;
   };
 
@@ -97,8 +111,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
       
       setProg((prev) => ({ ...prev, dias: newDias }));
       
-      // Validar días cuando cambian
-      const diasErrors = validateSchedulingDays(newDias, prog.repeticion);
+      const diasErrors = validateSchedulingDays(newDias);
       setErrors(prev => ({
         ...prev,
         dias: diasErrors.dias || null
@@ -106,7 +119,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
     } else {
       setProg((prev) => ({ ...prev, [name]: value }));
       
-      // Validar campo específico en tiempo real
       const fieldErrors = validateField(name, value);
       setErrors(prev => ({
         ...prev,
@@ -117,9 +129,11 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
 
   const handleEmployeeChange = (e) => {
     const value = e.target.value;
+    console.log("[DEBUG] handleEmployeeChange:");
+    console.log("  - New value:", value);
+    console.log("  - Type:", typeof value);
     setSelectedEmployee(value);
     
-    // Validar empleado en tiempo real
     const empleadoErrors = validateField('empleado', value);
     setErrors(prev => ({
       ...prev,
@@ -129,38 +143,65 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
 
   const handleAddEvent = (e) => {
     e.preventDefault();
-    
+
+    console.log("[DEBUG] ========== FORM SUBMIT ==========");
+    console.log("  - selectedEmployee:", selectedEmployee);
+    console.log("  - prog:", prog);
+    console.log("  - employees:", employees);
+
     // Validación completa del formulario
     const formErrors = validateSchedulingForm(prog);
-    
-    // Agregar validación de empleado
-    if (!selectedEmployee) {
-      formErrors.empleado = 'Selecciona un empleado';
+
+    // Validar empleado
+    if (!selectedEmployee || selectedEmployee === '' || selectedEmployee === 'undefined') {
+      formErrors.empleado = 'Debes seleccionar un empleado';
+      console.error("[DEBUG] Employee validation FAILED");
     }
-    
+
+    // Validar días
+    if (!prog.dias || prog.dias.length === 0) {
+      formErrors.dias = 'Debes seleccionar al menos un día';
+      console.error("[DEBUG] Days validation FAILED");
+    }
+
+    console.log("[DEBUG] Form errors:", formErrors);
     setErrors(formErrors);
+
+    if (Object.keys(formErrors).length > 0) {
+      toast.error('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    // Convertir a número
+    const empleadoIdNumber = parseInt(selectedEmployee, 10);
     
-    if (Object.keys(formErrors).length === 0) {
-      let progWithIds = { ...prog };
-      progWithIds.empleadoId = selectedEmployee;
-      if (!progWithIds.id) {
-        progWithIds.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
-      }
-      if (!progWithIds.idBase) {
-        progWithIds.idBase = progWithIds.id;
-      }
-      if (onAdd) onAdd(progWithIds);
+    if (isNaN(empleadoIdNumber)) {
+      toast.error('ID de empleado inválido');
+      console.error("[DEBUG] parseInt FAILED - selectedEmployee:", selectedEmployee);
+      return;
+    }
+
+    const schedulingData = {
+      empleadoId: empleadoIdNumber,
+      fechaInicio: prog.fechaInicio,
+      fechaFin: prog.fechaFin,
+      horaInicio: prog.horaInicio,
+      horaFin: prog.horaFin,
+      dias: prog.dias,
+    };
+
+    console.log("[DEBUG] Sending schedulingData:", schedulingData);
+
+    if (onAdd) {
+      onAdd(schedulingData);
+      // Reset después de agregar
       setProg(initialProg);
-      setSelectedEmployee('');
+      if (employees && employees.length > 0) {
+        setSelectedEmployee(String(employees[0].id));
+      } else {
+        setSelectedEmployee('');
+      }
       setErrors({});
-      toast.success('Programación agregada exitosamente!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
     }
   };
 
@@ -168,42 +209,72 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
     <div>
       <form onSubmit={handleAddEvent}>
         <div className="flex flex-wrap gap-6 items-end">
-          {employees.length > 1 && (
+          {employees && employees.length > 0 ? (
             <div>
-              <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
-              <select name="empleadoId" value={selectedEmployee} onChange={handleEmployeeChange} className="border rounded px-3 py-2 w-40">
+              <label className="block text-sm font-medium text-text-main mb-1">
+                Empleado <span className="text-red-500">*</span>
+              </label>
+              <select 
+                name="empleadoId" 
+                value={selectedEmployee} 
+                onChange={handleEmployeeChange} 
+                className="border rounded px-3 py-2 w-40"
+                required
+              >
                 <option value="">Selecciona un empleado</option>
                 {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.nombre} {emp.apellido}</option>
+                  <option key={emp.id} value={String(emp.id)}>
+                    {emp.nombre} {emp.apellido || ''}
+                  </option>
                 ))}
               </select>
               {errors.empleado && <p className="text-red-500 text-xs mt-1">{errors.empleado}</p>}
+              {/* Debug info - remover después */}
+              <p className="text-xs text-gray-500 mt-1">
+                Seleccionado ID: {selectedEmployee || 'Ninguno'}
+              </p>
             </div>
-          )}
-          {employees.length === 1 && (
+          ) : (
             <div>
               <label className="block text-sm font-medium text-text-main mb-1">Empleado</label>
-              <input type="text" value={`${employees[0].nombre} ${employees[0].apellido}`} disabled className="border rounded px-3 py-2 w-40 bg-gray-100" />
+              <input 
+                type="text" 
+                value="No hay empleados disponibles" 
+                disabled 
+                className="border rounded px-3 py-2 w-40 bg-gray-100 text-red-500" 
+              />
+              <p className="text-xs text-red-500 mt-1">
+                DEBUG: employees.length = {employees ? employees.length : 'undefined'}
+              </p>
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Fecha inicio</label>
-            <input type="date" name="fechaInicio" value={prog.fechaInicio} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Fecha inicio <span className="text-red-500">*</span>
+            </label>
+            <input 
+              type="date" 
+              name="fechaInicio" 
+              value={prog.fechaInicio} 
+              onChange={handleProgChange} 
+              className="border rounded px-3 py-2 w-32"
+              required
+            />
             {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-main mb-1">Fecha fin</label>
-            <input type="date" name="fechaFin" value={prog.fechaFin} onChange={handleProgChange} className="border rounded px-3 py-2 w-32" />
+            <label className="block text-sm font-medium text-text-main mb-1">
+              Fecha fin <span className="text-red-500">*</span>
+            </label>
+            <input 
+              type="date" 
+              name="fechaFin" 
+              value={prog.fechaFin} 
+              onChange={handleProgChange} 
+              className="border rounded px-3 py-2 w-32"
+              required
+            />
             {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
-          </div>
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-text-main mb-1">Repetición</label>
-            <select name="repeticion" value={prog.repeticion} onChange={handleProgChange} className="border rounded px-3 py-2 w-full">
-              <option>No se repite</option>
-              <option>Semanal</option>
-              <option>Mensual</option>
-            </select>
-            {errors.repeticion && <p className="text-red-500 text-xs mt-1">{errors.repeticion}</p>}
           </div>
         </div>
         <div className="flex flex-wrap gap-4 mt-6 mb-4">
@@ -223,16 +294,26 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
         <div className="flex flex-wrap items-end gap-4 mt-2">
           <div className="flex items-center gap-2">
             <select name="horaInicio" value={prog.horaInicio} onChange={handleProgChange} className="border rounded px-3 py-2">
-              {horas.map(h => <option key={h}>{h}</option>)}
+              {horas.map(h => <option key={`inicio-${h}`} value={h}>{h}</option>)}
             </select>
             <span className="mx-1">-</span>
             <select name="horaFin" value={prog.horaFin} onChange={handleProgChange} className="border rounded px-3 py-2">
-              {horas.map(h => <option key={h}>{h}</option>)}
+              {horas.map(h => <option key={`fin-${h}`} value={h}>{h}</option>)}
             </select>
           </div>
           <div className="flex-1 flex justify-end gap-2">
-            <button type="button" onClick={onCancelEdit} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-semibold hover:bg-gray-300 transition">Cancelar</button>
-            <button type="submit" className="bg-primary-dark text-white px-8 py-2 rounded font-semibold hover:bg-primary transition shadow" disabled={employees.length === 0}>
+            <button 
+              type="button" 
+              onClick={onCancelEdit} 
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-semibold hover:bg-gray-300 transition"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              className="bg-primary-dark text-white px-8 py-2 rounded font-semibold hover:bg-primary transition shadow disabled:opacity-50 disabled:cursor-not-allowed" 
+              disabled={!employees || employees.length === 0}
+            >
               {editing ? 'Guardar cambios' : 'Agregar'}
             </button>
           </div>
