@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
+import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder } from "../../../../../shared/validations";
 
 const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) => {
@@ -173,10 +174,12 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
           <label className="block text-xs font-medium text-black mb-1">
             Servicios
           </label>
-          <ServiceSelector 
-            selectedServices={selectedServices}
-            onServicesChange={setSelectedServices}
-          />
+          <ErrorBoundary>
+            <ServiceSelector 
+              selectedServices={selectedServices}
+              onServicesChange={setSelectedServices}
+            />
+          </ErrorBoundary>
           {showServiceError && (
             <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio</p>
           )}
@@ -187,10 +190,12 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
           <label className="block text-xs font-medium text-black mb-1">
             Productos (Opcional)
           </label>
-          <ProductSelector 
-            selectedProducts={selectedProducts}
-            onProductsChange={setSelectedProducts}
-          />
+          <ErrorBoundary>
+            <ProductSelector 
+              selectedProducts={selectedProducts}
+              onProductsChange={setSelectedProducts}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* Resumen de totales */}

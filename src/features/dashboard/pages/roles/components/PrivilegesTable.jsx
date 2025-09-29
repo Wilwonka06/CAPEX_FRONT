@@ -1,15 +1,16 @@
 import React from "react";
 
+// Módulos que coinciden con el backend
 const MODULES = [
-  "Dashboard",
-  "Gestión de Usuarios",
-  "Gestión de Compras",
-  "Gestión de Servicios",
-  "Ventas",
-  "configuración"
+  "Compras",
+  "Servicios", 
+  "Venta",
+  "Configuración",
+  "Usuarios"
 ];
 
-const ACTIONS = ["Crear", "Visualizar", "Editar", "Eliminar"];
+// Acciones que coinciden con el backend
+const ACTIONS = ["Create", "Read", "Edit", "Delete"];
 
 /**
  * props:
@@ -31,17 +32,18 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
 
   return (
     <div className="overflow-x-auto w-full">
-      <div className="flex justify-end mb-2">
-        <button
-          type="button"
-          onClick={handleSelectAll}
-          className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center gap-2"
-          disabled={disabled}
-        >
-          <i className="bi bi-check2-all mr-1"></i>
-          Seleccionar todos
-        </button>
-      </div>
+      {!disabled && (
+        <div className="flex justify-end mb-2">
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center gap-2"
+          >
+            <i className="bi bi-check2-all mr-1"></i>
+            Seleccionar todos
+          </button>
+        </div>
+      )}
       <table className="min-w-full rounded-lg border border-gray-200 shadow-sm text-sm">
         <thead>
           <tr className="bg-gray-50 hover:bg-gray-100">

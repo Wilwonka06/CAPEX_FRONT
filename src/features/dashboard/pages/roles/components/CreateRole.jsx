@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import PrivilegesTable from './PrivilegesTable';
-import { validateRole } from '../services/ValidateRoleService';
+import { validateRole } from '../../../../../shared/validations';
 
 const CreateRolesCard = ({ children, title, onClose }) => (
   <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
@@ -61,21 +61,26 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
     setTouched(prev => ({ ...prev, [name]: true }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
     setTouched({ nombre: true, descripcion: true, privilegios: true });
     const validationErrors = validateRole(formData, privileges, roles).errors;
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length === 0 && onCreate) {
-      onCreate(formData, privileges);
+      try {
+        await onCreate(formData, privileges);
+        // Cerrar el modal solo después de que la operación sea exitosa
+        onClose();
+      } catch (error) {
+        // El error ya se maneja en el componente padre
+        console.error('Error al crear rol:', error);
+      }
     }
   };
 
   const handleClose = () => {
-    if (!loading) {
-      onClose();
-    }
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -125,7 +130,6 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
             <button
               type="submit"
               className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center"
-              disabled={loading}
             >
               <i className="bi bi-plus-circle mr-2"></i>
               Crear Rol

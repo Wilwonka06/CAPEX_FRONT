@@ -49,11 +49,14 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
   useEffect(() => {
     // Excluye el rol actual de la validación de nombre único
     const otherRoles = roles.filter(r => r.id !== role?.id);
-    setErrors(validateRole(
+    const validationResult = validateRole(
       { nombre: formData.name, descripcion: formData.description },
       privileges,
       otherRoles
-    ));
+    );
+    console.log('🔍 Resultado de validación:', validationResult);
+    console.log('📋 Datos del formulario:', { formData, privileges, otherRoles });
+    setErrors(validationResult.errors || {});
   }, [formData, privileges, roles, role]);
 
   const handleChange = (e) => {
@@ -75,24 +78,26 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (Object.keys(errors).length === 0 && onEdit) {
-      onEdit({
+      const roleToUpdate = {
         id: role.id,
         name: formData.name,
         description: formData.description,
-        estado: role.estado,
-        privileges: privileges
-      });
-      if (onClose) onClose();
+        estado: role.estado, // Mantener el estado original del rol
+        privileges: privileges,
+        permisos: role.permisos || [],
+        privilegios: role.privilegios || []
+      };
+      
+      await onEdit(roleToUpdate);
     }
   };
 
   const handleClose = () => {
-    if (!loading) {
-      onClose();
-    }
+    onClose();
   };
 
   const handleBlur = (e) => {

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api.js';
 
 const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -7,26 +8,182 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [selectedServiceForQuantity, setSelectedServiceForQuantity] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedEmployeeForService, setSelectedEmployeeForService] = useState("");
+  const [availableServices, setAvailableServices] = useState([]);
+  const [availableEmployees, setAvailableEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
-  const availableServices = [
-    { id: 1, name: "Tintura Color verde", price: 15000, category: "Coloración", duration: "2 horas" },
-    { id: 2, name: "Aplicación de Extensión", price: 25000, category: "Extensiones", duration: "3 horas" },
-    { id: 3, name: "Manicura", price: 10000, category: "Uñas", duration: "45 min" },
-    { id: 4, name: "Pedicura", price: 12000, category: "Uñas", duration: "1 hora" },
-    { id: 5, name: "Corte de Cabello", price: 8000, category: "Cabello", duration: "30 min" },
-    { id: 6, name: "Barbería", price: 10000, category: "Cabello", duration: "45 min" }
-  ];
+  // Cargar servicios y empleados desde el backend
+  useEffect(() => {
+    const cargarDatos = async () => {
+      setLoading(true);
+      try {
+        // Cargar servicios
+        const serviciosResponse = await fetch(`${API_CONFIG.BASE_URL}/servicios`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
 
-  const availableEmployees = [
-    { id: 1, name: "Wilson" },
-    { id: 2, name: "Cruz" },
-    { id: 3, name: "Sara" },
-    { id: 4, name: "María" }
-  ];
+        if (serviciosResponse.ok) {
+          const servicios = await serviciosResponse.json();
+          console.log('🔍 Servicios recibidos del backend:', servicios);
+          
+          // Manejar diferentes estructuras de respuesta
+          let serviciosArray = [];
+          if (Array.isArray(servicios)) {
+            serviciosArray = servicios;
+          } else if (servicios && typeof servicios === 'object') {
+            // Si es un objeto, intentar extraer un array
+            if (servicios.data && Array.isArray(servicios.data)) {
+              serviciosArray = servicios.data;
+            } else if (servicios.servicios && Array.isArray(servicios.servicios)) {
+              serviciosArray = servicios.servicios;
+            } else if (servicios.results && Array.isArray(servicios.results)) {
+              serviciosArray = servicios.results;
+            } else {
+              // Si es un objeto con propiedades que parecen servicios
+              serviciosArray = Object.values(servicios).filter(item => 
+                item && typeof item === 'object' && (item.id || item.nombre || item.name)
+              );
+            }
+          }
+          
+          console.log('🔧 Servicios procesados:', serviciosArray);
+          setAvailableServices(serviciosArray);
+        } else {
+          console.error('Error al cargar servicios:', serviciosResponse.status);
+          setAvailableServices([]);
+        }
 
-  const filteredServices = availableServices.filter(service =>
-    service.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+        // Cargar empleados
+        const empleadosResponse = await fetch(`${API_CONFIG.BASE_URL}/empleados`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+
+        if (empleadosResponse.ok) {
+          const empleados = await empleadosResponse.json();
+          console.log('🔍 Empleados recibidos del backend:', empleados);
+          
+          // Manejar diferentes estructuras de respuesta
+          let empleadosArray = [];
+          if (Array.isArray(empleados)) {
+            empleadosArray = empleados;
+          } else if (empleados && typeof empleados === 'object') {
+            // Si es un objeto, intentar extraer un array
+            if (empleados.data && Array.isArray(empleados.data)) {
+              empleadosArray = empleados.data;
+            } else if (empleados.empleados && Array.isArray(empleados.empleados)) {
+              empleadosArray = empleados.empleados;
+            } else if (empleados.results && Array.isArray(empleados.results)) {
+              empleadosArray = empleados.results;
+            } else {
+              // Si es un objeto con propiedades que parecen empleados
+              empleadosArray = Object.values(empleados).filter(item => 
+                item && typeof item === 'object' && (item.id || item.nombre || item.name)
+              );
+            }
+          }
+          
+          console.log('🔧 Empleados procesados:', empleadosArray);
+          setAvailableEmployees(empleadosArray);
+        } else {
+          console.error('Error al cargar empleados:', empleadosResponse.status);
+          setAvailableEmployees([]);
+        }
+      } catch (error) {
+        console.error('Error al cargar datos:', error);
+        setAvailableServices([]);
+        setAvailableEmployees([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarDatos();
+  }, []);
+
+  // Cleanup del timeout al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  // Función para buscar servicios usando el endpoint de búsqueda
+  const buscarServicios = async (termino) => {
+    if (!termino.trim()) {
+      // Si no hay término, cargar todos los servicios
+      const response = await fetch(`${API_CONFIG.BASE_URL}/servicios`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.ok) {
+        const servicios = await response.json();
+        setAvailableServices(Array.isArray(servicios) ? servicios : []);
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/servicios/search?q=${encodeURIComponent(termino)}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const servicios = await response.json();
+        setAvailableServices(Array.isArray(servicios) ? servicios : []);
+      } else {
+        console.error('Error al buscar servicios:', response.status);
+        // Fallback a filtrado local
+        const todosLosServicios = availableServices;
+        const filtrados = Array.isArray(todosLosServicios) 
+          ? todosLosServicios.filter(service =>
+              (service.nombre || service.name || '').toLowerCase().includes(termino.toLowerCase())
+            )
+          : [];
+        setAvailableServices(filtrados);
+      }
+    } catch (error) {
+      console.error('Error al buscar servicios:', error);
+      // Fallback a filtrado local
+      const todosLosServicios = availableServices;
+      const filtrados = Array.isArray(todosLosServicios) 
+        ? todosLosServicios.filter(service =>
+            (service.nombre || service.name || '').toLowerCase().includes(termino.toLowerCase())
+          )
+        : [];
+      setAvailableServices(filtrados);
+    }
+  };
+
+  // Función para normalizar un servicio del backend
+  const normalizarServicio = (servicio) => {
+    return {
+      id: servicio.id_servicio || servicio.id,
+      nombre: servicio.nombre || servicio.name || servicio.servicio_nombre || 'Servicio sin nombre',
+      precio: servicio.precio || servicio.price || servicio.costo || 0,
+      categoria: servicio.categoria || servicio.category || servicio.tipo || servicio.descripcion || 'Sin categoría',
+      duracion: servicio.duracion || servicio.duration || servicio.tiempo || 'No especificada'
+    };
+  };
+
+  // Función para normalizar un empleado del backend
+  const normalizarEmpleado = (empleado) => {
+    return {
+      id: empleado.id_usuario || empleado.id,
+      nombre: empleado.nombre || empleado.name || empleado.empleado_nombre || 'Empleado sin nombre'
+    };
+  };
+
+  // Usar directamente los servicios del backend (ya filtrados por la búsqueda)
+  const filteredServices = Array.isArray(availableServices) 
+    ? availableServices.map(normalizarServicio) 
+    : [];
 
   const handleServiceSelect = (service) => {
     const isAlreadySelected = selectedServices.some(s => s.id === service.id);
@@ -42,11 +199,19 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
   const confirmServiceSelection = () => {
     if (selectedServiceForQuantity && selectedEmployeeForService && quantity > 0) {
+      const servicioNormalizado = normalizarServicio(selectedServiceForQuantity);
+      const empleadoSeleccionado = availableEmployees.find(emp => emp.id === parseInt(selectedEmployeeForService));
+      const empleadoNormalizado = empleadoSeleccionado ? normalizarEmpleado(empleadoSeleccionado) : null;
+      
       const serviceWithDetails = {
-        ...selectedServiceForQuantity,
+        ...servicioNormalizado,
+        name: servicioNormalizado.nombre,
+        price: servicioNormalizado.precio,
+        category: servicioNormalizado.categoria,
+        duration: servicioNormalizado.duracion,
         quantity: quantity,
-        subtotal: selectedServiceForQuantity.price * quantity,
-        employee: availableEmployees.find(emp => emp.id === parseInt(selectedEmployeeForService)),
+        subtotal: servicioNormalizado.precio * quantity,
+        employee: empleadoNormalizado,
         uniqueId: Date.now()
       };
       onServicesChange([...selectedServices, serviceWithDetails]);
@@ -73,8 +238,30 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
   // Funciones simples para evitar problemas de hooks
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+    const termino = e.target.value;
+    setSearchTerm(termino);
     setIsOpen(true);
+    
+    // Limpiar timeout anterior
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Crear nuevo timeout para debounce
+    const newTimeout = setTimeout(async () => {
+      if (termino.trim()) {
+        setLoading(true);
+        await buscarServicios(termino);
+        setLoading(false);
+      } else {
+        // Si no hay término, cargar todos los servicios
+        setLoading(true);
+        await buscarServicios('');
+        setLoading(false);
+      }
+    }, 300); // 300ms de debounce
+    
+    setSearchTimeout(newTimeout);
   };
 
   const handleSearchFocus = () => {
@@ -108,6 +295,13 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
       {/* Dropdown de servicios */}
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
+          {loading ? (
+            <div className="px-3 py-2 text-gray-500 text-sm flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+              Cargando servicios...
+            </div>
+          ) : (
+            <>
           {filteredServices.map(service => (
             <div
               key={service.id}
@@ -115,15 +309,17 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
             >
               <div className="flex justify-between">
-                <span>{service.name}</span>
-                <span className="text-gray-600">${service.price}</span>
+                    <span>{service.nombre || service.name}</span>
+                    <span className="text-gray-600">${service.precio || service.price || 0}</span>
               </div>
             </div>
           ))}
-          {filteredServices.length === 0 && (
+              {filteredServices.length === 0 && !loading && (
             <div className="px-3 py-2 text-gray-500 text-sm">
               No se encontraron servicios
             </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -152,28 +348,28 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Servicio</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    {selectedServiceForQuantity.name}
+                    {selectedServiceForQuantity.nombre || selectedServiceForQuantity.name}
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Categoría</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    {selectedServiceForQuantity.category}
+                    {selectedServiceForQuantity.categoria || selectedServiceForQuantity.category || 'Sin categoría'}
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Duración</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    {selectedServiceForQuantity.duration}
+                    {selectedServiceForQuantity.duracion || selectedServiceForQuantity.duration || 'No especificada'}
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Precio unitario</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    ${selectedServiceForQuantity.price}
+                    ${selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0}
                   </div>
                 </div>
                 
@@ -214,18 +410,21 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                   >
                     <option value="">Seleccionar empleado</option>
-                    {availableEmployees.map(employee => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.name}
+                    {availableEmployees.map(employee => {
+                      const empleadoNormalizado = normalizarEmpleado(employee);
+                      return (
+                        <option key={empleadoNormalizado.id} value={empleadoNormalizado.id}>
+                          {empleadoNormalizado.nombre}
                       </option>
-                    ))}
+                      );
+                    })}
                   </select>
                 </div>
                 
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-bold text-blue-600">
-                    ${(selectedServiceForQuantity.price * quantity).toLocaleString()}
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-blue-600">
+                    ${((selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0) * quantity).toLocaleString()}
                   </div>
                 </div>
               </div>

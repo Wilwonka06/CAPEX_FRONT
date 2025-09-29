@@ -38,7 +38,7 @@ const ViewRoles = ({ isOpen, onClose, role }) => {
         </div>
         <div>
           <label className="block text-sm font-bold mb-2">Privilegios</label>
-          <PrivilegesTable value={role.privileges || {}} onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })} />
+          <PrivilegesTable value={role.privileges || {}} disabled={true} />
         </div>
         <div className="flex justify-end pt-6">
           <button

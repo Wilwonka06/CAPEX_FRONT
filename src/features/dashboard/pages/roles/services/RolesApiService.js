@@ -1,0 +1,140 @@
+import { API_ENDPOINTS } from '../../../../../shared/config/api';
+import BaseService from './BaseService';
+import DataMapper from './DataMapper';
+
+class RolesApiService extends BaseService {
+  constructor() {
+    super(API_ENDPOINTS.ROLES);
+  }
+
+  // Obtener todos los roles
+  async getAllRoles() {
+    try {
+      const fetchOptions = {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      };
+
+      const data = await this.makeRequest(this.baseURL, fetchOptions);
+      
+      if (data.success && data.data) {
+        return DataMapper.mapRolesFromBackend(data.data);
+      }
+      
+      throw new Error(data.message || 'Error al obtener los roles');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Obtener un rol por ID
+  async getRoleById(id) {
+    try {
+      const url = `${this.baseURL}/${id}`;
+      const data = await this.makeRequest(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      if (data.success && data.data) {
+        const role = data.data;
+        return DataMapper.mapRoleFromBackend(role);
+      }
+      
+      throw new Error(data.message || 'Error al obtener el rol');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Crear un nuevo rol
+  async createRole(roleData) {
+    try {
+      const formattedRole = DataMapper.mapRoleToBackend(roleData);
+      
+      const data = await this.makeRequest(this.baseURL, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(formattedRole),
+      });
+
+      if (data.success && data.data) {
+        return DataMapper.mapRoleFromBackend(data.data);
+      }
+      
+      throw new Error(data.message || 'Error al crear el rol');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Actualizar un rol existente
+  async updateRole(id, roleData) {
+    try {
+      const formattedRole = DataMapper.mapRoleToBackend(roleData);
+      
+      const url = `${this.baseURL}/${id}`;
+      const data = await this.makeRequest(url, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(formattedRole),
+      });
+
+      if (data.success && data.data) {
+        return DataMapper.mapRoleFromBackend(data.data);
+      }
+      
+      throw new Error(data.message || 'Error al actualizar el rol');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Eliminar un rol
+  async deleteRole(id) {
+    try {
+      const url = `${this.baseURL}/${id}`;
+      const data = await this.makeRequest(url, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
+
+      if (data.success) {
+        return { success: true, message: data.message || 'Rol eliminado exitosamente' };
+      }
+      
+      throw new Error(data.message || 'Error al eliminar el rol');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Cambiar el estado de un rol
+  async changeRoleStatus(id, status) {
+    try {
+      const url = `${this.baseURL}/${id}/status`;
+      const statusData = {
+        estado: status === 'Activo' ? true : false
+      };
+      
+      const data = await this.makeRequest(url, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify(statusData),
+      });
+
+      if (data.success && data.data) {
+        return DataMapper.mapRoleFromBackend(data.data);
+      }
+      
+      throw new Error(data.message || 'Error al cambiar el estado del rol');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+}
+
+export default RolesApiService;
