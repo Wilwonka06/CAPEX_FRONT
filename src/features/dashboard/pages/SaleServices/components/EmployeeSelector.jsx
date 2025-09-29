@@ -1,24 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api.js';
 
 const EmployeeSelector = ({ selectedEmployee, onEmployeeChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [availableEmployees, setAvailableEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const availableEmployees = [
-    { id: 1, name: "Wilson" },
-    { id: 2, name: "Cruz" },
-    { id: 3, name: "María García" },
-    { id: 4, name: "Carlos López" },
-    { id: 5, name: "Ana Martínez" }
-  ];
+  // Cargar empleados desde el backend
+  useEffect(() => {
+    const cargarEmpleados = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/empleados`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
 
-  const filteredEmployees = availableEmployees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+        if (response.ok) {
+          const empleados = await response.json();
+          // Asegurar que sea un array
+          setAvailableEmployees(Array.isArray(empleados) ? empleados : []);
+        } else {
+          console.error('Error al cargar empleados:', response.status);
+          // Fallback a array vacío en caso de error
+          setAvailableEmployees([]);
+        }
+      } catch (error) {
+        console.error('Error al cargar empleados:', error);
+        setAvailableEmployees([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarEmpleados();
+  }, []);
+
+  const filteredEmployees = Array.isArray(availableEmployees) 
+    ? availableEmployees.filter(employee =>
+        (employee.nombre || employee.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   const handleEmployeeSelect = (employee) => {
     onEmployeeChange(employee);
-    setSearchTerm(employee.name);
+    setSearchTerm(employee.nombre || employee.name);
     setIsOpen(false);
   };
 
@@ -27,7 +54,7 @@ const EmployeeSelector = ({ selectedEmployee, onEmployeeChange }) => {
       <div className="relative">
         <input
           type="text"
-          value={selectedEmployee ? selectedEmployee.name : searchTerm}
+          value={selectedEmployee ? (selectedEmployee.nombre || selectedEmployee.name) : searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setIsOpen(true);
@@ -45,19 +72,28 @@ const EmployeeSelector = ({ selectedEmployee, onEmployeeChange }) => {
       {/* Dropdown de empleados */}
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-accent rounded shadow-lg max-h-40 overflow-y-auto">
-          {filteredEmployees.map(employee => (
-            <div
-              key={employee.id}
-              onClick={() => handleEmployeeSelect(employee)}
-              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
-            >
-              {employee.name}
+          {loading ? (
+            <div className="px-3 py-2 text-gray-500 text-sm flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+              Cargando empleados...
             </div>
-          ))}
-          {filteredEmployees.length === 0 && (
-            <div className="px-3 py-2 text-gray-500 text-sm">
-              No se encontraron empleados
-            </div>
+          ) : (
+            <>
+              {filteredEmployees.map(employee => (
+                <div
+                  key={employee.id_usuario || employee.id}
+                  onClick={() => handleEmployeeSelect(employee)}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+                >
+                  {employee.nombre || employee.name}
+                </div>
+              ))}
+              {filteredEmployees.length === 0 && !loading && (
+                <div className="px-3 py-2 text-gray-500 text-sm">
+                  No se encontraron empleados
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

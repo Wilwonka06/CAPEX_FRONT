@@ -2,7 +2,8 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // Base URL del backend
-const BASE_URL = import.meta.env.DEV ? 'http://localhost:3000/api' : 'https://capex-back.onrender.com/api';
+
+const BASE_URL = 'https://capex-back.onrender.com/api';
 
 // Crear instancia de axios con configuración base
 const apiClient = axios.create({

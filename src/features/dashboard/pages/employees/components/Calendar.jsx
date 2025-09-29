@@ -3,10 +3,10 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import AddScheduling from './AddScheduling';
+import { createScheduling } from '../api/schedulingApi';
+import { toast } from 'react-toastify';
 
-const EMPLOYEES_KEY = 'capex_employees';
-
-const Calendar = ({ empleado, onUpdateEmpleado }) => {
+const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [eventos, setEventos] = useState([]);
 
@@ -52,44 +52,46 @@ const Calendar = ({ empleado, onUpdateEmpleado }) => {
   };
   
 
-  const handleAddEvent = (prog) => {
-    const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
-    const idBase = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
-    const nuevoProg = { ...prog, idBase };
+  const handleAddEvent = async (prog) => {
+    try {
+      const schedulingData = {
+        ...prog,
+        id_usuario: empleado.id,
+      };
 
-    const nuevosEmpleados = empleados.map(emp =>
-      emp.id === empleado.id
-        ? { ...emp, schedulings: [...(emp.schedulings || []), nuevoProg] }
-        : emp
-    );
+      const createdScheduling = await createScheduling(schedulingData);
 
-    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(nuevosEmpleados));
-    if (onUpdateEmpleado) onUpdateEmpleado(nuevosEmpleados.find(e => e.id === empleado.id));
+      // Update schedulings list
+      if (onUpdateSchedulings) {
+        onUpdateSchedulings(prev => [...prev, createdScheduling]);
+      }
 
-    const eventosNuevos = expandirProgramacion(nuevoProg, idBase).map(ev => ({
-      id: ev.id,
-      title: `${ev.horaInicio} - ${ev.horaFin}`,
-      start: ev.fechaInicio,
-      allDay: true,
-    }));
+      // Add events to calendar
+      const eventosNuevos = expandirProgramacion(createdScheduling, createdScheduling.id).map(ev => ({
+        id: ev.id,
+        title: `${ev.hora_entrada} - ${ev.hora_salida}`,
+        start: ev.fecha,
+        allDay: true,
+      }));
 
-    setEventos(prev => [...prev, ...eventosNuevos]);
-    setModalOpen(false);
-
-    window.location.reload();
+      setEventos(prev => [...prev, ...eventosNuevos]);
+      setModalOpen(false);
+      toast.success('Programación agregada exitosamente');
+    } catch (error) {
+      console.error("Error agregando programación:", error);
+      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+      toast.error(backendMsg || "Error al agregar programación");
+    }
   };
 
   useEffect(() => {
     if (!empleado) return;
 
-    const schedulings = empleado.schedulings || [];
-    const todosEventos = schedulings.flatMap(prog => {
-      const idBase = prog.idBase || prog.id;
-      return expandirProgramacion(prog, idBase);
-    }).map(ev => ({
-      id: ev.id,
-      title: `${ev.horaInicio} - ${ev.horaFin}`,
-      start: ev.fechaInicio,
+    const employeeSchedulings = empleado.schedulings || [];
+    const todosEventos = employeeSchedulings.map(prog => ({
+      id: prog.id,
+      title: `${prog.hora_entrada} - ${prog.hora_salida}`,
+      start: prog.fecha,
       allDay: true,
     }));
 

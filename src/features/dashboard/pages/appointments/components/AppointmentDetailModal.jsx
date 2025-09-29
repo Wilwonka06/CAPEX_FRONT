@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { updateAppointment, APPOINTMENT_STATES } from '../../../../../shared/services/AppointmentsDataService';
+import appointmentsService from '../API/appointmentsService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -13,12 +13,11 @@ const ESTADO_COLORES = {
   'Agendada': { bg: '#FACC15', text: '#7C5700' },
   'Confirmada': { bg: '#60A5FA', text: '#1E3A8A' },
   'Reprogramada': { bg: '#F59E42', text: '#7C3F00' },
-  'En Ejecucion': { bg: '#A78BFA', text: '#4B006E' },
+  'En proceso': { bg: '#A78BFA', text: '#4B006E' },
   'Finalizada': { bg: '#34D399', text: '#065F46' },
-  'Cancelada': { bg: '#F87171', text: '#991B1B' },
-  'Cancelada por cliente': { bg: '#F87171', text: '#991B1B' },
   'Pagada': { bg: '#22D3EE', text: '#0E7490' },
-  'No asistió': { bg: '#D1D5DB', text: '#374151' },
+  'Cancelada por el usuario': { bg: '#F87171', text: '#991B1B' },
+  'No asistio': { bg: '#D1D5DB', text: '#374151' },
 };
 
 const getEstadoColor = (estado) => {
@@ -26,11 +25,11 @@ const getEstadoColor = (estado) => {
     case 'Agendada': return 'text-yellow-600';
     case 'Confirmada': return 'text-blue-600';
     case 'Reprogramada': return 'text-orange-600';
-    case 'En Ejecucion': return 'text-purple-600';
+    case 'En proceso': return 'text-purple-600';
     case 'Finalizada': return 'text-green-600';
-    case 'Cancelada': return 'text-red-600';
     case 'Pagada': return 'text-green-800';
-    case 'No asistió': return 'text-gray-500';
+    case 'Cancelada por el usuario': return 'text-red-600';
+    case 'No asistio': return 'text-gray-500';
     default: return 'text-gray-700';
   }
 };
@@ -39,15 +38,10 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   const [loadingCancel, setLoadingCancel] = useState(false);
   const [errorCancel, setErrorCancel] = useState(null);
   if (!cita) return null;
-  // const estadoObj = APPOINTMENT_STATES.find(e => e.nombre === cita.estado); // Eliminado para no mostrar descripción
-  const fechaStr = cita.fecha ? new Date(cita.fecha).toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
-  // Calcular hora inicio y fin global
-  let horaInicio = '08:00', horaFin = '09:00', duracionTotal = 0, valorTotal = 0;
+  const fechaStr = cita.fecha_servicio ? new Date(cita.fecha_servicio).toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  // Usar horas del backend
+  let horaInicio = cita.hora_entrada || '08:00:00', horaFin = cita.hora_salida || '09:00:00', duracionTotal = 0, valorTotal = 0;
   if (cita.servicios && cita.servicios.length > 0) {
-    const inicios = cita.servicios.map(s => s.inicio);
-    const fines = cita.servicios.map(s => s.fin);
-    horaInicio = inicios.sort()[0];
-    horaFin = fines.sort().reverse()[0];
     duracionTotal = cita.servicios.reduce((acc, s) => acc + (parseInt(s.duracion) || 0), 0);
     valorTotal = cita.servicios.reduce((acc, s) => acc + (limpiarPrecio(s.precio) * (parseInt(s.cantidad) || 1)), 0);
   }
@@ -58,8 +52,8 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
     setErrorCancel(null);
     console.log('Intentando cancelar cita...');
     try {
-      await updateAppointment({ ...cita, id: cita.id, estado: 'Cancelada' });
-      console.log('Cita cancelada en storage');
+      await appointmentsService.cancel(cita.id_cita, 'Cancelada por el usuario');
+      console.log('Cita cancelada en API');
       if (onCancel) await onCancel();
       onClose();
       toast.info('Cita cancelada', { position: 'top-right' });
@@ -73,7 +67,7 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   };
 
   // Determinar si la cita está cancelada
-  const esCancelada = cita.estado === 'Cancelada' || cita.estado === 'Cancelada por cliente';
+  const esCancelada = cita.estado === 'Cancelada por el usuario' || cita.estado === 'No asistio';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none font-inter">
@@ -104,8 +98,8 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="font-semibold mb-2 text-text-main">Información del Cliente</div>
             <div className="flex gap-8 text-sm">
-              <div><span className="font-medium">Nombre:</span> {cita.cliente}</div>
-              <div><span className="font-medium">Teléfono:</span> {cita.telefono}</div>
+              <div><span className="font-medium">Nombre:</span> {cita.cliente?.nombre || 'Cliente'}</div>
+              <div><span className="font-medium">Teléfono:</span> {cita.cliente?.telefono || 'Sin teléfono'}</div>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -113,12 +107,12 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
             {cita.servicios && cita.servicios.map((s, idx) => (
               <div key={idx} className="border-b border-gray-200 py-2 flex flex-col md:flex-row md:items-center md:gap-8">
                 <div className="flex-1">
-                  <span className="font-semibold">{s.nombre}</span> <span className="text-xs text-gray-500">{s.duracion} min ${s.precio}</span>
-                  <div className="text-xs text-gray-500">Profesional: {s.profesional} | Cantidad: {s.cantidad || 1}</div>
+                  <span className="font-semibold">{s.nombre_servicio}</span> <span className="text-xs text-gray-500">{s.duracion} min ${s.precio}</span>
+                  <div className="text-xs text-gray-500">Profesional: {s.nombre_empleado || 'Sin asignar'} | Cantidad: {s.cantidad || 1}</div>
                 </div>
                 <div className="flex gap-4 text-xs">
-                  <div>Hora inicio: <span className="font-semibold">{s.inicio}</span></div>
-                  <div>Hora finalización: <span className="font-semibold">{s.fin}</span></div>
+                  <div>Hora inicio: <span className="font-semibold">{s.hora_inicio}</span></div>
+                  <div>Hora finalización: <span className="font-semibold">{s.hora_fin}</span></div>
                 </div>
               </div>
             ))}

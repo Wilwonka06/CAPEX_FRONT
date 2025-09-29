@@ -3,7 +3,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { getAppointments, addAppointment, updateAppointment } from '../../../../shared/services/AppointmentsDataService';
+import appointmentsService from './API/appointmentsService';
 import { getProfessionals } from '../../../../shared/services/ProfessionalsDataService';
 import { getServices } from '../../../../shared/services/ServicesDataService';
 import { useOutletContext } from 'react-router-dom';
@@ -19,12 +19,11 @@ const ESTADO_COLORES = {
   'Agendada': { bg: '#FACC15', text: '#7C5700' }, // amarillo
   'Confirmada': { bg: '#60A5FA', text: '#1E3A8A' }, // azul
   'Reprogramada': { bg: '#F59E42', text: '#7C3F00' }, // naranja
-  'En Ejecucion': { bg: '#A78BFA', text: '#4B006E' }, // morado
+  'En proceso': { bg: '#A78BFA', text: '#4B006E' }, // morado
   'Finalizada': { bg: '#34D399', text: '#065F46' }, // verde
-  'Cancelada': { bg: '#F87171', text: '#991B1B' }, // rojo
-  'Cancelada por cliente': { bg: '#F87171', text: '#991B1B' }, // rojo
   'Pagada': { bg: '#22D3EE', text: '#0E7490' }, // cyan
-  'No asistió': { bg: '#D1D5DB', text: '#374151' }, // gris
+  'Cancelada por el usuario': { bg: '#F87171', text: '#991B1B' }, // rojo
+  'No asistio': { bg: '#D1D5DB', text: '#374151' }, // gris
 };
 
 const Appointments = () => {
@@ -40,7 +39,7 @@ const Appointments = () => {
 
   // Cargar citas al iniciar
   useEffect(() => {
-    getAppointments().then(setAppointments);
+    loadAppointments();
   }, []);
 
   useEffect(() => {
@@ -48,10 +47,31 @@ const Appointments = () => {
     return () => setTitle('');
   }, [setTitle]);
 
+  // Cargar citas desde la API
+  const loadAppointments = async () => {
+    try {
+      const response = await appointmentsService.getAll();
+      if (response.success) {
+        // El backend devuelve { success: true, data: { citas: [...] } }
+        // pero el frontend espera { success: true, data: [...] }
+        const appointmentsData = response.data?.citas || response.data || [];
+        setAppointments(appointmentsData);
+      } else {
+        console.error('API returned error:', response.message);
+        setAppointments([]);
+      }
+    } catch (err) {
+      console.error('Error loading appointments from API:', err);
+      console.error('Error details:', err.response?.data || err.message);
+      // Mostrar datos de ejemplo para desarrollo
+      setAppointments([]);
+      toast.error('Error al cargar citas. Verifica la conexión con el servidor.', { position: 'top-right' });
+    }
+  };
+
   // Refrescar citas tras crear/editar/cancelar
   const refreshAppointments = () => {
-    getAppointments().then(data => {
-      setAppointments(data);
+    loadAppointments().then(() => {
       toast.success('Citas actualizadas', { position: 'top-right' });
     }).catch(() => {
       toast.error('Error al actualizar citas', { position: 'top-right' });
@@ -68,7 +88,7 @@ const Appointments = () => {
   const handleEventClick = (info) => {
     // Buscar la cita actualizada por id en appointments (comparación robusta)
     const citaActualizada = appointments.find(
-      c => String(c.id) === String(info.event.id) || String(c.id) === String(info.event.extendedProps.id)
+      c => String(c.id_cita) === String(info.event.id) || String(c.id_cita) === String(info.event.extendedProps?.id_cita)
     );
     setSelectedEvent(citaActualizada || info.event.extendedProps);
     setShowDetailModal(true);
@@ -76,22 +96,17 @@ const Appointments = () => {
 
   // Convertir citas a eventos para FullCalendar
   const calendarEvents = appointments.map(cita => {
-    // Calcular hora inicio y fin global de la cita (mínimo y máximo de los servicios)
-    let horaInicio = '08:00';
-    let horaFin = '09:00';
-    if (cita.servicios && cita.servicios.length > 0) {
-      const inicios = cita.servicios.map(s => s.inicio);
-      const fines = cita.servicios.map(s => s.fin);
-      horaInicio = inicios.sort()[0];
-      horaFin = fines.sort().reverse()[0];
-    }
+    // Usar horas de la cita del backend
+    const horaInicio = cita.hora_entrada || '08:00:00';
+    const horaFin = cita.hora_salida || '09:00:00';
+
     // Color según estado
     const estadoColor = ESTADO_COLORES[cita.estado] || { bg: '#A0522D', text: '#fff' };
     return {
-      id: cita.id,
-      title: cita.cliente + ' - ' + (cita.servicios?.map(s => s.nombre).join(', ') || ''),
-      start: `${cita.fecha}T${horaInicio}`,
-      end: `${cita.fecha}T${horaFin}`,
+      id: cita.id_cita,
+      title: (cita.cliente?.nombre || 'Cliente') + ' - ' + (cita.servicios?.map(s => s.nombre_servicio).join(', ') || 'Sin servicios'),
+      start: `${cita.fecha_servicio}T${horaInicio}`,
+      end: `${cita.fecha_servicio}T${horaFin}`,
       ...cita,
       color: estadoColor.bg,
       textColor: estadoColor.text,
@@ -115,6 +130,19 @@ const Appointments = () => {
             </div>
           </div>
         </div>
+        
+        {/* Indicador de datos de ejemplo */}
+        {appointments.length > 0 && appointments[0]?.id_cita === 1 && (
+          <div className="mb-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
+              <i className="bi bi-exclamation-triangle text-yellow-600 text-lg"></i>
+              <div className="text-sm">
+                <span className="font-semibold text-yellow-800">Modo de desarrollo:</span>
+                <span className="text-yellow-700 ml-1">Mostrando datos de ejemplo debido a un error en el servidor.</span>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center mb-6">
           <div></div>
           <button

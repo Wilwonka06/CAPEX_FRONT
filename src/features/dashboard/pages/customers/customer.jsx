@@ -5,6 +5,9 @@ import ViewCustomer from "./components/ViewCustomer.jsx";
 import DeleteCustomer from "./components/DeleteCustomer.jsx";
 import { createCustomer } from "./services/CreateCustomerService.js";
 import { editCustomer } from "./services/EditCustomerService.js";
+import { deleteCustomer } from "./services/DeleteCustomerService.js";
+import { toggleCustomerStatus } from "./services/ToggleCustomerStatusService.js";
+import { getCustomers } from "./services/CustomerService.js";
 import SearchCustomer from "./components/SearchCustomer.jsx";
 import Paginator from "../../../../shared/Paginator.jsx";
 import { normalizeText } from '../../../../shared/normalizers.js';
@@ -14,68 +17,8 @@ import CustomerTable from "./components/CustomerTable.jsx";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const initialCustomers = [
-  {
-    id: 1,
-    documentType: "CC",
-    documentNumber: "1234567890",
-    firstName: "Juan",
-    lastName: "Pérez",
-    email: "juan.perez@email.com",
-    phone: "3101234567",
-    status: "Activo"
-  },
-  {
-    id: 2,
-    documentType: "CE",
-    documentNumber: "0987654321",
-    firstName: "María",
-    lastName: "González",
-    email: "maria.gonzalez@email.com",
-    phone: "3157894561",
-    status: "Activo"
-  },
-  {
-    id: 3,
-    documentType: "CC",
-    documentNumber: "5678901234",
-    firstName: "Carlos",
-    lastName: "Rodríguez",
-    email: "carlos.rodriguez@email.com",
-    phone: "3203216547",
-    status: "Inactivo"
-  },
-  {
-    id: 4,
-    documentType: "TI",
-    documentNumber: "4321098765",
-    firstName: "Ana",
-    lastName: "Martínez",
-    email: "ana.martinez@email.com",
-    phone: "3112345678",
-    status: "Activo"
-  },
-  {
-    id: 5,
-    documentType: "CC",
-    documentNumber: "9876543210",
-    firstName: "Pedro",
-    lastName: "Sánchez",
-    email: "pedro.sanchez@email.com",
-    phone: "3145678901",
-    status: "Activo"
-  },
-  {
-    id: 6,
-    documentType: "CE",
-    documentNumber: "2345678901",
-    firstName: "Laura",
-    lastName: "López",
-    email: "laura.lopez@email.com",
-    phone: "3167890123",
-    status: "Inactivo"
-  }
-];
+// Datos iniciales vacíos - se cargarán desde el backend
+const initialCustomers = [];
 
 const itemsPerPage = 5;
 
@@ -90,11 +33,35 @@ const CustomersPage = () => {
   const [customers, setCustomers] = useState(initialCustomers);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
 
   useEffect(() => {
     setTitle('Gestión de Clientes');
     return () => setTitle('');
   }, [setTitle]);
+
+  // Función para cargar clientes desde el backend
+  const loadCustomers = async (page = 1, search = '') => {
+    setIsLoadingCustomers(true);
+    try {
+      const response = await getCustomers(page, itemsPerPage, search);
+      setCustomers(response.data || response.customers || []);
+      setTotalCustomers(response.total || response.count || 0);
+    } catch (error) {
+      console.error('Error al cargar clientes:', error);
+      showMessage('Error al cargar los clientes', 'error');
+      setCustomers([]);
+      setTotalCustomers(0);
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  };
+
+  // Cargar clientes al montar el componente
+  useEffect(() => {
+    loadCustomers(currentPage, searchTerm);
+  }, [currentPage, searchTerm]);
 
   // Función para mostrar mensajes de feedback
   const showMessage = (text, type = 'success') => {
@@ -105,60 +72,14 @@ const CustomersPage = () => {
     }
   };
 
-  // Filtrado de clientes por búsqueda
-  const filteredCustomers = customers.filter((customer) => {
-    const term = normalizeText(searchTerm); // The search term is normalized once
-    if (!term) return true; // If no term, show all
-
-    // Verificar si el término es un número entero
-    const isNumericSearch = /^\d+$/.test(term);
-    
-    // Si es un número y coincide exactamente con el ID, solo mostrar ese cliente
-    if (isNumericSearch) {
-      const searchId = parseInt(term, 10);
-      // Comparación estricta con el ID convertido a número
-      if (searchId === customer.id) {
-        return true;
-      }
-      
-      // Si el término es un número pero no coincide exactamente con el ID,
-      // no continuar con la búsqueda parcial para IDs
-      if (term.length === String(customer.id).length) {
-        return false;
-      }
-    }
-    
-    // --- CRITICAL FIX HERE: Apply normalizeText to ID and Document Number ---
-    const idMatch = normalizeText(customer.id).includes(term); // Pass ID through normalizeText
-    const docNumberMatch = normalizeText(customer.documentNumber).includes(term); // Pass Document Number through normalizeText
-    // --- END OF CRITICAL FIX ---
-
-    const docTypeMatch = normalizeText(customer.documentType).includes(term);
-    const firstNameMatch = normalizeText(customer.firstName).includes(term);
-    const lastNameMatch = normalizeText(customer.lastName).includes(term);
-    const emailMatch = normalizeText(customer.email).includes(term);
-    const phoneMatch = normalizeText(customer.phone).includes(term);
-    const estado = normalizeText(customer.status);
-
-    // Keep the strict filter logic if the term matches 'activo', 'inactivo', etc.
-    if (["activo", "inactivo", "no activo", "no inactivo"].includes(term)) {
-      if (term === "activo") return estado === "activo";
-      if (term === "inactivo") return estado === "inactivo";
-      if (term === "no activo") return estado === "inactivo";
-      if (term === "no inactivo") return estado === "activo";
-    }
-
-    // General (partial) search for other text fields
-    const estadoMatch = estado.includes(term);
-    return idMatch || docTypeMatch || docNumberMatch || firstNameMatch || lastNameMatch || emailMatch || phoneMatch || estadoMatch;
-  });
-
-  // Cálculo de paginación basado en clientes filtrados
-  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / itemsPerPage));
+  // Los clientes ya vienen filtrados del backend, no necesitamos filtrar localmente
+  const filteredCustomers = customers;
   
-  // Para paginar los clientes
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedCustomers = filteredCustomers.slice(startIndex, startIndex + itemsPerPage);
+  // Cálculo de paginación basado en el total del backend
+  const totalPages = Math.max(1, Math.ceil(totalCustomers / itemsPerPage));
+  
+  // Los clientes ya vienen paginados del backend
+  const paginatedCustomers = customers;
 
   // Ajusta currentPage si es mayor que totalPages
   useEffect(() => {
@@ -201,32 +122,26 @@ const CustomersPage = () => {
 
   const handleDeleteCustomer = async (customerId) => {
     try {
-      // Simulación de eliminación
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCustomers(prevCustomers => prevCustomers.filter(customer => customer.id !== customerId));
+      await deleteCustomer(customerId);
+      // Recargar la lista de clientes
+      await loadCustomers(currentPage, searchTerm);
       setIsDeleteModalOpen(false);
       setSelectedCustomer(null);
       showMessage('Cliente eliminado exitosamente', 'success');
-    } catch {
-      showMessage('Error al eliminar el cliente', 'error');
+    } catch (error) {
+      showMessage(error.message || 'Error al eliminar el cliente', 'error');
     }
   };
 
-  // handleToggleStatus ahora solo cambia el estado, sin SweetAlert2
+  // handleToggleStatus ahora usa el servicio real
   const handleToggleStatus = async (customerId) => {
     try {
-      // Simulación de cambio de estado
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setCustomers(prevCustomers => prevCustomers.map(customer =>
-        customer.id === customerId
-          ? { ...customer, status: customer.status === 'Activo' ? 'Inactivo' : 'Activo' }
-          : customer
-      ));
-      const customer = customers.find(c => c.id === customerId);
-      const newStatus = customer.status === 'Activo' ? 'Inactivo' : 'Activo';
-      showMessage(`Estado del cliente cambiado a ${newStatus}`, 'success');
-    } catch {
-      showMessage('Error al cambiar el estado del cliente', 'error');
+      await toggleCustomerStatus(customerId);
+      // Recargar la lista de clientes
+      await loadCustomers(currentPage, searchTerm);
+      showMessage('Estado del cliente actualizado exitosamente', 'success');
+    } catch (error) {
+      showMessage(error.message || 'Error al cambiar el estado del cliente', 'error');
     }
   };
 
@@ -234,8 +149,9 @@ const CustomersPage = () => {
   const handleCreateCustomer = async (formData) => {
     setLoading(true);
     try {
-      const newCustomer = await createCustomer(formData, customers);
-      setCustomers(prev => [...prev, newCustomer]);
+      await createCustomer(formData, customers);
+      // Recargar la lista de clientes
+      await loadCustomers(currentPage, searchTerm);
       setIsCreateModalOpen(false);
       showMessage('Cliente creado exitosamente', 'success');
     } catch (error) {
@@ -258,12 +174,13 @@ const CustomersPage = () => {
     if (!result.isConfirmed) return;
     setLoading(true);
     try {
-      const updatedCustomer = await editCustomer({
+      await editCustomer({
         id: selectedCustomer.id,
         ...formData,
         status: selectedCustomer.status
       }, customers);
-      setCustomers(prev => prev.map(customer => customer.id === updatedCustomer.id ? updatedCustomer : customer));
+      // Recargar la lista de clientes
+      await loadCustomers(currentPage, searchTerm);
       setIsEditModalOpen(false);
       setSelectedCustomer(null);
       showMessage('Cliente actualizado exitosamente', 'success');
@@ -330,13 +247,20 @@ const CustomersPage = () => {
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              <CustomerTable
-                customers={paginatedCustomers}
-                onView={handleViewClick}
-                onEdit={handleEditClick}
-                onDelete={handleDeleteClick}
-                onToggleStatus={handleToggleStatus}
-              />
+              {isLoadingCustomers ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Cargando clientes...</span>
+                </div>
+              ) : (
+                <CustomerTable
+                  customers={paginatedCustomers}
+                  onView={handleViewClick}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                  onToggleStatus={handleToggleStatus}
+                />
+              )}
             </div>
 
             {/* Paginación */}
@@ -352,9 +276,9 @@ const CustomersPage = () => {
 
             {/* Mostrar información de paginación */}
             <div className="mt-4 text-center">
-              {/* <p className="text-sm text-text-main">
-                Mostrando <span className="font-medium">{filteredCustomers.length > 0 ? startIndex + 1 : 0}</span> a <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredCustomers.length)}</span> de <span className="font-medium">{filteredCustomers.length}</span> cliente{filteredCustomers.length !== 1 ? 's' : ''}
-              </p> */}
+              <p className="text-sm text-text-main">
+                Mostrando <span className="font-medium">{customers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a <span className="font-medium">{(currentPage - 1) * itemsPerPage + customers.length}</span> de <span className="font-medium">{totalCustomers}</span> cliente{totalCustomers !== 1 ? 's' : ''}
+              </p>
             </div>
           </div>
         </div>
