@@ -712,6 +712,13 @@ export function isNumeric(value) {
   return regex.test(String(value));
 }
 
+// Valida teléfono con formato internacional (acepta + al inicio)
+export function isNumericPhone(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return true;
+  const regex = /^\+?\d+$/;
+  return regex.test(String(value));
+}
+
 // ===== VALIDACIONES DE CONTRASEÑA (para clientes) =====
 // export function isValidPassword(password) {
 //   // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
@@ -769,35 +776,12 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
   // Teléfono
   if (!customerData.phone) {
     errors.phone = 'El teléfono es requerido.';
-  } else if (!isNumeric(customerData.phone)) { // Usa isNumeric para el teléfono
-    errors.phone = 'Solo se permiten números.';
-  } else if (customerData.phone.length < 7) {
+  } else if (!isNumericPhone(customerData.phone)) { // Usa isNumericPhone para el teléfono (acepta +)
+    errors.phone = 'Solo se permiten números y el símbolo + al inicio.';
+  } else if (customerData.phone.replace('+', '').length < 7) {
     errors.phone = 'El teléfono debe tener al menos 7 dígitos.';
   }
-  // Password y confirmPassword
-  if (!excludeId) { // CreateCustomer: password requerido
-    if (!customerData.password) {
-      errors.password = 'La contraseña es requerida.';
-    } else if (!isValidPassword(customerData.password)) {
-      errors.password = 'La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
-    }
-    if (!customerData.confirmPassword) {
-      errors.confirmPassword = 'Confirma la contraseña.';
-    } else if (customerData.password !== customerData.confirmPassword) {
-      errors.confirmPassword = 'Las contraseñas no coinciden.';
-    }
-  } else { // EditCustomer: password opcional
-    if (customerData.password) { // Solo validar si se ha ingresado una contraseña
-      if (!isValidPassword(customerData.password)) {
-        errors.password = 'La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
-      }
-      if (!customerData.confirmPassword) {
-        errors.confirmPassword = 'Confirma la contraseña.';
-      } else if (customerData.password !== customerData.confirmPassword) {
-        errors.confirmPassword = 'Las contraseñas no coinciden.';
-      }
-    }
-  }
+  // Los clientes no necesitan contraseñas - son solo datos de contacto
   return { isValid: Object.keys(errors).length === 0, errors };
 }
 
