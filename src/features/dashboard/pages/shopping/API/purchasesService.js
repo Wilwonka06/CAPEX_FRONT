@@ -67,45 +67,35 @@ export const purchasesService = {
   /**
    * Crear una nueva compra
    * @param {Object} purchaseData - Datos de la compra
-   * @param {number} purchaseData.supplierId - ID del proveedor
-   * @param {string} purchaseData.numeroFactura - Número de factura (opcional)
-   * @param {string} purchaseData.fechaCompra - Fecha de compra
-   * @param {string} purchaseData.fechaVencimiento - Fecha de vencimiento (opcional)
-   * @param {Array} purchaseData.detalles - Array de detalles de la compra
-   * @param {number} purchaseData.detalles[].productId - ID del producto
-   * @param {number} purchaseData.detalles[].cantidad - Cantidad del producto
-   * @param {number} purchaseData.detalles[].precioUnitario - Precio unitario
-   * @param {number} purchaseData.detalles[].descuento - Descuento aplicado (opcional)
-   * @param {string} purchaseData.observaciones - Observaciones (opcional)
+   * @param {number} purchaseData.id_proveedor - ID del proveedor
+   * @param {string} purchaseData.fecha_compra - Fecha de compra
+   * @param {number} purchaseData.subtotal - Subtotal (opcional)
+   * @param {number} purchaseData.iva - IVA (opcional)
+   * @param {number} purchaseData.total - Total (opcional)
+   * @param {string} purchaseData.estado - Estado (opcional, default: Completada)
    * @returns {Promise<Object>} Compra creada
    */
   create: async (purchaseData) => {
     try {
       // Validaciones básicas
-      if (!purchaseData.supplierId) {
+      if (!purchaseData.id_proveedor) {
         throw new Error('El proveedor es requerido');
       }
-      if (!purchaseData.fechaCompra) {
+      if (!purchaseData.fecha_compra) {
         throw new Error('La fecha de compra es requerida');
       }
-      if (!purchaseData.detalles || !Array.isArray(purchaseData.detalles) || purchaseData.detalles.length === 0) {
-        throw new Error('Los detalles de la compra son requeridos');
-      }
 
-      // Validar detalles
-      purchaseData.detalles.forEach((detalle, index) => {
-        if (!detalle.productId) {
-          throw new Error(`El producto es requerido en el detalle ${index + 1}`);
-        }
-        if (!detalle.cantidad || detalle.cantidad <= 0) {
-          throw new Error(`La cantidad debe ser mayor a 0 en el detalle ${index + 1}`);
-        }
-        if (!detalle.precioUnitario || detalle.precioUnitario <= 0) {
-          throw new Error(`El precio unitario debe ser mayor a 0 en el detalle ${index + 1}`);
-        }
-      });
+      // Limpiar datos
+      const cleanData = {
+        id_proveedor: purchaseData.id_proveedor,
+        fecha_compra: purchaseData.fecha_compra,
+        subtotal: purchaseData.subtotal || 0,
+        iva: purchaseData.iva || 0,
+        total: purchaseData.total || 0,
+        estado: purchaseData.estado || 'Completada'
+      };
 
-      const response = await apiRequest.post(PURCHASES_ENDPOINT, purchaseData);
+      const response = await apiRequest.post(PURCHASES_ENDPOINT, cleanData);
       return response;
     } catch (error) {
       console.error('Error creating purchase:', error);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import PropTypes from 'prop-types';
 
 const CategoryDetail = ({ category, isOpen, onClose }) => {
   if (!isOpen || !category) return null;
@@ -47,6 +47,18 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
       </div>
     </div>
   );
+};
+
+CategoryDetail.propTypes = {
+  category: PropTypes.shape({
+    nombre: PropTypes.string,
+    name: PropTypes.string,
+    descripcion: PropTypes.string,
+    description: PropTypes.string,
+    estado: PropTypes.string,
+  }),
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default CategoryDetail; 

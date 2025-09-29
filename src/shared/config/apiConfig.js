@@ -2,6 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // Base URL del backend
+
 const BASE_URL = 'https://capex-back.onrender.com/api';
 
 // Crear instancia de axios con configuración base
@@ -25,7 +26,7 @@ apiClient.interceptors.request.use(
     }
 
     // Log de requests en desarrollo
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
         data: config.data,
         params: config.params,
@@ -44,7 +45,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     // Log de responses exitosas en desarrollo
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log(`API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
         status: response.status,
         data: response.data,
@@ -114,52 +115,32 @@ apiClient.interceptors.response.use(
 export const apiRequest = {
   // GET request
   get: async (url, config = {}) => {
-    try {
-      const response = await apiClient.get(url, config);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.get(url, config);
+    return response.data;
   },
 
   // POST request
   post: async (url, data = {}, config = {}) => {
-    try {
-      const response = await apiClient.post(url, data, config);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.post(url, data, config);
+    return response.data;
   },
 
   // PUT request
   put: async (url, data = {}, config = {}) => {
-    try {
-      const response = await apiClient.put(url, data, config);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.put(url, data, config);
+    return response.data;
   },
 
   // PATCH request
   patch: async (url, data = {}, config = {}) => {
-    try {
-      const response = await apiClient.patch(url, data, config);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.patch(url, data, config);
+    return response.data;
   },
 
   // DELETE request
   delete: async (url, config = {}) => {
-    try {
-      const response = await apiClient.delete(url, config);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await apiClient.delete(url, config);
+    return response.data;
   },
 };
 
@@ -168,20 +149,16 @@ export const uploadFile = async (url, file, onUploadProgress = null) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  try {
-    const response = await apiClient.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: onUploadProgress ? (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        onUploadProgress(percentCompleted);
-      } : undefined,
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await apiClient.post(url, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    onUploadProgress: onUploadProgress ? (progressEvent) => {
+      const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+      onUploadProgress(percentCompleted);
+    } : undefined,
+  });
+  return response.data;
 };
 
 // Función para cancelar requests

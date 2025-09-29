@@ -46,7 +46,7 @@ export const categoriesService = {
    */
   getActive: async () => {
     try {
-      const response = await apiRequest.get(`${CATEGORIES_ENDPOINT}/active`);
+      const response = await apiRequest.get(`${CATEGORIES_ENDPOINT}?status=activo`);
       return response;
     } catch (error) {
       console.error('Error fetching active categories:', error);
@@ -122,7 +122,7 @@ export const categoriesService = {
       }
 
       // Limpiar datos - excluir estado para evitar validaciones
-      const { estado, ...dataWithoutEstado } = categoryData;
+      const { ...dataWithoutEstado } = categoryData;
       const cleanData = { ...dataWithoutEstado };
       if (cleanData.nombre) {
         cleanData.nombre = cleanData.nombre.trim();
