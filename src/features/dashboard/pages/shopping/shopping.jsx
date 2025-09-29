@@ -3,131 +3,161 @@ import SearchProduct from '../../../../shared/Search';
 import CreatePurchaseModal from './components/CreatePurchaseModal';
 import PurchaseDetailModal from './components/PurchaseDetailModal';
 import PurchasesTable from './components/PurchasesTable';
-import { useProducts } from '../products/hooks/useProducts';
-import { ToastContainer, toast } from 'react-toastify';
+import productsService from '../products/API/productsService';
+import purchasesService from './API/purchasesService';
+import suppliersService from '../suppliers/API/suppliersService';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
-// Mock de proveedores y productos para selects
-// const mockSuppliers = [ ... ];
-// const mockProducts = [ ... ];
-
-const mockPurchases = [
-  {
-    id: 1,
-    fechaRegistro: "2024-06-10",
-    fechaCompra: "2024-06-09",
-    proveedor: "Distribuidora Capilar S.A.",
-    nit: "1234567-8",
-    total: 500,
-    estado: "Registrada",
-    productos: [
-      { id: 1, descripcion: "Shampoo Nutritivo", cantidad: 10, iva: 0.12, precioBase: 100, precioVenta: 120 },
-    ],
-  },
-  {
-    id: 2,
-    fechaRegistro: "2024-06-08",
-    fechaCompra: "2024-06-07",
-    proveedor: "Proveedora Belleza MX",
-    nit: "9876543-2",
-    total: 300,
-    estado: "Anulada",
-    productos: [
-      { id: 2, descripcion: "Acondicionador Suavizante", cantidad: 5, iva: 0.12, precioBase: 80, precioVenta: 95 },
-    ],
-  },
-  // ...más registros
-];
-
 export default function Shopping() {
-  const [purchases, setPurchases] = useState(mockPurchases);
+  // Estados para productos
+  const [products, setProducts] = useState([]);
+
+  // Estados para compras
+  const [purchases, setPurchases] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10,
+  });
+
+  // Estados para UI
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailCompra, setDetailCompra] = useState(null);
-  const { products } = useProducts();
+  const [suppliers, setSuppliers] = useState([]);
+
   const { setTitle } = useOutletContext();
 
+  // Cargar compras, proveedores y productos al montar
   useEffect(() => {
     setTitle('Gestión de Compras');
+    loadPurchases();
+    loadSuppliers();
+    loadProducts();
     return () => setTitle('');
   }, [setTitle]);
 
-  // Filtro de búsqueda
-  const filteredPurchases = purchases.filter((p) => {
-    const term = searchTerm.toLowerCase();
-    return (
-      (p.id && p.id.toString().includes(term)) ||
-      (p.fechaRegistro && p.fechaRegistro.toLowerCase().includes(term)) ||
-      (p.fechaCompra && p.fechaCompra.toLowerCase().includes(term)) ||
-      (p.proveedor && p.proveedor.toLowerCase().includes(term)) ||
-      (p.nit && p.nit.toLowerCase().includes(term)) ||
-      (p.total && p.total.toString().includes(term)) ||
-      (p.estado && p.estado.toLowerCase().includes(term))
-    );
-  });
-
-  // Paginación
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(filteredPurchases.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedPurchases = filteredPurchases.slice(startIndex, startIndex + itemsPerPage);
-
-  // Descargar Excel (últimos 10 registros)
-  const handleDownloadExcel = () => {
+  // Función para cargar compras
+  const loadPurchases = async (params = {}) => {
+    setLoading(true);
+    setError(null);
     try {
-    const last10 = purchases.slice(-10);
-    const csv = [
-      ["ID", "Fecha Registro", "Fecha Compra", "Proveedor", "NIT", "Total", "Estado"],
-      ...last10.map(p => [p.id, p.fechaRegistro, p.fechaCompra, p.proveedor, p.nit, p.total, p.estado])
-    ].map(row => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "compras_ultimos10.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-      toast.success('Archivo descargado exitosamente', { position: 'top-right' });
-    } catch {
-      toast.error('Error al descargar el archivo', { position: 'top-right' });
+      const response = await purchasesService.getAll({
+        page: pagination.currentPage,
+        limit: pagination.itemsPerPage,
+        search: searchTerm,
+        ...params,
+      });
+
+      if (response.success) {
+        setPurchases(response.data || []);
+        setPagination({
+          currentPage: response.pagination?.currentPage || 1,
+          totalPages: response.pagination?.totalPages || 1,
+          totalItems: response.pagination?.totalItems || 0,
+          itemsPerPage: response.pagination?.itemsPerPage || 10,
+        });
+      } else {
+        throw new Error(response.message || 'Error al cargar compras');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading purchases:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Función para anular compra con confirmación
-  const handleAnularCompra = async (id) => {
+  // Función para cargar proveedores
+  const loadSuppliers = async () => {
+    try {
+      const response = await suppliersService.getActive();
+      if (response.success) {
+        setSuppliers(response.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading suppliers:', err);
+    }
+  };
+
+  // Función para cargar productos
+  const loadProducts = async () => {
+    try {
+      const response = await productsService.getAll({ limit: 100 });
+      if (response.success) {
+        setProducts(response.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading products:', err);
+    }
+  };
+
+  // Función para manejar búsqueda
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    loadPurchases({ search: term, page: 1 });
+  };
+
+  // Función para cambiar página
+  const handlePageChange = (page) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+    loadPurchases({ page });
+  };
+
+  // Descargar reporte de compras
+  const handleDownloadReport = async () => {
+    try {
+      const response = await purchasesService.generateReport({
+        format: 'excel',
+        startDate: '2024-01-01',
+        endDate: new Date().toISOString().split('T')[0],
+      });
+
+      // El servicio ya maneja la descarga del archivo
+      console.log('Report downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading report:', error);
+    }
+  };
+
+  // Función para cancelar compra con confirmación
+  const handleCancelPurchase = async (id) => {
     const compra = purchases.find(c => c.id === id);
     const result = await Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas anular la compra #${compra?.id}? Esta acción no se puede deshacer.`,
+      text: `¿Estás seguro de que deseas cancelar la compra #${compra?.id}? Esta acción no se puede deshacer.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, anular',
+      confirmButtonText: 'Sí, cancelar',
       cancelButtonText: 'Cancelar'
     });
 
     if (result.isConfirmed) {
       try {
-    setPurchases(prev => prev.map(c => c.id === id ? { ...c, estado: "Anulada" } : c));
-        toast.success('Compra anulada exitosamente', { position: 'top-right' });
-      } catch {
-        toast.error('Error al anular la compra', { position: 'top-right' });
+        await purchasesService.cancel(id, 'Cancelada por usuario');
+        await loadPurchases(); // Recargar lista
+      } catch (error) {
+        console.error('Error canceling purchase:', error);
       }
     }
   };
 
   // Función para crear una nueva compra
-  const handleCreatePurchase = (newPurchase) => {
+  const handleCreatePurchase = async (newPurchase) => {
     try {
-    setPurchases(prevPurchases => [newPurchase, ...prevPurchases]);
-    setIsCreateOpen(false);
-      toast.success('Compra registrada exitosamente', { position: 'top-right' });
-    } catch {
-      toast.error('Error al registrar la compra', { position: 'top-right' });
+      await purchasesService.create(newPurchase);
+      setIsCreateOpen(false);
+      await loadPurchases(); // Recargar lista
+    } catch (error) {
+      console.error('Error creating purchase:', error);
     }
   };
 
@@ -140,27 +170,56 @@ export default function Shopping() {
           </div>
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchProduct 
-                searchTerm={searchTerm} 
-                handleSearch={e => setSearchTerm(e.target.value)} 
-                placeholder="Buscar compras..." 
+              <SearchProduct
+                searchTerm={searchTerm}
+                handleSearch={(e) => handleSearch(e.target.value)}
+                placeholder="Buscar compras..."
               />
-              <button className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={() => setIsCreateOpen(true)}>
+              <button
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                onClick={() => setIsCreateOpen(true)}
+              >
                 <i className="bi bi-plus-circle mr-2"></i> Registrar compra
               </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center" onClick={handleDownloadExcel}>
-                <i className="bi bi-file-earmark-excel "></i>
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                onClick={handleDownloadReport}
+              >
+                <i className="bi bi-file-earmark-excel"></i>
               </button>
             </div>
+
+            {/* Mostrar loading o error */}
+            {loading && (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2">Cargando compras...</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-red-800">Error: {error}</p>
+                <button
+                  onClick={() => loadPurchases()}
+                  className="mt-2 bg-red-600 text-white px-3 py-1 rounded text-sm"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
             {/* Tabla de compras */}
-            <PurchasesTable
-              purchases={paginatedPurchases}
-              onView={setDetailCompra}
-              onAnnul={handleAnularCompra}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
+            {!loading && !error && (
+              <PurchasesTable
+                purchases={purchases}
+                onView={setDetailCompra}
+                onAnnul={handleCancelPurchase}
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+              />
+            )}
           </div>
         </div>
       </div>

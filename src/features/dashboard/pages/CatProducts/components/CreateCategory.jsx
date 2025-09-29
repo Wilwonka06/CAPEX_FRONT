@@ -48,7 +48,9 @@ const CreateCategory = ({ onCreate, categories }) => {
     }
     if (!isNameValid) valid = false;
     if (valid) {
-      if (onCreate) onCreate({ name: name.trim(), description: description.trim() });
+      const dataToSend = { nombre: name.trim(), descripcion: description.trim() };
+      console.log('Front-end: Sending data to API:', dataToSend);
+      if (onCreate) onCreate(dataToSend);
       handleClose();
     }
   };

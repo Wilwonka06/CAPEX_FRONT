@@ -549,7 +549,7 @@ export function isValidSupplierType(tipo) {
 
 // Valida tipo de documento
 export function isValidDocumentType(tipo) {
-  return ['CC', 'TI', 'CE', 'PAS'].includes(tipo);
+  return ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'].includes(tipo);
 }
 
 // Valida número de documento (solo números)
@@ -842,13 +842,21 @@ export function isValidName(name) {
 // Valida documento según tipo
 export function validateUserDocument(tipo, documento) {
   if (!documento) return 'El documento es obligatorio';
-  if (tipo === 'PPT') {
+  if (tipo === 'Pasaporte') {
     if (!/^[A-Z]{3}\d{6}$/.test(documento)) {
-      return 'PPT: 3 letras mayúsculas seguidas de 6 dígitos (ej: ABC123456)';
+      return 'Pasaporte: 3 letras mayúsculas seguidas de 6 dígitos (ej: ABC123456)';
     }
-  } else if (tipo === 'CC' || tipo === 'TI') {
+  } else if (tipo === 'Cedula de ciudadania' || tipo === 'Tarjeta de identidad') {
     if (!/^\d{7,15}$/.test(documento)) {
       return 'Debe tener solo números (7 a 15 dígitos)';
+    }
+  } else if (tipo === 'Cedula de extranjeria') {
+    if (!/^\d{7,15}$/.test(documento)) {
+      return 'Debe tener solo números (7 a 15 dígitos)';
+    }
+  } else if (tipo === 'NIT') {
+    if (!/^[A-Za-z]\d+$/.test(documento)) {
+      return 'NIT: Una letra seguida de números (ej: A123456789)';
     }
   } else {
     return 'Selecciona un tipo de documento válido';
@@ -856,11 +864,14 @@ export function validateUserDocument(tipo, documento) {
   return '';
 }
 
-// Valida teléfono (solo números, 4 a 15 dígitos)
+// Valida teléfono (formato internacional: opcional +, código de país + números)
 export function validateUserPhone(telefono) {
   if (!telefono) return 'El teléfono es obligatorio';
-  if (!/^\d{4,15}$/.test(telefono)) {
-    return 'El teléfono debe tener entre 4 y 15 dígitos, solo números';
+  // Remover espacios para validación
+  const cleanPhone = telefono.replace(/\s/g, '');
+  // Regex que permite formato internacional: opcional +, primer dígito 1-9, luego 1-14 dígitos
+  if (!/^\+?[1-9]\d{1,14}$/.test(cleanPhone)) {
+    return 'Formato de teléfono inválido. Debe comenzar con + seguido del código de país y número (ej: +571234567890)';
   }
   return '';
 }

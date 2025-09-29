@@ -12,9 +12,9 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
 
   useEffect(() => {
     if (category) {
-      setName(category.name);
-      setDescription(category.description);
-      setOriginalName(category.name);
+      setName(category.nombre || category.name || '');
+      setDescription(category.descripcion || category.description || '');
+      setOriginalName(category.nombre || category.name || '');
       setIsNameValid(true);
     }
   }, [category]);
@@ -48,8 +48,8 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
     if (valid) {
       onSave({
         ...category,
-        name: name.trim(),
-        description: description.trim()
+        nombre: name.trim(),
+        descripcion: description.trim()
       });
       handleClose();
     }
@@ -149,9 +149,11 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
 
 EditCategory.propTypes = {
   category: PropTypes.shape({
-    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    name: PropTypes.string,
-    description: PropTypes.string,
+    id_categoria_producto: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    nombre: PropTypes.string,
+    name: PropTypes.string, // fallback for backward compatibility
+    descripcion: PropTypes.string,
+    description: PropTypes.string, // fallback for backward compatibility
   }),
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
