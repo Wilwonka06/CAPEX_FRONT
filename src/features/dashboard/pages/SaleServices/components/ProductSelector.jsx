@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api.js';
 
 const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -6,18 +7,133 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedProductForQuantity, setSelectedProductForQuantity] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState(null);
 
-  const availableProducts = [
-    { id: 1, name: "Shampoo", price: 15000, category: "Cuidado Capilar" },
-    { id: 2, name: "Tratamiento", price: 25000, category: "Tratamientos" },
-    { id: 3, name: "Acondicionador", price: 12000, category: "Cuidado Capilar" },
-    { id: 4, name: "Mascarilla", price: 18000, category: "Tratamientos" },
-    { id: 5, name: "Aceite Capilar", price: 20000, category: "Aceites" }
-  ];
+  // Cargar productos desde el backend
+  useEffect(() => {
+    const cargarProductos = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/productos`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
 
-  const filteredProducts = availableProducts.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+        if (response.ok) {
+          const productos = await response.json();
+          console.log('🔍 Productos recibidos del backend:', productos);
+          
+          // Manejar diferentes estructuras de respuesta
+          let productosArray = [];
+          if (Array.isArray(productos)) {
+            productosArray = productos;
+          } else if (productos && typeof productos === 'object') {
+            // Si es un objeto, intentar extraer un array
+            if (productos.data && Array.isArray(productos.data)) {
+              productosArray = productos.data;
+            } else if (productos.productos && Array.isArray(productos.productos)) {
+              productosArray = productos.productos;
+            } else if (productos.results && Array.isArray(productos.results)) {
+              productosArray = productos.results;
+            } else {
+              // Si es un objeto con propiedades que parecen productos
+              productosArray = Object.values(productos).filter(item => 
+                item && typeof item === 'object' && (item.id || item.nombre || item.name)
+              );
+            }
+          }
+          
+          console.log('🔧 Productos procesados:', productosArray);
+          setAvailableProducts(productosArray);
+        } else {
+          console.error('Error al cargar productos:', response.status);
+          setAvailableProducts([]);
+        }
+      } catch (error) {
+        console.error('Error al cargar productos:', error);
+        setAvailableProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarProductos();
+  }, []);
+
+  // Cleanup del timeout al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  // Función para buscar productos usando el endpoint de búsqueda
+  const buscarProductos = async (termino) => {
+    if (!termino.trim()) {
+      // Si no hay término, cargar todos los productos
+      const response = await fetch(`${API_CONFIG.BASE_URL}/productos`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.ok) {
+        const productos = await response.json();
+        setAvailableProducts(Array.isArray(productos) ? productos : []);
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/productos/search/?q=${encodeURIComponent(termino)}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const productos = await response.json();
+        setAvailableProducts(Array.isArray(productos) ? productos : []);
+      } else {
+        console.error('Error al buscar productos:', response.status);
+        // Fallback a filtrado local
+        const todosLosProductos = availableProducts;
+        const filtrados = Array.isArray(todosLosProductos) 
+          ? todosLosProductos.filter(product =>
+              (product.nombre || product.name || '').toLowerCase().includes(termino.toLowerCase())
+            )
+          : [];
+        setAvailableProducts(filtrados);
+      }
+    } catch (error) {
+      console.error('Error al buscar productos:', error);
+      // Fallback a filtrado local
+      const todosLosProductos = availableProducts;
+      const filtrados = Array.isArray(todosLosProductos) 
+        ? todosLosProductos.filter(product =>
+            (product.nombre || product.name || '').toLowerCase().includes(termino.toLowerCase())
+          )
+        : [];
+      setAvailableProducts(filtrados);
+    }
+  };
+
+  // Función para normalizar un producto del backend
+  const normalizarProducto = (producto) => {
+    return {
+      id: producto.id_producto || producto.id,
+      nombre: producto.nombre || producto.name || producto.producto_nombre || 'Producto sin nombre',
+      precio: parseFloat(producto.costo || producto.precio || producto.price || 0),
+      categoria: producto.categoria || producto.category || producto.tipo || 'Sin categoría'
+    };
+  };
+
+  // Usar directamente los productos del backend (ya filtrados por la búsqueda)
+  const filteredProducts = Array.isArray(availableProducts) 
+    ? availableProducts.map(normalizarProducto) 
+    : [];
 
   const handleProductSelect = (product) => {
     const isAlreadySelected = selectedProducts.some(p => p.id === product.id);
@@ -32,10 +148,15 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
   const confirmProductSelection = () => {
     if (selectedProductForQuantity && quantity > 0) {
+      const productoNormalizado = normalizarProducto(selectedProductForQuantity);
+      
       const productWithQuantity = { 
-        ...selectedProductForQuantity, 
+        ...productoNormalizado,
+        name: productoNormalizado.nombre,
+        price: productoNormalizado.precio,
+        category: productoNormalizado.categoria,
         quantity,
-        subtotal: selectedProductForQuantity.price * quantity,
+        subtotal: productoNormalizado.precio * quantity,
         uniqueId: Date.now()
       };
       
@@ -61,8 +182,30 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
   // Funciones simples para evitar problemas de hooks
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
+    const termino = e.target.value;
+    setSearchTerm(termino);
     setIsOpen(true);
+    
+    // Limpiar timeout anterior
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Crear nuevo timeout para debounce
+    const newTimeout = setTimeout(async () => {
+      if (termino.trim()) {
+        setLoading(true);
+        await buscarProductos(termino);
+        setLoading(false);
+      } else {
+        // Si no hay término, cargar todos los productos
+        setLoading(true);
+        await buscarProductos('');
+        setLoading(false);
+      }
+    }, 300); // 300ms de debounce
+    
+    setSearchTimeout(newTimeout);
   };
 
   const handleSearchFocus = () => {
@@ -92,22 +235,31 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
       {/* Dropdown de productos */}
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
-          {filteredProducts.map(product => (
-            <div
-              key={product.id}
-              onClick={() => handleProductSelect(product)}
-              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
-            >
-              <div className="flex justify-between">
-                <span>{product.name}</span>
-                <span className="text-gray-600">${product.price}</span>
-              </div>
+          {loading ? (
+            <div className="px-3 py-2 text-gray-500 text-sm flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+              Cargando productos...
             </div>
-          ))}
-          {filteredProducts.length === 0 && (
-            <div className="px-3 py-2 text-gray-500 text-sm">
-              No se encontraron productos
-            </div>
+          ) : (
+            <>
+              {filteredProducts.map(product => (
+                <div
+                  key={product.id}
+                  onClick={() => handleProductSelect(product)}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
+                >
+                  <div className="flex justify-between">
+                    <span>{product.nombre || product.name}</span>
+                    <span className="text-gray-600">${product.precio || product.price || 0}</span>
+                  </div>
+                </div>
+              ))}
+              {filteredProducts.length === 0 && !loading && (
+                <div className="px-3 py-2 text-gray-500 text-sm">
+                  No se encontraron productos
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -136,21 +288,21 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Producto</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    {selectedProductForQuantity.name}
+                    {selectedProductForQuantity.nombre || selectedProductForQuantity.name}
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Categoría</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    {selectedProductForQuantity.category}
+                    {selectedProductForQuantity.categoria || selectedProductForQuantity.category || 'Sin categoría'}
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Precio unitario</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    ${selectedProductForQuantity.price}
+                    ${selectedProductForQuantity.precio || selectedProductForQuantity.price || 0}
                   </div>
                 </div>
                 
@@ -183,8 +335,8 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-bold text-green-600">
-                    ${(selectedProductForQuantity.price * quantity).toLocaleString()}
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-green-600">
+                    ${((selectedProductForQuantity.precio || selectedProductForQuantity.price || 0) * quantity).toLocaleString()}
                   </div>
                 </div>
               </div>

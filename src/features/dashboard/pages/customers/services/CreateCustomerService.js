@@ -1,8 +1,9 @@
 import { validateCustomer } from '../../../../../shared/validations';
+import { createCustomer as createCustomerApi, validateDocumentExists, validateEmailExists } from './CustomerService.js';
 
-// Servicio simulado para crear un cliente
+// Servicio para crear un cliente usando la API real
 export async function createCustomer(customerData, customers = []) {
-  // Validación interna usando ValidateCustomerService
+  // Validación local primero
   const validation = validateCustomer(customerData, customers);
   
   if (!validation.isValid) {
@@ -11,21 +12,35 @@ export async function createCustomer(customerData, customers = []) {
     throw new Error(firstError);
   }
 
-  // Busca el máximo id actual y suma 1
-  const maxId = customers.length ? Math.max(...customers.map(c => c.id)) : 0;
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        id: maxId + 1,
-        firstName: customerData.firstName,
-        lastName: customerData.lastName,
-        documentType: customerData.documentType,
-        documentNumber: customerData.documentNumber,
-        email: customerData.email,
-        phone: customerData.phone,
-        status: 'Activo'
-      });
-    }, 500);
-  });
+  try {
+    // Validar documento único en el backend
+    const documentValidation = await validateDocumentExists(
+      customerData.documentNumber, 
+      customerData.documentType
+    );
+    
+    if (documentValidation.exists) {
+      throw new Error('Ya existe un cliente con este número de documento');
+    }
+
+    // Validar email único en el backend
+    const emailValidation = await validateEmailExists(customerData.email);
+    
+    if (emailValidation.exists) {
+      throw new Error('Ya existe un cliente con este email');
+    }
+
+    // Crear cliente en el backend
+    const newCustomer = await createCustomerApi(customerData);
+    return newCustomer;
+    
+  } catch (error) {
+    // Si es un error de validación del backend, lo re-lanzamos
+    if (error.message.includes('Ya existe') || error.message.includes('documento') || error.message.includes('email')) {
+      throw error;
+    }
+    
+    // Para otros errores, lanzamos un mensaje genérico
+    throw new Error('Error al crear el cliente. Por favor, intenta nuevamente.');
+  }
 } 

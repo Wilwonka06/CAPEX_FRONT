@@ -6,6 +6,7 @@ import AnularServiceOrder from "./components/AnularServiceOrder";
 import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
+import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./services/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
@@ -21,129 +22,8 @@ const SaleServices = () => {
   const [isAnularModalOpen, setIsAnularModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [services, setServices] = useState([
-    {
-      id: 1,
-      clientName: "Jolyne",
-      status: "En ejecucion",
-      date: "14/12/2025",
-      time: "2:45 PM",
-      dineroProporcionado: 60000,
-      devolucion: 10000,
-      servicios: [
-        { id: 1, name: "Manicura", quantity: 1, price: 50000, subtotal: 50000, employee: { name: "Wilson" } }
-      ],
-      productos: [],
-      totalServices: 50000,
-      totalProducts: 0,
-      totalGeneral: 50000
-    },
-    {
-      id: 2,
-      clientName: "Maria",
-      status: "Pagado",
-      date: "12/08/2026",
-      time: "4:00 PM",
-      dineroProporcionado: 50000,
-      devolucion: 0,
-      servicios: [
-        { id: 2, name: "Barbería", quantity: 1, price: 30000, subtotal: 30000, employee: { name: "Cruz" } }
-      ],
-      productos: [
-        { id: 1, name: "Shampoo", quantity: 2, price: 10000, subtotal: 20000 }
-      ],
-      totalServices: 30000,
-      totalProducts: 20000,
-      totalGeneral: 50000
-    },
-    {
-      id: 3,
-      clientName: "Santiago",
-      status: "Pagado",
-      date: "7/07/2025",
-      time: "3:30 PM",
-      dineroProporcionado: 60000,
-      devolucion: 10000,
-      servicios: [
-        { id: 3, name: "Pedicura", quantity: 1, price: 40000, subtotal: 40000, employee: { name: "Sara" } }
-      ],
-      productos: [
-        { id: 2, name: "Tratamiento", quantity: 1, price: 10000, subtotal: 10000 }
-      ],
-      totalServices: 40000,
-      totalProducts: 10000,
-      totalGeneral: 50000
-    },
-    {
-      id: 4,
-      clientName: "Emilio",
-      status: "En ejecucion",
-      date: "27/03/2025",
-      time: "1:00 PM",
-      dineroProporcionado: 70000,
-      devolucion: 20000,
-      servicios: [
-        { id: 4, name: "Corte de Cabello", quantity: 1, price: 30000, subtotal: 30000, employee: { name: "María" } }
-      ],
-      productos: [
-        { id: 3, name: "Acondicionador", quantity: 2, price: 10000, subtotal: 20000 }
-      ],
-      totalServices: 30000,
-      totalProducts: 20000,
-      totalGeneral: 50000
-    },
-    {
-      id: 5,
-      clientName: "Yuliani",
-      status: "Pagado",
-      date: "4/04/2025",
-      time: "5:00 PM",
-      dineroProporcionado: 50000,
-      devolucion: 0,
-      servicios: [
-        { id: 5, name: "Tintura Color verde", quantity: 1, price: 50000, subtotal: 50000, employee: { name: "Cruz" } }
-      ],
-      productos: [],
-      totalServices: 50000,
-      totalProducts: 0,
-      totalGeneral: 50000
-    },
-    {
-      id: 6,
-      clientName: "Valeria",
-      status: "En ejecucion",
-      date: "10/10/2025",
-      time: "11:00 AM",
-      dineroProporcionado: 80000,
-      devolucion: 30000,
-      servicios: [
-        { id: 6, name: "Aplicación de Extensión", quantity: 1, price: 50000, subtotal: 50000, employee: { name: "Ana Martínez" } }
-      ],
-      productos: [
-        { id: 4, name: "Mascarilla", quantity: 1, price: 10000, subtotal: 10000 },
-        { id: 5, name: "Aceite Capilar", quantity: 2, price: 10000, subtotal: 20000 }
-      ],
-      totalServices: 50000,
-      totalProducts: 30000,
-      totalGeneral: 80000
-    },
-    {
-      id: 7,
-      clientName: "Carlos",
-      status: "Anulado",
-      date: "15/11/2025",
-      time: "9:30 AM",
-      dineroProporcionado: 40000,
-      devolucion: 0,
-      servicios: [
-        { id: 7, name: "Corte de Cabello", quantity: 1, price: 40000, subtotal: 40000, employee: { name: "Juan" } }
-      ],
-      productos: [],
-      totalServices: 40000,
-      totalProducts: 0,
-      totalGeneral: 40000
-    }
-  ]);
+  const [services, setServices] = useState([]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const itemsPerPage = 5;
   const [tab, setTab] = useState("En ejecucion");
@@ -153,6 +33,27 @@ const SaleServices = () => {
     setTitle('Venta de Servicios');
     return () => setTitle('');
   }, [setTitle]);
+
+  // Función para cargar citas desde el backend
+  const cargarCitas = async () => {
+    setInitialLoading(true);
+    try {
+      const citas = await getCitasEnEjecucion();
+      setServices(citas);
+    } catch (error) {
+      console.error('Error al cargar citas:', error);
+      toast.error('Error al cargar las citas en ejecución', { position: 'top-right' });
+      // En caso de error, mantener array vacío
+      setServices([]);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  // Cargar citas al montar el componente
+  useEffect(() => {
+    cargarCitas();
+  }, []);
 
   // Filtrar servicios basado en la búsqueda y el tab
   const filteredServices = services.filter((service) => {
@@ -220,11 +121,11 @@ const SaleServices = () => {
     setIsEditModalOpen(true);
   }, []);
 
-  // handleAnularClick ahora pide confirmación
+  // handleAnularClick ahora pide confirmación y actualiza en el backend
   const handleAnularClick = async (orderId) => {
     const result = await Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas anular la orden #${orderId}? Esta acción no se puede deshacer.`,
+      text: `¿Estás seguro de que deseas anular la cita #${orderId}? Esta acción no se puede deshacer.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -234,16 +135,23 @@ const SaleServices = () => {
     });
 
     if (result.isConfirmed) {
+      setLoading(true);
       try {
-        await anularServiceOrder(orderId);
+        // Actualizar estado en el backend
+        await actualizarEstadoCita(orderId, 'Anulado');
+        
+        // Actualizar estado local
         setServices(prev => prev.map(service => 
           service.id === orderId 
             ? { ...service, status: "Anulado" }
             : service
         ));
-        toast.success('Orden anulada exitosamente', { position: 'top-right' });
+        toast.success('Cita anulada exitosamente', { position: 'top-right' });
       } catch (error) {
-        toast.error('Error al anular la orden', { position: 'top-right' });
+        console.error('Error al anular cita:', error);
+        toast.error('Error al anular la cita', { position: 'top-right' });
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -306,9 +214,27 @@ const SaleServices = () => {
     }
   };
 
-  const handleSearch = useCallback((e) => {
-    setSearchTerm(e.target.value);
+  const handleSearch = useCallback(async (e) => {
+    const termino = e.target.value;
+    setSearchTerm(termino);
     setCurrentPage(1);
+    
+    // Si hay término de búsqueda, buscar en el backend
+    if (termino.trim()) {
+      setLoading(true);
+      try {
+        const resultados = await buscarCitas(termino);
+        setServices(resultados);
+      } catch (error) {
+        console.error('Error al buscar citas:', error);
+        toast.error('Error al buscar citas', { position: 'top-right' });
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Si no hay término, cargar todas las citas
+      cargarCitas();
+    }
   }, []);
 
   return (
@@ -346,13 +272,23 @@ const SaleServices = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar órdenes de servicio" />
-              <button
-                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                onClick={() => setIsCreateModalOpen(true)}
-              >
-                <i className="bi bi-plus-circle mr-2"></i> Nueva orden
-              </button>
+              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar citas en ejecución" />
+              <div className="flex gap-2">
+                <button
+                  className="bg-gray-500 hover:bg-gray-600 text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                  onClick={cargarCitas}
+                  disabled={loading || initialLoading}
+                >
+                  <i className="bi bi-arrow-clockwise mr-2"></i> 
+                  {loading ? 'Actualizando...' : 'Actualizar'}
+                </button>
+                <button
+                  className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  <i className="bi bi-plus-circle mr-2"></i> Nueva orden
+                </button>
+              </div>
             </div>
 
             {/* Tabla de órdenes de servicio */}
@@ -371,7 +307,25 @@ const SaleServices = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {paginatedServices.length > 0 ? paginatedServices.map((service) => (
+                  {initialLoading ? (
+                    <tr>
+                      <td colSpan="8" className="text-center py-8">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          <span className="ml-2 text-gray-600">Cargando citas...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : loading ? (
+                    <tr>
+                      <td colSpan="8" className="text-center py-8">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          <span className="ml-2 text-gray-600">Buscando...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedServices.length > 0 ? paginatedServices.map((service) => (
                     <tr key={service.id} className="hover:bg-gray-50">
                       <td className="py-2 px-3">{service.id}</td>
                       <td className="py-2 px-3">{service.clientName}</td>
@@ -411,7 +365,15 @@ const SaleServices = () => {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="8" className="text-center py-4 text-gray-500">No hay órdenes de servicio para mostrar.</td>
+                      <td colSpan="8" className="text-center py-8 text-gray-500">
+                        <div className="flex flex-col items-center">
+                          <i className="bi bi-calendar-x text-4xl text-gray-300 mb-2"></i>
+                          <p className="text-sm">No hay citas en ejecución para mostrar</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Las citas aparecerán aquí cuando cambien a estado "En ejecución"
+                          </p>
+                        </div>
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -472,7 +434,7 @@ const SaleServices = () => {
           onAnularSuccess={handleAnularOrder}
         />
       )}
-      <ToastContainer />
+              <ToastContainer />
     </div>
   );
 };

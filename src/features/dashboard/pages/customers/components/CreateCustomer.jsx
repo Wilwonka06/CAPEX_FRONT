@@ -13,13 +13,9 @@ const initialFormData = {
   lastName: "",
   email: "",
   phone: "",
-  password: "",
-  confirmPassword: "",
 };
 
 export default function CreateCustomer({ isOpen, onClose, onCreate, loading = false, setLoading, customers = [] }) {
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState(initialFormData)
   const [touched, setTouched] = useState({})
   const [errors, setErrors] = useState({})
@@ -197,60 +193,6 @@ export default function CreateCustomer({ isOpen, onClose, onCreate, loading = fa
                   placeholder="Ej: 3001234567"
                 />
                 {touched.phone && errors.phone && <p className="text-red-600 text-xs mt-1">{errors.phone}</p>}
-              </div>
-            </div>
-
-            {/* Contraseñas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Contraseña <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password || ''}
-                    onChange={handleInputChange}
-                    onBlur={handleBlur}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-black text-sm"
-                  >
-                    {showPassword ? "👁️" : "👁️‍🗨️"}
-                  </button>
-                </div>
-                {touched.password && errors.password && (
-                  <p className="text-red-600 text-xs mt-1">{errors.password}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Confirmar Contraseña <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword || ''}
-                    onChange={handleInputChange}
-                    onBlur={handleBlur}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-black text-sm"
-                  >
-                    {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
-                  </button>
-                </div>
-                {touched.confirmPassword && errors.confirmPassword && (
-                  <p className="text-red-600 text-xs mt-1">{errors.confirmPassword}</p>
-                )}
               </div>
             </div>
           </form>
