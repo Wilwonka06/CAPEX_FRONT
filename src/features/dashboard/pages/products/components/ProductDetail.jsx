@@ -61,7 +61,7 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
                 <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Categoría</span>
-                    <span className="font-semibold text-gray-800 text-sm">{product.categoria}</span>
+                    <span className="font-semibold text-gray-800 text-sm">{product.categoria?.nombre || 'Sin categoría'}</span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Color</span>

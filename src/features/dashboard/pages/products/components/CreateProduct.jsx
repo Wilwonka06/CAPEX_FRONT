@@ -7,14 +7,8 @@ import {
   isValidDecimal,
 } from "../../../../../shared/validations";
 import categoriesService from '../../CatProducts/API/categoriesService';
+import characteristicsService from '../API/characteristicsService';
 
-const CONCEPTOS_ESPECIFICACION = [
-  "Color",
-  "Material",
-  "Contenido",
-  "Tipo de Cabello",
-  // Puedes agregar más conceptos aquí
-];
 
 const MAX_IMAGES = 3;
 
@@ -22,6 +16,8 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [characteristics, setCharacteristics] = useState([]);
+  const [characteristicsLoading, setCharacteristicsLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -29,13 +25,12 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     cantidad: "",
     categoryId: "",
     fotos: [],
-    tipoProducto: "",
   });
   const [previews, setPreviews] = useState([]);
-  const [error, setError] = useState("");
   const [especificaciones, setEspecificaciones] = useState([
     { concepto: "", valor: "", otroConcepto: "" }
   ]);
+  const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Cargar categorías al montar
@@ -57,6 +52,25 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     loadCategories();
   }, []);
 
+  // Cargar características al montar
+  useEffect(() => {
+    const loadCharacteristics = async () => {
+      try {
+        setCharacteristicsLoading(true);
+        const response = await characteristicsService.getAll();
+        if (response.success) {
+          setCharacteristics(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading characteristics:', error);
+      } finally {
+        setCharacteristicsLoading(false);
+      }
+    };
+
+    loadCharacteristics();
+  }, []);
+
   // Determinar si el modal debe estar abierto
   const modalOpen = externalOpen !== undefined ? externalOpen : open;
 
@@ -70,10 +84,9 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       cantidad: "",
       categoryId: "",
       fotos: [],
-      tipoProducto: "",
     });
-    setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
     setPreviews([]);
+    setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
     setError("");
     setFieldErrors({});
     if (externalOnClose) externalOnClose();
@@ -81,28 +94,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Si cambia el tipo de producto a Extensiones, forzar cantidad a 1
-    if (name === 'tipoProducto' && value === 'Extensiones') {
-      setFormData((prev) => ({
-        ...prev,
-        tipoProducto: value,
-        cantidad: '1',
-      }));
-      return;
-    }
-    // Si cambia el tipo de producto a otro, permitir editar cantidad
-    if (name === 'tipoProducto' && value !== 'Extensiones') {
-      setFormData((prev) => ({
-        ...prev,
-        tipoProducto: value,
-        cantidad: '',
-      }));
-      return;
-    }
-    if (name === "cantidad" && formData.tipoProducto === "Extensiones") {
-      // No permitir editar cantidad si es Extensiones
-      return;
-    }
     if (name === "cantidad" && value && !isValidNumber(value)) {
       setError("Solo se permiten números enteros positivos en cantidad.");
       return;
@@ -171,7 +162,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
   const handleChangeEspecificacion = (idx, field, value) => {
     const nuevas = [...especificaciones];
     nuevas[idx][field] = value;
-    // Si se cambia el concepto y no es 'otro', limpiar otroConcepto
     if (field === "concepto" && value !== "otro") {
       nuevas[idx].otroConcepto = "";
     }
@@ -182,14 +172,16 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
 
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
     let errors = {};
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
     if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
-    if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
-    if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
+
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -202,10 +194,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     if (
       formData.nombre.trim() &&
       formData.categoryId &&
-      formData.precio &&
-      formData.descripcion.trim() &&
-      formData.tipoProducto.trim() &&
-      (formData.tipoProducto !== "Extensiones" || formData.textura?.trim())
+      formData.precio
     ) {
       // Procesar las fotos
       const fotosUrls = formData.fotos.map(foto => {
@@ -215,7 +204,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
         return foto;
       });
 
-      const selectedCategory = categories.find(c => c.id_categoria_producto === parseInt(formData.categoryId));
       const newProduct = {
         nombre: formData.nombre,
         descripcion: formData.descripcion,
@@ -225,13 +213,19 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
         stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
         costo: 0,
         iva: 0,
-        imagen: fotosUrls.length > 0 ? fotosUrls[0] : '',
-        especificaciones: especificaciones
+        imagen: fotosUrls.length > 0 && !fotosUrls[0].startsWith('blob:') ? fotosUrls[0] : '',
+        caracteristicas: especificaciones
           .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
-          .map(e => ({ 
-            nombre: e.concepto === "otro" ? e.otroConcepto : e.concepto, 
-            valor: e.valor 
-          }))
+          .map(e => {
+            const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+            // Find the characteristic ID if it exists, otherwise it will be created by the backend
+            const characteristic = characteristics.find(c => c.nombre === nombre);
+            return {
+              id_caracteristica: characteristic ? characteristic.id_caracteristica : undefined,
+              nombre: nombre,
+              valor: e.valor
+            };
+          })
       };
       if (onCreate) onCreate(newProduct);
       handleClose();
@@ -383,23 +377,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Tipo de producto <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="tipoProducto"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                    value={formData.tipoProducto}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Seleccionar tipo</option>
-                    <option value="Extensiones">Extensiones</option>
-                    <option value="Cuidado capilar">Cuidado capilar</option>
-                  </select>
-                  {fieldErrors.tipoProducto && <p className="text-xs text-red-500 mt-1">{fieldErrors.tipoProducto}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
                       Precio <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -421,14 +398,22 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                     name="cantidad"
                     value={formatNumber(formData.cantidad)}
                     onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white disabled:bg-gray-100 disabled:text-gray-400"
-                    required
-                    min={formData.tipoProducto === 'Extensiones' ? 1 : 0}
-                    max={formData.tipoProducto === 'Extensiones' ? 1 : undefined}
-                    disabled={formData.tipoProducto === 'Extensiones'}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
                   />
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">
+                  Descripción</label>
+                <textarea
+                  name="descripcion"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                  value={formData.descripcion}
+                  onChange={handleChange}
+                  rows={3}
+                />
+              </div>
+
               {/* Especificaciones Técnicas */}
               <div className="bg-gray-50 rounded-lg p-4 border mb-4">
                 <div className="font-semibold text-text-main mb-2">Especificaciones Técnicas</div>
@@ -441,8 +426,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                       onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
                     >
                       <option value="">Seleccione concepto</option>
-                      {CONCEPTOS_ESPECIFICACION.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
+                      {characteristics.map(char => (
+                        <option key={char.id_caracteristica} value={char.nombre}>
+                          {char.nombre}
+                        </option>
                       ))}
                       <option value="otro">Otro…</option>
                     </select>
@@ -462,30 +449,24 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                       value={esp.valor}
                       onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}
                     />
-                    <button type="button" className="text-gray-400 hover:text-red-500" onClick={() => handleRemoveEspecificacion(idx)}>
+                    <button
+                      type="button"
+                      className="text-gray-400 hover:text-red-500"
+                      onClick={() => handleRemoveEspecificacion(idx)}
+                    >
                       <i className="bi bi-trash"></i>
                     </button>
                   </div>
                 ))}
-                <button type="button" className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2" onClick={handleAddEspecificacion}>
+                <button
+                  type="button"
+                  className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2"
+                  onClick={handleAddEspecificacion}
+                >
                   <i className="bi bi-plus"></i> Agregar especificación
                 </button>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                    Descripción <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  name="descripcion"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                    value={formData.descripcion}
-                  onChange={handleChange}
-                  required
-                  rows={3}
-                />
-                {fieldErrors.descripcion && <p className="text-xs text-red-500 mt-1">{fieldErrors.descripcion}</p>}
-              </div>
-              
+
               <div className="flex justify-end gap-2 mt-6">
                 <button
                   type="button"

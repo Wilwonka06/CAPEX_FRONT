@@ -49,9 +49,9 @@ export const productsService = {
           url_foto: product.url_foto,
           foto: product.url_foto, // Para compatibilidad
           categoria: product.categoria,
-          caracteristicas: product.caracteristicas || []
+          caracteristicas: [] // Temporarily empty until associations are fixed
         }));
-        
+
         return {
           ...response,
           data: mappedProducts
@@ -117,12 +117,18 @@ export const productsService = {
         stock: parseInt(productData.stock || productData.cantidad || 0),
         costo: parseFloat(productData.costo || 0),
         iva: parseFloat(productData.iva || 0),
-        url_foto: productData.imagen || productData.url_foto || '',
         caracteristicas: (productData.caracteristicas || productData.especificaciones || []).map(caracteristica => ({
+          id_caracteristica: caracteristica.id_caracteristica,
           nombre: caracteristica.nombre,
           valor: caracteristica.valor
         }))
       };
+
+      // Solo incluir url_foto si es una URL válida (no blob)
+      const imagen = productData.imagen || productData.url_foto;
+      if (imagen && !imagen.startsWith('blob:')) {
+        mappedData.url_foto = imagen;
+      }
 
       console.log('API Service: Sending data to backend:', mappedData);
       const response = await apiRequest.post(PRODUCTS_ENDPOINT, mappedData);
@@ -158,6 +164,7 @@ export const productsService = {
        }
        if (productData.especificaciones) {
          mappedData.caracteristicas = productData.especificaciones.map(e => ({
+           id_caracteristica: e.id_caracteristica,
            nombre: e.concepto === "otro" ? e.otroConcepto : e.concepto,
            valor: e.valor
          }));
