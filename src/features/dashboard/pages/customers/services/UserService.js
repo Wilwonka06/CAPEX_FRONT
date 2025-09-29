@@ -83,7 +83,7 @@ export const getUsersByRole = async (roleName, page = 1, limit = 10, search = ''
   try {
     // Mapear nombre del rol a ID del rol
     const roleIdMap = {
-      'Cliente': 3,
+      'Cliente': 12, // Rol Cliente creado en el backend
       'Empleado': 2,
       'Administrador': 1
     };
