@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import PasswordEye from '../../../../../shared/components/PasswordEye';
 import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
-import { getRoles } from '../../../../../shared/services/ModuleDataService';
+import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Swal from 'sweetalert2';
 
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
-const DOC_TYPES = ['CC', 'PPT','TI'];
+const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -40,7 +40,14 @@ function compressImageToBase64(file, maxWidth = 80, maxHeight = 80, quality = 0.
 }
 
 const EditUserModal = ({ onClose, onEdit, user, users }) => {
-  const [form, setForm] = useState({ ...user, password: '', confirmPassword: '', roles: user.roles || [] });
+  const [form, setForm] = useState({
+    ...user,
+    tipoDocumento: user.tipo_documento, // Map backend field to frontend field
+    telefono: user.telefono, // Ensure telefono field is properly set
+    password: '',
+    confirmPassword: '',
+    roles: user.roleId ? [user.roleId.toString()] : []
+  });
   const [availableRoles, setAvailableRoles] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -50,14 +57,28 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   // Parsear teléfono guardado
   const parseTelefono = (telefono) => {
     if (!telefono) return { countryCode: 'co', dialCode: '+57', number: '' };
-    const match = telefono.match(/^(\+\d+)-(\d{4,15})$/);
-    if (match) {
+
+    // Primero intentar el formato con guion (legacy)
+    const matchWithDash = telefono.match(/^(\+\d+)-(\d{4,15})$/);
+    if (matchWithDash) {
       return {
         countryCode: 'co', // puedes mejorar esto si guardas el país
-        dialCode: match[1],
-        number: match[2]
+        dialCode: matchWithDash[1],
+        number: matchWithDash[2]
       };
     }
+
+    // Si no tiene guion, intentar extraer código de país y número
+    // Ejemplo: "+57123456789" -> dialCode: "+57", number: "123456789"
+    const matchWithoutDash = telefono.match(/^(\+\d{1,3})(\d{4,15})$/);
+    if (matchWithoutDash) {
+      return {
+        countryCode: 'co', // puedes mejorar esto si guardas el país
+        dialCode: matchWithoutDash[1],
+        number: matchWithoutDash[2]
+      };
+    }
+
     return { countryCode: 'co', dialCode: '+57', number: '' };
   };
   const [country, setCountry] = useState({
@@ -67,9 +88,18 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const [numero, setNumero] = useState(parseTelefono(user.telefono).number);
 
   useEffect(() => {
-    getRoles().then(roles => {
-      setAvailableRoles(roles.filter(r => r.estado === 'Activo'));
-    });
+    const loadRoles = async () => {
+      try {
+        const response = await usersService.getAvailableRoles();
+        if (response.success) {
+          setAvailableRoles(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading roles:', error);
+        setAvailableRoles([]);
+      }
+    };
+    loadRoles();
   }, []);
 
   // Validaciones instantáneas
@@ -78,12 +108,14 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       case 'correo':
         return isValidEmail(value) ? '' : 'Correo inválido';
       case 'telefono':
-        return validateUserPhone(numero);
+        // Validar el teléfono completo (código de país + número)
+        const telefonoCompleto = country.dialCode + numero;
+        return validateUserPhone(telefonoCompleto);
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
         if (!value.trim()) return 'Campo obligatorio';
-        if (form.documento && users.some(u => u.tipoDocumento === value && u.documento === form.documento && u.id !== form.id)) return 'Ya existe un usuario con ese tipo y número de documento';
+        if (form.documento && users.some(u => (u.tipoDocumento || u.tipo_documento) === value && u.documento === form.documento && (u.id_usuario || u.id) !== (form.id_usuario || form.id))) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
       case 'password':
         return value ? (isValidPassword(value) ? '' : 'Contraseña débil') : '';
@@ -156,34 +188,27 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       return;
     }
     // Procesar imagen si hay
-    let avatarCompressed = form.avatarCompressed;
-    let avatar = form.avatar;
+    let foto = form.foto;
     if (form.avatar && form.avatar instanceof File) {
-      avatarCompressed = await compressImageToBase64(form.avatar, 80, 80, 0.6); // baja calidad
-      avatar = await compressImageToBase64(form.avatar, 300, 300, 0.92); // mejor calidad
+      foto = await compressImageToBase64(form.avatar, 64, 64, 0.3); // reducir tamaño para caber en VARCHAR(255)
     }
-    // Actualizar usuario
-    const telefonoFinal = country.dialCode + '-' + numero;
+
+    // Preparar datos de actualización
+    const telefonoFinal = country.dialCode + numero; // Sin guion para formato internacional
     const updatedUser = {
-      ...form,
+      id_usuario: form.id_usuario || form.id,
+      nombre: form.nombre,
+      correo: form.correo,
+      tipo_documento: form.tipoDocumento,
+      documento: form.documento,
       telefono: telefonoFinal,
-      avatar,
-      avatarCompressed,
+      roleId: parseInt(form.roles[0]) || form.roleId,
+      estado: form.estado,
+      ...(foto && { foto }),
+      ...(form.direccion && { direccion: form.direccion }),
     };
-    // SweetAlert de confirmación
-    const result = await Swal.fire({
-      title: '¿Estás seguro de guardar los cambios?',
-      text: 'Esta acción actualizará la información del usuario.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, guardar',
-      cancelButtonText: 'Cancelar',
-    });
-    if (result.isConfirmed) {
-      onEdit(updatedUser);
-    }
+
+    onEdit(updatedUser);
   };
 
   const removeImage = () => {
@@ -280,15 +305,27 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                       // Solo permitir dígitos
                       const val = e.target.value.replace(/[^0-9]/g, '');
                       setNumero(val.slice(0, 15));
-                      // Validación en tiempo real
+                      // Validación en tiempo real del número
                       let err = '';
-                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      if (val && !/^\d{4,15}$/.test(val)) {
+                        err = 'El número debe tener entre 4 y 15 dígitos';
+                      } else if (val && val.length >= 4) {
+                        // Validar teléfono completo si tenemos suficientes dígitos
+                        const telefonoCompleto = country.dialCode + val;
+                        err = validateUserPhone(telefonoCompleto);
+                      }
                       setError(prev => ({ ...prev, telefono: err }));
                     }}
                     onBlur={e => {
                       const val = e.target.value;
                       let err = '';
-                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      if (!/^\d{4,15}$/.test(val)) {
+                        err = 'El número debe tener entre 4 y 15 dígitos';
+                      } else {
+                        // Validar teléfono completo
+                        const telefonoCompleto = country.dialCode + val;
+                        err = validateUserPhone(telefonoCompleto);
+                      }
                       setError(prev => ({ ...prev, telefono: err }));
                     }}
                     className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -304,17 +341,17 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 <label className="block text-xs font-medium text-text-main mb-1">Roles <span className="text-red-500">*</span></label>
                 <div className="flex flex-wrap gap-2">
                   {availableRoles.map(role => (
-                    <label key={role.id} className="flex items-center gap-2 text-sm font-medium text-text-main">
+                    <label key={role.id_rol} className="flex items-center gap-2 text-sm font-medium text-text-main">
                       <input
                         type="checkbox"
                         name="roles"
-                        value={role.name}
-                        checked={form.roles.includes(role.name)}
+                        value={role.id_rol.toString()}
+                        checked={form.roles.includes(role.id_rol.toString())}
                         onChange={handleChange}
                         onBlur={handleBlur}
                         className="accent-primary-dark"
                       />
-                      {role.name}
+                      {role.nombre}
                     </label>
                   ))}
                 </div>

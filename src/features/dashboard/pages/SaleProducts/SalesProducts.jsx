@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSales } from './context/SalesContext';
-import { useProducts } from '../products/hooks/useProducts';
+import productsService from '../products/API/productsService';
 import Search from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import CreateSaleModal from './components/CreateSaleModal';
@@ -23,7 +23,11 @@ const customersMock = [
 
 const SalesProducts = () => {
   const { sales, createSale, updateSale, deleteSale, loading } = useSales();
-  const { products } = useProducts();
+
+  // Estado para productos
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
@@ -31,6 +35,25 @@ const SalesProducts = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filteredSales, setFilteredSales] = useState([]);
   const { setTitle } = useOutletContext();
+
+  // Cargar productos al montar
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setProductsLoading(true);
+        const response = await productsService.getAll({ limit: 100 });
+        if (response.success) {
+          setProducts(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   const itemsPerPage = 5;
 

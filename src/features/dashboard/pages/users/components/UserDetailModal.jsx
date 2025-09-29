@@ -48,7 +48,7 @@ const UserDetailModal = ({ onClose, user }) => {
                 <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Tipo de documento</span>
-                    <span className="font-semibold text-gray-800 text-sm">{user.tipoDocumento}</span>
+                    <span className="font-semibold text-gray-800 text-sm">{user.tipo_documento}</span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Documento</span>
@@ -57,13 +57,17 @@ const UserDetailModal = ({ onClose, user }) => {
                   <div className="flex justify-between px-4 py-2">
                     <span className="text-xs text-gray-500">Rol</span>
                     <span className="font-semibold text-gray-800 text-sm">
-                      {Array.isArray(user.roles)
-                        ? (
-                          <ul className="list-disc list-inside">
-                            {user.roles.map((rol, idx) => <li key={rol + idx}>{rol}</li>)}
-                          </ul>
-                        )
-                        : user.roles}
+                      {user?.rol?.nombre
+                        ? user.rol.nombre
+                        : Array.isArray(user?.roles)
+                          ? (
+                            <ul className="list-disc list-inside">
+                              {user.roles.map((rol, idx) => (
+                                <li key={idx}>{typeof rol === 'string' ? rol : rol?.nombre || '—'}</li>
+                              ))}
+                            </ul>
+                          )
+                          : (user?.roles || 'Sin rol asignado')}
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-2">

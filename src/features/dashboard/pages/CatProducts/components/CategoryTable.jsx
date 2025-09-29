@@ -16,44 +16,44 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView })
         </thead>
         <tbody className="divide-y divide-gray-200">
           {categories.map((category) => (
-            <tr key={category.id} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.id}</td>
+            <tr key={category.id_categoria_producto} className="hover:bg-gray-50 transition-colors duration-150">
+              <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.id_categoria_producto}</td>
               <td className="py-4 px-4 text-xs font-medium text-gray-900">
-                <TruncatedText 
-                  text={category.name} 
-                  maxLength={25} 
+                <TruncatedText
+                  text={category.nombre}
+                  maxLength={25}
                   maxWidth="max-w-[180px]"
                 />
               </td>
               <td className="py-4 px-4 text-xs text-gray-600">
-                <TruncatedText 
-                  text={category.description} 
-                  maxLength={40} 
+                <TruncatedText
+                  text={category.descripcion}
+                  maxLength={40}
                   maxWidth="max-w-[250px]"
                 />
               </td>
               <td className="py-4 px-4 text-xs">
                 <div className="flex items-center space-x-3">
                   <button
-                    onClick={() => onToggleStatus(category.id)}
+                    onClick={() => onToggleStatus(category.id_categoria_producto)}
                     className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none  ${
-                      category.isActive ? 'bg-text-main' : 'bg-gray-300'
+                      category.estado === 'activo' ? 'bg-text-main' : 'bg-gray-300'
                     }`}
                   >
                     <span
                       className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        category.isActive ? 'translate-x-6' : 'translate-x-1'
+                        category.estado === 'activo' ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </button>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      category.isActive
+                      category.estado === 'activo'
                         ? ' text-gray-800'
                         : ' text-gray-600 '
                     }`}
                   >
-                    {category.isActive ? "Activo" : "Inactivo"}
+                    {category.estado === 'activo' ? "Activo" : "Inactivo"}
                   </span>
                 </div>
               </td>
@@ -73,9 +73,9 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView })
                   >
                     <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
                   </button>
-                  <button 
+                  <button
                     className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onDelete(category.id)}
+                    onClick={() => onDelete(category.id_categoria_producto)}
                     title="Eliminar"
                   >
                     <i className="bi bi-trash text-red-500 text-lg"></i>
@@ -93,10 +93,10 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView })
 CategoryTable.propTypes = {
   categories: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-      name: PropTypes.string.isRequired,
-      description: PropTypes.string.isRequired,
-      isActive: PropTypes.bool.isRequired,
+      id_categoria_producto: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+      nombre: PropTypes.string.isRequired,
+      descripcion: PropTypes.string,
+      estado: PropTypes.string.isRequired,
     })
   ).isRequired,
   onToggleStatus: PropTypes.func.isRequired,

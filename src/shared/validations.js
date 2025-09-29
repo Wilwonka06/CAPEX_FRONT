@@ -543,7 +543,9 @@ export function isValidSupplierType(tipo) {
 
 // Valida tipo de documento
 export function isValidDocumentType(tipo) {
+
   return ['Cedula de ciudadania', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte'].includes(tipo);
+
 }
 
 // Valida número de documento (solo números)
@@ -706,6 +708,13 @@ export function isNumeric(value) {
   return regex.test(String(value));
 }
 
+// Valida teléfono con formato internacional (acepta + al inicio)
+export function isNumericPhone(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return true;
+  const regex = /^\+?\d+$/;
+  return regex.test(String(value));
+}
+
 // ===== VALIDACIONES DE CONTRASEÑA (para clientes) =====
 // export function isValidPassword(password) {
 //   // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
@@ -763,35 +772,12 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
   // Teléfono
   if (!customerData.phone) {
     errors.phone = 'El teléfono es requerido.';
-  } else if (!isNumeric(customerData.phone)) { // Usa isNumeric para el teléfono
-    errors.phone = 'Solo se permiten números.';
-  } else if (customerData.phone.length < 7) {
+  } else if (!isNumericPhone(customerData.phone)) { // Usa isNumericPhone para el teléfono (acepta +)
+    errors.phone = 'Solo se permiten números y el símbolo + al inicio.';
+  } else if (customerData.phone.replace('+', '').length < 7) {
     errors.phone = 'El teléfono debe tener al menos 7 dígitos.';
   }
-  // Password y confirmPassword
-  if (!excludeId) { // CreateCustomer: password requerido
-    if (!customerData.password) {
-      errors.password = 'La contraseña es requerida.';
-    } else if (!isValidPassword(customerData.password)) {
-      errors.password = 'La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
-    }
-    if (!customerData.confirmPassword) {
-      errors.confirmPassword = 'Confirma la contraseña.';
-    } else if (customerData.password !== customerData.confirmPassword) {
-      errors.confirmPassword = 'Las contraseñas no coinciden.';
-    }
-  } else { // EditCustomer: password opcional
-    if (customerData.password) { // Solo validar si se ha ingresado una contraseña
-      if (!isValidPassword(customerData.password)) {
-        errors.password = 'La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.';
-      }
-      if (!customerData.confirmPassword) {
-        errors.confirmPassword = 'Confirma la contraseña.';
-      } else if (customerData.password !== customerData.confirmPassword) {
-        errors.confirmPassword = 'Las contraseñas no coinciden.';
-      }
-    }
-  }
+  // Los clientes no necesitan contraseñas - son solo datos de contacto
   return { isValid: Object.keys(errors).length === 0, errors };
 }
 
@@ -852,13 +838,21 @@ export function isValidName(name) {
 // Valida documento según tipo
 export function validateUserDocument(tipo, documento) {
   if (!documento) return 'El documento es obligatorio';
-  if (tipo === 'PPT') {
+  if (tipo === 'Pasaporte') {
     if (!/^[A-Z]{3}\d{6}$/.test(documento)) {
-      return 'PPT: 3 letras mayúsculas seguidas de 6 dígitos (ej: ABC123456)';
+      return 'Pasaporte: 3 letras mayúsculas seguidas de 6 dígitos (ej: ABC123456)';
     }
-  } else if (tipo === 'CC' || tipo === 'TI') {
+  } else if (tipo === 'Cedula de ciudadania' || tipo === 'Tarjeta de identidad') {
     if (!/^\d{7,15}$/.test(documento)) {
       return 'Debe tener solo números (7 a 15 dígitos)';
+    }
+  } else if (tipo === 'Cedula de extranjeria') {
+    if (!/^\d{7,15}$/.test(documento)) {
+      return 'Debe tener solo números (7 a 15 dígitos)';
+    }
+  } else if (tipo === 'NIT') {
+    if (!/^[A-Za-z]\d+$/.test(documento)) {
+      return 'NIT: Una letra seguida de números (ej: A123456789)';
     }
   } else {
     return 'Selecciona un tipo de documento válido';
@@ -866,11 +860,14 @@ export function validateUserDocument(tipo, documento) {
   return '';
 }
 
-// Valida teléfono (solo números, 4 a 15 dígitos)
+// Valida teléfono (formato internacional: opcional +, código de país + números)
 export function validateUserPhone(telefono) {
   if (!telefono) return 'El teléfono es obligatorio';
-  if (!/^\d{4,15}$/.test(telefono)) {
-    return 'El teléfono debe tener entre 4 y 15 dígitos, solo números';
+  // Remover espacios para validación
+  const cleanPhone = telefono.replace(/\s/g, '');
+  // Regex que permite formato internacional: opcional +, primer dígito 1-9, luego 1-14 dígitos
+  if (!/^\+?[1-9]\d{1,14}$/.test(cleanPhone)) {
+    return 'Formato de teléfono inválido. Debe comenzar con + seguido del código de país y número (ej: +571234567890)';
   }
   return '';
 }
