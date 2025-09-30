@@ -92,7 +92,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <TruncatedText
-                    text={product.categoria}
+                    text={product.categoria?.nombre || product.categoria || 'Sin categoría'}
                     maxLength={20}
                     maxWidth="max-w-[120px]"
                   />
@@ -100,18 +100,18 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      product.cantidad > 10
+                      (product.stock || product.cantidad || 0) > 10
                         ? " text-green-800"
-                        : product.cantidad > 0
+                        : (product.stock || product.cantidad || 0) > 0
                         ? " text-yellow-800"
                         : " text-red-800"
                     }`}
                   >
-                    {product.cantidad}
+                    {product.stock || product.cantidad || 0}
                   </span>
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
-                  ${product.precio.toFixed(2)}
+                  ${(product.precio || 0).toFixed(2)}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   {product.fechaRegistro}

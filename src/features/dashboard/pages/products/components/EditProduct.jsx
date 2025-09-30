@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { isDuplicateProductName } from '../../../../../shared/validations';
-import { useCategories } from '../../CatProducts/hooks/useCategories';
+import categoriesService from '../../CatProducts/API/categoriesService';
 
 const CONCEPTOS_ESPECIFICACION = [
   "Color",
@@ -14,13 +14,14 @@ const CONCEPTOS_ESPECIFICACION = [
 const MAX_IMAGES = 3;
 
 const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
-  const { categories: useCategoriesCategories } = useCategories();
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
     precio: "",
     cantidad: "",
-    categoria: "",
+    categoryId: "",
     fotos: [],
     tipoProducto: "",
   });
@@ -28,27 +29,49 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
   const [especificaciones, setEspecificaciones] = useState([{ concepto: "", valor: "", otroConcepto: "" }]);
   const [fieldErrors, setFieldErrors] = useState({});
 
+  // Cargar categorías al montar
   useEffect(() => {
-    if (product) {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await categoriesService.getActive();
+        if (response.success) {
+          setCategories(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (product && categories.length > 0) {
       const productFotos = product.fotos || (product.foto ? [product.foto] : []);
-      
+      const category = categories.find(c => c.nombre === product.categoria);
+
       setFormData({
         nombre: product.nombre || "",
         descripcion: product.descripcion || "",
         precio: product.precio?.toString() || "",
         cantidad: product.cantidad?.toString() || "",
-        categoria: product.categoria || "",
+        categoryId: category ? category.id_categoria_producto : "",
         fotos: productFotos,
         tipoProducto: product.tipoProducto || "",
       });
       setPreviews(productFotos);
+      // Map caracteristicas from API to especificaciones format
+      const caracteristicas = product.caracteristicas || [];
       setEspecificaciones(
-        product.especificaciones && product.especificaciones.length > 0
-          ? product.especificaciones.map(e => ({ ...e, otroConcepto: "" }))
+        caracteristicas.length > 0
+          ? caracteristicas.map(c => ({ concepto: c.nombre, valor: c.valor, otroConcepto: "" }))
           : [{ concepto: "", valor: "", otroConcepto: "" }]
       );
     }
-  }, [product]);
+  }, [product, categories]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -147,7 +170,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     e.preventDefault();
     let errors = {};
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
-    if (!formData.categoria.trim()) errors.categoria = "La categoría es obligatoria";
+    if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
     if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
     if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
@@ -170,13 +193,15 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         return foto;
       });
 
+      const selectedCategory = categories.find(c => c.id_categoria_producto === parseInt(formData.categoryId));
       const updatedProduct = {
         ...product,
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion.trim(),
         precio: parseFloat(formData.precio),
         cantidad: parseInt(formData.cantidad),
-        categoria: formData.categoria,
+        categoria: selectedCategory ? selectedCategory.nombre : '',
+        categoryId: formData.categoryId,
         fotos: fotosUrls,
         tipoProducto: formData.tipoProducto,
         especificaciones: especificaciones
@@ -195,7 +220,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
       descripcion: "",
       precio: "",
       cantidad: "",
-      categoria: "",
+      categoryId: "",
       fotos: [],
       tipoProducto: "",
     });
@@ -313,20 +338,20 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                   Categoría
                 </label>
               <select
-                name="categoria"
+                name="categoryId"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                value={formData.categoria}
+                value={formData.categoryId}
                 onChange={handleChange}
                 required
               >
                 <option value="">Seleccionar categoría</option>
-                {useCategoriesCategories.filter(c => c.isActive).map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
+                {categories.filter(c => c.estado === 'activo').map((category) => (
+                  <option key={category.id_categoria_producto} value={category.id_categoria_producto}>
+                    {category.nombre}
                   </option>
                 ))}
               </select>
-              {fieldErrors.categoria && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoria}</p>}
+              {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
             </div>
             <div>
                 <label className="block text-xs font-medium text-text-main mb-1">

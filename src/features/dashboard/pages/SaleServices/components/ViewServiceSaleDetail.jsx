@@ -11,13 +11,13 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Detalle de la Orden de Servicio</h2>
+          <h2 className="text-xl font-bold text-primary m-0">Detalle de la Cita en Ejecución</h2>
           <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose}>×</button>
         </div>
         
         {/* Contenido */}
         <div className="overflow-y-auto p-8 flex-1">
-          <div className="text-lg font-bold text-gray-800 text-center mb-2">Detalle de Orden #{order.id}</div>
+          <div className="text-lg font-bold text-gray-800 text-center mb-2">Detalle de Cita #{order.id}</div>
           
           <div className="flex flex-col md:flex-row gap-8 mb-8">
             {/* Información de Cliente */}

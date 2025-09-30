@@ -4,18 +4,11 @@ import './shared/styles/input.css';
 import './shared/styles/output.css'
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import App from './App.jsx'
-import { CategoriesProvider } from './features/dashboard/pages/CatProducts/hooks/useCategories';
-import { ProductsProvider } from './features/dashboard/pages/products/hooks/useProducts';
 import { SuppliersProvider } from './features/dashboard/pages/suppliers/hooks/useSuppliers';
-
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <CategoriesProvider>
-      <ProductsProvider>
-        <SuppliersProvider>
-          <App />
-        </SuppliersProvider>
-      </ProductsProvider>
-    </CategoriesProvider>
+    <SuppliersProvider>
+      <App />
+    </SuppliersProvider>
   </StrictMode>,
 )

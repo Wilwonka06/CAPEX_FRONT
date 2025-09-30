@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import PasswordEye from '../../../../../shared/components/PasswordEye';
 import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
-import { getRoles } from '../../../../../shared/services/ModuleDataService';
+import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import './phoneinput-search.css';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=128';
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
-const DOC_TYPES = ['CC', 'PPT','TI'];
+const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -82,9 +82,18 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   const [numero, setNumero] = useState('');
 
   useEffect(() => {
-    getRoles().then(roles => {
-      setAvailableRoles(roles.filter(r => r.estado === 'Activo'));
-    });
+    const loadRoles = async () => {
+      try {
+        const response = await usersService.getAvailableRoles();
+        if (response.success) {
+          setAvailableRoles(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading roles:', error);
+        setAvailableRoles([]);
+      }
+    };
+    loadRoles();
   }, []);
 
   // Validaciones instantáneas
@@ -95,8 +104,9 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
         if (users.some(u => u.correo === value)) return 'Correo ya registrado';
         return '';
       case 'telefono':
-        // Validar usando el valor de 'numero' (input del usuario)
-        return validateUserPhone(numero);
+        // Validar el teléfono completo (código de país + número)
+        const telefonoCompleto = country.dialCode + numero;
+        return validateUserPhone(telefonoCompleto);
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
@@ -163,25 +173,26 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
       return;
     }
     // Procesar imagen si hay
-    let avatarCompressed = '';
-    let avatar = '';
+    let foto = '';
     if (form.avatar && form.avatar instanceof File) {
-      avatarCompressed = await compressImageToBase64(form.avatar, 80, 80, 0.6); // baja calidad
-      avatar = await compressImageToBase64(form.avatar, 300, 300, 0.92); // mejor calidad
+      foto = await compressImageToBase64(form.avatar, 64, 64, 0.3); // reducir tamaño para caber en VARCHAR(255)
     }
-    // Obtener privilegios de los roles seleccionados
-    const allRoles = await getRoles();
-    const userRoles = allRoles.filter(r => form.roles.includes(r.name));
-    const privileges = mergePrivileges(userRoles);
-    // Crear usuario
-    const telefonoFinal = country.dialCode + '-' + numero;
+
+    // Crear usuario con los campos correctos para la API
+    const telefonoFinal = country.dialCode + numero; // Sin guion para formato internacional
     const newUser = {
-      ...form,
+      nombre: form.nombre,
+      correo: form.correo,
+      contrasena: form.password,
+      tipo_documento: form.tipoDocumento,
+      documento: form.documento,
       telefono: telefonoFinal,
-      avatar,
-      avatarCompressed,
-      privileges,
+      roleId: parseInt(form.roles[0]) || 1, // Asignar el primer rol seleccionado o rol por defecto
+      estado: form.estado,
+      ...(foto && { foto }),
+      ...(form.direccion && { direccion: form.direccion }),
     };
+
     onCreate(newUser);
   };
 
@@ -279,15 +290,27 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                       // Solo permitir dígitos
                       const val = e.target.value.replace(/[^0-9]/g, '');
                       setNumero(val.slice(0, 15));
-                      // Validación en tiempo real
+                      // Validación en tiempo real del número
                       let err = '';
-                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      if (val && !/^\d{4,15}$/.test(val)) {
+                        err = 'El número debe tener entre 4 y 15 dígitos';
+                      } else if (val && val.length >= 4) {
+                        // Validar teléfono completo si tenemos suficientes dígitos
+                        const telefonoCompleto = country.dialCode + val;
+                        err = validateUserPhone(telefonoCompleto);
+                      }
                       setError(prev => ({ ...prev, telefono: err }));
                     }}
                     onBlur={e => {
                       const val = e.target.value;
                       let err = '';
-                      if (!/^\d{4,15}$/.test(val)) err = 'Debe tener entre 4 y 15 dígitos';
+                      if (!/^\d{4,15}$/.test(val)) {
+                        err = 'El número debe tener entre 4 y 15 dígitos';
+                      } else {
+                        // Validar teléfono completo
+                        const telefonoCompleto = country.dialCode + val;
+                        err = validateUserPhone(telefonoCompleto);
+                      }
                       setError(prev => ({ ...prev, telefono: err }));
                     }}
                     className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -303,17 +326,17 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 <label className="block text-xs font-medium text-text-main mb-1">Roles <span className="text-red-500">*</span></label>
                 <div className="flex flex-wrap gap-2">
                   {availableRoles.map(role => (
-                    <label key={role.id} className="flex items-center gap-2 text-sm font-medium text-text-main">
+                    <label key={role.id_rol} className="flex items-center gap-2 text-sm font-medium text-text-main">
                       <input
                         type="checkbox"
                         name="roles"
-                        value={role.name}
-                        checked={form.roles.includes(role.name)}
+                        value={role.id_rol.toString()}
+                        checked={form.roles.includes(role.id_rol.toString())}
                         onChange={handleChange}
                         onBlur={handleBlur}
                         className="accent-primary-dark"
                       />
-                      {role.name}
+                      {role.nombre}
                     </label>
                   ))}
                 </div>

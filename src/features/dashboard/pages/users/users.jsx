@@ -5,79 +5,13 @@ import CreateUserModal from './components/CreateUserModal';
 import EditUserModal from './components/EditUserModal';
 import UserDetailModal from './components/UserDetailModal';
 import Paginator from '../../../../shared/Paginator';
-import { getRoles } from '../../../../shared/services/ModuleDataService';
+import usersService from './API/usersService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
-const LOCAL_STORAGE_KEY = 'usuarios';
 const USERS_PER_PAGE = 5;
-
-// Obtener privilegios del rol Administrador
-let ADMIN_PRIVILEGES = {};
-try {
-  const roles = JSON.parse(localStorage.getItem('roles'));
-  const adminRole = roles?.find(r => r.name === 'Administrador');
-  if (adminRole && adminRole.privileges) {
-    ADMIN_PRIVILEGES = adminRole.privileges;
-  }
-} catch {}
-
-// Usuario admin por defecto
-const DEFAULT_ADMIN = {
-  id: 1,
-  nombre: 'Administrador',
-  correo: 'admin@admin.com',
-  password: 'admin123',
-  rol: 'Administrador',
-  estado: 'Activo',
-  isAdmin: true,
-  privileges: ADMIN_PRIVILEGES
-};
-
-const DEFAULT_USERS = [
-  {
-    id: 2,
-    nombre: 'María López',
-    correo: 'maria@example.com',
-    password: 'test1234',
-    rol: 'Empleado',
-    estado: 'Activo',
-    isAdmin: false,
-    roles: ['Empleado']
-  },
-  {
-    id: 3,
-    nombre: 'Carlos Pérez',
-    correo: 'carlos@example.com',
-    password: 'test1234',
-    rol: 'Cliente',
-    estado: 'Activo',
-    isAdmin: false,
-    roles: ['Cliente']
-  },
-  {
-    id: 4,
-    nombre: 'Ana Torres',
-    correo: 'ana@example.com',
-    password: 'test1234',
-    rol: 'Empleado',
-    estado: 'Inactivo',
-    isAdmin: false,
-    roles: ['Empleado']
-  },
-  {
-    id: 5,
-    nombre: 'Luis Gómez',
-    correo: 'luis@example.com',
-    password: 'test1234',
-    rol: 'Cliente',
-    estado: 'Activo',
-    isAdmin: false,
-    roles: ['Cliente']
-  }
-];
 
 const Users = () => {
   const { setTitle } = useOutletContext();
@@ -90,71 +24,37 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Cargar usuarios de localStorage al iniciar
+  // Cargar usuarios desde la API al iniciar
   useEffect(() => {
-    let storedUsers = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
-    
-    // Asegurar que los roles existan
-    let storedRoles = JSON.parse(localStorage.getItem('roles')) || [];
-    if (storedRoles.length === 0) {
-      // Crear roles por defecto
-      const defaultRoles = [
-        {
-          id: 1,
-          name: 'Administrador',
-          description: 'Control total del sistema',
-          estado: 'Activo',
-          privileges: {
-            'Dashboard': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-            'Gestión de Usuarios': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-            'Gestión de Compras': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-            'Gestión de Servicios': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-            'Ventas': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true },
-            'configuración': { 'Crear': true, 'Visualizar': true, 'Editar': true, 'Eliminar': true }
-          }
-        }
-      ];
-      localStorage.setItem('roles', JSON.stringify(defaultRoles));
-      storedRoles = defaultRoles;
-    }
-    
-    // Actualizar ADMIN_PRIVILEGES con los roles actuales
-    const adminRole = storedRoles.find(r => r.name === 'Administrador');
-    if (adminRole && adminRole.privileges) {
-      ADMIN_PRIVILEGES = adminRole.privileges;
-    }
-    
-    // Si no existe el admin, agregarlo
-    if (!storedUsers.some(u => u.isAdmin)) {
-      const newAdmin = {
-        ...DEFAULT_ADMIN,
-        privileges: ADMIN_PRIVILEGES
-      };
-      storedUsers = [newAdmin, ...storedUsers];
-    }
-    // Agregar usuarios de prueba si no existen
-    DEFAULT_USERS.forEach(user => {
-      if (!storedUsers.some(u => u.correo === user.correo)) {
-        storedUsers.push(user);
-      }
-    });
-    // Eliminar duplicados por correo
-    const uniqueUsers = storedUsers.filter((user, index, self) =>
-      index === self.findIndex(u => u.correo === user.correo)
-    );
-    setUsers(uniqueUsers);
-    setIsLoaded(true);
+    loadUsers();
   }, []);
 
-  // Guardar usuarios en localStorage cuando cambian, solo si ya se cargaron
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(users));
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await usersService.getAll();
+      if (response.success) {
+        setUsers(response.data || []);
+      } else {
+        console.error('API returned error:', response.message);
+        setUsers([]);
+        setError(response.message || 'Error al cargar usuarios');
+      }
+    } catch (err) {
+      console.error('Error loading users from API:', err);
+      setUsers([]);
+      setError('Error al conectar con el servidor');
+    } finally {
+      setLoading(false);
+      setIsLoaded(true);
     }
-  }, [users, isLoaded]);
+  };
 
-  // Sincronizar filteredUsers con users (para el primer render y cambios en users)
+  // Sincronizar filteredUsers con users
   useEffect(() => {
     setFilteredUsers(users);
   }, [users]);
@@ -175,10 +75,9 @@ const Users = () => {
     );
   }, [searchTerm, users]);
 
-  // Filtrar admin para la tabla y paginador
-  const usersWithoutAdmin = filteredUsers.filter(u => !u.isAdmin);
-  const totalPages = Math.ceil(usersWithoutAdmin.length / USERS_PER_PAGE);
-  const paginatedUsers = usersWithoutAdmin.slice(
+  // Paginación
+  const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * USERS_PER_PAGE,
     currentPage * USERS_PER_PAGE
   );
@@ -189,35 +88,79 @@ const Users = () => {
   }, [searchTerm, users]);
 
   // Acciones CRUD
-  const handleCreateUser = (newUser) => {
-    setUsers(prev => {
-      const updated = [...prev, newUser];
-      toast.success('Usuario creado correctamente', { position: 'top-right' });
-      return updated;
+  const handleCreateUser = async (newUser) => {
+    try {
+      const response = await usersService.create(newUser);
+      if (response.success) {
+        toast.success('Usuario creado exitosamente', { position: 'top-right' });
+        await loadUsers(); // Recargar lista
+        setShowCreateModal(false);
+      } else {
+        throw new Error(response.message || 'Error al crear el usuario');
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error(error.message || 'Error al crear el usuario', { position: 'top-right' });
+    }
+  };
+
+  const handleEditUser = async (updatedUser) => {
+    const result = await Swal.fire({
+      title: '¿Confirmar edición?',
+      text: `¿Estás seguro de que deseas editar al usuario "${updatedUser.nombre || updatedUser.name}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, editar',
+      cancelButtonText: 'Cancelar'
     });
-    setShowCreateModal(false);
+
+    if (result.isConfirmed) {
+      try {
+        const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
+        if (response.success) {
+          setShowEditModal(false);
+          setSelectedUser(null);
+          toast.success('Usuario actualizado exitosamente', { position: 'top-right' });
+          await loadUsers(); // Recargar lista
+        } else {
+          throw new Error(response.message || 'Error al actualizar el usuario');
+        }
+      } catch (error) {
+        console.error('Error updating user:', error);
+        toast.error(error.message || 'Error al actualizar el usuario', { position: 'top-right' });
+      }
+    }
   };
-  const handleEditUser = (updatedUser) => {
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    setShowEditModal(false);
-    toast.success('Usuario editado correctamente', { position: 'top-right' });
-  };
+
   const handleDeleteUser = async (userId) => {
-    const userToDelete = users.find(u => u.id === userId);
+    const userToDelete = users.find(u => (u.id_usuario || u.id) === userId);
     if (userToDelete) {
       const result = await Swal.fire({
-        title: `¿Estás seguro de que quieres eliminar al usuario "${userToDelete.nombre}"?`,
-        text: 'Esta acción no se puede deshacer.',
+        title: '¿Estás seguro?',
+        text: `¿Estás seguro de que deseas eliminar al usuario "${userToDelete.nombre || userToDelete.name}"? Esta acción no se puede deshacer.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar',
+        cancelButtonText: 'Cancelar'
       });
+
       if (result.isConfirmed) {
-        setUsers(prev => prev.filter(u => u.id !== userId));
-        toast.success('Usuario eliminado correctamente', { position: 'top-right' });
+        try {
+          const response = await usersService.delete(userId);
+          if (response.success) {
+            toast.success('Usuario eliminado exitosamente', { position: 'top-right' });
+            await loadUsers(); // Recargar lista
+          } else {
+            throw new Error(response.message || 'Error al eliminar el usuario');
+          }
+        } catch (error) {
+          console.error('Error deleting user:', error);
+          toast.error(error.message || 'Error al eliminar el usuario', { position: 'top-right' });
+        }
       }
     }
   };
@@ -250,34 +193,65 @@ const Users = () => {
     return () => setTitle('');
   }, [setTitle]);
 
+  if (loading && !isLoaded) {
+    return (
+      <div className="min-h-screen font-inter flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-text-main mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando usuarios...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen font-inter flex items-center justify-center">
+        <div className="text-center">
+          <i className="bi bi-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error al cargar usuarios</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={loadUsers}
+            className="bg-text-main hover:bg-primary-dark text-white px-4 py-2 rounded-lg"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-    <div className="p-6">
+          <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <Search searchTerm={searchTerm} handleSearch={e => handleSearch(e.target.value)} placeholder="Buscar usuario..." />
-        <button
+              <Search searchTerm={searchTerm} handleSearch={e => handleSearch(e.target.value)} placeholder="Buscar usuario..." />
+              <button
                 className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-          onClick={openCreateModal}
-        >
-          <i className="bi bi-plus-circle mr-2"></i>
-          Crear usuario
-        </button>
-      </div>
-      <UserTable
-        users={paginatedUsers}
-        onView={openDetailModal}
-        onEdit={openEditModal}
-        onDelete={handleDeleteUser}
-      />
-      {usersWithoutAdmin.length > USERS_PER_PAGE && (
-        <Paginator
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
+                onClick={openCreateModal}
+                disabled={loading}
+              >
+                <i className="bi bi-plus-circle mr-2"></i>
+                Crear usuario
+              </button>
+            </div>
+            <UserTable
+              users={paginatedUsers}
+              onView={openDetailModal}
+              onEdit={openEditModal}
+              onDelete={handleDeleteUser}
+              loading={loading}
+            />
+            {filteredUsers.length > USERS_PER_PAGE && (
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </div>
         </div>
       </div>
