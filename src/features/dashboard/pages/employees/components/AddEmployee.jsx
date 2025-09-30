@@ -71,7 +71,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     let error = '';
-
+  
     switch (name) {
       case 'nombre':
         const nombreErrors = validateEmployeeName(value);
@@ -85,10 +85,17 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
         const correoErrors = validateEmployeeEmail(value, employees);
         error = correoErrors.correo || '';
         break;
+      case 'telefono':
+        // Validar formato de teléfono
+        const telefonoRegex = /^\+?[0-9]{7,15}$/;
+        if (!telefonoRegex.test(value)) {
+          error = 'El teléfono debe tener entre 7 y 15 dígitos (puede incluir + al inicio)';
+        }
+        break;
       default:
         break;
     }
-
+  
     if (error) {
       setErrors(prev => ({ ...prev, [name]: error }));
     }

@@ -52,26 +52,42 @@ export const getEmployees = async () => {
 };
 
 // Crear nuevo empleado
+// Crear nuevo empleado
 export const createEmployee = async (employee) => {
+  // Asegurar formato de teléfono internacional
+  let telefono = employee.telefono ?? employee.phone ?? '';
+  
+  // Si el teléfono no empieza con +, agregarlo (asumiendo Colombia +57)
+  if (telefono && !telefono.startsWith('+')) {
+    telefono = `+57${telefono}`;
+  }
+
   const payload = {
     nombre: employee.nombre ?? employee.name,
     documento: employee.documento ?? employee.document,
     tipo_documento: employee.tipo_documento ?? employee.tipoDocumento ?? employee.documentType,
-    telefono: employee.telefono ?? employee.phone ?? '',
+    telefono: telefono,
     correo: employee.correo ?? employee.email,
     direccion: employee.direccion ?? employee.address ?? '',
     estado: employee.estado === 'Activo' ? 'Activo' : 'Inactivo',
   };
 
-  // Remover campos undefined
-  Object.keys(payload).forEach(key => {
-    if (payload[key] === undefined || payload[key] === null) {
-      delete payload[key];
-    }
-  });
+  // Validar campos requeridos
+  if (!payload.nombre || !payload.documento || !payload.tipo_documento || !payload.telefono || !payload.correo) {
+    console.error("[API] createEmployee - Missing required fields:", payload);
+    throw new Error("Faltan campos obligatorios");
+  }
+
+  // Validar formato de teléfono
+  const telefonoRegex = /^\+[0-9]{7,15}$/;
+  if (!telefonoRegex.test(payload.telefono)) {
+    console.error("[API] createEmployee - Invalid phone format:", payload.telefono);
+    throw new Error(`El teléfono debe tener formato internacional (+1234567890). Recibido: ${payload.telefono}`);
+  }
+
+  console.log("[API] POST Employee payload ->", payload);
 
   try {
-    console.log("[API] POST Employee payload ->", payload);
     const res = await axios.post(BASE, payload, {
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +97,6 @@ export const createEmployee = async (employee) => {
     console.log("[API] POST Employee response ->", res.status, res.data);
 
     const created = res.data;
-    // Normalizar respuesta
     return {
       id: created.id_usuario ?? created.id,
       nombre: created.nombre ?? payload.nombre,
@@ -95,7 +110,9 @@ export const createEmployee = async (employee) => {
       rol: "Empleado",
     };
   } catch (err) {
-    console.error("[API] createEmployee ERROR:", err.response?.status, err.response?.data || err.message);
+    console.error("[API] createEmployee ERROR:", err.response?.status);
+    console.error("[API] Error data:", err.response?.data);
+    console.error("[API] Error message:", err.message);
     throw err;
   }
 };
