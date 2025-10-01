@@ -147,16 +147,16 @@ const transformarCitaAVentaServicio = (cita) => {
     id: cita.id,
     clientName: cita.cliente?.nombre || cita.cliente_nombre || 'Cliente no especificado',
     status: cita.estado || 'En ejecucion',
-    date: formatearFecha(cita.fecha_cita || cita.fecha),
-    time: formatearHora(cita.hora_cita || cita.hora),
-    dineroProporcionado: cita.dinero_proporcionado || 0,
-    devolucion: Math.max(0, (cita.dinero_proporcionado || 0) - totalGeneral),
+    date: formatearFecha(cita.fecha_cita || cita.fecha || cita.fecha_servicio),
+    time: formatearHora(cita.hora_cita || cita.hora || cita.hora_entrada),
+    dineroProporcionado: cita.dinero_proporcionado || cita.valor_total || 0,
+    devolucion: Math.max(0, (cita.dinero_proporcionado || cita.valor_total || 0) - totalGeneral),
     servicios: (cita.servicios || []).map(servicio => ({
       id: servicio.id || servicio.servicio_id,
       name: servicio.nombre || servicio.servicio_nombre || 'Servicio',
       quantity: servicio.cantidad || 1,
-      price: servicio.precio || 0,
-      subtotal: (servicio.precio || 0) * (servicio.cantidad || 1),
+      price: servicio.precio || servicio.precio_unitario || 0,
+      subtotal: (servicio.precio || servicio.precio_unitario || 0) * (servicio.cantidad || 1),
       employee: {
         name: servicio.empleado?.nombre || servicio.empleado_nombre || 'Empleado no asignado'
       }
@@ -165,15 +165,15 @@ const transformarCitaAVentaServicio = (cita) => {
       id: producto.id || producto.producto_id,
       name: producto.nombre || producto.producto_nombre || 'Producto',
       quantity: producto.cantidad || 1,
-      price: producto.precio || 0,
-      subtotal: (producto.precio || 0) * (producto.cantidad || 1)
+      price: producto.precio || producto.precio_unitario || 0,
+      subtotal: (producto.precio || producto.precio_unitario || 0) * (producto.cantidad || 1)
     })),
     totalServices,
     totalProducts,
     totalGeneral,
     // Información adicional de la cita
     citaId: cita.id,
-    observaciones: cita.observaciones || '',
+    observaciones: cita.observaciones || cita.motivo || '',
     fechaCreacion: cita.fecha_creacion || cita.created_at
   };
 };
