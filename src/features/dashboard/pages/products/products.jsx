@@ -85,12 +85,15 @@ const ProductsPage = () => {
     await loadProducts(newParams);
   };
 
-  // Función para crear producto
+  // En products.jsx, reemplaza las funciones createProduct, updateProduct (líneas 83-129)
+
+  // Función para crear producto - CORREGIDA
   const createProduct = async (productData) => {
     setLoading(true);
     setError(null);
 
     try {
+      console.log('ProductsPage: Creating product with data:', productData);
       const response = await productsService.create(productData);
 
       if (response.success) {
@@ -101,20 +104,35 @@ const ProductsPage = () => {
         throw new Error(response.message || 'Error al crear producto');
       }
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      // Manejar errores de validación del backend
+      const errorMessage = err.response?.data?.message || err.message;
+      const validationErrors = err.response?.data?.errors;
+
+      if (validationErrors && Array.isArray(validationErrors)) {
+        // Mostrar cada error de validación
+        validationErrors.forEach(error => {
+          toast.error(error.message || error);
+        });
+      } else {
+        toast.error(errorMessage);
+      }
+
+      setError(errorMessage);
+      console.error('Error creating product:', err);
+      console.error('Validation errors:', validationErrors);
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para actualizar producto
+  // Función para actualizar producto - CORREGIDA
   const updateProduct = async (id, productData) => {
     setLoading(true);
     setError(null);
 
     try {
+      console.log('ProductsPage: Updating product', id, 'with data:', productData);
       const response = await productsService.update(id, productData);
 
       if (response.success) {
@@ -125,8 +143,22 @@ const ProductsPage = () => {
         throw new Error(response.message || 'Error al actualizar producto');
       }
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      // Manejar errores de validación del backend
+      const errorMessage = err.response?.data?.message || err.message;
+      const validationErrors = err.response?.data?.errors;
+
+      if (validationErrors && Array.isArray(validationErrors)) {
+        // Mostrar cada error de validación
+        validationErrors.forEach(error => {
+          toast.error(error.message || error);
+        });
+      } else {
+        toast.error(errorMessage);
+      }
+
+      setError(errorMessage);
+      console.error('Error updating product:', err);
+      console.error('Validation errors:', validationErrors);
       throw err;
     } finally {
       setLoading(false);

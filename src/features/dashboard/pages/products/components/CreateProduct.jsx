@@ -9,7 +9,6 @@ import {
 import categoriesService from '../../CatProducts/API/categoriesService';
 import characteristicsService from '../API/characteristicsService';
 
-
 const MAX_IMAGES = 3;
 
 const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
@@ -71,7 +70,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     loadCharacteristics();
   }, []);
 
-  // Determinar si el modal debe estar abierto
   const modalOpen = externalOpen !== undefined ? externalOpen : open;
 
   const handleOpen = () => setOpen(true);
@@ -83,6 +81,8 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       precio: "",
       cantidad: "",
       categoryId: "",
+      costo: "",
+      iva: "",
       fotos: [],
     });
     setPreviews([]);
@@ -94,14 +94,21 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Validaciones específicas para campos numéricos
     if (name === "cantidad" && value && !isValidNumber(value)) {
       setError("Solo se permiten números enteros positivos en cantidad.");
       return;
     }
-    if (name === "precio" && value && !isValidDecimal(value)) {
-      setError("Solo se permiten números decimales positivos en precio.");
+    if ((name === "precio" || name === "costo") && value && !isValidDecimal(value)) {
+      setError("Solo se permiten números decimales positivos.");
       return;
     }
+    if (name === "iva" && value && !isValidDecimal(value)) {
+      setError("Solo se permiten números decimales positivos para el IVA.");
+      return;
+    }
+
     setError("");
     setFormData((prev) => ({
       ...prev,
@@ -114,10 +121,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     if (files.length > 0) {
       const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
       const newPreviews = newImages.map(file => URL.createObjectURL(file));
-      
-      setFormData((prev) => ({ 
-        ...prev, 
-        fotos: [...prev.fotos, ...newImages] 
+
+      setFormData((prev) => ({
+        ...prev,
+        fotos: [...prev.fotos, ...newImages]
       }));
       setPreviews((prev) => [...prev, ...newPreviews]);
     }
@@ -133,10 +140,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     if (files.length > 0) {
       const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
       const newPreviews = newImages.map(file => URL.createObjectURL(file));
-      
-      setFormData((prev) => ({ 
-        ...prev, 
-        fotos: [...prev.fotos, ...newImages] 
+
+      setFormData((prev) => ({
+        ...prev,
+        fotos: [...prev.fotos, ...newImages]
       }));
       setPreviews((prev) => [...prev, ...newPreviews]);
     }
@@ -149,7 +156,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     }));
     setPreviews((prev) => {
       const newPreviews = prev.filter((_, i) => i !== index);
-      // Liberar memoria de la URL del objeto
       URL.revokeObjectURL(prev[index]);
       return newPreviews;
     });
@@ -172,64 +178,76 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
 
-
-
   const handleSubmit = (e) => {
     e.preventDefault();
     let errors = {};
+
+    // Validaciones obligatorias
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
     if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
-
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
+
     if (isDuplicateProductName(formData.nombre, products)) {
       setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
+
     setFieldErrors({});
-    if (
-      formData.nombre.trim() &&
-      formData.categoryId &&
-      formData.precio
-    ) {
-      // Procesar las fotos
-      const fotosUrls = formData.fotos.map(foto => {
-        if (foto instanceof File) {
-          return URL.createObjectURL(foto);
-        }
-        return foto;
+
+    // Procesar las fotos - solo enviar la primera como string
+    let fotoUrl = '';
+    if (formData.fotos.length > 0) {
+      const firstPhoto = formData.fotos[0];
+      if (!(firstPhoto instanceof File)) {
+        fotoUrl = firstPhoto;
+      }
+    }
+
+    // Construir objeto con la estructura correcta para el backend
+    const newProduct = {
+      nombre: formData.nombre.trim(),
+      descripcion: formData.descripcion.trim() || null,
+      id_categoria_producto: parseInt(formData.categoryId),
+      precio_venta: parseFloat(formData.precio),
+      stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
+    };
+
+    // Solo enviar url_foto si es una URL válida (no blob)
+    if (fotoUrl) {
+      newProduct.url_foto = fotoUrl;
+    }
+
+    // CORRECCIÓN: Mapear especificaciones a características
+    // Solo enviar nombre y valor (el backend creará/encontrará las características)
+    const caracteristicasValidas = especificaciones
+      .filter(e => {
+        const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+        return nombre && nombre.trim() !== '' && e.valor && e.valor.trim() !== '';
+      })
+      .map(e => {
+        const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+        return {
+          nombre: nombre.trim(),
+          valor: e.valor.trim()
+        };
       });
 
-      const newProduct = {
-        nombre: formData.nombre,
-        descripcion: formData.descripcion,
-        categoryId: formData.categoryId,
-        precio: parseFloat(formData.precio),
-        cantidad: formData.cantidad ? parseInt(formData.cantidad) : 0,
-        stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
-        costo: 0,
-        iva: 0,
-        imagen: fotosUrls.length > 0 && !fotosUrls[0].startsWith('blob:') ? fotosUrls[0] : '',
-        caracteristicas: especificaciones
-          .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
-          .map(e => {
-            const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
-            // Find the characteristic ID if it exists, otherwise it will be created by the backend
-            const characteristic = characteristics.find(c => c.nombre === nombre);
-            return {
-              id_caracteristica: characteristic ? characteristic.id_caracteristica : undefined,
-              nombre: nombre,
-              valor: e.valor
-            };
-          })
-      };
-      if (onCreate) onCreate(newProduct);
-      handleClose();
+    if (caracteristicasValidas.length > 0) {
+      newProduct.caracteristicas = caracteristicasValidas;
     }
+
+    console.log('CreateProduct: Sending product data:', newProduct);
+    console.log('CreateProduct: Características a enviar:', newProduct.caracteristicas);
+
+    if (onCreate) {
+      onCreate(newProduct);
+    }
+    handleClose();
   };
 
   const handleBlurNombre = (e) => {
@@ -250,7 +268,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
 
   return (
     <>
-      {/* Solo mostrar el botón si no se controla externamente */}
       {externalOpen === undefined && (
         <button
           className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
@@ -276,23 +293,22 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                 ×
               </button>
             </div>
+
             {/* Contenido con scroll */}
             <div className="overflow-y-auto p-8 flex-1">
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Fotos del producto */}
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
                     Fotos del Producto <span className="text-gray-500 text-xs">(Máximo {MAX_IMAGES})</span>
                   </label>
                   <div className="space-y-3">
-                    {/* Área de carga de imágenes */}
                     {formData.fotos.length < MAX_IMAGES && (
                       <div
                         className="relative w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
-                        onClick={() =>
-                          document.getElementById("file-input").click()
-                        }
+                        onClick={() => document.getElementById("file-input").click()}
                       >
                         <div className="text-center">
                           <i className="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
@@ -305,8 +321,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                         </div>
                       </div>
                     )}
-                    
-                    {/* Input de archivo */}
+
                     <input
                       id="file-input"
                       type="file"
@@ -316,7 +331,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                       className="hidden"
                     />
 
-                    {/* Vista previa de imágenes */}
                     {previews.length > 0 && (
                       <div className="grid grid-cols-3 gap-2">
                         {previews.map((preview, index) => (
@@ -339,155 +353,176 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                     )}
                   </div>
                 </div>
+
+                {/* Campos del formulario en grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Nombre */}
                   <div>
                     <label className="block text-xs font-medium text-text-main mb-1">
                       Nombre <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="nombre"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                    value={formData.nombre}
-                    onChange={handleChange}
-                      onBlur={handleBlurNombre}
-                    required
-                  />
-                  {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                      Categoría <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="categoryId"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                      value={formData.categoryId}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Seleccionar categoría</option>
-                    {categories.filter(c => c.estado === 'activo').map((cat) => (
-                      <option key={cat.id_categoria_producto} value={cat.id_categoria_producto}>
-                        {cat.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                      Precio <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="precio"
-                    value={formatNumber(formData.precio)}
-                    onChange={e => handleChange({ target: { name: 'precio', value: cleanNumber(e.target.value) } })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400  text-text-main text-sm"
-                    required
-                      onKeyDown={isNumberInputValid}
-                  />
-                  {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    Cantidad en Stock</label>
-                  <input
-                    type="text"
-                    name="cantidad"
-                    value={formatNumber(formData.cantidad)}
-                    onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Descripción</label>
-                <textarea
-                  name="descripcion"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                  value={formData.descripcion}
-                  onChange={handleChange}
-                  rows={3}
-                />
-              </div>
-
-              {/* Especificaciones Técnicas */}
-              <div className="bg-gray-50 rounded-lg p-4 border mb-4">
-                <div className="font-semibold text-text-main mb-2">Especificaciones Técnicas</div>
-                <hr className="mb-4" />
-                {especificaciones.map((esp, idx) => (
-                  <div key={idx} className="flex flex-wrap gap-2 items-center mb-2">
-                    <select
-                      className="px-2 py-1 border rounded text-sm min-w-[140px] max-w-[180px]"
-                      value={esp.concepto}
-                      onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
-                    >
-                      <option value="">Seleccione concepto</option>
-                      {characteristics.map(char => (
-                        <option key={char.id_caracteristica} value={char.nombre}>
-                          {char.nombre}
-                        </option>
-                      ))}
-                      <option value="otro">Otro…</option>
-                    </select>
-                    {esp.concepto === "otro" && (
-                      <input
-                        type="text"
-                        className="flex-1 min-w-[120px] max-w-[180px] px-2 py-1 border rounded text-sm"
-                        placeholder="Nuevo concepto"
-                        value={esp.otroConcepto}
-                        onChange={e => handleChangeEspecificacion(idx, "otroConcepto", e.target.value)}
-                      />
-                    )}
+                    </label>
                     <input
                       type="text"
-                      className="flex-1 min-w-[120px] max-w-[220px] px-2 py-1 border rounded text-sm"
-                      placeholder="Valor"
-                      value={esp.valor}
-                      onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}
+                      name="nombre"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                      value={formData.nombre}
+                      onChange={handleChange}
+                      onBlur={handleBlurNombre}
+                      required
                     />
-                    <button
-                      type="button"
-                      className="text-gray-400 hover:text-red-500"
-                      onClick={() => handleRemoveEspecificacion(idx)}
-                    >
-                      <i className="bi bi-trash"></i>
-                    </button>
+                    {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
                   </div>
-                ))}
-                <button
-                  type="button"
-                  className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2"
-                  onClick={handleAddEspecificacion}
-                >
-                  <i className="bi bi-plus"></i> Agregar especificación
-                </button>
-              </div>
 
-              <div className="flex justify-end gap-2 mt-6">
-                <button
-                  type="button"
+                  {/* Categoría */}
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Categoría <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="categoryId"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                      value={formData.categoryId}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">Seleccionar categoría</option>
+                      {categories.filter(c => c.estado === 'activo').map((cat) => (
+                        <option key={cat.id_categoria_producto} value={cat.id_categoria_producto}>
+                          {cat.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
+                  </div>
+
+                  {/* Precio */}
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Precio <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="precio"
+                      value={formatNumber(formData.precio)}
+                      onChange={e => handleChange({ target: { name: 'precio', value: cleanNumber(e.target.value) } })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                      required
+                      onKeyDown={isNumberInputValid}
+                    />
+                    {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
+                  </div>
+
+                  {/* Cantidad en Stock */}
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">
+                      Cantidad en Stock
+                    </label>
+                    <input
+                      type="text"
+                      name="cantidad"
+                      value={formatNumber(formData.cantidad)}
+                      onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Descripción */}
+                <div>
+                  <label className="block text-xs font-medium text-text-main mb-1">
+                    Descripción
+                  </label>
+                  <textarea
+                    name="descripcion"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                    value={formData.descripcion}
+                    onChange={handleChange}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Especificaciones Técnicas */}
+                <div className="bg-gray-50 rounded-lg p-4 border mb-4">
+                  <div className="font-semibold text-text-main mb-2">Especificaciones Técnicas</div>
+                  <hr className="mb-4" />
+                  {especificaciones.map((esp, idx) => (
+                    <div key={idx} className="flex flex-wrap gap-2 items-center mb-2">
+                      <select
+                        className="px-2 py-1 border rounded text-sm min-w-[140px] max-w-[180px]"
+                        value={esp.concepto}
+                        onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
+                      >
+                        <option value="">Seleccione concepto</option>
+                        {characteristics.map(char => (
+                          <option key={char.id_caracteristica} value={char.nombre}>
+                            {char.nombre}
+                          </option>
+                        ))}
+                        <option value="otro">Otro…</option>
+                      </select>
+                      {esp.concepto === "otro" && (
+                        <input
+                          type="text"
+                          className="flex-1 min-w-[120px] max-w-[180px] px-2 py-1 border rounded text-sm"
+                          placeholder="Nuevo concepto"
+                          value={esp.otroConcepto}
+                          onChange={e => handleChangeEspecificacion(idx, "otroConcepto", e.target.value)}
+                        />
+                      )}
+                      <input
+                        type="text"
+                        className="flex-1 min-w-[120px] max-w-[220px] px-2 py-1 border rounded text-sm"
+                        placeholder="Valor"
+                        value={esp.valor}
+                        onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-red-500"
+                        onClick={() => handleRemoveEspecificacion(idx)}
+                      >
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2"
+                    onClick={handleAddEspecificacion}
+                  >
+                    <i className="bi bi-plus"></i> Agregar especificación
+                  </button>
+                </div>
+
+                {/* Mensaje de error general */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-xs text-red-600">{error}</p>
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    type="button"
                     className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
-                  onClick={handleClose}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
+                    onClick={handleClose}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
                     className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
-                >
-                  Guardar
-                </button>
-              </div>
+                  >
+                    Guardar
+                  </button>
+                </div>
               </form>
             </div>
           </div>
         </div>
       )}
-      {error && <div className="text-red-500 text-xs mb-2">{error}</div>}
     </>
   );
 };

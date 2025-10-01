@@ -1,0 +1,1 @@
+un aplicación web movil para una tienda que tiene como objetivo la venta productos y servicios. los roductos son extensiones de cabello natural y productos para el cabello. los servicios son peluqueria, trenzado, etc.
