@@ -103,9 +103,11 @@ class DataMapper {
 
   // Mapear datos del frontend al formato del backend para crear/actualizar
   static mapRoleToBackend(roleData) {
+    const descripcion = (roleData.description || roleData.descripcion || '').trim();
+    
     return {
       nombre: (roleData.name || roleData.nombre || '').trim(),
-      descripcion: (roleData.description || roleData.descripcion || '').trim(),
+      descripcion: descripcion || null, // Enviar null si está vacía para que sea opcional
       estado: roleData.estado === 'Activo' ? true : false,
       permisos_privilegios: this.convertPrivilegesToBackendFormat(roleData.privileges || {})
     };
