@@ -4,11 +4,8 @@ import './shared/styles/input.css';
 import './shared/styles/output.css'
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import App from './App.jsx'
-import { SuppliersProvider } from './features/dashboard/pages/suppliers/hooks/useSuppliers';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <SuppliersProvider>
       <App />
-    </SuppliersProvider>
   </StrictMode>,
 )

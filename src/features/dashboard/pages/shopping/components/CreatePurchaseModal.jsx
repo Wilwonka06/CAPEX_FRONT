@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import productsService from "../../products/API/productsService";
 import suppliersService from "../../suppliers/API/suppliersService";
-import CreateSupplier from '../../suppliers/components/CreateSupplier';
-import CreateProduct from '../../products/components/CreateProduct';
-import QuickCreateSupplierModal from './QuickCreateSupplierModal';
-import QuickCreateProductModal from './QuickCreateProductModal';
+import CreateSupplier from "../../suppliers/components/CreateSupplier";
+import CreateProduct from "../../products/components/CreateProduct";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [productsList, setProductsList] = useState([]);
@@ -14,17 +12,17 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   // Estado para proveedores
   const [suppliersList, setSuppliersList] = useState([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
-  
+
   // Estado del formulario principal
   const [proveedorId, setProveedorId] = useState("");
   const [nit, setNit] = useState("");
-  const [ivaGeneral, setIvaGeneral] = useState(0.19); // IVA general por defecto (19%)
+  const [ivaGeneral, setIvaGeneral] = useState(0.19);
   const [fechaCompra, setFechaCompra] = useState(
     new Date().toISOString().slice(0, 10)
-  ); // Fecha de compra seleccionable
-  const [fechaRegistro] = useState(new Date().toISOString().slice(0, 10)); // Fecha de registro fija (actual)
+  );
+  const [fechaRegistro] = useState(new Date().toISOString().slice(0, 10));
 
-  // Estado para agregar productos a la lista
+  // Estado para agregar productos
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [costo, setCosto] = useState("");
@@ -44,7 +42,6 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   // Estado para modales de creación rápida
   const [openSupplierModal, setOpenSupplierModal] = useState(false);
   const [openProductModal, setOpenProductModal] = useState(false);
-  // Estado local para listas actualizadas
   const [localSuppliers, setLocalSuppliers] = useState([]);
   const [localProducts, setLocalProducts] = useState([]);
 
@@ -53,12 +50,24 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     const loadSuppliers = async () => {
       try {
         setLoadingSuppliers(true);
-        const response = await suppliersService.getActive();
+        // Intentar primero con getActive, si falla usar getAll
+        let response;
+        try {
+          response = await suppliersService.getActive();
+        } catch (error) {
+          console.log("getActive no disponible, usando getAll");
+          response = await suppliersService.getAll({ limit: 100 });
+        }
+        
         if (response.success) {
-          setSuppliersList(response.data || []);
+          const activeSuppliers = Array.isArray(response.data) 
+            ? response.data.filter(s => s.estado === 'Activo' || s.isActive) 
+            : [];
+          setSuppliersList(activeSuppliers);
         }
       } catch (error) {
-        console.error('Error loading suppliers:', error);
+        console.error("Error loading suppliers:", error);
+        setSuppliersList([]);
       } finally {
         setLoadingSuppliers(false);
       }
@@ -72,46 +81,55 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
           setProductsList(response.data || []);
         }
       } catch (error) {
-        console.error('Error loading products:', error);
+        console.error("Error loading products:", error);
       } finally {
         setLoadingProducts(false);
       }
     };
 
-    loadSuppliers();
-    loadProducts();
-  }, []);
+    if (isOpen) {
+      loadSuppliers();
+      loadProducts();
+    }
+  }, [isOpen]);
 
   // Unificar listas para selects
   const suppliersSelect = localSuppliers.length > 0 ? localSuppliers : suppliersList;
   const productsSelect = localProducts.length > 0 ? localProducts : productsList;
 
-  // Efecto para actualizar el NIT cuando cambia el proveedor
+  // Actualizar NIT cuando cambia el proveedor
   useEffect(() => {
-    const proveedor = suppliersList.find((s) => s.id === Number(proveedorId));
+    const proveedor = suppliersSelect.find((s) => s.id === Number(proveedorId));
     setNit(proveedor ? proveedor.nit : "");
-  }, [proveedorId, suppliersList]);
+  }, [proveedorId, suppliersSelect]);
 
-  // Efecto para cargar datos del producto cuando se selecciona
+  // Cargar datos del producto cuando se selecciona
   useEffect(() => {
-    const producto = productsList.find(p => p.id === Number(productoSeleccionado));
+    const producto = productsSelect.find((p) => p.id === Number(productoSeleccionado));
     if (producto) {
-      setCosto(producto.precio?.toString() || "");
-      setPrecioVenta(producto.precio?.toString() || "");
+      setCosto(producto.precio?.toString() || producto.costo?.toString() || "");
+      setPrecioVenta(producto.precioVenta?.toString() || producto.precio_venta?.toString() || "");
     } else {
       setCosto("");
       setPrecioVenta("");
     }
-  }, [productoSeleccionado, productsList]);
+  }, [productoSeleccionado, productsSelect]);
 
-  // Efecto para recalcular totales cuando cambia la lista de items o el IVA general
+  // Recalcular totales cuando cambia la lista de items o el IVA
   useEffect(() => {
+    if (itemsCompra.length === 0) {
+      setSubtotal(0);
+      setTotalIva(0);
+      setTotal(0);
+      return;
+    }
+
     const newSubtotal = itemsCompra.reduce(
-      (acc, item) => acc + item.costo * item.cantidad,
+      (acc, item) => acc + (parseFloat(item.costo) || 0) * (parseInt(item.cantidad) || 0),
       0
     );
     const newTotalIva = itemsCompra.reduce(
-      (acc, item) => acc + item.costo * item.cantidad * ivaGeneral,
+      (acc, item) => acc + (parseFloat(item.costo) || 0) * (parseInt(item.cantidad) || 0) * ivaGeneral,
       0
     );
     setSubtotal(newSubtotal);
@@ -119,13 +137,15 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     setTotal(newSubtotal + newTotalIva);
   }, [itemsCompra, ivaGeneral]);
 
-  // Efecto para actualizar IVA de todos los items cuando cambia el IVA general
+  // Actualizar IVA de todos los items cuando cambia el IVA general
   useEffect(() => {
     if (itemsCompra.length > 0) {
       setItemsCompra((prev) =>
         prev.map((item) => {
-          const montoIva = item.costo * item.cantidad * ivaGeneral;
-          const precioConIva = (item.costo * (1 + ivaGeneral)).toFixed(2);
+          const costoNum = parseFloat(item.costo) || 0;
+          const cantidadNum = parseInt(item.cantidad) || 0;
+          const montoIva = costoNum * cantidadNum * ivaGeneral;
+          const precioConIva = (costoNum * (1 + ivaGeneral)).toFixed(2);
           return {
             ...item,
             iva: ivaGeneral,
@@ -138,15 +158,34 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   }, [ivaGeneral]);
 
   const formatNumber = (num) => {
-    if (num === '' || num === undefined || num === null) return '';
-    const parts = num.toString().split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
+    if (num === "" || num === undefined || num === null) return "";
+    const parts = num.toString().split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
   };
-  const cleanNumber = (str) => str.replace(/,/g, '');
+
+  const cleanNumber = (str) => {
+    if (!str) return "";
+    return str.toString().replace(/[^0-9.]/g, "");
+  };
+
+  const handleNumberInput = (e, setter) => {
+    const value = e.target.value;
+    // Solo permitir números y un punto decimal
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setter(value);
+    }
+  };
 
   const handleAddProduct = () => {
     let nuevosErrores = {};
+
+    // Validar proveedor primero
+    if (!proveedorId) {
+      alert("Debe seleccionar un proveedor antes de agregar productos.");
+      return;
+    }
+
     if (!productoSeleccionado) {
       nuevosErrores.producto = "Seleccione un producto.";
     }
@@ -159,29 +198,37 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     if (precioVenta === "" || Number(precioVenta) < 0) {
       nuevosErrores.precioVenta = "El precio de venta no puede ser negativo.";
     }
+
     if (Object.keys(nuevosErrores).length > 0) {
       setErrores(nuevosErrores);
       return;
     }
+
     setErrores({});
-    const producto = productsList.find(p => p.id === Number(productoSeleccionado));
-    if (!producto || Number(cantidad) <= 0 || Number(costo) <= 0) {
-      alert("Por favor, complete todos los campos para agregar el producto.");
+
+    const producto = productsSelect.find((p) => p.id === Number(productoSeleccionado));
+    if (!producto) {
+      alert("Producto no encontrado.");
       return;
     }
-    const montoIva = Number(costo) * Number(cantidad) * ivaGeneral;
-    const precioConIva = (Number(costo) * (1 + ivaGeneral)).toFixed(2);
+
+    const costoNum = parseFloat(costo);
+    const cantidadNum = parseInt(cantidad);
+    const montoIva = costoNum * cantidadNum * ivaGeneral;
+    const precioConIva = (costoNum * (1 + ivaGeneral)).toFixed(2);
+
     const newItem = {
       ...producto,
-      codigo: `P${producto.id.toString().padStart(3, '0')}`,
-      cantidad: Number(cantidad),
-      costo: Number(costo),
-      precioVenta: Number(precioVenta),
+      codigo: `P${producto.id.toString().padStart(3, "0")}`,
+      cantidad: cantidadNum,
+      costo: costoNum,
+      precioVenta: parseFloat(precioVenta) || costoNum,
       iva: ivaGeneral,
       montoIva: montoIva,
-      precioConIva: parseFloat(precioConIva)
+      precioConIva: parseFloat(precioConIva),
     };
-    setItemsCompra(prev => [...prev, newItem]);
+
+    setItemsCompra((prev) => [...prev, newItem]);
     setProductoSeleccionado("");
     setCantidad("");
     setCosto("");
@@ -189,14 +236,16 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   };
 
   const handleUpdateCantidad = (index, nuevaCantidad) => {
+    const cantidadNum = parseInt(nuevaCantidad) || 0;
     setItemsCompra((prev) =>
       prev.map((item, i) => {
         if (i === index) {
-          const montoIva = item.costo * nuevaCantidad * ivaGeneral;
-          const precioConIva = (item.costo * (1 + ivaGeneral)).toFixed(2);
+          const costoNum = parseFloat(item.costo) || 0;
+          const montoIva = costoNum * cantidadNum * ivaGeneral;
+          const precioConIva = (costoNum * (1 + ivaGeneral)).toFixed(2);
           return {
             ...item,
-            cantidad: nuevaCantidad,
+            cantidad: cantidadNum,
             montoIva,
             iva: ivaGeneral,
             precioConIva: parseFloat(precioConIva),
@@ -213,35 +262,37 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!proveedorId || itemsCompra.length === 0) {
-      alert("Debe seleccionar un proveedor y agregar al menos un producto.");
+    
+    if (!proveedorId) {
+      alert("Debe seleccionar un proveedor.");
+      return;
+    }
+    
+    if (itemsCompra.length === 0) {
+      alert("Debe agregar al menos un producto.");
       return;
     }
 
     try {
-      // Preparar datos para la API
       const purchaseData = {
         supplierId: Number(proveedorId),
         fechaCompra: fechaCompra,
-        numeroFactura: '', // Opcional
-        detalles: itemsCompra.map(item => ({
+        detalles: itemsCompra.map((item) => ({
           productId: item.id,
           cantidad: item.cantidad,
           precioUnitario: item.costo,
-          descuento: 0, // Opcional
         })),
-        observaciones: '', // Opcional
       };
 
-      // El onCreate ahora debería llamar al servicio API
-      if (onCreate) {
-        await onCreate(purchaseData);
-      }
+      await onCreate(purchaseData);
 
-      onClose();
+      // Limpiar formulario
+      setProveedorId("");
+      setItemsCompra([]);
+      setFechaCompra(new Date().toISOString().slice(0, 10));
     } catch (error) {
-      console.error('Error creating purchase:', error);
-      alert('Error al crear la compra. Intente nuevamente.');
+      console.error("Error creating purchase:", error);
+      alert(error.response?.data?.message || "Error al crear la compra");
     }
   };
 
@@ -250,8 +301,8 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       <CreateSupplier
         isOpen={true}
         onClose={() => setOpenSupplierModal(false)}
-        onCreate={nuevoProveedor => {
-          setLocalSuppliers(prev => [nuevoProveedor, ...suppliersSelect]);
+        onCreate={(nuevoProveedor) => {
+          setLocalSuppliers((prev) => [nuevoProveedor, ...suppliersSelect]);
           setProveedorId(nuevoProveedor.id);
           setOpenSupplierModal(false);
         }}
@@ -259,13 +310,14 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       />
     );
   }
+
   if (openProductModal) {
     return (
       <CreateProduct
         isOpen={true}
         onClose={() => setOpenProductModal(false)}
-        onCreate={nuevoProducto => {
-          setLocalProducts(prev => [nuevoProducto, ...productsSelect]);
+        onCreate={(nuevoProducto) => {
+          setLocalProducts((prev) => [nuevoProducto, ...productsSelect]);
           setProductoSeleccionado(nuevoProducto.id);
           setOpenProductModal(false);
         }}
@@ -295,10 +347,9 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
         {/* Contenido con scroll */}
         <div className="overflow-y-auto p-8 flex-1 space-y-8">
           <form id="purchase-form" onSubmit={handleSubmit} className="space-y-8">
-            {/* Sección de Fechas*/}
+            {/* Sección de Fechas */}
             <div className="p-4 border rounded-lg bg-gray-50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
                     Fecha de Compra <span className="text-red-500">*</span>
@@ -325,7 +376,8 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                 </div>
               </div>
             </div>
-            {/* Sección de Proveedor, Fechas e IVA */}
+
+            {/* Sección de Proveedor e IVA */}
             <div className="p-6 border rounded-lg bg-gray-50 mb-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
@@ -338,9 +390,12 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       value={proveedorId}
                       onChange={(e) => setProveedorId(e.target.value)}
                       required
+                      disabled={loadingSuppliers}
                     >
-                      <option value="">Seleccione proveedor</option>
-                      {suppliersSelect.filter(s => s.isActive).map((s) => (
+                      <option value="">
+                        {loadingSuppliers ? "Cargando..." : "Seleccione proveedor"}
+                      </option>
+                      {suppliersSelect.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.nombre}
                         </option>
@@ -350,12 +405,17 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       type="button"
                       className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center"
                       title="Registrar proveedor"
-                      style={{ border: 'none', background: 'none' }}
+                      style={{ border: "none", background: "none" }}
                       onClick={() => setOpenSupplierModal(true)}
                     >
                       <i className="bi bi-plus-circle"></i>
                     </button>
                   </div>
+                  {suppliersSelect.length === 0 && !loadingSuppliers && (
+                    <span className="text-xs text-red-500">
+                      No hay proveedores activos disponibles
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -373,13 +433,10 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     IVA General (%)
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
                     className="w-full px-3 py-2 border rounded-md text-sm"
                     value={ivaGeneral * 100}
-                    onChange={(e) =>
-                      setIvaGeneral(parseFloat(e.target.value) / 100)
-                    }
+                    onChange={(e) => handleNumberInput(e, (val) => setIvaGeneral(parseFloat(val) / 100 || 0))}
                   />
                 </div>
               </div>
@@ -387,13 +444,24 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
             {/* Sección para agregar productos */}
             <div className="p-6 border rounded-lg mb-6 space-y-4">
-              <h3 className="text-md font-semibold text-text-main mb-4">Agregar Productos a la Compra</h3>
+              <h3 className="text-md font-semibold text-text-main mb-4">
+                Agregar Productos a la Compra
+              </h3>
+              {!proveedorId && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-yellow-800">
+                    <i className="bi bi-exclamation-triangle mr-2"></i>
+                    Debe seleccionar un proveedor antes de agregar productos
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
                 <div className="flex items-center gap-2 md:col-span-2">
                   <select
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                     value={productoSeleccionado}
                     onChange={(e) => setProductoSeleccionado(e.target.value)}
+                    disabled={!proveedorId}
                   >
                     <option value="">Seleccionar producto</option>
                     {productsSelect.map((p) => (
@@ -404,10 +472,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   </select>
                   <button
                     type="button"
-                    className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center"
+                    className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Registrar producto"
-                    style={{ border: 'none', background: 'none' }}
+                    style={{ border: "none", background: "none" }}
                     onClick={() => setOpenProductModal(true)}
+                    disabled={!proveedorId}
                   >
                     <i className="bi bi-plus-circle"></i>
                   </button>
@@ -418,12 +487,15 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   </label>
                   <input
                     type="text"
-                    name="cantidad"
-                    value={formatNumber(cantidad)}
-                    onChange={e => setCantidad(cleanNumber(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    value={cantidad}
+                    onChange={(e) => handleNumberInput(e, setCantidad)}
+                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100"
+                    disabled={!proveedorId}
+                    placeholder="0"
                   />
-                  {errores.cantidad && <span className="text-xs text-red-500">{errores.cantidad}</span>}
+                  {errores.cantidad && (
+                    <span className="text-xs text-red-500">{errores.cantidad}</span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -431,12 +503,15 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   </label>
                   <input
                     type="text"
-                    name="costo"
-                    value={formatNumber(costo)}
-                    onChange={e => setCosto(cleanNumber(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    value={costo}
+                    onChange={(e) => handleNumberInput(e, setCosto)}
+                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100"
+                    disabled={!proveedorId}
+                    placeholder="0.00"
                   />
-                  {errores.costo && <span className="text-xs text-red-500">{errores.costo}</span>}
+                  {errores.costo && (
+                    <span className="text-xs text-red-500">{errores.costo}</span>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
@@ -444,19 +519,23 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   </label>
                   <input
                     type="text"
-                    name="precioVenta"
-                    value={formatNumber(precioVenta)}
-                    onChange={e => setPrecioVenta(cleanNumber(e.target.value))}
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    value={precioVenta}
+                    onChange={(e) => handleNumberInput(e, setPrecioVenta)}
+                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100"
+                    disabled={!proveedorId}
+                    placeholder="0.00"
                   />
-                  {errores.precioVenta && <span className="text-xs text-red-500">{errores.precioVenta}</span>}
+                  {errores.precioVenta && (
+                    <span className="text-xs text-red-500">{errores.precioVenta}</span>
+                  )}
                 </div>
               </div>
               <div className="text-right mt-6">
                 <button
                   type="button"
-                  className="bg-text-main text-white text-sm px-4 py-2 rounded-md hover:bg-primary-dark"
+                  className="bg-text-main text-white text-sm px-4 py-2 rounded-md hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
                   onClick={handleAddProduct}
+                  disabled={!proveedorId}
                 >
                   <i className="bi bi-plus-circle mr-2"></i>
                   Agregar a la Lista
@@ -464,9 +543,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
               </div>
             </div>
 
-            {/* Tabla de productos en la compra */}
+            {/* Tabla de productos */}
             <div className="mt-8">
-              <h3 className="text-md font-semibold text-text-main mb-4">Lista de Compra</h3>
+              <h3 className="text-md font-semibold text-text-main mb-4">
+                Lista de Compra
+              </h3>
               <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
                 <table className="min-w-full text-xs">
                   <thead className="bg-gray-50">
@@ -474,10 +555,8 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">CÓDIGO</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">NOMBRE</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">COSTO</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">PRECIO VENTA</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700 w-24">CANTIDAD</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">CANTIDAD</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">IVA (%)</th>
-                      <th className="py-2 px-3 text-left font-semibold text-gray-700">PRECIO C/IVA</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">SUBTOTAL</th>
                       <th className="py-2 px-3 text-center font-semibold text-gray-700">ACCIÓN</th>
                     </tr>
@@ -488,44 +567,30 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         <tr key={index}>
                           <td className="py-2 px-3">{item.codigo}</td>
                           <td className="py-2 px-3">{item.nombre}</td>
+                          <td className="py-2 px-3">${(item.costo || 0).toFixed(2)}</td>
                           <td className="py-2 px-3">
                             <input
-                              type="number"
-                              min="0"
-                              className="w-20 px-2 py-1 border rounded-md"
-                              value={item.costo}
-                              onChange={e => {
-                                const value = Number(e.target.value);
-                                setItemsCompra(prev => prev.map((it, i) => i === index ? { ...it, costo: value } : it));
-                              }}
-                            />
-                          </td>
-                          <td className="py-2 px-3">
-                            <input
-                              type="number"
-                              min="0"
-                              className="w-20 px-2 py-1 border rounded-md"
-                              value={item.precioVenta}
-                              onChange={e => {
-                                const value = Number(e.target.value);
-                                setItemsCompra(prev => prev.map((it, i) => i === index ? { ...it, precioVenta: value } : it));
-                              }}
-                            />
-                          </td>
-                          <td className="py-2 px-3">
-                            <input
-                              type="number"
-                              min="1"
+                              type="text"
                               className="w-20 px-2 py-1 border rounded-md"
                               value={item.cantidad}
-                              onChange={e => handleUpdateCantidad(index, Number(e.target.value))}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || /^\d+$/.test(val)) {
+                                  handleUpdateCantidad(index, val);
+                                }
+                              }}
                             />
                           </td>
                           <td className="py-2 px-3">{(item.iva * 100).toFixed(0)}%</td>
-                          <td className="py-2 px-3">${item.precioConIva}</td>
-                          <td className="py-2 px-3">${(item.costo * item.cantidad).toFixed(2)}</td>
+                          <td className="py-2 px-3">
+                            ${((item.costo || 0) * (item.cantidad || 0)).toFixed(2)}
+                          </td>
                           <td className="py-2 px-3 text-center">
-                            <button type="button" className="text-red-500 hover:text-red-700" onClick={() => handleRemoveItem(index)}>
+                            <button
+                              type="button"
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => handleRemoveItem(index)}
+                            >
                               <i className="bi bi-trash"></i>
                             </button>
                           </td>
@@ -533,7 +598,9 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="9" className="text-center py-4 text-gray-500">Aún no hay productos en la lista.</td>
+                        <td colSpan="7" className="text-center py-4 text-gray-500">
+                          Aún no hay productos en la lista.
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -542,17 +609,25 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Subtotal:</td>
-                        <td className="py-2 px-3 font-bold" colSpan="2">${formatNumber(subtotal)}</td>
+                        <td className="py-2 px-3 font-bold" colSpan="2">
+                          ${(subtotal || 0).toFixed(2)}
+                        </td>
                       </tr>
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Total IVA:</td>
-                        <td className="py-2 px-3 font-bold" colSpan="2">${formatNumber(totalIva)}</td>
+                        <td className="py-2 px-3 font-bold" colSpan="2">
+                          ${(totalIva || 0).toFixed(2)}
+                        </td>
                       </tr>
                       <tr>
                         <td colSpan="4"></td>
-                        <td className="py-2 px-3 font-bold text-right text-primary">Total a Pagar:</td>
-                        <td className="py-2 px-3 font-bold text-primary" colSpan="2">${formatNumber(total)}</td>
+                        <td className="py-2 px-3 font-bold text-right text-primary">
+                          Total a Pagar:
+                        </td>
+                        <td className="py-2 px-3 font-bold text-primary" colSpan="2">
+                          ${(total || 0).toFixed(2)}
+                        </td>
                       </tr>
                     </tfoot>
                   )}
@@ -560,25 +635,26 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
               </div>
             </div>
           </form>
-          <div className="rounded-b-lg flex justify-end px-8 py-4">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-md border text-sm"
-              onClick={onClose}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="purchase-form"
-              className="px-4 py-2 rounded-md bg-text-main text-white font-semibold text-sm ml-2"
-            >
-              Guardar Compra
-            </button>
-          </div>
         </div>
 
         {/* Footer fijo */}
+        <div className="rounded-b-lg flex justify-end px-8 py-4 border-t">
+          <button
+            type="button"
+            className="px-4 py-2 rounded-md border text-sm"
+            onClick={onClose}
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="purchase-form"
+            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold text-sm ml-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={!proveedorId || itemsCompra.length === 0}
+          >
+            Guardar Compra
+          </button>
+        </div>
       </div>
     </div>
   );

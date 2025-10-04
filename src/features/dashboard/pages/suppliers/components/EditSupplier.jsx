@@ -19,26 +19,22 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   const [originalCorreo, setOriginalCorreo] = useState("");
   const [errors, setErrors] = useState({});
   const [isEmailValid, setIsEmailValid] = useState(true);
+  const [numero, setNumero] = useState('');
 
-  const parseTelefono = (telefono) => {
-    if (!telefono) return { countryCode: 'co', dialCode: '+57', number: '' };
-    const match = telefono.match(/^(\+\d+)-(\d{4,15})$/);
-    if (match) {
-      return {
-        countryCode: 'co',
-        dialCode: match[1],
-        number: match[2]
-      };
-    }
-    return { countryCode: 'co', dialCode: '+57', number: '' };
+  // Función para limpiar y parsear el teléfono desde el backend
+  const parsePhoneFromBackend = (telefono) => {
+    if (!telefono) return '';
+    
+    // Remover el símbolo + si existe y retornar solo números
+    // El componente PhoneInput manejará el formato
+    return telefono.replace(/[^0-9]/g, '');
   };
-
-  const initialTelefono = supplier && supplier.telefono ? supplier.telefono : '';
-  const [country, setCountry] = useState({ countryCode: parseTelefono(initialTelefono).countryCode, dialCode: parseTelefono(initialTelefono).dialCode });
-  const [numero, setNumero] = useState(parseTelefono(initialTelefono).number);
 
   useEffect(() => {
     if (supplier) {
+      // Parsear el teléfono correctamente
+      const phoneNumber = parsePhoneFromBackend(supplier.telefono);
+      
       setFormData({
         nit: supplier.nit || "",
         nombre: supplier.nombre || "",
@@ -51,8 +47,7 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
       setOriginalCorreo(supplier.correo || "");
       setErrors({});
       setIsEmailValid(true);
-      setCountry({ countryCode: parseTelefono(supplier.telefono || '').countryCode, dialCode: parseTelefono(supplier.telefono || '').dialCode });
-      setNumero(parseTelefono(supplier.telefono || '').number);
+      setNumero(phoneNumber); // Establecer el número limpio
     }
   }, [supplier]);
 
@@ -102,25 +97,31 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handlePhoneChange = (value, countryData) => {
+  const handlePhoneChange = (value) => {
+    // PhoneInput ya incluye el código del país en 'value'
     setNumero(value);
-    setCountry({ countryCode: countryData.countryCode, dialCode: '+' + countryData.dialCode });
     const error = validateField('telefono', value);
     setErrors(prev => ({ ...prev, telefono: error }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Detener la propagación del evento
+    
     // Validar todos los campos
     const newErrors = {};
     Object.keys(formData).forEach(key => {
-      newErrors[key] = validateField(key, formData[key]);
+      if (key !== 'telefono') {
+        newErrors[key] = validateField(key, formData[key]);
+      }
     });
     newErrors.telefono = validateField('telefono', numero);
+    
     if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       return;
     }
+    
     // Confirmación SweetAlert
     const result = await Swal.fire({
       title: '¿Confirmar edición?',
@@ -132,15 +133,15 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
       confirmButtonText: 'Sí, editar',
       cancelButtonText: 'Cancelar'
     });
+    
     if (result.isConfirmed) {
       const updatedSupplier = {
         ...supplier,
         ...formData,
-        telefono: country.dialCode + '-' + numero,
+        telefono: '+' + numero,
         tipo: formData.tipo.toUpperCase(),
       };
       if (onSave) onSave(updatedSupplier);
-      handleClose();
     }
   };
 
@@ -158,6 +159,7 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
     setOriginalCorreo("");
     setErrors({});
     setIsEmailValid(true);
+    setNumero(''); // Limpiar el número
   };
 
   if (!isOpen || !supplier) return null;
@@ -165,7 +167,6 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-primary m-0">Editar proveedor</h2>
           <button
@@ -176,7 +177,6 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
             ×
           </button>
         </div>
-        {/* Contenido con scroll */}
         <div className="overflow-y-auto p-8 flex-1">
           <form id="edit-supplier-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -255,21 +255,18 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  name="telefono"
-                  className="hidden"
-                  value={formData.telefono}
-                  readOnly
-                />
                 <PhoneInput
-                  country={country.countryCode}
+                  country={'co'}
                   value={numero}
                   onChange={handlePhoneChange}
                   inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
-                  inputProps={{ name: 'telefono', required: true }}
+                  containerClass="w-full"
+                  inputProps={{ 
+                    name: 'telefono', 
+                    required: true,
+                    placeholder: 'Ej: 3001234567'
+                  }}
                   specialLabel=""
-                  placeholder="Ej: 3001234567"
                 />
                 {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
               </div>
@@ -289,7 +286,6 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
             </div>
           </form>
         </div>
-        {/* Footer fijo */}
         <div className="sticky bottom-0 rounded-b-lg flex justify-end px-8 py-4">
           <button
             type="button"
@@ -333,4 +329,4 @@ EditSupplier.propTypes = {
   suppliers: PropTypes.array.isRequired,
 };
 
-export default EditSupplier; 
+export default EditSupplier;

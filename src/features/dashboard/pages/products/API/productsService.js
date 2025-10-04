@@ -24,31 +24,54 @@ export const productsService = {
 
       if (response.success && response.data) {
         const mappedProducts = response.data.map(product => ({
+          // IDs
           id_producto: product.id_producto,
           id: product.id_producto,
+          
+          // Información básica
           nombre: product.nombre,
           descripcion: product.descripcion || '',
+          
+          // Stock y cantidad
           stock: parseInt(product.stock) || 0,
           cantidad: parseInt(product.stock) || 0,
+          
+          // Precios
           precio_venta: parseFloat(product.precio_venta) || 0,
           precio: parseFloat(product.precio_venta) || 0,
           costo: parseFloat(product.costo) || 0,
           iva: parseFloat(product.iva) || 0,
+          
+          // Fechas
           fecha_registro: product.fecha_registro,
           fechaRegistro: product.fecha_registro,
+          
+          // Imágenes
           url_foto: product.url_foto,
           foto: product.url_foto,
           fotos: product.url_foto ? [product.url_foto] : [],
-          categoria: product.categoria ? {
+          imagen: product.url_foto,
+          
+          // Categoría - compatible con ambos formatos
+          categoriaObj: product.categoria ? {
             id_categoria_producto: product.categoria.id_categoria_producto,
             nombre: product.categoria.nombre
           } : null,
+          categoria: product.categoria?.nombre || 'Sin categoría',
+          id_categoria_producto: product.categoria?.id_categoria_producto || null,
+          
+          // Tipo de producto (puedes ajustarlo según tu lógica)
+          tipoProducto: product.categoria?.nombre || 'General',
+          
+          // Características - formato completo
           caracteristicas: (product.caracteristicas || []).map(car => ({
             id_caracteristica: car.id_caracteristica,
             nombre: car.nombre,
             valor: car.FichaTecnica?.valor || car.valor || '',
             FichaTecnica: car.FichaTecnica
           })),
+          
+          // Especificaciones - formato para landing
           especificaciones: (product.caracteristicas || []).map(car => ({
             concepto: car.nombre,
             valor: car.FichaTecnica?.valor || car.valor || '',
@@ -85,31 +108,54 @@ export const productsService = {
         return {
           ...response,
           data: {
+            // IDs
             id_producto: product.id_producto,
             id: product.id_producto,
+            
+            // Información básica
             nombre: product.nombre,
             descripcion: product.descripcion || '',
+            
+            // Stock y cantidad
             stock: parseInt(product.stock) || 0,
             cantidad: parseInt(product.stock) || 0,
+            
+            // Precios
             precio_venta: parseFloat(product.precio_venta) || 0,
             precio: parseFloat(product.precio_venta) || 0,
             costo: parseFloat(product.costo) || 0,
             iva: parseFloat(product.iva) || 0,
+            
+            // Fechas
             fecha_registro: product.fecha_registro,
             fechaRegistro: product.fecha_registro,
+            
+            // Imágenes
             url_foto: product.url_foto,
             foto: product.url_foto,
             fotos: product.url_foto ? [product.url_foto] : [],
-            categoria: product.categoria ? {
+            imagen: product.url_foto,
+            
+            // Categoría - compatible con ambos formatos
+            categoriaObj: product.categoria ? {
               id_categoria_producto: product.categoria.id_categoria_producto,
               nombre: product.categoria.nombre
             } : null,
+            categoria: product.categoria?.nombre || 'Sin categoría',
+            id_categoria_producto: product.categoria?.id_categoria_producto || null,
+            
+            // Tipo de producto
+            tipoProducto: product.categoria?.nombre || 'General',
+            
+            // Características - formato completo
             caracteristicas: (product.caracteristicas || []).map(car => ({
               id_caracteristica: car.id_caracteristica,
               nombre: car.nombre,
               valor: car.FichaTecnica?.valor || car.valor || '',
               FichaTecnica: car.FichaTecnica
             })),
+            
+            // Especificaciones - formato para landing
             especificaciones: (product.caracteristicas || []).map(car => ({
               concepto: car.nombre,
               valor: car.FichaTecnica?.valor || car.valor || '',
@@ -127,7 +173,7 @@ export const productsService = {
   },
 
   /**
-   * Crear un nuevo producto - CORREGIDO
+   * Crear un nuevo producto
    */
   create: async (productData) => {
     try {
@@ -144,15 +190,15 @@ export const productsService = {
         throw new Error('La categoría es requerida');
       }
 
-      // Mapeo CORRECTO para el backend
+      // Mapeo para el backend
       const mappedData = {
         nombre: productData.nombre.trim(),
         descripcion: productData.descripcion?.trim() || null,
         id_categoria_producto: parseInt(productData.id_categoria_producto || productData.categoryId),
         precio_venta: parseFloat(productData.precio_venta || productData.precio),
         stock: parseInt(productData.stock || productData.cantidad || 0),
-        costo: 0,
-        iva: 0
+        costo: parseFloat(productData.costo || 0),
+        iva: parseFloat(productData.iva || 0)
       };
 
       // Solo incluir url_foto si es válida
@@ -161,7 +207,7 @@ export const productsService = {
         mappedData.url_foto = imagen;
       }
 
-      // Mapear características CORRECTAMENTE - incluir nombre Y valor
+      // Mapear características
       if (productData.caracteristicas && Array.isArray(productData.caracteristicas)) {
         mappedData.caracteristicas = productData.caracteristicas
           .filter(c => c.nombre && c.valor && c.nombre.trim() !== '' && c.valor.trim() !== '')
@@ -185,7 +231,7 @@ export const productsService = {
   },
 
   /**
-   * Actualizar un producto existente - CORREGIDO
+   * Actualizar un producto existente
    */
   update: async (id, productData) => {
     try {
@@ -195,7 +241,7 @@ export const productsService = {
 
       console.log('API Service: Updating product', id, 'with data:', productData);
 
-      // Mapeo CORRECTO para el backend
+      // Mapeo para el backend
       const mappedData = {
         nombre: productData.nombre?.trim(),
         descripcion: productData.descripcion?.trim() || null,
@@ -265,7 +311,6 @@ export const productsService = {
       throw error;
     }
   },
-
 
   /**
    * Actualizar stock de un producto

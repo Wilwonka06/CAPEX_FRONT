@@ -18,7 +18,7 @@ import Appointments from "../features/dashboard/pages/appointments/Appointments"
 import Citas from '../features/dashboard/pages/Quotes/Quotes';
 import Clientes from "../features/dashboard/pages/customers/Customer";
 
-import Compras from "../features/dashboard/pages/Shopping/Shopping";
+import Compras from "../features/dashboard/pages/shopping/Purchases";
 import Dashboard from "../features/dashboard/components/Dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
 import Pedidos from "../features/dashboard/pages/orders/Orders";

@@ -10,7 +10,6 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [characteristics, setCharacteristics] = useState([]);
-  const [characteristicsLoading, setCharacteristicsLoading] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -49,15 +48,12 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
   useEffect(() => {
     const loadCharacteristics = async () => {
       try {
-        setCharacteristicsLoading(true);
         const response = await characteristicsService.getAll();
         if (response.success) {
           setCharacteristics(response.data || []);
         }
       } catch (error) {
         console.error('Error loading characteristics:', error);
-      } finally {
-        setCharacteristicsLoading(false);
       }
     };
 
@@ -96,7 +92,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
 
       setPreviews(productFotos);
 
-      // CORRECCIÓN: Mapear características correctamente
+      // Mapear características correctamente
       const caracteristicas = product.caracteristicas || [];
       console.log('EditProduct: Procesando características:', caracteristicas);
 
@@ -191,7 +187,6 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
 
-
   const handleSubmit = (e) => {
     e.preventDefault();
     let errors = {};
@@ -199,17 +194,19 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
 
-
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
+
     const otrosProductos = products.filter(p => p.id !== product.id);
     if (isDuplicateProductName(formData.nombre, otrosProductos)) {
       setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
+
     setFieldErrors({});
+
     if (formData.nombre.trim() && formData.precio) {
       // Procesar las fotos
       const fotosUrls = formData.fotos.map(foto => {
@@ -219,29 +216,48 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         return foto;
       });
 
-      const selectedCategory = categories.find(c => c.id_categoria_producto === parseInt(formData.categoryId));
+      // ✅ CORRECCIÓN: Mapear especificaciones correctamente para el backend
+      // El backend espera un array con { nombre, valor }
+      const caracteristicasParaBackend = especificaciones
+        .filter(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return nombre && nombre.trim() !== '' && e.valor && e.valor.trim() !== '';
+        })
+        .map(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return {
+            nombre: nombre.trim(),
+            valor: e.valor.trim()
+          };
+        });
+
+      console.log('EditProduct: Características mapeadas para backend:', caracteristicasParaBackend);
+
       const updatedProduct = {
         ...product,
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion,
         precio: parseFloat(formData.precio),
+        precio_venta: parseFloat(formData.precio),
         cantidad: parseInt(formData.cantidad),
-        categoria: selectedCategory ? selectedCategory.nombre : '',
+        stock: parseInt(formData.cantidad),
+        id_categoria_producto: parseInt(formData.categoryId),
         categoryId: formData.categoryId,
+        url_foto: fotosUrls[0] || null,
         fotos: fotosUrls,
+        // ✅ Enviar características en el formato correcto
+        caracteristicas: caracteristicasParaBackend,
+        // También mantener especificaciones para compatibilidad con el frontend
         especificaciones: especificaciones
           .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
-          .map(e => {
-            const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
-            // Find the characteristic ID if it exists, otherwise it will be created by the backend
-            const characteristic = characteristics.find(c => c.nombre === nombre);
-            return {
-              id_caracteristica: characteristic ? characteristic.id_caracteristica : undefined,
-              nombre: nombre,
-              valor: e.valor
-            };
-          })
+          .map(e => ({
+            concepto: e.concepto === "otro" ? e.otroConcepto : e.concepto,
+            valor: e.valor,
+            otroConcepto: e.otroConcepto || ''
+          }))
       };
+
+      console.log('EditProduct: Sending updated product:', updatedProduct);
       onSave(updatedProduct);
       handleClose();
     }
