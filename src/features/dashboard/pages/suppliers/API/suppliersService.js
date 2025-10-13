@@ -63,6 +63,41 @@ export const suppliersService = {
     }
   },
 
+  // ... después del método getAll()
+
+/**
+ * Obtener solo proveedores activos
+ * @returns {Promise<Object>} Objeto con success y data (proveedores activos)
+ */
+getActive: async () => {
+  try {
+    const response = await apiRequest.get(SUPPLIERS_ENDPOINT);
+    
+    // El backend retorna { success: true, data: [...], count: X }
+    if (response.data && Array.isArray(response.data)) {
+      // Transformar y filtrar solo activos usando la función mapSupplierFromBackend
+      const activeSuppliers = response.data
+        .filter(proveedor => proveedor.estado === 'Activo')
+        .map(mapSupplierFromBackend);
+
+      return {
+        success: true,
+        data: activeSuppliers
+      };
+    }
+
+    return {
+      success: true,
+      data: []
+    };
+  } catch (error) {
+    console.error('Error fetching active suppliers:', error);
+    throw new Error(error.response?.data?.message || 'Error al obtener proveedores activos');
+  }
+},
+
+// ... continúa con getById()
+
   /**
    * Obtener un proveedor por ID
    * @param {number|string} id - ID del proveedor

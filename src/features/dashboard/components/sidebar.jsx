@@ -13,11 +13,9 @@ const Sidebar = () => {
 
   // Función para verificar si el usuario tiene permisos para un módulo
   const hasPermission = (module, action = 'Visualizar') => {
-    // Esto es una simulación. En un caso real, deberías cargar los permisos del usuario logueado.
     const user = JSON.parse(localStorage.getItem('currentUser'));
     if (!user || !user.privileges) {
-      // Si no hay usuario o privilegios, por defecto no tiene permiso para nada excepto Dashboard
-      if (module === 'Dashboard') return true; // Dashboard es siempre visible
+      if (module === 'Dashboard') return true; 
       return false;
     }
     // Verificar si el módulo existe y si la acción específica es true
@@ -54,7 +52,7 @@ const Sidebar = () => {
         ]
       },
       {
-        id: 'shoppings',
+        id: 'purchases',
         title: 'Gestión de Compras',
         icon: 'bi-cart-check-fill',
         module: 'Gestión de Compras',

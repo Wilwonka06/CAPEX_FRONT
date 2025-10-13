@@ -5,8 +5,8 @@ import RequirePrivilege from "../features/auth/components/RequirePrivilege";
 import NotFound from "../shared/components/NotFound";
 
 // Layouts
-import Layout from "../features/dashboard/Layout";
-import Landing from "../features/landing/Landing";
+import Layout from "../features/dashboard/layout";
+import Landing from "../features/landing/landing";
 
 // Pages Dashboard
 import CategoriasProductos from "../features/dashboard/pages/CatProducts/CatProducts";
@@ -18,7 +18,7 @@ import Appointments from "../features/dashboard/pages/appointments/Appointments"
 import Citas from '../features/dashboard/pages/Quotes/Quotes';
 import Clientes from "../features/dashboard/pages/customers/Customer";
 
-import Compras from "../features/dashboard/pages/shopping/Purchases";
+import Compras from "../features/dashboard/pages/purchases/Purchases";
 import Dashboard from "../features/dashboard/components/Dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
 import Pedidos from "../features/dashboard/pages/orders/Orders";
