@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import OrderDetailModal from "./components/OrderDetailModal";
 import EditOrderModal from "./components/EditOrderModal";
-import { useSales } from '../SaleProducts/context/SalesContext';
-import { useOrders } from './context/OrdersContext';
 import Paginator from '../../../../shared/Paginator';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';

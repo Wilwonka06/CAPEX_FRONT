@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useSales } from './context/SalesContext';
 import productsService from '../products/API/productsService';
 import Search from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';

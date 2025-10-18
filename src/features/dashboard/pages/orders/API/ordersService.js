@@ -2,250 +2,246 @@ import apiRequest from '../../../../../shared/config/apiConfig';
 
 /**
  * Servicio API para gestión de pedidos
- * Endpoints base: /api/pedidos
+ * Maneja completamente la comunicación con el backend
+ * El frontend consume directamente estos métodos
  */
 
 const ORDERS_ENDPOINT = '/pedidos';
 
-export const ordersService = {
+class OrdersService {
   /**
-   * Obtener todos los pedidos con paginación y filtros
-   * @param {Object} params - Parámetros de consulta
-   * @param {number} params.page - Número de página (opcional)
-   * @param {number} params.limit - Límite de resultados por página (opcional)
-   * @param {string} params.search - Término de búsqueda (opcional)
-   * @param {string} params.estado - Estado del pedido (opcional)
-   * @returns {Promise<Object>} Lista de pedidos con metadatos de paginación
+   * Obtener todos los pedidos con paginación
+   * @param {Object} params - { page, limit }
+   * @returns {Promise<Object>} { data: [], pagination: {...} }
    */
-  getAll: async (params = {}) => {
+  async getAll(params = {}) {
     try {
       const queryParams = new URLSearchParams();
-
-      // Agregar parámetros de consulta si existen
+      
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
-      if (params.search) queryParams.append('search', params.search);
-      if (params.estado) queryParams.append('estado', params.estado);
 
       const url = queryParams.toString()
         ? `${ORDERS_ENDPOINT}?${queryParams.toString()}`
         : ORDERS_ENDPOINT;
 
       const response = await apiRequest.get(url);
-      return response;
+      return this._handleResponse(response);
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      throw error;
+      return this._handleError('Error fetching orders', error);
     }
-  },
+  }
 
   /**
    * Obtener un pedido por ID
-   * @param {number|string} id - ID del pedido
-   * @returns {Promise<Object>} Datos del pedido
+   * @param {number} id - ID del pedido
+   * @returns {Promise<Object>} Datos del pedido con detalles
    */
-  getById: async (id) => {
+  async getById(id) {
     try {
-      if (!id) {
-        throw new Error('ID del pedido es requerido');
-      }
+      if (!id) throw new Error('ID del pedido es requerido');
 
       const response = await apiRequest.get(`${ORDERS_ENDPOINT}/${id}`);
-      return response;
+      return this._handleResponse(response);
     } catch (error) {
-      console.error(`Error fetching order ${id}:`, error);
-      throw error;
+      return this._handleError(`Error fetching order ${id}`, error);
     }
-  },
+  }
 
   /**
    * Crear un nuevo pedido
-   * @param {Object} orderData - Datos del pedido
-   * @param {string} orderData.fecha - Fecha del pedido
-   * @param {number} orderData.total - Total del pedido
-   * @param {string} orderData.estado - Estado del pedido (opcional, default: Pendiente)
-   * @returns {Promise<Object>} Pedido creado
+   * @param {Object} orderData - { fecha, productos: [{id_producto, cantidad, precio_unitario}] }
+   * @returns {Promise<Object>} Pedido creado con detalles
    */
-  create: async (orderData) => {
+  async create(orderData) {
     try {
-      // Validaciones básicas
-      if (!orderData.fecha) {
-        throw new Error('La fecha del pedido es requerida');
-      }
-      if (!orderData.total || orderData.total <= 0) {
-        throw new Error('El total debe ser mayor a 0');
+      if (!orderData.fecha) throw new Error('La fecha del pedido es requerida');
+      if (!orderData.productos?.length) {
+        throw new Error('El pedido debe tener al menos un producto');
       }
 
-      // Limpiar datos
-      const cleanData = {
-        fecha: orderData.fecha,
-        total: parseFloat(orderData.total),
-        estado: orderData.estado || 'Pendiente'
-      };
-
-      const response = await apiRequest.post(ORDERS_ENDPOINT, cleanData);
-      return response;
+      const response = await apiRequest.post(ORDERS_ENDPOINT, orderData);
+      return this._handleResponse(response);
     } catch (error) {
-      console.error('Error creating order:', error);
-      throw error;
+      return this._handleError('Error creating order', error);
     }
-  },
+  }
 
   /**
    * Actualizar un pedido existente
-   * @param {number|string} id - ID del pedido
-   * @param {Object} orderData - Datos actualizados del pedido
+   * @param {number} id - ID del pedido
+   * @param {Object} orderData - Datos a actualizar
    * @returns {Promise<Object>} Pedido actualizado
    */
-  update: async (id, orderData) => {
+  async update(id, orderData) {
     try {
-      if (!id) {
-        throw new Error('ID del pedido es requerido');
-      }
-
-      // Validaciones básicas
-      if (orderData.total !== undefined && orderData.total <= 0) {
-        throw new Error('El total debe ser mayor a 0');
-      }
+      if (!id) throw new Error('ID del pedido es requerido');
 
       const response = await apiRequest.put(`${ORDERS_ENDPOINT}/${id}`, orderData);
-      return response;
+      return this._handleResponse(response);
     } catch (error) {
-      console.error(`Error updating order ${id}:`, error);
-      throw error;
+      return this._handleError(`Error updating order ${id}`, error);
     }
-  },
-
-  /**
-   * Eliminar un pedido
-   * @param {number|string} id - ID del pedido
-   * @returns {Promise<Object>} Confirmación de eliminación
-   */
-  delete: async (id) => {
-    try {
-      if (!id) {
-        throw new Error('ID del pedido es requerido');
-      }
-
-      const response = await apiRequest.delete(`${ORDERS_ENDPOINT}/${id}`);
-      return response;
-    } catch (error) {
-      console.error(`Error deleting order ${id}:`, error);
-      throw error;
-    }
-  },
+  }
 
   /**
    * Cambiar estado de un pedido
-   * @param {number|string} id - ID del pedido
+   * @param {number} id - ID del pedido
    * @param {string} estado - Nuevo estado
    * @returns {Promise<Object>} Pedido con estado actualizado
    */
-  changeStatus: async (id, estado) => {
+  async changeStatus(id, estado) {
     try {
-      if (!id) {
-        throw new Error('ID del pedido es requerido');
-      }
-      if (!['Pendiente', 'En proceso', 'Enviado', 'Entregado', 'Cancelado'].includes(estado)) {
-        throw new Error('Estado debe ser uno de: Pendiente, En proceso, Enviado, Entregado, Cancelado');
-      }
+      if (!id) throw new Error('ID del pedido es requerido');
+      if (!estado) throw new Error('El estado es requerido');
 
-      const response = await apiRequest.patch(`${ORDERS_ENDPOINT}/${id}/estado`, { estado });
-      return response;
+      const response = await apiRequest.patch(
+        `${ORDERS_ENDPOINT}/${id}/estado`,
+        { estado }
+      );
+      return this._handleResponse(response);
     } catch (error) {
-      console.error(`Error changing order status ${id}:`, error);
-      throw error;
+      return this._handleError(`Error changing order status`, error);
     }
-  },
+  }
 
   /**
-   * Buscar pedidos por término
+   * Buscar pedidos
    * @param {string} searchTerm - Término de búsqueda
-   * @param {Object} filters - Filtros adicionales (opcional)
+   * @param {Object} params - { page, limit }
    * @returns {Promise<Object>} Resultados de búsqueda
    */
-  search: async (searchTerm, filters = {}) => {
+  async search(searchTerm, params = {}) {
     try {
-      if (!searchTerm || searchTerm.trim() === '') {
+      if (!searchTerm?.trim()) {
         throw new Error('Término de búsqueda es requerido');
       }
 
-      const params = {
-        search: searchTerm.trim(),
-        ...filters
-      };
+      const queryParams = new URLSearchParams({
+        q: searchTerm.trim(),
+        ...params
+      });
 
-      return await ordersService.getAll(params);
+      const response = await apiRequest.get(
+        `${ORDERS_ENDPOINT}/search?${queryParams.toString()}`
+      );
+      return this._handleResponse(response);
     } catch (error) {
-      console.error('Error searching orders:', error);
-      throw error;
+      return this._handleError('Error searching orders', error);
     }
-  },
+  }
 
   /**
    * Obtener pedidos por estado
-   * @param {string} estado - Estado
-   * @param {Object} params - Parámetros adicionales (opcional)
+   * @param {string} estado - Estado del pedido
+   * @param {Object} params - { page, limit }
    * @returns {Promise<Object>} Pedidos del estado especificado
    */
-  getByEstado: async (estado, params = {}) => {
+  async getByEstado(estado, params = {}) {
     try {
-      if (!estado || !['Pendiente', 'En proceso', 'Enviado', 'Entregado', 'Cancelado'].includes(estado)) {
-        throw new Error('Estado debe ser uno de: Pendiente, En proceso, Enviado, Entregado, Cancelado');
-      }
+      if (!estado) throw new Error('El estado es requerido');
 
-      const queryParams = {
-        estado,
-        ...params
-      };
-
-      return await ordersService.getAll(queryParams);
+      const queryParams = new URLSearchParams(params);
+      const response = await apiRequest.get(
+        `${ORDERS_ENDPOINT}/estado/${estado}?${queryParams.toString()}`
+      );
+      return this._handleResponse(response);
     } catch (error) {
-      console.error(`Error fetching orders by estado ${estado}:`, error);
-      throw error;
+      return this._handleError(`Error fetching orders by status`, error);
     }
-  },
+  }
 
   /**
    * Obtener pedidos por rango de fechas
-   * @param {string} startDate - Fecha de inicio (YYYY-MM-DD)
-   * @param {string} endDate - Fecha de fin (YYYY-MM-DD)
-   * @param {Object} params - Parámetros adicionales (opcional)
-   * @returns {Promise<Object>} Pedidos en el rango de fechas
+   * @param {string} fecha_inicio - YYYY-MM-DD
+   * @param {string} fecha_fin - YYYY-MM-DD
+   * @param {Object} params - { page, limit }
+   * @returns {Promise<Object>} Pedidos en el rango
    */
-  getByDateRange: async (startDate, endDate, params = {}) => {
+  async getByDateRange(fecha_inicio, fecha_fin, params = {}) {
     try {
-      if (!startDate || !endDate) {
+      if (!fecha_inicio || !fecha_fin) {
         throw new Error('Fechas de inicio y fin son requeridas');
       }
 
       const queryParams = new URLSearchParams({
-        startDate,
-        endDate,
+        fecha_inicio,
+        fecha_fin,
         ...params
       });
 
-      const response = await apiRequest.get(`${ORDERS_ENDPOINT}/fechas?${queryParams.toString()}`);
-      return response;
+      const response = await apiRequest.get(
+        `${ORDERS_ENDPOINT}/fechas?${queryParams.toString()}`
+      );
+      return this._handleResponse(response);
     } catch (error) {
-      console.error(`Error fetching orders by date range ${startDate} - ${endDate}:`, error);
-      throw error;
+      return this._handleError('Error fetching orders by date range', error);
     }
-  },
+  }
 
   /**
    * Obtener estadísticas de pedidos
-   * @returns {Promise<Object>} Estadísticas de pedidos
+   * @returns {Promise<Object>} Estadísticas
    */
-  getStats: async () => {
+  async getStats() {
     try {
       const response = await apiRequest.get(`${ORDERS_ENDPOINT}/estadisticas`);
-      return response;
+      return this._handleResponse(response);
     } catch (error) {
-      console.error('Error fetching order stats:', error);
-      throw error;
+      return this._handleError('Error fetching stats', error);
     }
-  },
-};
+  }
 
-export default ordersService;
+  /**
+   * Eliminar un pedido
+   * @param {number} id - ID del pedido
+   * @returns {Promise<Object>} Confirmación
+   */
+  async delete(id) {
+    try {
+      if (!id) throw new Error('ID del pedido es requerido');
+
+      const response = await apiRequest.delete(`${ORDERS_ENDPOINT}/${id}`);
+      return this._handleResponse(response);
+    } catch (error) {
+      return this._handleError(`Error deleting order`, error);
+    }
+  }
+
+  /**
+   * Manejo de respuestas exitosas
+   * @private
+   */
+  _handleResponse(response) {
+    const data = response.data || response;
+    
+    // Retornar estructura consistente
+    return {
+      success: data.success !== false,
+      data: data.data || data,
+      pagination: data.pagination || null,
+      message: data.message || null
+    };
+  }
+
+  /**
+   * Manejo de errores
+   * @private
+   */
+  _handleError(context, error) {
+    const errorMessage = error?.response?.data?.message 
+      || error?.message 
+      || 'Error desconocido';
+    
+    console.error(`[OrdersService] ${context}:`, error);
+    
+    throw {
+      success: false,
+      message: errorMessage,
+      status: error?.response?.status || 500,
+      data: null
+    };
+  }
+}
+
+export default new OrdersService();
