@@ -31,16 +31,19 @@ export const DEFAULT_HEADERS = {
 // Función para obtener headers con autenticación
 export const getAuthHeaders = () => {
   try {
-    const user = localStorage.getItem('currentUser');
-    const userData = user ? JSON.parse(user) : null;
+    // Intentar obtener el token JWT del localStorage
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     
-    return {
+    const headers = {
       ...DEFAULT_HEADERS,
-      // Agregar headers de autenticación según sea necesario
-      'User-ID': userData?.id || '',
-      // Si el backend usa JWT:
-      // 'Authorization': userData?.token ? `Bearer ${userData.token}` : '',
     };
+    
+    // Agregar Authorization header si hay token
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
   } catch (error) {
     console.error('Error al obtener headers de autenticación:', error);
     return DEFAULT_HEADERS;

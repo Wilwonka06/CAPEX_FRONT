@@ -112,3 +112,6 @@ Las citas del backend se transforman al formato esperado por el componente:
 4. Notificaciones en tiempo real
 5. Historial de cambios de estado
 
+
+
+

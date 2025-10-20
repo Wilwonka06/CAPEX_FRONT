@@ -39,17 +39,21 @@ class RolesValidationService {
     return { isValid: true };
   }
 
-  // Validar descripción de rol
+  // Validar descripción de rol (opcional)
   static validateRoleDescription(description) {
+    // Si no hay descripción, es válido (opcional)
     if (!description || typeof description !== 'string') {
-      return { isValid: false, error: 'La descripción es requerida' };
+      return { isValid: true };
     }
 
     const trimmedDescription = description.trim();
+    
+    // Si está vacía después de trim, es válido (opcional)
     if (trimmedDescription.length === 0) {
-      return { isValid: false, error: 'La descripción no puede estar vacía' };
+      return { isValid: true };
     }
 
+    // Si tiene contenido, validar longitud mínima
     if (trimmedDescription.length < 5) {
       return { isValid: false, error: 'La descripción debe tener al menos 5 caracteres' };
     }
