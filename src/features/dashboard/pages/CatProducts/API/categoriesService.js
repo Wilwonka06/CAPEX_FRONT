@@ -131,6 +131,7 @@ export const categoriesService = {
         cleanData.descripcion = cleanData.descripcion.trim();
       }
 
+      console.log('Frontend: Sending update data for category', id, ':', cleanData);
       const response = await apiRequest.put(`${CATEGORIES_ENDPOINT}/${id}`, cleanData);
       return response;
     } catch (error) {

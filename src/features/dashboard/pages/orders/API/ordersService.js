@@ -3,10 +3,9 @@ import apiRequest from '../../../../../shared/config/apiConfig';
 /**
  * Servicio API para gestión de pedidos
  * Maneja completamente la comunicación con el backend
- * El frontend consume directamente estos métodos
  */
 
-const ORDERS_ENDPOINT = '/pedidos';
+const ORDERS_ENDPOINT = '/pedidos-productos';
 
 class OrdersService {
   /**
@@ -26,6 +25,27 @@ class OrdersService {
         : ORDERS_ENDPOINT;
 
       const response = await apiRequest.get(url);
+      
+      // Mapear respuesta del backend al formato del frontend
+      if (response.success && response.data) {
+        response.data = response.data.map(pedido => ({
+          id: pedido.id_pedido,
+          numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
+          fecha: pedido.fecha,
+          clienteId: pedido.id_cliente || null,
+          valor: parseFloat(pedido.total || 0),
+          estado: pedido.estado || 'Pendiente',
+          productos: (pedido.detalles || []).map(det => ({
+            id: det.id_producto,
+            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            nombre: det.producto?.nombre || 'N/A',
+            cantidad: det.cantidad,
+            precio: parseFloat(det.precio_unitario || 0),
+            subtotal: parseFloat(det.subtotal || 0)
+          }))
+        }));
+      }
+
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError('Error fetching orders', error);
@@ -42,6 +62,28 @@ class OrdersService {
       if (!id) throw new Error('ID del pedido es requerido');
 
       const response = await apiRequest.get(`${ORDERS_ENDPOINT}/${id}`);
+      
+      // Mapear respuesta
+      if (response.success && response.data) {
+        const pedido = response.data;
+        response.data = {
+          id: pedido.id_pedido,
+          numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
+          fecha: pedido.fecha,
+          clienteId: pedido.id_cliente || null,
+          valor: parseFloat(pedido.total || 0),
+          estado: pedido.estado || 'Pendiente',
+          productos: (pedido.detalles || []).map(det => ({
+            id: det.id_producto,
+            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            nombre: det.producto?.nombre || 'N/A',
+            cantidad: det.cantidad,
+            precio: parseFloat(det.precio_unitario || 0),
+            subtotal: parseFloat(det.subtotal || 0)
+          }))
+        };
+      }
+
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError(`Error fetching order ${id}`, error);
@@ -60,7 +102,38 @@ class OrdersService {
         throw new Error('El pedido debe tener al menos un producto');
       }
 
-      const response = await apiRequest.post(ORDERS_ENDPOINT, orderData);
+      // Mapear estructura frontend a backend
+      const pedidoData = {
+        fecha: orderData.fecha,
+        productos: orderData.productos.map(p => ({
+          id_producto: p.id || p.id_producto,
+          cantidad: p.cantidad,
+          precio_unitario: p.precio || p.precio_unitario
+        }))
+      };
+
+      const response = await apiRequest.post(ORDERS_ENDPOINT, pedidoData);
+      
+      // Mapear respuesta
+      if (response.success && response.data) {
+        const pedido = response.data;
+        response.data = {
+          id: pedido.id_pedido,
+          numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
+          fecha: pedido.fecha,
+          valor: parseFloat(pedido.total || 0),
+          estado: pedido.estado || 'Pendiente',
+          productos: (pedido.detalles || []).map(det => ({
+            id: det.id_producto,
+            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            nombre: det.producto?.nombre || 'N/A',
+            cantidad: det.cantidad,
+            precio: parseFloat(det.precio_unitario || 0),
+            subtotal: parseFloat(det.subtotal || 0)
+          }))
+        };
+      }
+
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError('Error creating order', error);
@@ -77,7 +150,18 @@ class OrdersService {
     try {
       if (!id) throw new Error('ID del pedido es requerido');
 
-      const response = await apiRequest.put(`${ORDERS_ENDPOINT}/${id}`, orderData);
+      const updateData = {};
+      if (orderData.fecha) updateData.fecha = orderData.fecha;
+      if (orderData.estado) updateData.estado = orderData.estado;
+      if (orderData.productos) {
+        updateData.productos = orderData.productos.map(p => ({
+          id_producto: p.id || p.id_producto,
+          cantidad: p.cantidad,
+          precio_unitario: p.precio || p.precio_unitario
+        }));
+      }
+
+      const response = await apiRequest.put(`${ORDERS_ENDPOINT}/${id}`, updateData);
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError(`Error updating order ${id}`, error);

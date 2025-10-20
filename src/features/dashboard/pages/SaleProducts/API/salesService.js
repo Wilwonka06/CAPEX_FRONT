@@ -5,9 +5,7 @@ import apiRequest from '../../../../../shared/config/apiConfig';
  * Mapea operaciones de frontend con endpoint de backend
  */
 
-// En caso de que el backend tenga endpoint /ventas, sino usa /pedidos
-const SALES_ENDPOINT = '/ventas';
-const ORDERS_ENDPOINT = '/pedidos';
+const SALES_ENDPOINT = '/ventas-productos';
 
 class SalesService {
   /**
@@ -28,6 +26,28 @@ class SalesService {
         : SALES_ENDPOINT;
 
       const response = await apiRequest.get(url);
+      
+      // Mapear respuesta del backend al formato del frontend
+      if (response.success && response.data) {
+        response.data = response.data.map(venta => ({
+          id: venta.id_venta_producto,
+          numeroVenta: `VEN-${venta.id_venta_producto.toString().padStart(5, '0')}`,
+          fecha: venta.fecha,
+          clienteId: venta.id_usuario,
+          valor: parseFloat(venta.total || 0),
+          estado: venta.estado || 'Pendiente',
+          productos: (venta.detalles || []).map(det => ({
+            id: det.id_producto,
+            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            nombre: det.producto?.nombre || 'N/A',
+            cantidad: det.cantidad,
+            precio: parseFloat(det.precio_unitario || 0),
+            subtotal: parseFloat(det.subtotal || 0)
+          })),
+          metodoPago: venta.metodoPago || 'No especificado'
+        }));
+      }
+
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError('Error fetching sales', error);
@@ -44,6 +64,29 @@ class SalesService {
       if (!id) throw new Error('ID de la venta es requerido');
 
       const response = await apiRequest.get(`${SALES_ENDPOINT}/${id}`);
+      
+      // Mapear respuesta del backend
+      if (response.success && response.data) {
+        const venta = response.data;
+        response.data = {
+          id: venta.id_venta_producto,
+          numeroVenta: `VEN-${venta.id_venta_producto.toString().padStart(5, '0')}`,
+          fecha: venta.fecha,
+          clienteId: venta.id_usuario,
+          valor: parseFloat(venta.total || 0),
+          estado: venta.estado || 'Pendiente',
+          productos: (venta.detalles || []).map(det => ({
+            id: det.id_producto,
+            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            nombre: det.producto?.nombre || 'N/A',
+            cantidad: det.cantidad,
+            precio: parseFloat(det.precio_unitario || 0),
+            subtotal: parseFloat(det.subtotal || 0)
+          })),
+          metodoPago: venta.metodoPago || 'No especificado'
+        };
+      }
+
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError(`Error fetching sale ${id}`, error);
@@ -52,29 +95,51 @@ class SalesService {
 
   /**
    * Crear una nueva venta
-   * Internamente usa el endpoint /pedidos con estado "Enviado"
-   * @param {Object} saleData - { fecha, productos, clienteId, metodoPago }
+   * @param {Object} saleData - { fecha, productos, id_usuario, metodoPago }
    * @returns {Promise<Object>} Venta creada
    */
   async create(saleData) {
     try {
       if (!saleData.fecha) throw new Error('La fecha es requerida');
+      if (!saleData.id_usuario) throw new Error('El ID del usuario es requerido');
       if (!saleData.productos?.length) {
         throw new Error('La venta debe tener al menos un producto');
       }
 
       // Mapear estructura frontend a backend
-      const orderData = {
+      const ventaData = {
         fecha: saleData.fecha,
+        id_usuario: saleData.id_usuario || saleData.clienteId,
         productos: saleData.productos.map(p => ({
           id_producto: p.id || p.id_producto,
           cantidad: p.cantidad,
           precio_unitario: p.precio || p.precio_unitario
-        })),
-        estado: 'Enviado' // Las ventas inician como "Enviado"
+        }))
       };
 
-      const response = await apiRequest.post(ORDERS_ENDPOINT, orderData);
+      const response = await apiRequest.post(SALES_ENDPOINT, ventaData);
+      
+      // Mapear respuesta
+      if (response.success && response.data) {
+        const venta = response.data;
+        response.data = {
+          id: venta.id_venta_producto,
+          numeroVenta: `VEN-${venta.id_venta_producto.toString().padStart(5, '0')}`,
+          fecha: venta.fecha,
+          clienteId: venta.id_usuario,
+          valor: parseFloat(venta.total || 0),
+          estado: venta.estado || 'Pendiente',
+          productos: (venta.detalles || []).map(det => ({
+            id: det.id_producto,
+            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            nombre: det.producto?.nombre || 'N/A',
+            cantidad: det.cantidad,
+            precio: parseFloat(det.precio_unitario || 0),
+            subtotal: parseFloat(det.subtotal || 0)
+          }))
+        };
+      }
+
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError('Error creating sale', error);
@@ -233,6 +298,60 @@ class SalesService {
       return this._handleResponse(response);
     } catch (error) {
       return this._handleError('Error deleting sale', error);
+    }
+  }
+
+  /**
+   * Obtener ventas por usuario
+   * @param {number} id_usuario - ID del usuario
+   * @param {Object} params - { page, limit }
+   * @returns {Promise<Object>} Ventas del usuario
+   */
+  async getByUsuario(id_usuario, params = {}) {
+    try {
+      if (!id_usuario) throw new Error('ID del usuario es requerido');
+
+      const queryParams = new URLSearchParams(params);
+      const response = await apiRequest.get(
+        `${SALES_ENDPOINT}/usuario/${id_usuario}?${queryParams.toString()}`
+      );
+      return this._handleResponse(response);
+    } catch (error) {
+      return this._handleError('Error fetching sales by user', error);
+    }
+  }
+
+  /**
+   * Obtener ventas online (sin cita)
+   * @param {Object} params - { page, limit }
+   * @returns {Promise<Object>} Ventas online
+   */
+  async getOnline(params = {}) {
+    try {
+      const queryParams = new URLSearchParams(params);
+      const response = await apiRequest.get(
+        `${SALES_ENDPOINT}/online?${queryParams.toString()}`
+      );
+      return this._handleResponse(response);
+    } catch (error) {
+      return this._handleError('Error fetching online sales', error);
+    }
+  }
+
+  /**
+   * Obtener ventas en citas
+   * @param {Object} params - { page, limit }
+   * @returns {Promise<Object>} Ventas en citas
+   */
+  async getEnCitas(params = {}) {
+    try {
+      const queryParams = new URLSearchParams(params);
+      const response = await apiRequest.get(
+        `${SALES_ENDPOINT}/en-citas?${queryParams.toString()}`
+      );
+      return this._handleResponse(response);
+    } catch (error) {
+      return this._handleError('Error fetching sales in appointments', error);
     }
   }
 
