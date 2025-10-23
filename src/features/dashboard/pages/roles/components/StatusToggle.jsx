@@ -1,9 +1,24 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import Swal from 'sweetalert2';
 
 const StatusToggle = ({ role, onStatusChange }) => {
   const handleToggle = async () => {
-    if (onStatusChange) {
+    const newStatus = role.estado === 'Activo' ? 'Inactivo' : 'Activo';
+    const roleName = role.name || role.nombre || '';
+    
+    const result = await Swal.fire({
+      title: '¿Confirmar cambio de estado?',
+      text: `¿Estás seguro de que deseas cambiar el estado del rol "${roleName}" a ${newStatus}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed && onStatusChange) {
       await onStatusChange(role.id, role.estado);
     }
   };

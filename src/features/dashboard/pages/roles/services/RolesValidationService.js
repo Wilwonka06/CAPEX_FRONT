@@ -103,6 +103,25 @@ class RolesValidationService {
     return { isValid: true };
   }
 
+  // Validar si un rol se puede eliminar
+  static validateRoleDeletion(role) {
+    const systemRoles = ['Administrador', 'Empleado', 'Cliente'];
+    const roleName = role.name || role.nombre || '';
+    
+    const isSystemRole = systemRoles.some(systemRole => 
+      roleName.toLowerCase() === systemRole.toLowerCase()
+    );
+
+    if (isSystemRole) {
+      return { 
+        isValid: false, 
+        error: `No se puede eliminar el rol "${roleName}" porque es un rol del sistema.` 
+      };
+    }
+
+    return { isValid: true };
+  }
+
   // Validación completa para crear rol
   static validateCreateRole(roleData, existingRoles = []) {
     const errors = {};
