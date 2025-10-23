@@ -9,7 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
-// Estados posibles según el backend
+// Estados posibles según el backend unificado
 const estados = ["Pendiente", "En proceso", "Enviado", "Entregado", "Cancelado"];
 
 function OrdersTable({ orders, onView, onEdit }) {
@@ -112,8 +112,8 @@ export default function OrdersPage() {
           id: pedido.id_pedido,
           numeroOrden: `PED-${pedido.id_pedido.toString().padStart(6, '0')}`,
           fecha: pedido.fecha,
-          clienteId: 1, // Mock - reemplazar con datos reales cuando tengas API de clientes
-          clienteNombre: 'Cliente Mock', // Reemplazar con datos reales
+          clienteId: pedido.id_usuario,
+          clienteNombre: pedido.usuario?.nombre || `Usuario ${pedido.id_usuario}`,
           valor: parseFloat(pedido.total || 0),
           estado: pedido.estado,
           productos: (pedido.detalles || []).map(det => ({
@@ -289,30 +289,30 @@ export default function OrdersPage() {
       {/* Modal de detalle */}
       <OrderDetailModal
         order={detailOrder}
-        customer={detailOrder ? { 
-          firstName: 'Cliente', 
-          lastName: 'Mock',
+        customer={detailOrder ? {
+          firstName: detailOrder.clienteNombre || 'Cliente',
+          lastName: '',
           documentType: 'CC',
-          documentNumber: '123456',
+          documentNumber: `DOC-${detailOrder.clienteId}`,
           email: 'cliente@example.com',
           phone: '300123456',
-          address: 'Dirección mock'
+          address: 'Dirección del cliente'
         } : null}
         isOpen={!!detailOrder}
         onClose={() => setDetailOrder(null)}
       />
-      
+
       {/* Modal de edición */}
       <EditOrderModal
         order={editOrder}
-        customer={editOrder ? { 
-          firstName: 'Cliente', 
-          lastName: 'Mock',
+        customer={editOrder ? {
+          firstName: editOrder.clienteNombre || 'Cliente',
+          lastName: '',
           documentType: 'CC',
-          documentNumber: '123456',
+          documentNumber: `DOC-${editOrder.clienteId}`,
           email: 'cliente@example.com',
           phone: '300123456',
-          address: 'Dirección mock'
+          address: 'Dirección del cliente'
         } : null}
         isOpen={!!editOrder}
         estados={estados}

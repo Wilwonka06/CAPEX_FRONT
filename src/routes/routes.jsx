@@ -15,7 +15,6 @@ import CategoriasServicios from "../features/dashboard/pages/CatServices/CatServ
 import Appointments from "../features/dashboard/pages/appointments/Appointments";
 
 
-import Citas from '../features/dashboard/pages/Quotes/Quotes';
 import Clientes from "../features/dashboard/pages/customers/Customer";
 
 import Compras from "../features/dashboard/pages/purchases/Purchases";
@@ -235,7 +234,7 @@ const router = createBrowserRouter([
           },
         ],
       },
-      // Landing page del cliente
+      // Landing page del cliente (pública)
       {
         path: "/landing",
         element: <Landing />,

@@ -1,17 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { isValidEmail, isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
 import { useAuth } from '../../../shared/contexts/AuthContext';
-import { restoreAdminData, verifyAdminData } from '../../../shared/utils/adminDataRestore';
+import { apiRequest } from '../../../shared/config/apiConfig';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
-const roleRedirect = {
-  'administrador': '/dashboard',
-  'empleado': '/dashboard/citas',
-  'cliente': '/landing',
-};
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -19,62 +12,71 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Restaurar datos del administrador al cargar la página
-  useEffect(() => {
-    console.log('=== INICIALIZANDO LOGIN PAGE ===');
-    
-    // Verificar si los datos del administrador existen
-    const dataExists = verifyAdminData();
-    
-    if (!dataExists) {
-      console.log('Datos del administrador no encontrados, restaurando...');
-      restoreAdminData();
-    } else {
-      console.log('Datos del administrador ya existen');
-    }
-  }, []);
 
-  const isFormValid = isValidEmail(email.trim()) && isValidPassword(password.trim());
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
+
     if (!isValidEmail(trimmedEmail)) {
       setError('Por favor ingresa un correo válido.');
       setEmail('');
       toast.error('Por favor ingresa un correo válido.', { position: 'top-right' });
+      setLoading(false);
       return;
     }
+
     if (!isValidPassword(trimmedPassword)) {
       setError('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.');
       setPassword('');
       toast.error('La contraseña no cumple los requisitos.', { position: 'top-right' });
+      setLoading(false);
       return;
     }
-    const users = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const userByEmail = users.find(u => u.correo === trimmedEmail);
-    if (!userByEmail) {
-      setError('No existe un usuario con ese correo.');
+
+    try {
+      // Llamar a la API de autenticación del backend
+      const response = await apiRequest.post('/auth/login', {
+        correo: trimmedEmail,
+        contrasena: trimmedPassword
+      });
+
+      if (response.success) {
+        // Guardar token en localStorage
+        localStorage.setItem('authToken', response.token);
+
+        // Preparar datos del usuario para el contexto
+        const userData = {
+          ...response.user,
+          token: response.token
+        };
+
+        // Login exitoso
+        login(userData);
+        toast.success('¡Bienvenido!', { position: 'top-right' });
+      } else {
+        throw new Error(response.message || 'Error en la autenticación');
+      }
+    } catch (error) {
+      console.error('Error en login:', error);
+
+      if (error.response?.status === 401) {
+        setError('Credenciales inválidas');
+        toast.error('Credenciales inválidas', { position: 'top-right' });
+      } else {
+        setError(error.message || 'Error al iniciar sesión');
+        toast.error(error.message || 'Error al iniciar sesión', { position: 'top-right' });
+      }
+
       setPassword('');
-      toast.error('No existe un usuario con ese correo.', { position: 'top-right' });
-      return;
+    } finally {
+      setLoading(false);
     }
-    if (userByEmail.password !== trimmedPassword) {
-      setError('La contraseña es incorrecta para este correo.');
-      setPassword('');
-      toast.error('La contraseña es incorrecta.', { position: 'top-right' });
-      return;
-    }
-    if (userByEmail.estado !== 'Activo') {
-      setError('El usuario está inactivo.');
-      toast.error('El usuario está inactivo.', { position: 'top-right' });
-      return;
-    }
-    login(userByEmail);
-    toast.success('¡Bienvenido!', { position: 'top-right' });
   };
 
   return (
@@ -130,7 +132,20 @@ export default function LoginPage() {
             <div className="flex justify-end">
               <a href="/forgot-password" className="text-[#a0522d] hover:underline text-sm">¿Olvidaste tu contraseña?</a>
             </div>
-            <button type="submit" className="w-full bg-[#a0522d] text-white py-2 rounded hover:bg-[#7a3a1d] transition font-semibold text-lg flex items-center justify-center gap-2">Entrar</button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#a0522d] text-white py-2 rounded hover:bg-[#7a3a1d] transition font-semibold text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Iniciando sesión...
+                </>
+              ) : (
+                'Entrar'
+              )}
+            </button>
           </form>
           <div className="mt-4 text-center">
             <a href="/register" className="text-[#a0522d] hover:underline">¿No tienes cuenta? Regístrate</a>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import ordersService from '../../../../shared/services/OrdersService';
+import ordersService from '../../pages/orders/API/OrdersService';
 import { jsPDF } from 'jspdf';
 
 // Mock de clientes (idéntico al dashboard)

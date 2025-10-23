@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 
 const AuthContext = createContext();
@@ -31,11 +31,16 @@ export const AuthProvider = ({ children }) => {
     if (!currentUser) {
       return false;
     }
-    
+
+    // Si el usuario es administrador, tiene todos los privilegios
+    if (currentUser.rol?.toLowerCase() === 'administrador') {
+      return true;
+    }
+
     if (!currentUser.privileges) {
       return false;
     }
-    
+
     const hasPrivilege = currentUser.privileges[module]?.[action] === true;
     return hasPrivilege;
   };
@@ -44,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   const getRoleRedirect = (role) => {
     const roleRedirects = {
       'administrador': '/dashboard',
-      'empleado': '/landing',
+      'empleado': '/dashboard/citas',
       'cliente': '/landing',
     };
     return roleRedirects[role?.toLowerCase()] || '/landing';
