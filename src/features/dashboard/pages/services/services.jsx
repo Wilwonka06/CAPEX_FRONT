@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import AddServices from './components/AddServices'
+import {
+  getServices,
+  createService,
+  updateService,
+  deleteService,
+  toggleServiceStatus,
+} from "./api/servicesApi";
+import { getServiceCategories } from "../CatServices/api/serviceCategoriesApi";
+import AddServices from './components/AddServices';
 import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../../../../shared/Paginator";
@@ -9,36 +17,8 @@ import SearchProduct from '../../../../shared/Search';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import PropTypes from "prop-types";
-import { useServiceCategories, ServiceCategoriesProvider } from './hooks/useServiceCategories';
 
-const LOCAL_STORAGE_KEY = 'servicios';
 const SERVICES_PER_PAGE = 5;
-
-const initialServices = [
-  { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: '30 min', price: '$25.000', active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
-  { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: '45 min', price: '$35.000', active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
-  { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: '60 min', price: '$80.000', active: true, description: 'Masaje corporal relajante', estado: 'Activo' },
-  { id: 4, name: 'Depilación Láser', category: 'Estética', duration: '20 min', price: '$150.000', active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
-  { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: '50 min', price: '$60.000', active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
-  { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: '40 min', price: '$75.000', active: true, description: 'Tratamiento nutritivo para el cabello', estado: 'Activo' },
-];
-
-// Función para normalizar texto (remover tildes)
-const normalizeText = (text) => {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-};
-
-// Componente para el interruptor de estado
-const StatusToggle = ({ isActive, onToggle }) => (
-  <label onClick={(e) => { e.stopPropagation(); }} className="flex items-center cursor-pointer">
-    <div className="relative">
-      <input type="checkbox" className="sr-only" checked={isActive} onChange={onToggle} />
-      <div className={`block w-11 h-6 rounded-full ${isActive ? 'bg-black' : 'bg-gray-300'}`}></div>
-      <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isActive ? 'translate-x-full' : ''}`}></div>
-    </div>
-    <div className="ml-3 text-black font-medium">{isActive ? 'Activo' : 'Inactivo'}</div>
-  </label>
-);
 
 // Componente para la tabla de servicios
 const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) => (
@@ -56,65 +36,68 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) =>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200">
-        {services.map((service) => (
-          <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
-            <td className="py-4 px-4 text-xs font-medium text-gray-900">{service.id}</td>
-            <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.name}</td>
-            <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">{service.category}</td>
-            <td className="py-4 px-4 text-xs text-gray-600">{service.duration}</td>
-            <td className="py-4 px-4 text-xs text-gray-600">{service.price}</td>
-            <td className="py-4 px-4 text-xs">
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => onToggleStatus(service.id)}
-                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none  ${
-                    service.active ? 'bg-text-main' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      service.active ? 'translate-x-6' : 'translate-x-1'
+        {services.map((service) => {
+          const isActive = service.estado === "Activo";
+          return (
+            <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
+              <td className="py-4 px-4 text-xs font-medium text-gray-900">{service.id}</td>
+              <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.nombre}</td>
+              <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">
+                {service.categoria?.nombre || service.categoria || 'Sin categoría'}
+              </td>
+              <td className="py-4 px-4 text-xs text-gray-600">{service.duracion} min</td>
+              <td className="py-4 px-4 text-xs text-gray-600">${service.precio?.toLocaleString()}</td>
+              <td className="py-4 px-4 text-xs">
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => onToggleStatus(service.id)}
+                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
+                      isActive ? 'bg-text-main' : 'bg-gray-300'
                     }`}
-                  />
-                </button>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    service.active
-                      ? ' text-gray-800'
-                      : ' text-gray-600 '
-                  }`}
-                >
-                  {service.active ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-            </td>
-            <td className="py-4 px-4 text-sm font-medium text-right">
-              <div className="flex justify-end space-x-2">
-                <button 
-                  className="h-8 w-8 p-0 flex items-center justify-center"
-                  onClick={() => onSee(service)}
-                  title="Ver detalles"
-                >
-                  <i className="bi bi-eye text-primary text-lg"></i>
-                </button>
-                <button 
-                  className="h-8 w-8 p-0 flex items-center justify-center"
-                  onClick={() => onEdit(service)}
-                  title="Editar"
-                >
-                  <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
-                </button>
-                <button 
-                  className="h-8 w-8 p-0 flex items-center justify-center"
-                  onClick={() => onDelete(service)}
-                  title="Eliminar"
-                >
-                  <i className="bi bi-trash text-red-500 text-lg"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                        isActive ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      isActive ? ' text-gray-800' : ' text-gray-600'
+                    }`}
+                  >
+                    {isActive ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
+              </td>
+              <td className="py-4 px-4 text-sm font-medium text-right">
+                <div className="flex justify-end space-x-2">
+                  <button
+                    className="h-8 w-8 p-0 flex items-center justify-center"
+                    onClick={() => onSee(service)}
+                    title="Ver detalles"
+                  >
+                    <i className="bi bi-eye text-primary text-lg"></i>
+                  </button>
+                  <button
+                    className="h-8 w-8 p-0 flex items-center justify-center"
+                    onClick={() => onEdit(service)}
+                    title="Editar"
+                  >
+                    <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
+                  </button>
+                  <button
+                    className="h-8 w-8 p-0 flex items-center justify-center"
+                    onClick={() => onDelete(service)}
+                    title="Eliminar"
+                  >
+                    <i className="bi bi-trash text-red-500 text-lg"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   </div>
@@ -128,10 +111,12 @@ ServicesTable.propTypes = {
   onDelete: PropTypes.func.isRequired,
 };
 
-const ServicesContent = () => {
+const Services = () => {
   const { setTitle } = useOutletContext();
-  const { categories } = useServiceCategories();
   const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -139,38 +124,66 @@ const ServicesContent = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
 
-  // Cargar servicios al iniciar
-  useEffect(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    let parsed = [];
+  // Cargar servicios y categorías
+  const loadData = async () => {
+    setLoading(true);
+    setError("");
     try {
-      parsed = JSON.parse(stored);
-    } catch (e) {
-      parsed = [];
+      const [servicesData, categoriesData] = await Promise.all([
+        getServices(),
+        getServiceCategories().catch(() => [])
+      ]);
+
+      console.log("[DEBUG] Servicios cargados:", servicesData);
+      console.log("[DEBUG] Categorías cargadas:", categoriesData);
+
+      setServices(Array.isArray(servicesData) ? servicesData : []);
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+
+      // Enriquecer servicios con nombres de categorías si no vienen del backend
+      if (servicesData.length && categoriesData.length) {
+        const enrichedServices = servicesData.map(service => {
+          if (service.categoria?.nombre || typeof service.categoria === 'string') {
+            return service;
+          }
+          
+          const category = categoriesData.find(
+            cat => (cat.id_categoria_servicio || cat.id) === service.id_categoria_servicio
+          );
+          
+          return category 
+            ? { ...service, categoria: { nombre: category.nombre } }
+            : service;
+        });
+        setServices(enrichedServices);
+      }
+    } catch (err) {
+      console.error("Error cargando datos:", err);
+      setError("No se pudieron cargar los servicios.");
+      toast.error("Error al cargar servicios");
+    } finally {
+      setLoading(false);
     }
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      setServices(initialServices);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialServices));
-    } else {
-      setServices(parsed);
-    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
-  // Guardar servicios en localStorage cuando cambian
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(services));
-  }, [services]);
+    setTitle("Gestión de Servicios");
+    return () => setTitle("");
+  }, [setTitle]);
 
   // Filtrar servicios por término de búsqueda
-  const filteredServices = services.filter(
-    (service) =>
-      (service.id?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.duration || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.price || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.active ? "activo" : "inactivo").includes(searchTerm.toLowerCase())
+  const filteredServices = services.filter((service) =>
+    (service.id?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (service.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ((service.categoria?.nombre || service.categoria || "").toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (String(service.duracion || "").toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (String(service.precio || "").toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (service.descripcion || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (service.estado || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Paginación
@@ -178,84 +191,132 @@ const ServicesContent = () => {
   const startIndex = (currentPage - 1) * SERVICES_PER_PAGE;
   const paginatedServices = filteredServices.slice(startIndex, startIndex + SERVICES_PER_PAGE);
 
-  // Resetear página al cambiar el filtro
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, services]);
 
-  // CRUD
-  const handleAddService = (newService) => {
-    setServices((prev) => [...prev, newService]);
-    toast.success('Servicio creado exitosamente', { position: 'top-right' });
+  // CRUD handlers
+  const handleAddService = async (newServiceData) => {
+    try {
+      const createdService = await createService(newServiceData);
+      
+      // Enriquecer con categoría si es necesario
+      const category = categories.find(
+        cat => (cat.id_categoria_servicio || cat.id) == newServiceData.id_categoria_servicio
+      );
+      const enrichedService = category && !createdService.categoria
+        ? { ...createdService, categoria: { nombre: category.nombre } }
+        : createdService;
+
+      setServices(prev => [...prev, enrichedService]);
+      setShowAddModal(false);
+      toast.success("Servicio agregado exitosamente");
+    } catch (error) {
+      console.error("Error agregando servicio:", error);
+      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+      toast.error(backendMsg || "Error al agregar servicio");
+    }
   };
 
-  const handleEditService = async (editedService) => {
+  const handleEditService = async (editedServiceData) => {
     const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar el servicio "${editedService.name}"?`,
-      icon: 'question',
+      title: "¿Confirmar edición?",
+      text: `¿Editar el servicio "${editedServiceData.nombre}"?`,
+      icon: "question",
       showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonText: "Sí, editar",
+      cancelButtonText: "Cancelar",
     });
+    
     if (result.isConfirmed) {
-      setServices((prev) => prev.map(s => s.id === editedService.id ? editedService : s));
-      setShowEditModal(false);
-      setSelectedService(null);
-      toast.success('Servicio actualizado exitosamente', { position: 'top-right' });
+      try {
+        const updatedService = await updateService(editedServiceData.id, editedServiceData);
+        
+        // Enriquecer con categoría si es necesario
+        const category = categories.find(
+          cat => (cat.id_categoria_servicio || cat.id) == editedServiceData.id_categoria_servicio
+        );
+        const enrichedService = category && !updatedService.categoria
+          ? { ...updatedService, categoria: { nombre: category.nombre } }
+          : updatedService;
+
+        setServices(prev => prev.map(s => s.id === enrichedService.id ? enrichedService : s));
+        setShowEditModal(false);
+        setSelectedService(null);
+        toast.success("Servicio actualizado exitosamente");
+      } catch (error) {
+        console.error("Error actualizando servicio:", error);
+        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+        toast.error(backendMsg || "Error al actualizar servicio");
+      }
     }
   };
 
   const handleDeleteService = async (service) => {
     const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas eliminar el servicio "${service?.name}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
+      title: "¿Estás seguro?",
+      text: `Eliminar "${service.nombre}" no se puede deshacer.`,
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
     });
+    
     if (result.isConfirmed) {
-      setServices((prev) => prev.filter(s => s.id !== service.id));
-      toast.success('Servicio eliminado exitosamente', { position: 'top-right' });
+      try {
+        await deleteService(service.id);
+        setServices(prev => prev.filter(s => s.id !== service.id));
+        toast.success("Servicio eliminado exitosamente");
+      } catch (error) {
+        console.error("Error eliminando servicio:", error);
+        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+        toast.error(backendMsg || "Error al eliminar servicio");
+      }
     }
   };
 
   const handleToggleStatus = async (serviceId) => {
-    const service = services.find(s => s.id === serviceId);
-    const newStatus = service.active ? 'Inactivo' : 'Activo';
-    const result = await Swal.fire({
-      title: '¿Confirmar cambio de estado?',
-      text: `¿Estás seguro de que deseas cambiar el estado de "${service?.name}" a ${newStatus}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, cambiar',
-      cancelButtonText: 'Cancelar'
-    });
-    if (result.isConfirmed) {
-      setServices((prev) => prev.map(s =>
-        s.id === serviceId
-          ? { ...s, active: !s.active, estado: newStatus }
-          : s
-      ));
-      toast.success(`Estado cambiado a ${newStatus}`, { position: 'top-right' });
+    const current = services.find(s => s.id === serviceId);
+    if (!current) {
+      toast.error("Servicio no encontrado");
+      return;
+    }
+
+    const nextEstado = current.estado === 'Activo' ? 'Inactivo' : 'Activo';
+    const updatedService = { ...current, estado: nextEstado };
+
+    // Optimista: aplicar cambio local y revertir si falla
+    const prevServices = services;
+    setServices(prevList => prevList.map(s =>
+      s.id === serviceId
+        ? { ...s, estado: nextEstado }
+        : s
+    ));
+
+    try {
+      const updated = await toggleServiceStatus(updatedService);
+      // Sincronizar con respuesta del backend si viene completa
+      if (updated && updated.id) {
+        // Mantener categoría enriquecida
+        const currentService = services.find(s => s.id === serviceId);
+        const enriched = {
+          ...updated,
+          categoria: currentService?.categoria || updated.categoria
+        };
+        setServices(prevList => prevList.map(s => s.id === updated.id ? enriched : s));
+      }
+      toast.success(`Estado cambiado a ${nextEstado}`);
+    } catch (error) {
+      setServices(prevServices); // revertir
+      console.error("Error cambiando estado:", error);
+      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+      toast.error(backendMsg || "Error al cambiar estado");
     }
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
+  const handlePageChange = (page) => setCurrentPage(page);
+  const handleSearch = (e) => setSearchTerm(e.target.value);
+  
   const closeModals = () => {
     setShowAddModal(false);
     setShowEditModal(false);
@@ -263,10 +324,32 @@ const ServicesContent = () => {
     setSelectedService(null);
   };
 
-  useEffect(() => {
-    setTitle('Gestión de Servicios');
-    return () => setTitle('');
-  }, [setTitle]);
+  if (loading) {
+    return (
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando servicios...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadData}
+            className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark transition"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen font-inter">
@@ -275,7 +358,11 @@ const ServicesContent = () => {
           <div className="p-6">
             {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar servicios..." />
+              <SearchProduct 
+                searchTerm={searchTerm} 
+                handleSearch={handleSearch} 
+                placeholder="Buscar servicios..." 
+              />
               <button
                 className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
                 onClick={() => setShowAddModal(true)}
@@ -284,31 +371,40 @@ const ServicesContent = () => {
                 Nuevo Servicio
               </button>
             </div>
+
             {/* Tabla de servicios */}
-            <ServicesTable
-              services={paginatedServices}
-              onToggleStatus={handleToggleStatus}
-              onSee={(service) => {
-                setSelectedService(service);
-                setShowDetailModal(true);
-              }}
-              onEdit={(service) => {
-                setSelectedService(service);
-                setShowEditModal(true);
-              }}
-              onDelete={handleDeleteService}
-            />
-            {/* Paginación */}
-            {totalPages > 1 && (
+            {services.length === 0 ? (
+              <p className="text-gray-600 text-center py-8">No hay servicios registrados.</p>
+            ) : (
+              <>
+                <ServicesTable
+                  services={paginatedServices}
+                  onToggleStatus={handleToggleStatus}
+                  onSee={(service) => {
+                    setSelectedService(service);
+                    setShowDetailModal(true);
+                  }}
+                  onEdit={(service) => {
+                    setSelectedService(service);
+                    setShowEditModal(true);
+                  }}
+                  onDelete={handleDeleteService}
+                />
+                
+                {/* Paginación */}
+                {totalPages > 1 && (
                   <Paginator
                     currentPage={currentPage}
                     totalPages={totalPages}
                     onPageChange={handlePageChange}
                   />
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
+
       {/* Modales */}
       {showAddModal && (
         <AddServices
@@ -318,6 +414,7 @@ const ServicesContent = () => {
           categories={categories}
         />
       )}
+
       {showEditModal && selectedService && (
         <EditServices
           onClose={closeModals}
@@ -327,21 +424,17 @@ const ServicesContent = () => {
           categories={categories}
         />
       )}
+
       {showDetailModal && selectedService && (
         <SeeServices
           onClose={closeModals}
           service={selectedService}
         />
       )}
-      <ToastContainer />
+
+      <ToastContainer position="top-right" />
     </div>
   );
 };
-
-const Services = () => (
-  <ServiceCategoriesProvider>
-    <ServicesContent />
-  </ServiceCategoriesProvider>
-);
 
 export default Services;

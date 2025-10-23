@@ -3,15 +3,31 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import AddScheduling from './AddScheduling';
+import { createScheduling } from '../api/schedulingApi';
+import { toast } from 'react-toastify';
 
-const EMPLOYEES_KEY = 'capex_employees';
-
-const Calendar = ({ empleado, onUpdateEmpleado }) => {
+const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [eventos, setEventos] = useState([]);
 
-  const expandirProgramacion = (prog, idBase) => {
+  console.log("[Calendar] Render - empleado:", empleado);
+  console.log("[Calendar] Render - schedulings:", schedulings);
+
+  // Función para expandir programaciones con días seleccionados
+  const expandirProgramacion = (prog) => {
+    console.log("[Calendar] expandirProgramacion input:", prog);
+    
     const { fechaInicio, fechaFin, dias = [] } = prog;
+
+    if (!fechaInicio) {
+      console.warn("[Calendar] No fechaInicio, returning single event");
+      return [{
+        id: prog.id,
+        title: `${prog.horaInicio || prog.hora_entrada} - ${prog.horaFin || prog.hora_salida}`,
+        start: prog.fecha || prog.fechaInicio,
+        allDay: true,
+      }];
+    }
   
     const diasSemanaMap = {
       domingo: 0, lunes: 1, martes: 2, miercoles: 3,
@@ -21,88 +37,137 @@ const Calendar = ({ empleado, onUpdateEmpleado }) => {
     const diasSeleccionados = dias.map(d => {
       const limpio = d.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       return diasSemanaMap[limpio];
-    });
+    }).filter(d => d !== undefined);
   
     const eventos = [];
     const start = new Date(fechaInicio + 'T00:00');
     const end = new Date(fechaFin + 'T23:59');
   
     let current = new Date(start);
-    let idx = 0;
   
     while (current <= end) {
       const diaSemana = current.getDay();
   
       if (diasSeleccionados.length === 0 || diasSeleccionados.includes(diaSemana)) {
         eventos.push({
-          ...prog,
-          fechaInicio: current.toISOString().split('T')[0],
-          fechaFin: current.toISOString().split('T')[0],
-          id: `${idBase}_${idx}`,
-          idBase,
+          id: `${prog.id}_${current.toISOString().split('T')[0]}`,
+          title: `${prog.horaInicio || prog.hora_entrada} - ${prog.horaFin || prog.hora_salida}`,
+          start: current.toISOString().split('T')[0],
+          allDay: true,
         });
-        idx++;
       }
   
       current.setDate(current.getDate() + 1);
       current.setHours(0, 0, 0, 0);
     }
-  
+
+    console.log("[Calendar] expandirProgramacion output:", eventos);
     return eventos;
   };
-  
 
-  const handleAddEvent = (prog) => {
-    const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
-    const idBase = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
-    const nuevoProg = { ...prog, idBase };
+  const handleAddEvent = async (prog) => {
+    console.log("[Calendar] handleAddEvent input:", prog);
+    
+    try {
+      if (!empleado || !empleado.id) {
+        toast.error("No hay empleado seleccionado");
+        return;
+      }
 
-    const nuevosEmpleados = empleados.map(emp =>
-      emp.id === empleado.id
-        ? { ...emp, schedulings: [...(emp.schedulings || []), nuevoProg] }
-        : emp
-    );
+      // Calcular fechas específicas basadas en días seleccionados
+      const { fechaInicio, fechaFin, dias, horaInicio, horaFin } = prog;
+      
+      if (!dias || dias.length === 0) {
+        toast.error("Debes seleccionar al menos un día");
+        return;
+      }
 
-    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(nuevosEmpleados));
-    if (onUpdateEmpleado) onUpdateEmpleado(nuevosEmpleados.find(e => e.id === empleado.id));
+      const diasSemanaMap = {
+        domingo: 0, lunes: 1, martes: 2, miercoles: 3,
+        miércoles: 3, jueves: 4, viernes: 5, sabado: 6, sábado: 6
+      };
 
-    const eventosNuevos = expandirProgramacion(nuevoProg, idBase).map(ev => ({
-      id: ev.id,
-      title: `${ev.horaInicio} - ${ev.horaFin}`,
-      start: ev.fechaInicio,
-      allDay: true,
-    }));
+      const diasSeleccionados = dias.map(d => {
+        const limpio = d.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return diasSemanaMap[limpio];
+      }).filter(d => d !== undefined);
 
-    setEventos(prev => [...prev, ...eventosNuevos]);
-    setModalOpen(false);
+      // Calcular fechas específicas
+      const start = new Date(fechaInicio + 'T00:00');
+      const end = new Date(fechaFin + 'T23:59');
+      const fechasEspecificas = [];
 
-    window.location.reload();
+      let current = new Date(start);
+      while (current <= end) {
+        const diaSemana = current.getDay();
+        if (diasSeleccionados.includes(diaSemana)) {
+          fechasEspecificas.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+        current.setHours(0, 0, 0, 0);
+      }
+
+      console.log("[Calendar] Fechas específicas calculadas:", fechasEspecificas);
+
+      if (fechasEspecificas.length === 0) {
+        toast.error("No hay fechas válidas para los días seleccionados");
+        return;
+      }
+
+      // Crear una programación por cada fecha
+      const createdSchedulings = [];
+      for (const fecha of fechasEspecificas) {
+        const schedulingData = {
+          id_usuario: empleado.id,
+          fecha_inicio: fecha,
+          hora_entrada: horaInicio,
+          hora_salida: horaFin,
+        };
+
+        console.log("[Calendar] Creating scheduling for fecha:", fecha, schedulingData);
+        const created = await createScheduling(schedulingData);
+        createdSchedulings.push(created);
+      }
+
+      // Actualizar lista de schedulings
+      if (onUpdateSchedulings) {
+        onUpdateSchedulings(prev => [...prev, ...createdSchedulings]);
+      }
+
+      setModalOpen(false);
+      toast.success(`${createdSchedulings.length} programación(es) creada(s) exitosamente`);
+    } catch (error) {
+      console.error("[Calendar] Error agregando programación:", error);
+      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+      toast.error(backendMsg || "Error al agregar programación");
+    }
   };
 
   useEffect(() => {
-    if (!empleado) return;
+    console.log("[Calendar] useEffect triggered");
+    if (!empleado) {
+      console.log("[Calendar] No empleado, clearing events");
+      setEventos([]);
+      return;
+    }
 
-    const schedulings = empleado.schedulings || [];
-    const todosEventos = schedulings.flatMap(prog => {
-      const idBase = prog.idBase || prog.id;
-      return expandirProgramacion(prog, idBase);
-    }).map(ev => ({
-      id: ev.id,
-      title: `${ev.horaInicio} - ${ev.horaFin}`,
-      start: ev.fechaInicio,
-      allDay: true,
-    }));
+    const employeeSchedulings = empleado.schedulings || [];
+    console.log("[Calendar] Employee schedulings:", employeeSchedulings);
+
+    const todosEventos = employeeSchedulings.flatMap(prog => expandirProgramacion(prog));
+    console.log("[Calendar] All events:", todosEventos);
 
     setEventos(todosEventos);
-  }, [empleado]);
+  }, [empleado, schedulings]);
 
   return (
-    <div className="w-full">
+    <div className="w-full p-4">
       <FullCalendar
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         events={eventos}
         dateClick={() => setModalOpen(true)}
+        height="auto"
       />
 
       {modalOpen && (

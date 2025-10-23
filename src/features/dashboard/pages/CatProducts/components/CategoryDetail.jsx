@@ -1,4 +1,4 @@
-import { useState } from "react";
+import PropTypes from 'prop-types';
 
 const CategoryDetail = ({ category, isOpen, onClose }) => {
   if (!isOpen || !category) return null;
@@ -20,11 +20,11 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
         {/* Contenido con scroll */}
         <div className="overflow-y-auto p-8 flex-1">
           <div className="flex flex-col gap-6">
-            <div className="text-lg font-bold text-gray-800 text-center mb-2">{category.name}</div>
+            <div className="text-lg font-bold text-gray-800 text-center mb-2">{category.nombre || category.name}</div>
             <div>
               <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Descripción</span>
               <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[60px]">
-                {category.description}
+                {category.descripcion || category.description || 'Sin descripción'}
               </div>
             </div>
           </div>
@@ -41,6 +41,18 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
       </div>
     </div>
   );
+};
+
+CategoryDetail.propTypes = {
+  category: PropTypes.shape({
+    nombre: PropTypes.string,
+    name: PropTypes.string,
+    descripcion: PropTypes.string,
+    description: PropTypes.string,
+    estado: PropTypes.string,
+  }),
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default CategoryDetail; 

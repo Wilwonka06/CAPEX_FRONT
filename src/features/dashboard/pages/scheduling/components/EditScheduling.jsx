@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { 
+import {
   validateSchedulingForm,
   validateSchedulingStartDate,
   validateSchedulingEndDate,
   validateSchedulingStartTime,
   validateSchedulingEndTime,
-  validateSchedulingRepetition,
   validateSchedulingDays
 } from '../../../../../shared/validations';
 
@@ -22,7 +21,6 @@ const diasSemana = [
 const initialProg = {
   fechaInicio: '',
   fechaFin: '',
-  repeticion: 'No se repite',
   dias: [],
   horaInicio: '08:00',
   horaFin: '09:00',
@@ -34,7 +32,14 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
 
   useEffect(() => {
     if (editing) {
-      setProg(editing);
+      // Convert API format to form format
+      setProg({
+        fechaInicio: editing.fecha || editing.fechaInicio || '',
+        fechaFin: editing.fecha || editing.fechaFin || '',
+        dias: editing.dias || [],
+        horaInicio: editing.hora_entrada || editing.horaInicio || '08:00',
+        horaFin: editing.hora_salida || editing.horaFin || '09:00',
+      });
     } else {
       setProg(initialProg);
     }
@@ -44,7 +49,7 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
   // Validación en tiempo real
   const validateField = (field, value) => {
     let fieldErrors = {};
-    
+
     switch (field) {
       case 'fechaInicio':
         fieldErrors = validateSchedulingStartDate(value);
@@ -58,16 +63,13 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
       case 'horaFin':
         fieldErrors = validateSchedulingEndTime(value, prog.horaInicio);
         break;
-      case 'repeticion':
-        fieldErrors = validateSchedulingRepetition(value);
-        break;
       case 'dias':
         fieldErrors = validateSchedulingDays(prog.dias, value);
         break;
       default:
         break;
     }
-    
+
     return fieldErrors;
   };
 
@@ -82,7 +84,7 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
       setProg((prev) => ({ ...prev, dias: newDias }));
       
       // Validar días cuando cambian
-      const diasErrors = validateSchedulingDays(newDias, prog.repeticion);
+      const diasErrors = validateSchedulingDays(newDias);
       setErrors(prev => ({
         ...prev,
         dias: diasErrors.dias || null
@@ -107,24 +109,18 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
     setErrors(formErrors);
     
     if (Object.keys(formErrors).length === 0) {
-      let progToSave = { ...prog };
+      // Create scheduling data in API format
+      const schedulingData = {
+        id: editing.id,
+        id_usuario: editing.id_usuario,
+        fecha: prog.fechaInicio,
+        hora_entrada: prog.horaInicio,
+        hora_salida: prog.horaFin,
+        dias: prog.dias,
+      };
 
-      if (editing && editing.id) progToSave.id = editing.id;
-      if (editing && editing.idBase) progToSave.idBase = editing.idBase;
-
-      // ✅ CLAVE: Conserva el empleadoId original
-      progToSave.empleadoId = editing.empleadoId;
-
-      if (onSave) onSave(progToSave);
+      if (onSave) onSave(schedulingData);
       setErrors({});
-      toast.success('Programación actualizada exitosamente!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
     }
   };
 
@@ -156,22 +152,6 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
             />
             {errors.fechaFin && (
               <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>
-            )}
-          </div>
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-sm font-medium text-text-main mb-1">Repetición</label>
-            <select
-              name="repeticion"
-              value={prog.repeticion}
-              onChange={handleProgChange}
-              className="border rounded px-3 py-2 w-full"
-            >
-              <option>No se repite</option>
-              <option>Semanal</option>
-              <option>Mensual</option>
-            </select>
-            {errors.repeticion && (
-              <p className="text-red-500 text-xs mt-1">{errors.repeticion}</p>
             )}
           </div>
         </div>

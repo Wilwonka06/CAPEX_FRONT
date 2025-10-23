@@ -22,7 +22,6 @@ const diasSemana = [
 const initialProg = {
   fechaInicio: '',
   fechaFin: '',
-  repeticion: 'No se repite',
   dias: [],
   horaInicio: '08:00',
   horaFin: '09:00',
@@ -52,7 +51,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     } else {
       setProg({ ...prog, [name]: value });
     }
-    
+
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -80,10 +79,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
         const horaFinErrors = validateSchedulingEndTime(value, prog.horaInicio);
         error = horaFinErrors.horaFin || '';
         break;
-      case 'repeticion':
-        const repeticionErrors = validateSchedulingRepetition(value);
-        error = repeticionErrors.repeticion || '';
-        break;
+      // Removed repeticion validation
       default:
         break;
     }
@@ -108,7 +104,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     const nuevaProg = {
       ...prog,
       dias: diasLimpios,               // ⚡️ Guarda días limpios
-      repeticion: prog.repeticion,
       empleadoId: empleado?.id || null,
       id: editing?.id || Date.now().toString(),
     };
@@ -189,21 +184,6 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
             {errors.fechaFin && <p className="text-red-500 text-xs">{errors.fechaFin}</p>}
           </div>
 
-          <div className="md:col-span-2">
-            <label>Repetición</label>
-            <select
-              name="repeticion"
-              value={prog.repeticion}
-              onChange={handleProgChange}
-              onBlur={handleBlur}
-              className="w-full border rounded px-3 py-2"
-            >
-              <option>No se repite</option>
-              <option>Semanal</option>
-              <option>Mensual</option>
-            </select>
-            {errors.repeticion && <p className="text-red-500 text-xs">{errors.repeticion}</p>}
-          </div>
 
           <div className="md:col-span-2">
             <div className="flex flex-wrap gap-4 mt-2">

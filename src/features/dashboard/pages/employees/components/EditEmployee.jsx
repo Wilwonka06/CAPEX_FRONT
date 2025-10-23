@@ -4,25 +4,25 @@ import EditScheduling from './EditScheduling';
 import {
   validateEmployeeEditForm,
   validateEmployeeName,
-  validateEmployeeLastName,
   validateEmployeeDocument,
   validateEmployeeEmail
 } from '../../../../../shared/validations';
 
 const tiposDocumento = [
-  { value: 'CC', label: 'Cédula de Ciudadanía' },
-  { value: 'TI', label: 'Tarjeta de Identidad' },
-  { value: 'CE', label: 'Cédula de Extranjería' },
-  { value: 'PAS', label: 'Pasaporte' },
+  { value: 'Cedula de ciudadania', label: 'Cédula de Ciudadanía' },
+  { value: 'Tarjeta de identidad', label: 'Tarjeta de Identidad' },
+  { value: 'Cedula de extranjeria', label: 'Cédula de Extranjería' },
+  { value: 'Pasaporte', label: 'Pasaporte' },
 ];
 
 const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
   const [form, setForm] = useState({
     nombre: '',
-    apellido: '', // Cambiado a singular
-    tipoDocumento: 'CC',
+    tipoDocumento: 'Cedula de ciudadania',
     documento: '',
+    telefono: '',
     correo: '',
+    direccion: '',
     estado: 'Activo',
   });
   const [errors, setErrors] = useState({});
@@ -42,11 +42,12 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
     if (employee) {
       setForm({
         nombre: employee.nombre || '',
-        apellido: employee.apellido || '', // Cambiado a singular
-        tipoDocumento: employee.tipoDocumento || 'CC',
+        tipoDocumento: employee.tipoDocumento || 'Cedula de ciudadania',
         documento: employee.documento || '',
+        telefono: employee.telefono || '',
         correo: employee.correo || '',
-        estado: employee.estado ? 'Activo' : 'Inactivo',
+        direccion: employee.direccion || '',
+        estado: employee.estado === 'Activo' ? 'Activo' : 'Inactivo',
       });
       setSchedulings(employee.schedulings || []);
       setErrors({}); // Limpiar errores al cambiar de empleado
@@ -85,10 +86,6 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
       case 'nombre':
         const nombreErrors = validateEmployeeName(value);
         error = nombreErrors.nombre || '';
-        break;
-      case 'apellido':
-        const apellidoErrors = validateEmployeeLastName(value);
-        error = apellidoErrors.apellido || '';
         break;
       case 'documento':
         const documentoErrors = validateEmployeeDocument(value, employees, employee);
@@ -205,20 +202,6 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
               {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
             </div>
             <div>
-              <label htmlFor="apellido" className="block text-sm font-medium text-text-main mb-1">Apellido</label>
-              <input
-                type="text"
-                name="apellido"
-                id="apellido"
-                value={form.apellido}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                required
-              />
-              {errors.apellido && <p className="text-red-500 text-xs mt-1">{errors.apellido}</p>}
-            </div>
-            <div>
               <label htmlFor="tipoDocumento" className="block text-sm font-medium text-text-main mb-1">Tipo de Documento</label>
               <select
                 name="tipoDocumento"
@@ -248,6 +231,20 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
               {errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
             </div>
             <div>
+              <label htmlFor="telefono" className="block text-sm font-medium text-text-main mb-1">Teléfono</label>
+              <input
+                type="tel"
+                name="telefono"
+                id="telefono"
+                value={form.telefono}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
+                required
+              />
+              {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
+            </div>
+            <div>
               <label htmlFor="correo" className="block text-sm font-medium text-text-main mb-1">Correo</label>
               <input
                 type="email"
@@ -260,6 +257,20 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                 required
               />
               {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
+            </div>
+            <div>
+              <label htmlFor="direccion" className="block text-sm font-medium text-text-main mb-1">Dirección</label>
+              <input
+                type="text"
+                name="direccion"
+                id="direccion"
+                value={form.direccion}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
+                required
+              />
+              {errors.direccion && <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>}
             </div>
             <div>
               <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">Estado</label>
