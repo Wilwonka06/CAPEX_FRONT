@@ -39,7 +39,7 @@ const convertCustomerToUser = (customerData) => {
     telefono: customerData.phone,
     tipo_documento: customerData.documentType,
     documento: customerData.documentNumber,
-    roleId: 3, // ID del rol "Cliente"
+    roleId: 13, // ID del rol "Cliente"
     estado: customerData.status || "Activo"
   };
 };

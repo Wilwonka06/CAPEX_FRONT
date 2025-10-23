@@ -37,12 +37,12 @@ Backend API (/users)
 
 El sistema está configurado para usar únicamente usuarios del backend. 
 
-**✅ ROL CLIENTE**: El rol "Cliente" (ID: 12) ha sido creado en el backend y está disponible para usar.
+**✅ ROL CLIENTE**: El rol "Cliente" (ID: 13) ha sido creado en el backend y está disponible para usar.
 
 ## Endpoints Requeridos
 
 ### ✅ Implementados en el Backend:
-- `GET /api/usuarios?roleId=12` - Obtener usuarios con rol "Cliente"
+- `GET /api/usuarios?roleId=13` - Obtener usuarios con rol "Cliente"
 - `GET /api/usuarios/:id` - Obtener usuario por ID
 
 ### ❌ Pendientes de Implementar:
@@ -78,7 +78,7 @@ El sistema está configurado para usar únicamente usuarios del backend.
   telefono: customerData.phone,
   tipo_documento: customerData.documentType,
   documento: customerData.documentNumber,
-    roleId: 12, // ID del rol "Cliente"
+    roleId: 13, // ID del rol "Cliente"
   estado: customerData.status || "Activo"
 }
 ```

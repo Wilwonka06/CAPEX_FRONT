@@ -74,8 +74,10 @@ class RolesApiService extends BaseService {
   // Actualizar un rol existente
   async updateRole(id, roleData) {
     try {
+      console.log('🔧 Formateando rol para backend:', roleData);
       const formattedRole = DataMapper.mapRoleToBackend(roleData);
-      
+      console.log('📦 Datos formateados para API:', formattedRole);
+
       const url = `${this.baseURL}/${id}`;
       const data = await this.makeRequest(url, {
         method: 'PUT',
@@ -83,12 +85,17 @@ class RolesApiService extends BaseService {
         body: JSON.stringify(formattedRole),
       });
 
+      console.log('📨 Respuesta cruda de API:', data);
+
       if (data.success && data.data) {
-        return DataMapper.mapRoleFromBackend(data.data);
+        const mappedRole = DataMapper.mapRoleFromBackend(data.data);
+        console.log('✅ Rol mapeado desde backend:', mappedRole);
+        return mappedRole;
       }
-      
+
       throw new Error(data.message || 'Error al actualizar el rol');
     } catch (error) {
+      console.error('❌ Error en updateRole:', error);
       throw this.handleError(error);
     }
   }

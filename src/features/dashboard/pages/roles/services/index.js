@@ -86,6 +86,15 @@ class RolesService {
 
   // Eliminar un rol
   async deleteRole(id) {
+    // Obtener el rol para validar si se puede eliminar
+    const role = await this.getRoleById(id);
+    
+    // Validar si el rol se puede eliminar
+    const validation = RolesValidationService.validateRoleDeletion(role);
+    if (!validation.isValid) {
+      throw new Error(validation.error);
+    }
+
     const result = await this.apiService.deleteRole(id);
     
     // Invalidar caché

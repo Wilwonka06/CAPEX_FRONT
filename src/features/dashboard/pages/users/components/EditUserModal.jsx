@@ -2,10 +2,117 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import PasswordEye from '../../../../../shared/components/PasswordEye';
 import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
-import { getRoles } from '../../../../../shared/services/ModuleDataService';
+import { API_ENDPOINTS } from '../../../../../shared/config/api';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Swal from 'sweetalert2';
+
+const mergePrivileges = (roles) => {
+  // roles: array de objetos de rol
+  const merged = {};
+  roles.forEach(role => {
+    if (role.privileges) {
+      Object.entries(role.privileges).forEach(([mod, actions]) => {
+        if (!merged[mod]) merged[mod] = {};
+        Object.entries(actions).forEach(([act, val]) => {
+          // Usar OR lógico para combinar privilegios - si algún rol tiene el privilegio, se mantiene
+          merged[mod][act] = merged[mod][act] || val;
+        });
+      });
+    }
+  });
+  return merged;
+};
+
+// Función para obtener roles desde la API
+const fetchRolesFromAPI = async () => {
+  try {
+    const response = await fetch(API_ENDPOINTS.ROLES, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.success && data.data) {
+      // Mapear los datos de la API al formato del frontend
+      return data.data.map(role => ({
+        id: role.id_rol || role.id,
+        name: role.nombre,
+        descripcion: role.descripcion,
+        estado: role.estado === true || role.estado === 'activo' ? 'Activo' : 'Inactivo',
+        privileges: mapPermissionsFromBackend(role.permisos || [], role.privilegios || [])
+      }));
+    }
+
+    throw new Error(data.message || 'Error al obtener los roles');
+  } catch (error) {
+    console.error('Error fetching roles from API:', error);
+    throw error;
+  }
+};
+
+// Función auxiliar para mapear permisos del backend
+const mapPermissionsFromBackend = (backendPermissions, separatePrivileges) => {
+  const frontendPermissions = {};
+
+  if (!backendPermissions || !Array.isArray(backendPermissions) || backendPermissions.length === 0) {
+    return frontendPermissions;
+  }
+
+  if (backendPermissions[0] && backendPermissions[0].privilegios) {
+    backendPermissions.forEach(permiso => {
+      const modulo = permiso.nombre;
+      frontendPermissions[modulo] = {};
+
+      if (Array.isArray(permiso.privilegios)) {
+        permiso.privilegios.forEach(privilegio => {
+          frontendPermissions[modulo][privilegio.nombre] = true;
+        });
+      }
+    });
+  } else if (Array.isArray(separatePrivileges) && separatePrivileges.length > 0) {
+    backendPermissions.forEach(permiso => {
+      const modulo = permiso.nombre;
+      frontendPermissions[modulo] = {};
+
+      separatePrivileges.forEach(privilegio => {
+        frontendPermissions[modulo][privilegio.nombre] = true;
+      });
+    });
+
+    const allModules = ['Compras', 'Servicios', 'Venta', 'Configuración', 'Usuarios'];
+    allModules.forEach(modulo => {
+      if (!frontendPermissions[modulo]) {
+        frontendPermissions[modulo] = {
+          Create: false,
+          Read: false,
+          Edit: false,
+          Delete: false
+        };
+      }
+    });
+  } else {
+    backendPermissions.forEach(permiso => {
+      const modulo = permiso.nombre;
+      frontendPermissions[modulo] = {
+        Create: false,
+        Read: false,
+        Edit: false,
+        Delete: false
+      };
+    });
+  }
+
+  return frontendPermissions;
+};
 
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
 const DOC_TYPES = ['CC', 'PPT','TI'];
@@ -67,8 +174,12 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const [numero, setNumero] = useState(parseTelefono(user.telefono).number);
 
   useEffect(() => {
-    getRoles().then(roles => {
+    fetchRolesFromAPI().then(roles => {
       setAvailableRoles(roles.filter(r => r.estado === 'Activo'));
+    }).catch(error => {
+      console.error('Error loading roles:', error);
+      // Fallback to empty array if API fails
+      setAvailableRoles([]);
     });
   }, []);
 
@@ -162,6 +273,19 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       avatarCompressed = await compressImageToBase64(form.avatar, 80, 80, 0.6); // baja calidad
       avatar = await compressImageToBase64(form.avatar, 300, 300, 0.92); // mejor calidad
     }
+
+    // Recalcular privilegios basados en los roles seleccionados
+    const allRoles = await fetchRolesFromAPI();
+    const userRoles = allRoles.filter(r => form.roles.includes(r.name));
+    const privileges = mergePrivileges(userRoles);
+
+    console.log('DEBUG - EditUserModal:');
+    console.log('Roles seleccionados:', form.roles);
+    console.log('Todos los roles disponibles:', allRoles);
+    console.log('Roles filtrados para usuario:', userRoles);
+    console.log('Privilegios calculados:', privileges);
+    console.log('Privilegios actuales del usuario:', user.privileges);
+
     // Actualizar usuario
     const telefonoFinal = country.dialCode + '-' + numero;
     const updatedUser = {
@@ -169,6 +293,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       telefono: telefonoFinal,
       avatar,
       avatarCompressed,
+      privileges,
     };
     // SweetAlert de confirmación
     const result = await Swal.fire({

@@ -116,26 +116,33 @@ class DataMapper {
   // Convertir privilegios del frontend al formato del backend
   static convertPrivilegesToBackendFormat(frontendPrivileges) {
     const backendFormat = [];
-    
+    console.log('🔄 Convirtiendo privilegios del frontend:', frontendPrivileges);
+
     if (!frontendPrivileges || typeof frontendPrivileges !== 'object') {
+      console.log('⚠️ No hay privilegios o formato inválido');
       return [];
     }
-    
-    Object.keys(frontendPrivileges).forEach(modulo => {
+
+    // Procesar TODOS los módulos, incluso si no tienen privilegios
+    const allModules = ['Compras', 'Servicios', 'Venta', 'Configuración', 'Usuarios'];
+
+    allModules.forEach(modulo => {
       const permisos = frontendPrivileges[modulo];
       const privilegios = [];
-      
+
+      console.log(`📋 Procesando módulo ${modulo}:`, permisos);
+
       if (permisos && typeof permisos === 'object') {
         Object.keys(permisos).forEach(accion => {
-          if (permisos[accion]) {
-            // Mapear nombres de acciones del frontend al backend (IDs correctos del backend)
+          // Solo incluir privilegios que estén ACTIVOS (true)
+          if (permisos[accion] === true) {
             const actionMap = {
               'Create': 1,
               'Read': 2,
               'Edit': 3,
               'Delete': 4
             };
-            
+
             if (actionMap[accion]) {
               privilegios.push({
                 id_privilegio: actionMap[accion],
@@ -145,27 +152,27 @@ class DataMapper {
           }
         });
       }
-      
-      if (privilegios.length > 0) {
-        // Mapear nombres de módulos del frontend al backend (IDs correctos del backend)
-        const moduleMap = {
-          'Compras': 1,
-          'Servicios': 2,
-          'Venta': 3,
-          'Configuración': 4,
-          'Usuarios': 5
-        };
-        
-        if (moduleMap[modulo]) {
-          backendFormat.push({
-            id_permiso: moduleMap[modulo],
-            nombre: modulo,
-            privilegios: privilegios
-          });
-        }
+
+      // Mapear nombres de módulos del frontend al backend (IDs correctos del backend)
+      const moduleMap = {
+        'Compras': 1,
+        'Servicios': 2,
+        'Venta': 3,
+        'Configuración': 4,
+        'Usuarios': 5
+      };
+
+      if (moduleMap[modulo]) {
+        // SIEMPRE incluir el módulo, incluso si no tiene privilegios
+        backendFormat.push({
+          id_permiso: moduleMap[modulo],
+          nombre: modulo,
+          privilegios: privilegios
+        });
       }
     });
-    
+
+    console.log('✅ Formato final para backend:', backendFormat);
     return backendFormat;
   }
 }
