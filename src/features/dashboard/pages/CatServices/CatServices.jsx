@@ -8,6 +8,7 @@ import {
 
 import AddCatServices from "./components/AddCatServices";
 import EditCatServices from "./components/EditCatServices";
+import LoadingTable from "../../../../shared/components/LoadingTable";
 import Swal from "sweetalert2";
 
 const CatServices = () => {
@@ -94,61 +95,82 @@ const CatServices = () => {
         </button>
       </div>
 
-      {loading ? (
-        <p className="text-gray-600">Cargando categorías...</p>
-      ) : error ? (
-        <p className="text-red-600">{error}</p>
-      ) : categories.length === 0 ? (
-        <p className="text-gray-600">No hay categorías registradas.</p>
-      ) : (
-        <div className="overflow-x-auto shadow-md rounded-lg border border-gray-200">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-100 text-gray-700 text-sm uppercase">
-              <tr>
-                <th className="px-6 py-3">ID</th>
-                <th className="px-6 py-3">Categoría</th>
-                <th className="px-6 py-3">Descripción</th>
-                <th className="px-6 py-3">Estado</th>
-                <th className="px-6 py-3 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((cat) => (
-                <tr key={cat.id_categoria_servicio} className="border-t">
-                  <td className="px-6 py-3">{cat.id_categoria_servicio}</td>
-                  <td className="px-6 py-3">{cat.nombre}</td>
-                  <td className="px-6 py-3">{cat.descripcion || "—"}</td>
-                  <td className="px-6 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        cat.estado === "Activo"
-                          ? "bg-green-100 text-green-600"
-                          : "bg-red-100 text-red-600"
-                      }`}
-                    >
-                      {cat.estado}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3 flex gap-2 justify-center">
-                    <button
-                      onClick={() => setEditingCategory(cat)}
-                      className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cat.id_categoria_servicio)}
-                      className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
+      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+        {loading ? (
+          <LoadingTable message="Cargando categorías..." />
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <i className="bi bi-exclamation-triangle text-red-400"></i>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error al cargar categorías</h3>
+                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <button
+                  onClick={loadCategories}
+                  className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+                >
+                  Reintentar
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="text-center py-12">
+            <i className="bi bi-inbox text-6xl text-gray-300"></i>
+            <p className="mt-4 text-gray-500">No hay categorías registradas.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-gray-100 text-gray-700 text-sm uppercase">
+                <tr>
+                  <th className="px-6 py-3">ID</th>
+                  <th className="px-6 py-3">Categoría</th>
+                  <th className="px-6 py-3">Descripción</th>
+                  <th className="px-6 py-3">Estado</th>
+                  <th className="px-6 py-3 text-center">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {categories.map((cat) => (
+                  <tr key={cat.id_categoria_servicio} className="border-t">
+                    <td className="px-6 py-3">{cat.id_categoria_servicio}</td>
+                    <td className="px-6 py-3">{cat.nombre}</td>
+                    <td className="px-6 py-3">{cat.descripcion || "—"}</td>
+                    <td className="px-6 py-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          cat.estado === "Activo"
+                            ? "bg-green-100 text-green-600"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        {cat.estado}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 flex gap-2 justify-center">
+                      <button
+                        onClick={() => setEditingCategory(cat)}
+                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cat.id_categoria_servicio)}
+                        className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {showAdd && (
         <AddCatServices

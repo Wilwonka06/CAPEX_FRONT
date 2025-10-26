@@ -50,25 +50,25 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100 ">
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                FOTO
+                Foto
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                NOMBRE
+                Nombre
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                CATEGORÍA
+                Categoría
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                STOCK
+                Stock
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                PRECIO
+                Precio
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                FECHA REGISTRO
+                Fecha registro
               </th>
               <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                ACCIONES
+                Acciones
               </th>
             </tr>
           </thead>
@@ -81,7 +81,11 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 <td className="py-4 px-4">
                   <div className="flex items-center">
                     <img
-                      src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
+                      src={
+                        product.fotos && product.fotos.length > 0
+                          ? product.fotos[0]
+                          : product.foto
+                      }
                       alt={product.nombre}
                       className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                     />
@@ -96,7 +100,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <TruncatedText
-                    text={product.categoria?.nombre || 'Sin categoría'}
+                    text={product.categoria?.nombre || "Sin categoría"}
                     maxLength={20}
                     maxWidth="max-w-[120px]"
                   />
@@ -138,7 +142,9 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                     </button>
                     <button
                       className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
-                      onClick={() => onDelete(product.id_producto || product.id)}
+                      onClick={() =>
+                        onDelete(product.id_producto || product.id)
+                      }
                       title="Eliminar"
                     >
                       <i className="bi bi-trash text-red-500 text-lg"></i>

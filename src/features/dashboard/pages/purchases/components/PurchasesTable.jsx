@@ -1,10 +1,14 @@
 import PropTypes from "prop-types";
 
 export default function PurchasesTable({ purchases, onView, onAnnul, currentPage, totalPages, onPageChange }) {
-  const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+  const formatNumber = (num) => {
+    if (num === null || num === undefined) return '$0';
+    const parsedNum = typeof num === 'string' ? parseFloat(num) : num;
+    return isNaN(parsedNum) ? '$0' : new Intl.NumberFormat('es-MX').format(parsedNum);
+  };
 
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+    <>
       <table className="min-w-full text-xs">
         <thead className="bg-gray-50">
           <tr>
@@ -20,13 +24,13 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
         <tbody className="divide-y divide-gray-200">
           {purchases.length > 0 ? purchases.map((p) => (
             <tr key={p.id} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-4 px-4 text-xs font-medium text-gray-900">{p.id}</td>
-              <td className="py-4 px-4 text-xs text-gray-600">{p.fechaRegistro}</td>
-              <td className="py-4 px-4 text-xs text-gray-600">{p.fechaCompra}</td>
-              <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor}</td>
-              <td className="py-4 px-4 text-xs text-gray-600 font-semibold">${formatNumber(p.total)}</td>
+              <td className="py-4 px-4 text-xs font-medium text-gray-900">{p.id || 'N/A'}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">{p.fechaRegistro || 'N/A'}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">{p.fechaCompra || 'N/A'}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor || 'N/A'}</td>
+              <td className="py-4 px-4 text-xs text-gray-600 font-semibold">{formatNumber(p.total)}</td>
               <td className="py-4 px-4 text-xs text-gray-600">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? ' text-green-800' : ' text-red-800'}`}>{p.estado}</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? ' text-green-800' : ' text-red-800'}`}>{p.estado || 'N/A'}</span>
               </td>
               <td className="py-4 px-4 text-sm font-medium text-center">
                 <div className="flex justify-center space-x-2">
@@ -43,20 +47,24 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
             </tr>
           )) : (
             <tr>
-              <td colSpan="7" className="text-center py-4 text-gray-500">No hay compras para mostrar.</td>
+              <td colSpan="7" className="text-center py-12">
+                <i className="bi bi-receipt text-6xl text-gray-300"></i>
+                <p className="mt-4 text-gray-500 text-sm">No hay compras registradas.</p>
+                <p className="text-xs text-gray-400 mt-1">Las compras aparecerán aquí cuando se registren.</p>
+              </td>
             </tr>
           )}
         </tbody>
       </table>
       {/* Paginador */}
-      {totalPages > 1 && (
+      {totalPages > 1 && purchases.length > 0 && (
         <div className="flex justify-center mt-4">
           <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1 border rounded-l disabled:opacity-50">Anterior</button>
           <span className="px-4 py-1 border-t border-b">Página {currentPage} de {totalPages}</span>
           <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-1 border rounded-r disabled:opacity-50">Siguiente</button>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

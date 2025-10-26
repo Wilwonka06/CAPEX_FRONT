@@ -10,15 +10,10 @@ class RolesApiService extends BaseService {
   // Obtener todos los roles
   async getAllRoles() {
     try {
-      const fetchOptions = {
+      const data = await this.makeRequest(this.baseURL, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      };
-
-      const data = await this.makeRequest(this.baseURL, fetchOptions);
+        headers: this.getHeaders(),
+      });
       
       if (data.success && data.data) {
         return DataMapper.mapRolesFromBackend(data.data);

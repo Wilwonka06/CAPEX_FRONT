@@ -1,4 +1,4 @@
-import { API_CONFIG, API_ENDPOINTS, getAuthHeaders } from '../../../../../shared/config/api';
+import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api';
 
 class BaseService {
   constructor(endpoint) {
@@ -69,6 +69,7 @@ class BaseService {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
+        credentials: 'include', // Importante para incluir cookies HttpOnly
       });
 
       clearTimeout(timeoutId);
@@ -77,14 +78,14 @@ class BaseService {
         let errorData = {};
         try {
           errorData = await response.json();
-        } catch (e) {
+        } catch {
           try {
             errorData = { message: await response.text() };
-          } catch (e2) {
+          } catch {
             errorData = { message: 'Error desconocido' };
           }
         }
-        
+
         const error = new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
         error.status = response.status;
         error.data = errorData;

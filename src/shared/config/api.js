@@ -30,22 +30,9 @@ export const DEFAULT_HEADERS = {
 
 // Función para obtener headers con autenticación
 export const getAuthHeaders = () => {
-  try {
-    // Intentar obtener el token JWT del localStorage
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-    
-    const headers = {
-      ...DEFAULT_HEADERS,
-    };
-    
-    // Agregar Authorization header si hay token
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    return headers;
-  } catch (error) {
-    console.error('Error al obtener headers de autenticación:', error);
-    return DEFAULT_HEADERS;
-  }
+  // Con cookies HttpOnly, no necesitamos agregar manualmente el header Authorization
+  // Las cookies se incluyen automáticamente con credentials: 'include'
+  return {
+    ...DEFAULT_HEADERS,
+  };
 };
