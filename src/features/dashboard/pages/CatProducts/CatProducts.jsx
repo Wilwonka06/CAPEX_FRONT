@@ -3,6 +3,7 @@ import CategoryTable from "./components/CategoryTable";
 import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import CreateCategory from "./components/CreateCategory";
+import LoadingTable from '../../../../shared/components/LoadingTable';
 import categoriesService from './API/categoriesService';
 import EditCategory from "./components/EditCategory";
 import CategoryDetail from "./components/CategoryDetail";
@@ -12,11 +13,12 @@ import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
-const CATEGORIES_PER_PAGE = 5;
+const CATEGORIES_PER_PAGE = 10;
 
 const CatProductsPage = () => {
   const [categories, setCategories] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   // Cargar categorías al montar
   useEffect(() => {
@@ -25,6 +27,7 @@ const CatProductsPage = () => {
 
   const loadCategories = async () => {
     try {
+      setLoading(true);
       const response = await categoriesService.getAll();
       if (response.success) {
         setCategories(response.data || []);
@@ -35,6 +38,8 @@ const CatProductsPage = () => {
     } catch (err) {
       console.error('Error loading categories from API:', err);
       setCategories([]);
+    } finally {
+      setLoading(false);
     }
   };
   const [searchTerm, setSearchTerm] = useState("");
@@ -222,26 +227,32 @@ const CatProductsPage = () => {
             </div>
 
             {/* Tabla de categorías */}
-            <CategoryTable 
-              categories={paginatedCategories} 
-              onToggleStatus={handleToggleStatus}
-              onEdit={(category) => {
-                setSelectedCategory(category);
-                setShowEditModal(true);
-              }}
-              onDelete={handleDeleteCategory}
-              onView={(category) => {
-                setSelectedCategory(category);
-                setShowDetailModal(true);
-              }}
-            />
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {loading ? (
+                <LoadingTable message="Cargando categorías..." />
+              ) : (
+                <CategoryTable
+                  categories={paginatedCategories}
+                  onToggleStatus={handleToggleStatus}
+                  onEdit={(category) => {
+                    setSelectedCategory(category);
+                    setShowEditModal(true);
+                  }}
+                  onDelete={handleDeleteCategory}
+                  onView={(category) => {
+                    setSelectedCategory(category);
+                    setShowDetailModal(true);
+                  }}
+                />
+              )}
+            </div>
 
             {/* Paginación */}
-            {totalPages > 1 && (
-              <Paginator 
-                currentPage={currentPage} 
-                totalPages={totalPages} 
-                onPageChange={handlePageChange} 
+            {totalPages > 1 && !loading && (
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
               />
             )}
           </div>

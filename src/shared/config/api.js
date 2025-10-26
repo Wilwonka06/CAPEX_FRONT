@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   // URL base del backend - usa proxy en desarrollo, URL directa en producción
   BASE_URL: import.meta.env.DEV 
-    ? '/api' // Proxy local en desarrollo
+    ? ' http://localhost:3000/api' // Proxy local en desarrollo
     : 'https://capex-back.onrender.com/api', // URL directa en producción
   
   // Timeout para las peticiones (en milisegundos)
@@ -30,19 +30,9 @@ export const DEFAULT_HEADERS = {
 
 // Función para obtener headers con autenticación
 export const getAuthHeaders = () => {
-  try {
-    const user = localStorage.getItem('currentUser');
-    const userData = user ? JSON.parse(user) : null;
-    
-    return {
-      ...DEFAULT_HEADERS,
-      // Agregar headers de autenticación según sea necesario
-      'User-ID': userData?.id || '',
-      // Si el backend usa JWT:
-      // 'Authorization': userData?.token ? `Bearer ${userData.token}` : '',
-    };
-  } catch (error) {
-    console.error('Error al obtener headers de autenticación:', error);
-    return DEFAULT_HEADERS;
-  }
+  // Con cookies HttpOnly, no necesitamos agregar manualmente el header Authorization
+  // Las cookies se incluyen automáticamente con credentials: 'include'
+  return {
+    ...DEFAULT_HEADERS,
+  };
 };

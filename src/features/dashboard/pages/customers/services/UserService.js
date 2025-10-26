@@ -82,11 +82,11 @@ export const getUsers = async (page = 1, limit = 10, search = '') => {
 export const getUsersByRole = async (roleName, page = 1, limit = 10, search = '') => {
   try {
     // Mapear nombre del rol a ID del rol
-    const roleIdMap = {
-      'Cliente': 12, // Rol Cliente creado en el backend
-      'Empleado': 2,
-      'Administrador': 1
-    };
+      const roleIdMap = {
+        'Cliente': 13, // Rol Cliente creado en el backend
+        'Empleado': 2,
+        'Administrador': 1
+      };
     
     const roleId = roleIdMap[roleName];
     if (!roleId) {

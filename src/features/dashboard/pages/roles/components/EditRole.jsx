@@ -80,7 +80,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (Object.keys(errors).length === 0 && onEdit) {
       const roleToUpdate = {
         id: role.id,
@@ -91,7 +91,11 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
         permisos: role.permisos || [],
         privilegios: role.privilegios || []
       };
-      
+
+      console.log('🔄 Enviando rol a actualizar:', roleToUpdate);
+      console.log('📊 Privilegios actuales:', privileges);
+      console.log('📊 Privilegios originales:', role.privileges);
+
       await onEdit(roleToUpdate);
     }
   };

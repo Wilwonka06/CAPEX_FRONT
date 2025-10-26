@@ -5,10 +5,10 @@ import { isDuplicateCategoryName } from "../../../../../shared/validations";
 const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [originalName, setOriginalName] = useState("");
+  const [setOriginalName] = useState("");
   const [isNameValid, setIsNameValid] = useState(true);
   const [nameError, setNameError] = useState("");
-  const [descriptionError, setDescriptionError] = useState("");
+  const [setDescriptionError] = useState("");
 
   useEffect(() => {
     if (category) {

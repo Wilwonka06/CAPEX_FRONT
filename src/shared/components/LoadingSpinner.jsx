@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 
 const LoadingSpinner = ({ size = 'h-32 w-32', color = 'border-primary' }) => {
   return (
@@ -8,4 +8,9 @@ const LoadingSpinner = ({ size = 'h-32 w-32', color = 'border-primary' }) => {
   );
 };
 
-export default LoadingSpinner; 
+LoadingSpinner.propTypes = {
+  size: PropTypes.string,
+  color: PropTypes.string
+};
+
+export default LoadingSpinner;

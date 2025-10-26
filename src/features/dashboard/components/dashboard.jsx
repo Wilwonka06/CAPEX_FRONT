@@ -1,6 +1,5 @@
 // pages/Dashboard.jsx
 import { useState } from 'react';
-import { useSales } from '../pages/SaleProducts/context/SalesContext';
 import MonthlySalesChart from './MonthlySalesChart';
 import MonthlyTotalsChart from './MonthlyTotalsChart';
 import TopServicesChart from './TopServicesChart';

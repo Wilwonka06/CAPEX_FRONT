@@ -48,15 +48,22 @@ export function RolesProvider({ children }) {
   const editRole = async (updatedRole) => {
     setLoading(true);
     try {
+      console.log('📤 Enviando rol a API:', updatedRole);
       const editedRole = await rolesService.updateRole(updatedRole.id, updatedRole);
+      console.log('📥 Respuesta de API:', editedRole);
+
       // Actualizar el estado local después de editar exitosamente
-      setRoles(prevRoles => 
-        prevRoles.map(role => 
+      setRoles(prevRoles => {
+        const newRoles = prevRoles.map(role =>
           role.id === updatedRole.id ? editedRole : role
-        )
-      );
+        );
+        console.log('🔄 Estado local actualizado:', newRoles);
+        return newRoles;
+      });
+
       return editedRole;
     } catch (err) {
+      console.error('❌ Error al editar rol:', err);
       setError(err.message);
       throw err;
     } finally {

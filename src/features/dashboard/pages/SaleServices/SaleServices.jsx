@@ -282,12 +282,12 @@ const SaleServices = () => {
                   <i className="bi bi-arrow-clockwise mr-2"></i> 
                   {loading ? 'Actualizando...' : 'Actualizar'}
                 </button>
-                <button
-                  className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
-                  <i className="bi bi-plus-circle mr-2"></i> Nueva orden
-                </button>
+              <button
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                <i className="bi bi-plus-circle mr-2"></i> Nueva orden
+              </button>
               </div>
             </div>
 
@@ -434,7 +434,7 @@ const SaleServices = () => {
           onAnularSuccess={handleAnularOrder}
         />
       )}
-              <ToastContainer />
+      <ToastContainer />
     </div>
   );
 };

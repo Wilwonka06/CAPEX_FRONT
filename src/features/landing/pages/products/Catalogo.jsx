@@ -26,8 +26,9 @@ const Catalogo = () => {
     const loadProducts = async () => {
       try {
         setProductsLoading(true);
-        const response = await productsService.getAll({ limit: 100 }); // Cargar más productos para catálogo
+        const response = await productsService.getAll({ limit: 100 });
         if (response.success) {
+          console.log('Productos cargados:', response.data);
           setProducts(response.data || []);
         } else {
           setProductsError('Error al cargar productos');
@@ -50,10 +51,16 @@ const Catalogo = () => {
         setCategoriesLoading(true);
         const response = await categoriesService.getActive();
         if (response.success) {
-          setActiveCategories(response.data || []);
+          console.log('Categorías cargadas:', response.data);
+          // Filtrar solo categorías activas
+          const active = (response.data || []).filter(cat => 
+            cat.estado === 'activo' || cat.estado === 'Activo'
+          );
+          setActiveCategories(active);
         }
       } catch (error) {
         console.error('Error loading categories:', error);
+        // No bloquear la UI si las categorías fallan
       } finally {
         setCategoriesLoading(false);
       }
@@ -62,21 +69,25 @@ const Catalogo = () => {
     loadCategories();
   }, []);
 
-  // Categorías activas - ajustar según estructura de API
-  const categoriasActivas = activeCategories.map(cat => cat.nombre);
+  // Categorías activas - nombres únicos de los productos
+  const categoriasActivas = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.categoria).filter(Boolean))];
+    return uniqueCategories;
+  }, [products]);
+
   // Extraer valores únicos de especificaciones para filtros dinámicos
   const obtenerValoresUnicos = (concepto) => {
-    const valores = [];
+    const valores = new Set();
     products.forEach(product => {
       if (product.especificaciones) {
         product.especificaciones.forEach(esp => {
-          if (esp.concepto === concepto && !valores.includes(esp.valor)) {
-            valores.push(esp.valor);
+          if (esp.concepto === concepto && esp.valor) {
+            valores.add(esp.valor);
           }
         });
       }
     });
-    return valores;
+    return Array.from(valores);
   };
 
   // Obtener conceptos únicos de especificaciones
@@ -85,11 +96,19 @@ const Catalogo = () => {
     products.forEach(product => {
       if (product.especificaciones) {
         product.especificaciones.forEach(esp => {
-          conceptos.add(esp.concepto);
+          if (esp.concepto) {
+            conceptos.add(esp.concepto);
+          }
         });
       }
     });
     return Array.from(conceptos);
+  }, [products]);
+
+  // Tipos de producto únicos
+  const tiposProducto = useMemo(() => {
+    const tipos = new Set(products.map(p => p.tipoProducto).filter(Boolean));
+    return Array.from(tipos);
   }, [products]);
 
   // Rango de precio
@@ -106,12 +125,19 @@ const Catalogo = () => {
   const [ordenarPor, setOrdenarPor] = useState('nombre');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
+  // Actualizar rango de precio cuando cambien los productos
+  useEffect(() => {
+    if (precios.length > 0) {
+      setFiltroPrecio([minPrecio, maxPrecio]);
+    }
+  }, [minPrecio, maxPrecio]);
+
   // Filtrado
   const productosFiltrados = useMemo(() => {
     let filtrados = products.filter(p => {
       const coincideBusqueda = busqueda === '' || 
-        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        p.descripcion.toLowerCase().includes(busqueda.toLowerCase());
+        p.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        p.descripcion?.toLowerCase().includes(busqueda.toLowerCase());
       
       const coincideCategoria = filtroCategoria.length === 0 || filtroCategoria.includes(p.categoria);
       const coincideTipoProducto = filtroTipoProducto.length === 0 || filtroTipoProducto.includes(p.tipoProducto);
@@ -183,13 +209,38 @@ const Catalogo = () => {
     return activos;
   };
 
+  // Estados de carga
+  if (productsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FACC15] mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando productos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (productsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Error al cargar productos</h2>
+          <p className="text-gray-600 mb-4">{productsError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-[#FACC15] text-[#1E1E1E] rounded-lg hover:bg-yellow-400 transition"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Migas de pan */}
         <nav className="text-xs text-gray-500 mb-6 flex items-center gap-2">
@@ -270,40 +321,44 @@ const Catalogo = () => {
               </div>
 
               {/* Categoría */}
-              <div className="mb-6">
-                <h3 className="font-semibold mb-3 text-gray-800">Categoría</h3>
-                <div className="space-y-2">
-                  {categoriasActivas.map(categoria => (
-                    <label key={categoria} className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={filtroCategoria.includes(categoria)}
-                        onChange={() => toggleFiltro(categoria, filtroCategoria, setFiltroCategoria)}
-                        className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
-                      />
-                      <span className="text-sm text-gray-700">{categoria}</span>
-                    </label>
-                  ))}
+              {categoriasActivas.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-semibold mb-3 text-gray-800">Categoría</h3>
+                  <div className="space-y-2">
+                    {categoriasActivas.map(categoria => (
+                      <label key={categoria} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={filtroCategoria.includes(categoria)}
+                          onChange={() => toggleFiltro(categoria, filtroCategoria, setFiltroCategoria)}
+                          className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
+                        />
+                        <span className="text-sm text-gray-700">{categoria}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Tipo de Producto */}
-              <div className="mb-6">
-                <h3 className="font-semibold mb-3 text-gray-800">Tipo de Producto</h3>
-                <div className="space-y-2">
-                  {['Extensiones', 'Cuidado Capilar'].map(tipo => (
-                    <label key={tipo} className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={filtroTipoProducto.includes(tipo)}
-                        onChange={() => toggleFiltro(tipo, filtroTipoProducto, setFiltroTipoProducto)}
-                        className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
-                      />
-                      <span className="text-sm text-gray-700">{tipo}</span>
-                    </label>
-                  ))}
+              {tiposProducto.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-semibold mb-3 text-gray-800">Tipo de Producto</h3>
+                  <div className="space-y-2">
+                    {tiposProducto.map(tipo => (
+                      <label key={tipo} className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={filtroTipoProducto.includes(tipo)}
+                          onChange={() => toggleFiltro(tipo, filtroTipoProducto, setFiltroTipoProducto)}
+                          className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
+                        />
+                        <span className="text-sm text-gray-700">{tipo}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Especificaciones dinámicas */}
               {conceptosUnicos.map(concepto => {
@@ -343,7 +398,7 @@ const Catalogo = () => {
                       <input
                         type="number"
                         value={filtroPrecio[0]}
-                        onChange={e => setFiltroPrecio([parseInt(e.target.value), filtroPrecio[1]])}
+                        onChange={e => setFiltroPrecio([parseInt(e.target.value) || 0, filtroPrecio[1]])}
                         className="px-3 py-2 border border-gray-300 rounded text-sm"
                         placeholder="Mín"
                       />
@@ -353,7 +408,7 @@ const Catalogo = () => {
                       <input
                         type="number"
                         value={filtroPrecio[1]}
-                        onChange={e => setFiltroPrecio([filtroPrecio[0], parseInt(e.target.value)])}
+                        onChange={e => setFiltroPrecio([filtroPrecio[0], parseInt(e.target.value) || 0])}
                         className="px-3 py-2 border border-gray-300 rounded text-sm"
                         placeholder="Máx"
                       />
@@ -395,10 +450,10 @@ const Catalogo = () => {
                     className="flex flex-col cursor-pointer group transition-all"
                     onClick={() => navigate(`/landing/productos/${prod.id}`)}
                   >
-                    {/* Imagen ocupa todo el ancho superior, sin perder calidad */}
+                    {/* Imagen */}
                     <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img
-                        src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : prod.foto}
+                        src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : (prod.foto || prod.imagen)}
                         alt={prod.nombre}
                         className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
@@ -432,4 +487,4 @@ const Catalogo = () => {
   );
 };
 
-export default Catalogo; 
+export default Catalogo;

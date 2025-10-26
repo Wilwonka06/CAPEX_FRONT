@@ -1,13 +1,19 @@
-import React from 'react';
 import PropTypes from 'prop-types';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=256';
 
-const UserProfileModal = ({ user, onClose, onEdit, onGoToPurchases, onLogout }) => {
+const UserProfileModal = ({ user, onClose, onEdit, onLogout }) => {
   if (!user) return null;
-  const isClient = Array.isArray(user.roles)
-    ? user.roles.includes('Cliente')
-    : user.roles === 'Cliente' || user.rol === 'Cliente';
+
+  // Función segura para obtener el rol del usuario
+  const getUserRole = (user) => {
+    if (!user) return '';
+    if (typeof user.rol === 'string') return user.rol;
+    if (user.rol && typeof user.rol === 'object' && user.rol.nombre) return user.rol.nombre;
+    return '';
+  };
+
+  const userRole = getUserRole(user);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none">
@@ -49,13 +55,7 @@ const UserProfileModal = ({ user, onClose, onEdit, onGoToPurchases, onLogout }) 
               <div className="flex justify-between text-sm items-start">
                 <span className="text-gray-500">Rol(es):</span>
                 <span className="font-medium text-gray-800">
-                  {Array.isArray(user.roles)
-                    ? (
-                      <ul className="list-disc list-inside">
-                        {user.roles.map((rol, idx) => <li key={rol + idx}>{rol}</li>)}
-                      </ul>
-                    )
-                    : (user.roles || user.rol || '-')}
+                  {userRole || '-'}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
@@ -88,7 +88,6 @@ UserProfileModal.propTypes = {
   user: PropTypes.object,
   onClose: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
-  onGoToPurchases: PropTypes.func,
   onLogout: PropTypes.func,
 };
 
