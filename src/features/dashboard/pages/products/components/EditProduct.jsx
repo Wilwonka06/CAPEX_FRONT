@@ -2,20 +2,14 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { isDuplicateProductName } from '../../../../../shared/validations';
 import categoriesService from '../../CatProducts/API/categoriesService';
-
-const CONCEPTOS_ESPECIFICACION = [
-  "Color",
-  "Material",
-  "Contenido",
-  "Tipo de Cabello",
-  // Puedes agregar más conceptos aquí
-];
+import characteristicsService from '../API/characteristicsService'
 
 const MAX_IMAGES = 3;
 
 const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [characteristics, setCharacteristics] = useState([]);
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -23,10 +17,12 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     cantidad: "",
     categoryId: "",
     fotos: [],
-    tipoProducto: "",
+    fechaRegistro: "",
   });
   const [previews, setPreviews] = useState([]);
-  const [especificaciones, setEspecificaciones] = useState([{ concepto: "", valor: "", otroConcepto: "" }]);
+  const [especificaciones, setEspecificaciones] = useState([
+    { concepto: "", valor: "", otroConcepto: "" }
+  ]);
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Cargar categorías al montar
@@ -48,55 +44,78 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     loadCategories();
   }, []);
 
+  // Cargar características al montar
+  useEffect(() => {
+    const loadCharacteristics = async () => {
+      try {
+        const response = await characteristicsService.getAll();
+        if (response.success) {
+          setCharacteristics(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading characteristics:', error);
+      }
+    };
+
+    loadCharacteristics();
+  }, []);
+  
   useEffect(() => {
     if (product && categories.length > 0) {
-      const productFotos = product.fotos || (product.foto ? [product.foto] : []);
-      const category = categories.find(c => c.nombre === product.categoria);
+      console.log('EditProduct: Loading product data:', product);
+      console.log('EditProduct: Product caracteristicas:', product.caracteristicas);
+
+      // Manejar fotos
+      const productFotos = product.fotos || (product.foto ? [product.foto] : []) || (product.url_foto ? [product.url_foto] : []);
+
+      // Buscar categoría por ID o por nombre
+      let category;
+      if (product.categoria) {
+        if (typeof product.categoria === 'object') {
+          category = categories.find(c =>
+            c.id_categoria_producto === product.categoria.id_categoria_producto
+          );
+        } else {
+          category = categories.find(c => c.nombre === product.categoria);
+        }
+      }
 
       setFormData({
         nombre: product.nombre || "",
         descripcion: product.descripcion || "",
-        precio: product.precio?.toString() || "",
-        cantidad: product.cantidad?.toString() || "",
-        categoryId: category ? category.id_categoria_producto : "",
+        precio: (product.precio_venta || product.precio || 0).toString(),
+        cantidad: (product.stock || product.cantidad || 0).toString(),
+        categoryId: category ? category.id_categoria_producto.toString() : "",
         fotos: productFotos,
-        tipoProducto: product.tipoProducto || "",
+        fechaRegistro: product.fecha_registro || product.fechaRegistro || "",
       });
+
       setPreviews(productFotos);
-      // Map caracteristicas from API to especificaciones format
+
+      // Mapear características correctamente
       const caracteristicas = product.caracteristicas || [];
-      setEspecificaciones(
-        caracteristicas.length > 0
-          ? caracteristicas.map(c => ({ concepto: c.nombre, valor: c.valor, otroConcepto: "" }))
-          : [{ concepto: "", valor: "", otroConcepto: "" }]
-      );
+      console.log('EditProduct: Procesando características:', caracteristicas);
+
+      if (caracteristicas.length > 0) {
+        const especsFormateadas = caracteristicas.map(c => {
+          console.log('EditProduct: Característica individual:', c);
+          return {
+            concepto: c.nombre,
+            valor: c.FichaTecnica?.valor || c.valor || "",
+            otroConcepto: "",
+            id_caracteristica: c.id_caracteristica
+          };
+        });
+        console.log('EditProduct: Especificaciones formateadas:', especsFormateadas);
+        setEspecificaciones(especsFormateadas);
+      } else {
+        setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
+      }
     }
   }, [product, categories]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Si cambia el tipo de producto a Extensiones, forzar cantidad a 1
-    if (name === 'tipoProducto' && value === 'Extensiones') {
-      setFormData((prev) => ({
-        ...prev,
-        tipoProducto: value,
-        cantidad: '1',
-      }));
-      return;
-    }
-    // Si cambia el tipo de producto a otro, permitir editar cantidad
-    if (name === 'tipoProducto' && value !== 'Extensiones') {
-      setFormData((prev) => ({
-        ...prev,
-        tipoProducto: value,
-        cantidad: '',
-      }));
-      return;
-    }
-    if (name === "cantidad" && formData.tipoProducto === "Extensiones") {
-      // No permitir editar cantidad si es Extensiones
-      return;
-    }
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -108,10 +127,10 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     if (files.length > 0) {
       const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
       const newPreviews = newImages.map(file => URL.createObjectURL(file));
-      
-      setFormData((prev) => ({ 
-        ...prev, 
-        fotos: [...prev.fotos, ...newImages] 
+
+      setFormData((prev) => ({
+        ...prev,
+        fotos: [...prev.fotos, ...newImages]
       }));
       setPreviews((prev) => [...prev, ...newPreviews]);
     }
@@ -127,10 +146,10 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     if (files.length > 0) {
       const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
       const newPreviews = newImages.map(file => URL.createObjectURL(file));
-      
-      setFormData((prev) => ({ 
-        ...prev, 
-        fotos: [...prev.fotos, ...newImages] 
+
+      setFormData((prev) => ({
+        ...prev,
+        fotos: [...prev.fotos, ...newImages]
       }));
       setPreviews((prev) => [...prev, ...newPreviews]);
     }
@@ -154,6 +173,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
   const handleAddEspecificacion = () => {
     setEspecificaciones([...especificaciones, { concepto: "", valor: "", otroConcepto: "" }]);
   };
+
   const handleChangeEspecificacion = (idx, field, value) => {
     const nuevas = [...especificaciones];
     nuevas[idx][field] = value;
@@ -162,6 +182,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     }
     setEspecificaciones(nuevas);
   };
+
   const handleRemoveEspecificacion = (idx) => {
     setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
@@ -172,19 +193,21 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
     if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
-    if (!formData.descripcion.trim()) errors.descripcion = "La descripción es obligatoria";
-    if (!formData.tipoProducto.trim()) errors.tipoProducto = "El tipo de producto es obligatorio";
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
+
     const otrosProductos = products.filter(p => p.id !== product.id);
     if (isDuplicateProductName(formData.nombre, otrosProductos)) {
       setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
+
     setFieldErrors({});
-    if (formData.nombre.trim() && formData.descripcion.trim() && formData.precio && formData.tipoProducto.trim()) {
+
+    if (formData.nombre.trim() && formData.precio) {
       // Procesar las fotos
       const fotosUrls = formData.fotos.map(foto => {
         if (foto instanceof File) {
@@ -193,21 +216,48 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         return foto;
       });
 
-      const selectedCategory = categories.find(c => c.id_categoria_producto === parseInt(formData.categoryId));
+      // ✅ CORRECCIÓN: Mapear especificaciones correctamente para el backend
+      // El backend espera un array con { nombre, valor }
+      const caracteristicasParaBackend = especificaciones
+        .filter(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return nombre && nombre.trim() !== '' && e.valor && e.valor.trim() !== '';
+        })
+        .map(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return {
+            nombre: nombre.trim(),
+            valor: e.valor.trim()
+          };
+        });
+
+      console.log('EditProduct: Características mapeadas para backend:', caracteristicasParaBackend);
+
       const updatedProduct = {
         ...product,
         nombre: formData.nombre.trim(),
-        descripcion: formData.descripcion.trim(),
+        descripcion: formData.descripcion,
         precio: parseFloat(formData.precio),
+        precio_venta: parseFloat(formData.precio),
         cantidad: parseInt(formData.cantidad),
-        categoria: selectedCategory ? selectedCategory.nombre : '',
+        stock: parseInt(formData.cantidad),
+        id_categoria_producto: parseInt(formData.categoryId),
         categoryId: formData.categoryId,
+        url_foto: fotosUrls[0] || null,
         fotos: fotosUrls,
-        tipoProducto: formData.tipoProducto,
+        // ✅ Enviar características en el formato correcto
+        caracteristicas: caracteristicasParaBackend,
+        // También mantener especificaciones para compatibilidad con el frontend
         especificaciones: especificaciones
           .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
-          .map(e => ({ concepto: e.concepto === "otro" ? e.otroConcepto : e.concepto, valor: e.valor }))
+          .map(e => ({
+            concepto: e.concepto === "otro" ? e.otroConcepto : e.concepto,
+            valor: e.valor,
+            otroConcepto: e.otroConcepto || ''
+          }))
       };
+
+      console.log('EditProduct: Sending updated product:', updatedProduct);
       onSave(updatedProduct);
       handleClose();
     }
@@ -222,7 +272,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
       cantidad: "",
       categoryId: "",
       fotos: [],
-      tipoProducto: "",
+      fechaRegistro: "",
     });
     setPreviews([]);
     setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
@@ -255,17 +305,17 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-primary m-0">Editar producto</h2>
-        <button
+          <button
             className="text-gray-400 hover:text-primary text-xl font-bold"
-          onClick={handleClose}
-          aria-label="Cerrar"
-        >
-          ×
-        </button>
+            onClick={handleClose}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
         </div>
         {/* Contenido con scroll */}
         <div className="overflow-y-auto p-8 flex-1">
-        <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-text-main mb-1">
                 Fotos del Producto <span className="text-gray-500 text-xs">(Máximo {MAX_IMAGES})</span>
@@ -285,7 +335,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                     </div>
                   </div>
                 )}
-                
+
                 <input
                   id="edit-file-input"
                   type="file"
@@ -322,55 +372,78 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                 <label className="block text-xs font-medium text-text-main mb-1">
                   Nombre
                 </label>
-              <input
-                type="text"
-                name="nombre"
+                <input
+                  type="text"
+                  name="nombre"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                value={formData.nombre}
-                onChange={handleChange}
-                onBlur={handleBlurNombre}
-                required
-              />
-              {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
-            </div>
-            <div>
+                  value={formData.nombre}
+                  onChange={handleChange}
+                  onBlur={handleBlurNombre}
+                  required
+                />
+                {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-text-main mb-1">
                   Categoría
                 </label>
-              <select
-                name="categoryId"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                value={formData.categoryId}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Seleccionar categoría</option>
-                {categories.filter(c => c.estado === 'activo').map((category) => (
-                  <option key={category.id_categoria_producto} value={category.id_categoria_producto}>
-                    {category.nombre}
-                  </option>
-                ))}
-              </select>
-              {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
-            </div>
-            <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Tipo de producto <span className="text-red-500">*</span>
-                </label>
                 <select
-                  name="tipoProducto"
+                  name="categoryId"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                  value={formData.tipoProducto}
+                  value={formData.categoryId}
                   onChange={handleChange}
                   required
                 >
-                  <option value="">Seleccionar tipo</option>
-                  <option value="Extensiones">Extensiones</option>
-                  <option value="Cuidado capilar">Cuidado capilar</option>
+                  <option value="">Seleccionar categoría</option>
+                  {categories.filter(c => c.estado === 'activo').map((category) => (
+                    <option key={category.id_categoria_producto} value={category.id_categoria_producto}>
+                      {category.nombre}
+                    </option>
+                  ))}
                 </select>
-                {fieldErrors.tipoProducto && <p className="text-xs text-red-500 mt-1">{fieldErrors.tipoProducto}</p>}
+                {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">
+                  Precio
+                </label>
+                <input
+                  type="text"
+                  name="precio"
+                  value={formatNumber(formData.precio)}
+                  onChange={e => handleChange({ target: { name: 'precio', value: cleanNumber(e.target.value) } })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                  required
+                />
+                {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-main mb-1">
+                  Cantidad en Stock
+                </label>
+                <input
+                  type="text"
+                  name="cantidad"
+                  value={formatNumber(formData.cantidad)}
+                  onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                />
+              </div>
             </div>
-            {/* Especificaciones Técnicas (antes de la descripción) */}
+            <div>
+              <label className="block text-xs font-medium text-text-main mb-1">
+                Descripción
+              </label>
+              <textarea
+                name="descripcion"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
+                value={formData.descripcion}
+                onChange={handleChange}
+                rows={3}
+              />
+            </div>
+
+            {/* Especificaciones Técnicas */}
             <div className="bg-gray-50 rounded-lg p-4 border mb-4">
               <div className="font-semibold text-text-main mb-2">Especificaciones Técnicas</div>
               <hr className="mb-4" />
@@ -382,110 +455,76 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
                     onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
                   >
                     <option value="">Seleccione concepto</option>
-                    {CONCEPTOS_ESPECIFICACION.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
+                    {characteristics.map(char => (
+                      <option key={char.id_caracteristica} value={char.nombre}>
+                        {char.nombre}
+                      </option>
                     ))}
                     <option value="otro">Otro…</option>
                   </select>
                   {esp.concepto === "otro" && (
-                <input
-                  type="text"
+                    <input
+                      type="text"
                       className="flex-1 min-w-[120px] max-w-[180px] px-2 py-1 border rounded text-sm"
                       placeholder="Nuevo concepto"
                       value={esp.otroConcepto}
                       onChange={e => handleChangeEspecificacion(idx, "otroConcepto", e.target.value)}
                     />
                   )}
-              <input
-                type="text"
+                  <input
+                    type="text"
                     className="flex-1 min-w-[120px] max-w-[220px] px-2 py-1 border rounded text-sm"
                     placeholder="Valor"
                     value={esp.valor}
                     onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}
                   />
-                  <button type="button" className="text-gray-400 hover:text-red-500" onClick={() => handleRemoveEspecificacion(idx)}>
+                  <button
+                    type="button"
+                    className="text-gray-400 hover:text-red-500"
+                    onClick={() => handleRemoveEspecificacion(idx)}
+                  >
                     <i className="bi bi-trash"></i>
                   </button>
                 </div>
               ))}
-              <button type="button" className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2" onClick={handleAddEspecificacion}>
+              <button
+                type="button"
+                className="mt-2 px-4 py-2 bg-text-main text-white rounded hover:bg-primary-dark text-sm flex items-center gap-2"
+                onClick={handleAddEspecificacion}
+              >
                 <i className="bi bi-plus"></i> Agregar especificación
               </button>
             </div>
+
             <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Precio
-                </label>
-              <input
-                type="text"
-                name="precio"
-                value={formatNumber(formData.precio)}
-                onChange={e => handleChange({ target: { name: 'precio', value: cleanNumber(e.target.value) } })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-                required
-              />
-              {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
-            </div>
-            <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Cantidad en Stock
-                </label>
-              <input
-                type="text"
-                name="cantidad"
-                value={formatNumber(formData.cantidad)}
-                onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent bg-white disabled:bg-gray-100 disabled:text-gray-400"
-                min={formData.tipoProducto === 'Extensiones' ? 1 : 0}
-                max={formData.tipoProducto === 'Extensiones' ? 1 : undefined}
-                disabled={formData.tipoProducto === 'Extensiones'}
-                required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
-                  Fecha de Registro
-                </label>
-                <input
-                  type="text"
-                  name="fechaRegistro"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm bg-gray-100 cursor-not-allowed"
-                  value={product?.fechaRegistro || ""}
-                  readOnly
-                  disabled
-              />
-            </div>
-          </div>
-          <div>
               <label className="block text-xs font-medium text-text-main mb-1">
-                Descripción
+                Fecha de Registro
               </label>
-            <textarea
-              name="descripcion"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm"
-              value={formData.descripcion}
-              onChange={handleChange}
-              required
-              rows={3}
-            />
-            {fieldErrors.descripcion && <p className="text-xs text-red-500 mt-1">{fieldErrors.descripcion}</p>}
-          </div>
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
-              onClick={handleClose}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
+              <input
+                type="text"
+                name="fechaRegistro"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm bg-gray-100 cursor-not-allowed"
+                value={formData.fechaRegistro}
+                readOnly
+                disabled
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
+                onClick={handleClose}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
                 className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
-            >
-              Guardar Cambios
-            </button>
-          </div>
-        </form>
+              >
+                Guardar Cambios
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

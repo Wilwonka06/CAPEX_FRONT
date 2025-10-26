@@ -5,8 +5,8 @@ import RequirePrivilege from "../features/auth/components/RequirePrivilege";
 import NotFound from "../shared/components/NotFound";
 
 // Layouts
-import Layout from "../features/dashboard/Layout";
-import Landing from "../features/landing/Landing";
+import Layout from "../features/dashboard/layout";
+import Landing from "../features/landing/landing";
 
 // Pages Dashboard
 import CategoriasProductos from "../features/dashboard/pages/CatProducts/CatProducts";
@@ -15,10 +15,9 @@ import CategoriasServicios from "../features/dashboard/pages/CatServices/CatServ
 import Appointments from "../features/dashboard/pages/appointments/Appointments";
 
 
-import Citas from '../features/dashboard/pages/Quotes/Quotes';
 import Clientes from "../features/dashboard/pages/customers/Customer";
 
-import Compras from "../features/dashboard/pages/Shopping/Shopping";
+import Compras from "../features/dashboard/pages/purchases/Purchases";
 import Dashboard from "../features/dashboard/components/Dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
 import Pedidos from "../features/dashboard/pages/orders/Orders";
@@ -51,6 +50,17 @@ import EditProfilePage from "../shared/pages/EditProfilePage";
 import RegisterPage from "../features/auth/pages/RegisterPage";
 
 const router = createBrowserRouter([
+  // Ruta raíz - Home público con navbar
+  {
+    path: "/",
+    element: <Landing />, // Página de landing con navbar que incluye login
+    children: [
+      {
+        index: true,
+        element: <Home />, // Página principal (home)
+      },
+    ],
+  },
   // Rutas públicas de autenticación
   {
     path: "/login",
@@ -80,14 +90,62 @@ const router = createBrowserRouter([
     path: "/dashboard/perfil",
     element: <EditProfilePage />,
   },
+  // Landing page (pública - no requiere autenticación)
+  {
+    path: "/landing",
+    element: <Landing />,
+    children: [
+      {
+        index: true,
+        element: <Home />,
+      },
+      {
+        path: "cart",
+        element: <Cart />,
+      },
+      {
+        path: "citas",
+        element: <ClientAppointments />,
+      },
+      {
+        path: "pedidos",
+        element: <Orders />,
+      },
+      {
+        path: "mis-pedidos",
+        element: <Orders />,
+      },
+      {
+        path: "productos/:id",
+        element: <ProductDetailPageCliente />,
+      },
+      {
+        path: "servicios",
+        element: <ServicesPage />,
+      },
+      {
+        path: "citas-cliente",
+        element: <ClientAppointments />,
+      },
+      {
+        path: "catalogo",
+        element: <Catalogo />,
+      },
+      {
+        path: "checkout",
+        element: <Checkout />,
+      },
+      {
+        path: "gracias",
+        element: <ThankYou />,
+      },
+    ],
+  },
   // Rutas protegidas
   {
     element: <RequireAuth />,
     children: [
-      {
-        path: "/",
-        element: <Navigate to="/dashboard" replace />,
-      },
+      // Redirección automática basada en rol se maneja en AuthContext
       {
         path: "/dashboard",
         element: <Layout />,
@@ -234,65 +292,14 @@ const router = createBrowserRouter([
             element: <Scheduling />,
           },
         ],
-      },
-      // Landing page del cliente
-      {
-        path: "/landing",
-        element: <Landing />,
-        children: [
-          {
-            index: true,
-            element: <Home />,
-          },
-          {
-            path: "cart",
-            element: <Cart />,
-          },
-          {
-            path: "citas",
-            element: <ClientAppointments />,
-          },
-          {
-            path: "pedidos",
-            element: <Orders />,
-          },
-          {
-            path: "mis-pedidos",
-            element: <Orders />,
-          },
-          {
-            path: "productos/:id",
-            element: <ProductDetailPageCliente />,
-          },
-          {
-            path: "servicios",
-            element: <ServicesPage />,
-          },
-          {
-            path: "citas-cliente",
-            element: <ClientAppointments />,
-          },
-          {
-            path: "catalogo",
-            element: <Catalogo />,
-          },
-          {
-            path: "checkout",
-            element: <Checkout />,
-          },
-          {
-            path: "gracias",
-            element: <ThankYou />,
-          },
-        ],
-      },
-      // Redirección para compatibilidad
-      {
-        path: "/roles",
-        element: <Navigate to="/dashboard/roles" replace />,
-      },
-    ],
-  },
+     },
+     // Redirección para compatibilidad
+     {
+       path: "/roles",
+       element: <Navigate to="/dashboard/roles" replace />,
+     },
+   ],
+ },
   // Alias para catálogo y servicios en la landing
   {
     path: "/catalogo",

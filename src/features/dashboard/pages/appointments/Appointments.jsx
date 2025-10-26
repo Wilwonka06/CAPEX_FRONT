@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import appointmentsService from './API/appointmentsService';
-import { getProfessionals } from '../../../../shared/services/ProfessionalsDataService';
-import { getServices } from '../../../../shared/services/ServicesDataService';
 import { useOutletContext } from 'react-router-dom';
 import esLocale from '@fullcalendar/core/locales/es';
 

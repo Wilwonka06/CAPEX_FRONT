@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import UserProfileModal from '../../../shared/components/UserProfileModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const AdminNavbar = ({ title }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('currentUser')));
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, currentUser: authUser } = useAuth();
+
+  // Sincronizar con el contexto de autenticación
+  useEffect(() => {
+    setCurrentUser(authUser);
+  }, [authUser]);
 
   const handleEdit = () => {
     setShowProfileModal(false);
@@ -51,4 +57,8 @@ const AdminNavbar = ({ title }) => {
   );
 };
 
-export default AdminNavbar; 
+AdminNavbar.propTypes = {
+  title: PropTypes.string
+};
+
+export default AdminNavbar;

@@ -29,6 +29,12 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
     setSelectedProduct(null);
   };
 
+  // Función para convertir precio a número de forma segura
+  const formatPrice = (price) => {
+    const numPrice = parseFloat(price) || 0;
+    return numPrice.toFixed(2);
+  };
+
   /* const handleConfirmDelete = async (productId) => {
     if (onDelete) {
       await onDelete(productId);
@@ -37,8 +43,6 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
     setSelectedProduct(null);
   }; */
 
-  const formatNumber = (num) => new Intl.NumberFormat("es-MX").format(num);
-
   return (
     <>
       <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
@@ -46,38 +50,42 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100 ">
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                FOTO
+                Foto
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                NOMBRE
+                Nombre
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                CATEGORÍA
+                Categoría
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                STOCK
+                Stock
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                PRECIO
+                Precio
               </th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                FECHA REGISTRO
+                Fecha registro
               </th>
               <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                ACCIONES
+                Acciones
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {products.map((product) => (
+            {products.map((product, index) => (
               <tr
-                key={product.id}
+                key={product.id_producto || product.id || `product-${index}`}
                 className="hover:bg-gray-50 transition-colors duration-150"
               >
                 <td className="py-4 px-4">
                   <div className="flex items-center">
                     <img
-                      src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
+                      src={
+                        product.fotos && product.fotos.length > 0
+                          ? product.fotos[0]
+                          : product.foto
+                      }
                       alt={product.nombre}
                       className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                     />
@@ -92,7 +100,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <TruncatedText
-                    text={product.categoria?.nombre || product.categoria || 'Sin categoría'}
+                    text={product.categoria?.nombre || "Sin categoría"}
                     maxLength={20}
                     maxWidth="max-w-[120px]"
                   />
@@ -111,10 +119,10 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                   </span>
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
-                  ${(product.precio || 0).toFixed(2)}
+                  ${formatPrice(product.precio_venta || product.precio || 0)}
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
-                  {product.fechaRegistro}
+                  {product.fecha_registro || product.fechaRegistro}
                 </td>
                 <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
@@ -134,7 +142,9 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                     </button>
                     <button
                       className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
-                      onClick={() => onDelete(product.id)}
+                      onClick={() =>
+                        onDelete(product.id_producto || product.id)
+                      }
                       title="Eliminar"
                     >
                       <i className="bi bi-trash text-red-500 text-lg"></i>
@@ -186,14 +196,21 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
 ProductsTable.propTypes = {
   products: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-      nombre: PropTypes.string.isRequired,
-      descripcion: PropTypes.string.isRequired,
-      cantidad: PropTypes.number.isRequired,
-      categoria: PropTypes.string.isRequired,
-      precio: PropTypes.number.isRequired,
-      fechaRegistro: PropTypes.string.isRequired,
-      foto: PropTypes.string.isRequired,
+      id_producto: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      nombre: PropTypes.string,
+      descripcion: PropTypes.string,
+      cantidad: PropTypes.number,
+      stock: PropTypes.number,
+      categoria: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+      precio: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      precio_venta: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      fechaRegistro: PropTypes.string,
+      fecha_registro: PropTypes.string,
+      foto: PropTypes.string,
+      fotos: PropTypes.array,
+      url_foto: PropTypes.string,
+      caracteristicas: PropTypes.array,
     })
   ).isRequired,
   onEdit: PropTypes.func,

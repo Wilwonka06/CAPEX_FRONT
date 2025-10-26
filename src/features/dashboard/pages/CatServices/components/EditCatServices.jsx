@@ -1,77 +1,97 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { validateCategoryForm, validateCategory, validateCategoryDescription } from "../../../../../shared/validations";
-import Swal from 'sweetalert2';
+import { isDuplicateCategoryName } from "../../../../../shared/validations";
 
-const EditCatServices = ({ onClose, category, onEdit, existingCategories = [] }) => {
-  const [open, setOpen] = useState(true);
-  const [form, setForm] = useState({
-    id: category?.id || null,
-    Categoria: category?.Categoria || "",
-    Descripcion: category?.Descripcion || "",
-    estado: category?.estado || "Activo"
-  });
-  const [errors, setErrors] = useState({});
+const EditCatServices = ({ category, onClose, onEdit, existingCategories }) => {
+  const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [originalName, setOriginalName] = useState("");
+  const [isNameValid, setIsNameValid] = useState(true);
+  const [nameError, setNameError] = useState("");
+  const [descriptionError, setDescriptionError] = useState("");
 
   useEffect(() => {
-    setForm({
-      id: category?.id || null,
-      Categoria: category?.Categoria || "",
-      Descripcion: category?.Descripcion || "",
-      estado: category?.estado || "Activo"
-    });
-    setErrors({});
+    if (category) {
+      setNombre(category.nombre || '');
+      setDescripcion(category.descripcion || '');
+      setOriginalName(category.nombre || '');
+      setIsNameValid(true);
+    }
   }, [category]);
 
-  const handleClose = () => {
-    setOpen(false);
-    if (onClose) onClose();
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
-  };
-
-  const handleBlur = (e) => {
-    const { name, value } = e.target;
-    let error = "";
-    if (name === "Categoria") {
-      const categoriaErrors = validateCategory(value, existingCategories, category);
-      error = categoriaErrors.categoria || "";
-    } else if (name === "Descripcion") {
-      const descripcionErrors = validateCategoryDescription(value);
-      error = descripcionErrors.descripcion || "";
+  const handleNameBlur = () => {
+    if (!nombre.trim()) {
+      setNameError("El nombre es obligatorio");
+      setIsNameValid(false);
+    } else if (nombre.length > 20) {
+      setNameError("El nombre no puede tener más de 20 caracteres");
+      setIsNameValid(false);
+    } else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(nombre)) {
+      setNameError("El nombre solo puede contener letras y espacios");
+      setIsNameValid(false);
+    } else if (isDuplicateCategoryName(nombre, existingCategories, category)) {
+      setNameError("Ya existe una categoría con este nombre");
+      setIsNameValid(false);
+    } else {
+      setNameError("");
+      setIsNameValid(true);
     }
-    if (error) setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleDescriptionBlur = () => {
+    setDescriptionError("");
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    const formErrors = validateCategoryForm(form, existingCategories, category);
-    setErrors(formErrors);
-    if (Object.keys(formErrors).length === 0) {
-      const result = await Swal.fire({
-        title: '¿Guardar cambios en la categoría?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, guardar',
-        cancelButtonText: 'Cancelar',
+    let valid = true;
+    
+    if (!nombre.trim()) {
+      setNameError("El nombre es obligatorio");
+      setIsNameValid(false);
+      valid = false;
+    } else if (nombre.length > 20) {
+      setNameError("El nombre no puede tener más de 20 caracteres");
+      setIsNameValid(false);
+      valid = false;
+    } else if (!/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/.test(nombre)) {
+      setNameError("El nombre solo puede contener letras y espacios");
+      setIsNameValid(false);
+      valid = false;
+    }
+
+    if (!isNameValid) valid = false;
+
+    if (valid) {
+      onEdit({
+        id_categoria_servicio: category.id_categoria_servicio,
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
+        estado: category.estado
       });
-      if (result.isConfirmed) {
-        onEdit({
-          id: form.id,
-          name: form.Categoria,
-          description: form.Descripcion,
-          isActive: form.estado === "Activo"
-        });
-        handleClose();
-      }
+      handleClose();
     }
   };
 
-  if (!open) return null;
+  const handleNameChange = (e) => {
+    setNombre(e.target.value);
+    setNameError("");
+    setIsNameValid(true);
+  };
+
+  const handleDescriptionChange = (e) => {
+    setDescripcion(e.target.value);
+  };
+
+  const handleClose = () => {
+    onClose();
+    setNombre("");
+    setDescripcion("");
+    setOriginalName("");
+    setIsNameValid(true);
+  };
+
+  if (!category) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -87,38 +107,48 @@ const EditCatServices = ({ onClose, category, onEdit, existingCategories = [] })
             ×
           </button>
         </div>
+
         {/* Contenido con scroll */}
         <div className="overflow-y-auto p-8 flex-1">
           <form id="edit-category-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-text-main mb-1">Categoría <span className='text-red-500'>*</span></label>
+              <label className="block text-xs font-medium text-text-main mb-1">
+                Nombre
+              </label>
               <input
                 type="text"
-                name="Categoria"
-                value={form.Categoria}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.Categoria ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                  !isNameValid || nameError ? 'border-red-500' : 'border-gray-300'
+                }`}
+                value={nombre}
+                onChange={handleNameChange}
+                onBlur={handleNameBlur}
+                maxLength={20}
                 required
               />
-              {errors.Categoria && <p className="text-xs text-red-500 mt-1">{errors.Categoria}</p>}
+              {nameError && (
+                <p className="text-xs text-red-500 mt-1">{nameError}</p>
+              )}
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-text-main mb-1">Descripción</label>
+              <label className="block text-xs font-medium text-text-main mb-1">
+                Descripción
+              </label>
               <textarea
-                name="Descripcion"
-                value={form.Descripcion}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none ${errors.Descripcion ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none border-gray-300`}
+                value={descripcion}
+                onChange={handleDescriptionChange}
+                onBlur={handleDescriptionBlur}
+                maxLength={100}
                 rows={3}
               />
-              {errors.Descripcion && <p className="text-xs text-red-500 mt-1">{errors.Descripcion}</p>}
             </div>
           </form>
         </div>
+
         {/* Footer fijo */}
-        <div className="sticky bottom-0 bg-white rounded-b-lg flex justify-end px-8 py-4">
+        <div className="sticky bottom-0 rounded-b-lg flex justify-end px-8 py-4">
           <button
             type="button"
             className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
@@ -129,9 +159,14 @@ const EditCatServices = ({ onClose, category, onEdit, existingCategories = [] })
           <button
             type="submit"
             form="edit-category-form"
-            className={`px-4 py-2 rounded-md font-semibold transition ml-2 text-sm bg-text-main text-white hover:bg-primary-dark`}
+            disabled={!isNameValid}
+            className={`px-4 py-2 rounded-md font-semibold transition ml-2 text-sm ${
+              isNameValid 
+                ? 'bg-text-main text-white hover:bg-primary-dark' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
-            Guardar
+            Guardar Cambios
           </button>
         </div>
       </div>
@@ -140,10 +175,15 @@ const EditCatServices = ({ onClose, category, onEdit, existingCategories = [] })
 };
 
 EditCatServices.propTypes = {
+  category: PropTypes.shape({
+    id_categoria_servicio: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    nombre: PropTypes.string,
+    descripcion: PropTypes.string,
+    estado: PropTypes.string,
+  }),
   onClose: PropTypes.func.isRequired,
-  category: PropTypes.object,
   onEdit: PropTypes.func.isRequired,
-  existingCategories: PropTypes.array
+  existingCategories: PropTypes.array.isRequired,
 };
 
 export default EditCatServices;

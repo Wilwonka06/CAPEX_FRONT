@@ -9,13 +9,15 @@ import EditScheduling from './EditScheduling';
 import Swal from 'sweetalert2';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { deleteScheduling, updateScheduling, createScheduling } from '../services/schedulingApi.js';
 
-const EMPLOYEES_KEY = 'capex_employees';
+const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdateEvent, onDeleteEvent }) => {
+  console.log("[GeneralCalendar] RENDER:");
+  console.log("  - employees:", employees);
+  console.log("  - employees.length:", employees?.length);
+  console.log("  - schedulings.length:", schedulings?.length);
 
-const GeneralCalendar = ({ employees = [], onAddEvent }) => {
-  // ------------------------------
   // Estados generales del modal
-  // ------------------------------
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState('edit');
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -25,107 +27,42 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
   const [editingData, setEditingData] = useState(null);
   const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
 
-  // ✅ NUEVO: Estado para los eventos del calendario
+  // Estado para los eventos del calendario
   const [calendarEvents, setCalendarEvents] = useState([]);
 
-  // ------------------------------
-  // Expande programaciones repetitivas (ya lo tienes bien)
-  // ------------------------------
-  const expandirProgramacion = (prog, idBase) => {
-    const { fechaInicio, fechaFin, dias = [], exclusiones = [] } = prog;
-  
-    const diasSemanaMap = {
-      domingo: 0, lunes: 1, martes: 2, miercoles: 3, miércoles: 3,
-      jueves: 4, viernes: 5, sabado: 6, sábado: 6
-    };
-  
-    const diasSeleccionados = dias.map(d => {
-      const limpio = d.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      return diasSemanaMap[limpio];
-    });
-  
-    const eventos = [];
-  
-    const start = new Date(fechaInicio + 'T00:00:00');
-    const end = new Date(fechaFin + 'T00:00:00');
-    let current = new Date(start);
-  
-    let idx = 0;
-  
-    while (current.getTime() <= end.getTime()) {
-      const diaSemana = current.getDay();
-      const formattedDate = current.toISOString().split('T')[0];
-  
-      const esDiaValido = diasSeleccionados.length === 0 || diasSeleccionados.includes(diaSemana);
-      const estaExcluido = exclusiones.includes(formattedDate);
-  
-      console.log(`⏰ ${formattedDate} | Día local: ${diaSemana} | Incluir? ${esDiaValido} | Excluido? ${estaExcluido}`);
-  
-      if (esDiaValido && !estaExcluido) {
-        eventos.push({
-          ...prog,
-          fechaInicio: formattedDate,
-          fechaFin: formattedDate,
-          id: `${idBase}_${idx}`,
-          idBase,
-        });
-        idx++;
-      }
-  
-      current.setDate(current.getDate() + 1);
-    }
-  
-    console.log("✅ Fechas expandidas:", eventos.map(e => e.fechaInicio));
-    return eventos;
-  };  
-
-  // ------------------------------
-  // Carga eventos desde localStorage o employees
-  // ------------------------------
+  // Cargar eventos desde schedulings API
   const loadEvents = () => {
-    const empleadosActuales = employees || [];
-    console.log("Empleados cargados:", empleadosActuales);
-  
-    const events = empleadosActuales.flatMap(emp =>
-      (emp.schedulings || [])
-        .filter(Boolean) // ✅ Elimina entradas null o undefined
-        .flatMap(prog => {
-          const idBase = prog.idBase || prog.id;
-  
-          // ✅ Llama expandirProgramacion y garantiza un array
-          const expandido = expandirProgramacion(prog, idBase) || [];
-  
-          console.log("Prog:", prog);
-          console.log("Expandido:", expandido);
-  
-          return expandido.map(ev => ({
-            ...ev,
-            empleadoId: emp.id,
-            title: `${emp.nombre}: ${ev.horaInicio}-${ev.horaFin}`,
-            start: ev.fechaInicio,
-            allDay: true,
-          }));
-        })
-    );
-  
-    console.log("Eventos finales:", events);
+    const schedulingsActuales = schedulings || [];
+    console.log("[GeneralCalendar] loadEvents - Programaciones:", schedulingsActuales);
+
+    const events = schedulingsActuales.map(scheduling => {
+      const employee = employees.find(emp => String(emp.id) === String(scheduling.id_usuario));
+      console.log("[GeneralCalendar] Buscando empleado para scheduling.id_usuario:", scheduling.id_usuario);
+      console.log("[GeneralCalendar] Empleado encontrado:", employee);
+
+      return {
+        id: scheduling.id,
+        title: employee ? `${employee.nombre}: ${scheduling.hora_entrada}-${scheduling.hora_salida}` : `Programación: ${scheduling.hora_entrada}-${scheduling.hora_salida}`,
+        start: scheduling.fecha,
+        allDay: true,
+        extendedProps: {
+          id: scheduling.id,
+          empleadoId: scheduling.id_usuario,
+          hora_entrada: scheduling.hora_entrada,
+          hora_salida: scheduling.hora_salida,
+        }
+      };
+    });
+
+    console.log("[GeneralCalendar] Eventos finales:", events);
     setCalendarEvents(events);
   };
-  
 
-  // ------------------------------
-  // useEffect para inicializar y escuchar cambios
-  // ------------------------------
   useEffect(() => {
+    console.log("[GeneralCalendar] useEffect triggered - reloading events");
     loadEvents();
-    const handleStorageChange = () => loadEvents();
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [employees]); // Ahora depende de employees
+  }, [employees, schedulings]);
 
-  // ------------------------------
-  // Tu lógica de clicks y handlers
-  // ------------------------------
   const handleEventClick = (info) => {
     setModalType('edit');
     setSelectedEvent(info.event);
@@ -134,6 +71,9 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
   };
 
   const handleDateClick = (info) => {
+    console.log("[GeneralCalendar] handleDateClick - Opening add modal");
+    console.log("[GeneralCalendar] employees at modal open:", employees);
+    console.log("[GeneralCalendar] employees.length at modal open:", employees?.length);
     setModalType('add');
     setSelectedDate(info.dateStr);
     setModalOpen(true);
@@ -141,21 +81,14 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
 
   const handleDelete = async () => {
     if (!selectedEvent) return;
-  
-    const rawId = selectedEvent.extendedProps?.id || selectedEvent.id;
-    const idBase = rawId?.includes('_') ? rawId.split('_')[0] : rawId;
-  
-    const empleadoId =
-      selectedEvent.extendedProps?.empleadoId ||
-      selectedEvent.groupId ||
-      selectedEvent.resourceId ||
-      selectedEvent.getResources?.()[0]?.id;
-  
-    if (!idBase || !empleadoId) {
-      alert('⚠️ No se pudo obtener idBase o empleadoId.');
+
+    const schedulingId = selectedEvent.extendedProps?.id || selectedEvent.id;
+
+    if (!schedulingId) {
+      alert('⚠️ No se pudo obtener el ID de la programación.');
       return;
     }
-  
+
     const result = await Swal.fire({
       title: '¿Estás seguro de eliminar esta programación?',
       text: 'Esta acción no se puede deshacer.',
@@ -165,158 +98,70 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
       cancelButtonText: 'Cancelar',
     });
     if (!result.isConfirmed) return;
-  
-    const updatedEmployees = employees.map(emp =>
-      String(emp.id) === String(empleadoId)
-        ? {
-            ...emp,
-            schedulings: (emp.schedulings || []).filter(
-              ev =>
-                String(ev.idBase) !== String(idBase) &&
-                String(ev.id) !== String(idBase)
-            ),
-          }
-        : emp
-    );
-  
-    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
-    setModalOpen(false);
-    loadEvents();
-    toast.success('Programación eliminada correctamente!');
+
+    try {
+      await deleteScheduling(schedulingId);
+      if (onDeleteEvent) {
+        onDeleteEvent(schedulingId);
+      }
+      setModalOpen(false);
+      toast.success('Programación eliminada correctamente!');
+    } catch (error) {
+      console.error("Error eliminando programación:", error);
+      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+      toast.error(backendMsg || "Error al eliminar programación");
+    }
   };
 
-  
-    // Tu lógica de delete se mantiene igual
-    // Pero reemplaza window.location.reload() por loadEvents()
-    //localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
-    //setModalOpen(false);
-    //loadEvents();
+  const handleEdit = () => {
+    if (!selectedEvent) return;
 
-    const handleEdit = () => {
-      if (!selectedEvent) return;
-  
-      const rawId = selectedEvent.extendedProps?.id || selectedEvent.id;
-      const idBase = rawId.includes('_') ? rawId.split('_')[0] : rawId;
-  
-      const empleadoId =
-        selectedEvent.extendedProps?.empleadoId ||
-        selectedEvent.groupId ||
-        selectedEvent.resourceId ||
-        (selectedEvent.getResources?.()[0]?.id);
-  
-      console.log('DEBUG handleEdit:', { rawId, idBase, empleadoId });
-  
-      if (!empleadoId) {
-        alert('⚠️ Error: empleadoId no definido. Verifica expandirProgramacion.');
-        return;
-      }
-  
-      let progData = null;
-      const emp = employees.find(e => e.id && String(e.id) === String(empleadoId));
-  
-      if (emp && Array.isArray(emp.schedulings)) {
-        progData = emp.schedulings.find(ev => {
-          const evIdBase = ev.idBase || (ev.id ? ev.id.toString() : undefined);
-          return String(evIdBase) === String(idBase) || String(ev.id) === String(idBase);
-        });
-      }
-  
-      if (!progData) {
-        console.error('No se encontró la programación.', { empleadoId, idBase, emp });
-        alert(`No se pudo encontrar la programación para empleadoId=${empleadoId} y idBase=${idBase}`);
-        return;
-      }
-  
-      setEditingData({
-        fechaInicio: progData.fechaInicio,
-        fechaFin: progData.fechaFin,
-        horaInicio: progData.horaInicio,
-        horaFin: progData.horaFin,
-        repeticion: progData.repeticion,
-        dias: progData.dias || [],
-        id: idBase,
-        idBase,
-        empleadoId,
-        title: progData.title,
-      });
-      setEditFormOpen(true);
+    const schedulingId = selectedEvent.extendedProps?.id || selectedEvent.id;
+    const scheduling = schedulings.find(s => s.id === schedulingId);
+
+    if (!scheduling) {
+      alert('⚠️ No se pudo encontrar la programación.');
+      return;
+    }
+
+    setEditingData({
+      id: scheduling.id,
+      id_usuario: scheduling.id_usuario,
+      fecha: scheduling.fecha,
+      hora_entrada: scheduling.hora_entrada,
+      hora_salida: scheduling.hora_salida,
+      empleadoId: scheduling.id_usuario,
+    });
+    setEditFormOpen(true);
+  };
+
+  const handleSaveEdit = (prog) => {
+    if (!editingData) {
+      alert('Error: no hay datos de edición válidos.');
+      return;
+    }
+
+    const schedulingData = {
+      ...prog,
+      id: editingData.id,
     };
 
-    const handleSaveEdit = (prog) => {
-      if (!editingData) {
-        alert('Error: no hay datos de edición válidos.');
-        return;
-      }
-      const empId = editingData.empleadoId;
-      const idBase = editingData.idBase || editingData.id || Date.now().toString();
-  
-      const updatedEmployees = employees.map(emp => {
-        if (emp.id !== empId) return emp;
-  
-        let nuevasSchedulings = (emp.schedulings || []).filter(
-          ev => String(ev.idBase) !== String(idBase) && String(ev.id) !== String(idBase)
-        );
-  
-        nuevasSchedulings = [...nuevasSchedulings, ...expandirProgramacion(prog, idBase)];
-  
-        return { ...emp, schedulings: nuevasSchedulings };
-      });
-  
-      localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
-      setEditFormOpen(false);
-      setModalOpen(false);
-      setEditingData(null);
-      setSelectedEvent(null);
-      loadEvents();
-      toast.success('Programación editada correctamente!');
-    };
+    if (onUpdateEvent) {
+      onUpdateEvent(schedulingData);
+    }
 
-  
-    // Tu lógica se mantiene igual pero:
-    //localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(updatedEmployees));
-    //setEditFormOpen(false);
-    //setModalOpen(false);
-    //setEditingData(null);
-    //setSelectedEvent(null);
-    //loadEvents(); // Mejor que recargar la página
+    setEditFormOpen(false);
+    setModalOpen(false);
+    setEditingData(null);
+    setSelectedEvent(null);
+  };
 
-    const handleAddEvent = (prog) => {
-      // Validar que se seleccionó un empleado
-      if (!prog.empleadoId) {
-        alert('Debes seleccionar un empleado para la programación.');
-        return;
-      }
+  const handleAddEvent = (prog) => {
+    console.log("[GeneralCalendar] handleAddEvent called with prog:", prog);
+    if (onAddEvent) onAddEvent(prog);
+    setModalOpen(false);
+  };
 
-      // Cargar empleados actuales
-      const empleados = JSON.parse(localStorage.getItem(EMPLOYEES_KEY)) || [];
-      // Buscar el empleado por id (asegura comparación de string)
-      const empleadoIndex = empleados.findIndex(emp => String(emp.id) === String(prog.empleadoId));
-      if (empleadoIndex === -1) {
-        alert('Empleado no encontrado.');
-        return;
-      }
-
-      // Generar idBase único si no existe
-      const idBase = prog.idBase || (Date.now().toString() + Math.floor(Math.random() * 10000).toString());
-      const nuevaProg = { ...prog, idBase };
-
-      // Agregar la programación al empleado correcto
-      empleados[empleadoIndex].schedulings = [
-        ...(empleados[empleadoIndex].schedulings || []),
-        nuevaProg
-      ];
-
-      // Guardar en localStorage
-      localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(empleados));
-      setModalOpen(false);
-      loadEvents();
-      if (typeof onAddEvent === 'function') onAddEvent();
-      toast.success('Programación agregada correctamente!');
-    };
-
-  // ------------------------------
-  // Renderiza FullCalendar y modales
-  // ------------------------------
   return (
     <div className="w-full p-4">
       <FullCalendar
@@ -377,17 +222,15 @@ const GeneralCalendar = ({ employees = [], onAddEvent }) => {
         </SeeScheduling>
       )}
 
-      {modalType === 'add' && (
+      {modalType === 'add' && modalOpen && (
         <SeeScheduling
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           title={'Agregar programación'}
         >
+          {console.log("[GeneralCalendar] Rendering AddScheduling with employees:", employees)}
           <AddScheduling
-            onAdd={(prog) => {
-              if (onAddEvent) onAddEvent(prog);
-              setModalOpen(false);
-            }}
+            onAdd={handleAddEvent}
             editing={null}
             onCancelEdit={() => setModalOpen(false)}
             employees={employees}

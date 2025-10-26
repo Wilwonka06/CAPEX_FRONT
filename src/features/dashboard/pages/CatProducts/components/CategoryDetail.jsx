@@ -1,4 +1,4 @@
-import { useState } from "react";
+import PropTypes from 'prop-types';
 
 const CategoryDetail = ({ category, isOpen, onClose }) => {
   if (!isOpen || !category) return null;
@@ -27,12 +27,6 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
                 {category.descripcion || category.description || 'Sin descripción'}
               </div>
             </div>
-            <div>
-              <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Estado</span>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[60px]">
-                {category.estado === 'activo' ? 'Categoría activa' : 'Categoría inactiva'}
-              </div>
-            </div>
           </div>
         </div>
         {/* Footer fijo */}
@@ -47,6 +41,18 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
       </div>
     </div>
   );
+};
+
+CategoryDetail.propTypes = {
+  category: PropTypes.shape({
+    nombre: PropTypes.string,
+    name: PropTypes.string,
+    descripcion: PropTypes.string,
+    description: PropTypes.string,
+    estado: PropTypes.string,
+  }),
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default CategoryDetail; 

@@ -23,7 +23,7 @@ const ChangeStatus = ({ category, isOpen, onClose, onStatusChange }) => {
         <div className="p-6">
           <h2 className="text-xl font-bold text-primary mb-4">Cambiar Estado</h2>
           <p className="text-gray-600 mb-6">
-            ¿Estás seguro de que deseas cambiar el estado de la categoría "{category.name}" a {category.isActive ? 'Inactivo' : 'Activo'}?
+            ¿Estás seguro de que deseas cambiar el estado de la categoría {category.name} a {category.isActive ? 'Inactivo' : 'Activo'}?
           </p>
           <div className="flex justify-end space-x-3">
             <button

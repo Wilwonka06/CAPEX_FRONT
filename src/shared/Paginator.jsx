@@ -1,5 +1,3 @@
-import React from "react";
-
 const Paginator = ({ currentPage, totalPages, onPageChange }) => {
   return (
     <div className="flex justify-center items-center space-x-2 mt-6">

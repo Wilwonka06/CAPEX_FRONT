@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../components/CartContext';
-import ordersService from '../../../../shared/services/OrdersService';
-import CustomerService from '../../../../shared/services/CustomerService';
+import ordersService from '../../pages/orders/API/OrdersService';
+import { useAuth } from '../../../../shared/contexts/AuthContext';
 
 const empresasEnvio = [
   { nombre: 'INTER rapidísimo', precio: { 'Bogotá': 13500, 'Medellín': 15000, 'default': 18000 } },
@@ -14,6 +14,7 @@ const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
 const Checkout = () => {
   const { cart, clearCart } = useCart();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
     documentType: 'CC',
@@ -22,28 +23,25 @@ const Checkout = () => {
   });
   const [envio, setEnvio] = useState('CO-ORDINADORA');
   const [error, setError] = useState('');
-  const [clienteExistente, setClienteExistente] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Autocompletar si documento existe en tiempo real
-  const handleDocumentoChange = (e) => {
-    const value = e.target.value;
-    setForm(f => ({ ...f, documento: value }));
-    if (!value) return;
-    const cliente = CustomerService.findByDocument(value);
-    if (cliente) {
+  // Autocompletar con datos del usuario autenticado
+  useEffect(() => {
+    if (user) {
       setForm(f => ({
         ...f,
-        documentType: cliente.documentType || 'CC',
-        nombre: cliente.firstName,
-        apellidos: cliente.lastName,
-        telefono: cliente.phone,
-        email: cliente.email,
-        direccion: cliente.address || '',
-        ciudad: cliente.city || '',
-        pais: cliente.country || 'Colombia',
+        documentType: user.tipo_documento || 'CC',
+        documento: user.documento || '',
+        nombre: user.nombre || '',
+        apellidos: '', // El modelo Usuario no tiene apellidos separados
+        telefono: user.telefono || '',
+        email: user.correo || '',
+        direccion: user.direccion || '',
+        ciudad: '', // No está en el modelo básico
+        pais: 'Colombia',
       }));
     }
-  };
+  }, [user]);
 
   // Calcular precio de envío
   const envioSeleccionado = empresasEnvio.find(e => e.nombre === envio);
@@ -56,60 +54,53 @@ const Checkout = () => {
   const total = subtotal + precioEnvio;
 
   // Guardar pedido y redirigir
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.documento || !form.nombre || !form.apellidos || !form.telefono || !form.direccion || !form.ciudad) {
+
+    if (!user) {
+      setError('Debes iniciar sesión para realizar un pedido.');
+      return;
+    }
+
+    if (!form.direccion || !form.ciudad) {
       setError('Por favor completa todos los campos obligatorios.');
       return;
     }
-    // Guardar cliente si es nuevo o actualizar si existe
-    let cliente = CustomerService.findByDocument(form.documento);
-    if (!cliente) {
-      cliente = CustomerService.add({
-        documentType: form.documentType,
-        documentNumber: form.documento,
-        firstName: form.nombre,
-        lastName: form.apellidos,
-        phone: form.telefono,
-        email: form.email,
-        address: form.direccion,
-        city: form.ciudad,
-        country: form.pais,
-      });
-    } else {
-      cliente = CustomerService.update(form.documento, {
-        documentType: form.documentType,
-        firstName: form.nombre,
-        lastName: form.apellidos,
-        phone: form.telefono,
-        email: form.email,
-        address: form.direccion,
-        city: form.ciudad,
-        country: form.pais,
-      });
+
+    if (cart.length === 0) {
+      setError('El carrito está vacío.');
+      return;
     }
-    // Guardar pedido en "mis pedidos"
-    ordersService.createOrder({
-      clienteId: cliente.id,
-      direccion: form.direccion,
-      ciudad: form.ciudad,
-      pais: form.pais,
-      productos: cart.map(p => ({
-        id: p.id,
-        nombre: p.nombre,
-        cantidad: p.cantidad,
-        precio: p.precio,
-        color: p.color || '',
-        imagen: p.fotos && p.fotos.length > 0 ? p.fotos[0] : (p.foto || p.imagen || ''),
-      })),
-      subtotal,
-      envio: precioEnvio,
-      valor: total,
-      medioPago: envio,
-      estado: 'Pendiente',
-    });
-    clearCart();
-    navigate('/landing/gracias');
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Crear pedido en el backend
+      const orderData = {
+        id_usuario: user.id_usuario,
+        fecha: new Date().toISOString().split('T')[0],
+        productos: cart.map(p => ({
+          id: p.id,
+          cantidad: p.cantidad,
+          precio_unitario: p.precio
+        }))
+      };
+
+      const response = await ordersService.create(orderData);
+
+      if (response.success) {
+        clearCart();
+        navigate('/landing/gracias');
+      } else {
+        throw new Error(response.message || 'Error al crear el pedido');
+      }
+    } catch (error) {
+      console.error('Error creating order:', error);
+      setError(error.message || 'Error al procesar el pedido. Inténtalo de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -118,12 +109,18 @@ const Checkout = () => {
         {/* Formulario */}
         <form className="flex-1 bg-white rounded-2xl shadow-lg p-8" onSubmit={handleSubmit}>
           <h2 className="text-2xl font-bold mb-6 text-[#1E1E1E]">Información del cliente</h2>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-blue-800">
+              <strong>Nota:</strong> Los datos se cargan automáticamente desde tu cuenta.
+              Si necesitas actualizar tu información, ve a tu perfil.
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Número identificación*" value={form.documento} onChange={handleDocumentoChange} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Nombre*" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Apellidos*" value={form.apellidos} onChange={e => setForm(f => ({ ...f, apellidos: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Teléfono*" value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 md:col-span-2 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Dirección de correo" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            <input className="border rounded-lg px-3 py-3 bg-gray-100 cursor-not-allowed" placeholder="Número identificación*" value={form.documento} readOnly />
+            <input className="border rounded-lg px-3 py-3 bg-gray-100 cursor-not-allowed" placeholder="Nombre*" value={form.nombre} readOnly />
+            <input className="border rounded-lg px-3 py-3 bg-gray-100 cursor-not-allowed" placeholder="Apellidos*" value={form.apellidos} readOnly />
+            <input className="border rounded-lg px-3 py-3 bg-gray-100 cursor-not-allowed" placeholder="Teléfono*" value={form.telefono} readOnly />
+            <input className="border rounded-lg px-3 py-3 md:col-span-2 bg-gray-100 cursor-not-allowed" placeholder="Dirección de correo" value={form.email} readOnly />
           </div>
           <h2 className="text-xl font-bold mb-4 text-[#1E1E1E] mt-6">Dirección de Entrega</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -143,7 +140,13 @@ const Checkout = () => {
             ))}
           </div>
           {error && <div className="text-red-600 mb-4">{error}</div>}
-          <button type="submit" className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-bold py-3 rounded-full text-lg transition mt-4 shadow-lg">Continuar con el pago</button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#FACC15] hover:bg-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed text-[#1E1E1E] font-bold py-3 rounded-full text-lg transition mt-4 shadow-lg"
+          >
+            {loading ? 'Procesando pedido...' : 'Continuar con el pago'}
+          </button>
         </form>
         {/* Resumen */}
         <div className="w-full md:w-80 bg-white rounded-2xl shadow-lg p-6 h-fit">
