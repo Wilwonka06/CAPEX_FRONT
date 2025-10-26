@@ -4,19 +4,27 @@ import {
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,
+  toggleServiceCategoryStatus,
 } from "./api/serviceCategoriesApi";
 
 import AddCatServices from "./components/AddCatServices";
 import EditCatServices from "./components/EditCatServices";
 import LoadingTable from "../../../../shared/components/LoadingTable";
 import Swal from "sweetalert2";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import SearchProduct from '../../../../shared/Search';
+import { useOutletContext } from 'react-router-dom';
 
 const CatServices = () => {
+  const { setTitle } = useOutletContext();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [togglingId, setTogglingId] = useState(null);
 
   const loadCategories = async () => {
     setLoading(true);
@@ -38,13 +46,19 @@ const CatServices = () => {
     loadCategories();
   }, []);
 
+  useEffect(() => {
+    setTitle("Categorías de Servicios");
+    return () => setTitle("");
+  }, [setTitle]);
+
   const handleAdd = async (newCategory) => {
     try {
       await createServiceCategory(newCategory);
       await loadCategories();
-      Swal.fire("Éxito", "Categoría creada correctamente", "success");
+      setShowAdd(false);
+      toast.success("Categoría creada correctamente");
     } catch (error) {
-      Swal.fire("Error", "No se pudo crear la categoría", "error");
+      toast.error("No se pudo crear la categoría");
     }
   };
 
@@ -55,9 +69,10 @@ const CatServices = () => {
         updatedCategory
       );
       await loadCategories();
-      Swal.fire("Éxito", "Categoría actualizada correctamente", "success");
+      setEditingCategory(null);
+      toast.success("Categoría actualizada correctamente");
     } catch (error) {
-      Swal.fire("Error", "No se pudo actualizar la categoría", "error");
+      toast.error("No se pudo actualizar la categoría");
     }
   };
 
@@ -74,19 +89,69 @@ const CatServices = () => {
       try {
         await deleteServiceCategory(id);
         await loadCategories();
-        Swal.fire("Éxito", "Categoría eliminada", "success");
+        toast.success("Categoría eliminada");
       } catch (error) {
-        Swal.fire("Error", "No se pudo eliminar la categoría", "error");
+        toast.error("No se pudo eliminar la categoría");
       }
     }
   };
 
+const handleToggleStatus = async (category) => {
+  setTogglingId(category.id_categoria_servicio);
+  try {
+    await toggleServiceCategoryStatus(category.id_categoria_servicio, category);
+    await loadCategories();
+    const newStatus = category.estado === "Activo" ? "Inactivo" : "Activo";
+    toast.success(`Categoría ${newStatus.toLowerCase()}a`);
+  } catch (error) {
+    console.error("Error al cambiar estado:", error);
+    toast.error("No se pudo cambiar el estado");
+  } finally {
+    setTogglingId(null);
+  }
+};
+
+const handleSearch = (e) => setSearchTerm(e.target.value);
+
+const filteredCategories = categories.filter((cat) =>
+  (cat.id_categoria_servicio?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (cat.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (cat.descripcion || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (cat.estado || "").toLowerCase().includes(searchTerm.toLowerCase())
+);
+
+if (loading) {
   return (
-    <div className="p-6">
+    <div className="min-h-screen p-6 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando categorías...</p>
+      </div>
+    </div>
+  );
+}
+
+if (error) {
+  return (
+    <div className="min-h-screen p-6 flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-red-600 mb-4">{error}</p>
+        <button
+          onClick={loadCategories}
+          className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark transition"
+        >
+          Reintentar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+return (
+  <div className="min-h-screen font-inter p-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">
-          Categorías de Servicios
-        </h1>
+        <h1 className="text-2xl font-bold text-primary">Categorías de Servicios</h1>
         <button
           onClick={() => setShowAdd(true)}
           className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition"
@@ -95,28 +160,18 @@ const CatServices = () => {
         </button>
       </div>
 
+      {/* Barra de búsqueda */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <SearchProduct
+          searchTerm={searchTerm}
+          handleSearch={handleSearch}
+          placeholder="Buscar categorías..."
+        />
+      </div>
+
+      {/* Tabla de categorías */}
       <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-        {loading ? (
-          <LoadingTable message="Cargando categorías..." />
-        ) : error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <i className="bi bi-exclamation-triangle text-red-400"></i>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error al cargar categorías</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-                <button
-                  onClick={loadCategories}
-                  className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
-                >
-                  Reintentar
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : categories.length === 0 ? (
+        {filteredCategories.length === 0 ? (
           <div className="text-center py-12">
             <i className="bi bi-inbox text-6xl text-gray-300"></i>
             <p className="mt-4 text-gray-500">No hay categorías registradas.</p>
@@ -134,42 +189,54 @@ const CatServices = () => {
                 </tr>
               </thead>
               <tbody>
-                {categories.map((cat) => (
-                  <tr key={cat.id_categoria_servicio} className="border-t">
-                    <td className="px-6 py-3">{cat.id_categoria_servicio}</td>
-                    <td className="px-6 py-3">{cat.nombre}</td>
-                    <td className="px-6 py-3">{cat.descripcion || "—"}</td>
-                    <td className="px-6 py-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          cat.estado === "Activo"
-                            ? "bg-green-100 text-green-600"
-                            : "bg-red-100 text-red-600"
-                        }`}
-                      >
-                        {cat.estado}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 flex gap-2 justify-center">
-                      <button
-                        onClick={() => setEditingCategory(cat)}
-                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(cat.id_categoria_servicio)}
-                        className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredCategories.map((cat) => {
+                  const isActive = cat.estado === "Activo";
+                  const isToggling = togglingId === cat.id_categoria_servicio;
+                  return (
+                    <tr key={cat.id_categoria_servicio} className="border-t hover:bg-gray-50">
+                      <td className="px-6 py-3">{cat.id_categoria_servicio}</td>
+                      <td className="px-6 py-3">{cat.nombre}</td>
+                      <td className="px-6 py-3">{cat.descripcion || "—"}</td>
+                      <td className="px-6 py-3">
+                        <button
+                          onClick={() => handleToggleStatus(cat)}
+                          disabled={isToggling}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            isActive ? "bg-green-500" : "bg-gray-300"
+                          } ${isToggling ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              isActive ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-6 py-3 flex gap-2 justify-center">
+                        <button
+                          onClick={() => setEditingCategory(cat)}
+                          className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(cat.id_categoria_servicio)}
+                          className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
+      </div>
+    </div>
+  </div>
+);
       </div>
 
       {showAdd && (
@@ -188,6 +255,8 @@ const CatServices = () => {
           existingCategories={categories}
         />
       )}
+
+      <ToastContainer position="top-right" />
     </div>
   );
 };

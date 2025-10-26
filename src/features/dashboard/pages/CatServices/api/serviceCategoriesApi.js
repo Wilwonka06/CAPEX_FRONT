@@ -73,3 +73,28 @@ export const deleteServiceCategory = async (id) => {
   const res = await axios.delete(`${BASE}/${id}`);
   return res.data;
 };
+
+// Toggle de estado (Activo/Inactivo)
+export const toggleServiceCategoryStatus = async (id, currentCategory) => {
+  try {
+    // Calcular el nuevo estado
+    const newStatus = currentCategory.estado === "Activo" ? "Inactivo" : "Activo";
+    
+    // Enviar el nuevo estado en el body
+    const payload = {
+      estado: newStatus
+    };
+    
+    console.log("[API] PATCH change status for ID:", id, "payload:", payload);
+    const res = await axios.patch(`${BASE}/${id}/status`, payload);
+    console.log("[API] PATCH response ->", res.status, res.data);
+    return res.data;
+  } catch (err) {
+    console.error(
+      "[API] toggleServiceCategoryStatus ERROR:",
+      err.response?.status,
+      err.response?.data || err.message
+    );
+    throw err;
+  }
+};
