@@ -37,7 +37,7 @@ const Sidebar = () => {
         id: 'config',
         title: 'Configuración',
         icon: 'bi-gear-fill',
-        module: 'Gestión de Usuarios', // O un módulo específico para configuración si lo tienes
+        module: 'Gestión de Usuarios',
         items: [
           { name: 'Roles', icon: 'bi-shield-check', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
         ]

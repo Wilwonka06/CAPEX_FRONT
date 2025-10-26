@@ -1,5 +1,4 @@
-import React from 'react';
-import { Line } from 'react-chartjs-2';
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,8 +8,8 @@ import {
   Title,
   Tooltip,
   Legend,
-} from 'chart.js';
-import * as XLSX from 'xlsx';
+} from "chart.js";
+import * as XLSX from "xlsx";
 
 ChartJS.register(
   CategoryScale,
@@ -23,14 +22,27 @@ ChartJS.register(
 );
 
 const colores = [
-  '#7c3aed', // violeta
-  '#22d3ee', // cyan
-  '#a3e635', // verde
-  '#f472b6', // rosa
-  '#facc15', // amarillo
+  "#7c3aed", // violeta
+  "#22d3ee", // cyan
+  "#a3e635", // verde
+  "#f472b6", // rosa
+  "#facc15", // amarillo
 ];
 
-const mesesES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const mesesES = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+];
 
 const AnnualComparisonChart = ({ data }) => {
   const years = Object.keys(data).sort();
@@ -52,10 +64,10 @@ const AnnualComparisonChart = ({ data }) => {
   const options = {
     responsive: true,
     plugins: {
-      legend: { display: true, position: 'top' },
+      legend: { display: true, position: "top" },
       tooltip: {
         callbacks: {
-          label: ctx => `$${ctx.parsed.y.toLocaleString('es-CO')}`,
+          label: (ctx) => `$${ctx.parsed.y.toLocaleString("es-CO")}`,
         },
       },
     },
@@ -63,31 +75,33 @@ const AnnualComparisonChart = ({ data }) => {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: v => `${(v/1e6).toFixed(1)}M`,
-          color: '#333',
+          callback: (v) => `${(v / 1e6).toFixed(1)}M`,
+          color: "#333",
         },
-        grid: { color: '#eee' },
+        grid: { color: "#eee" },
       },
       x: {
-        ticks: { color: '#333' },
-        grid: { color: '#eee' },
+        ticks: { color: "#333" },
+        grid: { color: "#eee" },
       },
     },
   };
 
   const handleDownload = () => {
     // Construir tabla: columnas = meses, filas = años
-    const rows = Object.keys(data).sort().map(year => {
-      const row = { Año: year };
-      mesesES.forEach((mes, idx) => {
-        row[mes] = data[year][idx] || 0;
+    const rows = Object.keys(data)
+      .sort()
+      .map((year) => {
+        const row = { Año: year };
+        mesesES.forEach((mes, idx) => {
+          row[mes] = data[year][idx] || 0;
+        });
+        return row;
       });
-      return row;
-    });
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'ComparativaAnual');
-    XLSX.writeFile(wb, 'comparativa_anual.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, "ComparativaAnual");
+    XLSX.writeFile(wb, "comparativa_anual.xlsx");
   };
 
   return (
@@ -101,10 +115,12 @@ const AnnualComparisonChart = ({ data }) => {
           <i className="bi bi-download"></i> Descargar
         </button>
       </div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Comparativa Anual de Ventas</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        Comparativa Anual de Ventas
+      </h3>
       <Line data={chartData} options={options} />
     </div>
   );
 };
 
-export default AnnualComparisonChart; 
+export default AnnualComparisonChart;

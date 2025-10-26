@@ -26,7 +26,7 @@ const Navbar = () => {
             try {
                 const user = localStorage.getItem('currentUser');
                 const parsedUser = user ? JSON.parse(user) : null;
-                console.log('🔄 Navbar: Usuario actualizado:', parsedUser);
+                console.log('🔄 Navbar: Usuario actualizado:', parsedUser?.nombre || 'No autenticado');
                 setCurrentUser(parsedUser);
             } catch (error) {
                 console.warn('Error parsing currentUser from localStorage:', error);

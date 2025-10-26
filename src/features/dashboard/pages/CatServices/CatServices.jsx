@@ -33,7 +33,6 @@ const CatServices = () => {
     }
   };
 
-
   useEffect(() => {
     loadCategories();
   }, []);
@@ -50,7 +49,10 @@ const CatServices = () => {
 
   const handleEdit = async (updatedCategory) => {
     try {
-      await updateServiceCategory(updatedCategory.id_categoria_servicio, updatedCategory);
+      await updateServiceCategory(
+        updatedCategory.id_categoria_servicio,
+        updatedCategory
+      );
       await loadCategories();
       Swal.fire("Éxito", "Categoría actualizada correctamente", "success");
     } catch (error) {
@@ -81,7 +83,9 @@ const CatServices = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary">Categorías de Servicios</h1>
+        <h1 className="text-2xl font-bold text-primary">
+          Categorías de Servicios
+        </h1>
         <button
           onClick={() => setShowAdd(true)}
           className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition"
