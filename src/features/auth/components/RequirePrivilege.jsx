@@ -8,16 +8,35 @@ const RequirePrivilege = ({ module, action, children }) => {
 
     // Mostrar loading mientras se verifica la autenticación
     if (loading) {
+        console.log('Cargando autenticación...');
         return <LoadingSpinner />;
     }
 
     if (!currentUser) {
+        console.log('Usuario no autenticado, redirigiendo a login');
         return <Navigate to="/login" replace />;
     }
     
     // Verificar privilegios usando la función del contexto
+    console.log(`Verificando privilegios para módulo: ${module}, acción: ${action}`);
+    console.log('Usuario actual:', {
+      nombre: currentUser.nombre,
+      rol: currentUser.rol,
+      privileges: currentUser.privileges
+    });
+
     const hasRequiredPrivilege = hasPrivilege(module, action);
-    
+    console.log(`¿Tiene privilegio?: ${hasRequiredPrivilege}`);
+
+    if (!hasRequiredPrivilege) {
+      console.log(`Acceso denegado: ${module} -> ${action}`);
+      console.log('Detalles del privilegio faltante:', {
+        module,
+        action,
+        userPrivileges: currentUser.privileges
+      });
+    }
+
     if (!hasRequiredPrivilege) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
@@ -31,7 +50,7 @@ const RequirePrivilege = ({ module, action, children }) => {
                     <div className="text-xs text-gray-400 mb-4">
                         <p>Usuario: {currentUser.nombre}</p>
                         <p>Rol: {currentUser.rol}</p>
-                        <p>Privilegios disponibles: {JSON.stringify(currentUser.privileges)}</p>
+                        <p>Privilegios disponibles: {JSON.stringify(currentUser.privileges, null, 2)}</p>
                     </div>
                     <div className="flex gap-3 justify-center">
                         <button 

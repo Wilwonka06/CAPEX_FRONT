@@ -30,7 +30,7 @@ export const registerUser = async (userData) => {
 };
 
 /**
- * Inicia sesión y obtiene el token JWT
+ * Inicia sesión - el token se maneja automáticamente en cookies HttpOnly
  */
 export const loginUser = async (credentials) => {
   try {
@@ -40,6 +40,7 @@ export const loginUser = async (credentials) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(credentials),
+      credentials: 'include', // Importante para incluir cookies
     });
 
     if (!response.ok) {
@@ -48,14 +49,9 @@ export const loginUser = async (credentials) => {
     }
 
     const result = await response.json();
-    
-    // Guardar token en localStorage
-    if (result.token) {
-      localStorage.setItem('authToken', result.token);
-      localStorage.setItem('token', result.token); // Backup
-    }
-    
-    // Guardar información del usuario
+
+    // El token ya está en cookies HttpOnly, no lo guardamos en localStorage
+    // Solo guardamos la información del usuario si es necesario
     if (result.user) {
       localStorage.setItem('currentUser', JSON.stringify(result.user));
     }
@@ -97,35 +93,28 @@ export const verifyToken = async (token) => {
  */
 export const getCurrentUser = async () => {
   try {
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-    
-    if (!token) {
-      throw new Error('No hay token disponible');
-    }
-
     const response = await fetch(`${BASE_URL}/auth/me`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include', // Importante para incluir cookies HttpOnly
     });
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Token expirado o inválido
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('token');
+        // Token expirado o inválido - limpiar localStorage
+        localStorage.removeItem('currentUser');
         throw new Error('Token expirado. Por favor, inicia sesión nuevamente.');
       }
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 
     const user = await response.json();
-    
+
     // Actualizar información del usuario en localStorage
     localStorage.setItem('currentUser', JSON.stringify(user));
-    
+
     return user;
   } catch (error) {
     console.error('Error al obtener usuario actual:', error);
@@ -138,18 +127,12 @@ export const getCurrentUser = async () => {
  */
 export const updateProfile = async (profileData) => {
   try {
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-    
-    if (!token) {
-      throw new Error('No hay token disponible');
-    }
-
     const response = await fetch(`${BASE_URL}/auth/profile`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
+      credentials: 'include', // Importante para incluir cookies HttpOnly
       body: JSON.stringify(profileData),
     });
 
@@ -158,12 +141,12 @@ export const updateProfile = async (profileData) => {
     }
 
     const result = await response.json();
-    
+
     // Actualizar información del usuario en localStorage
     if (result.user) {
       localStorage.setItem('currentUser', JSON.stringify(result.user));
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error al actualizar perfil:', error);
@@ -176,47 +159,44 @@ export const updateProfile = async (profileData) => {
  */
 export const logoutUser = async () => {
   try {
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-    
-    if (token) {
-      // Intentar cerrar sesión en el backend
-      try {
-        await fetch(`${BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-      } catch (error) {
-        console.warn('Error al cerrar sesión en el backend:', error);
-      }
-    }
-    
+    // Cerrar sesión en el backend (limpia la cookie HttpOnly)
+    await fetch(`${BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Importante para incluir cookies
+    });
+
     // Limpiar localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
-    
+
     return { success: true, message: 'Sesión cerrada correctamente' };
   } catch (error) {
     console.error('Error al cerrar sesión:', error);
-    throw error;
+    // Aun si hay error en el backend, limpiamos localStorage
+    localStorage.removeItem('currentUser');
+    return { success: true, message: 'Sesión cerrada localmente' };
   }
 };
 
 /**
  * Verifica si el usuario está autenticado
+ * Nota: Con cookies HttpOnly, no podemos verificar directamente desde el frontend
+ * Esta función ahora verifica si hay información del usuario en localStorage
  */
 export const isAuthenticated = () => {
-  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-  return !!token;
+  const user = localStorage.getItem('currentUser');
+  return !!user;
 };
 
 /**
  * Obtiene el token actual
+ * Nota: Con cookies HttpOnly, el token no está disponible en el frontend
+ * Esta función ahora retorna null ya que el token está protegido
  */
 export const getCurrentToken = () => {
-  return localStorage.getItem('authToken') || localStorage.getItem('token');
+  // El token está en cookies HttpOnly y no es accesible desde JavaScript
+  return null;
 };
 

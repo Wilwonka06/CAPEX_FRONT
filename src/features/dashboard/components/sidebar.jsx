@@ -77,7 +77,7 @@ const Sidebar = () => {
       },
       {
         id: 'sales',
-        title: 'Ventas',
+        title: 'Gestión de Ventas',
         icon: 'bi-graph-up-arrow',
         module: 'Ventas',
         items: [

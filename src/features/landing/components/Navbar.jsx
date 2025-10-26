@@ -8,7 +8,7 @@ import cartIcon from '../../../shared/images/cart.png';
 const Navbar = () => {
     // Estado para controlar la visibilidad del menú móvil
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('currentUser')));
+    const [currentUser, setCurrentUser] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
     const navigate = useNavigate();
     const profileRef = useRef();
@@ -23,8 +23,20 @@ const Navbar = () => {
     // Escuchar cambios en localStorage (login/logout) y evento personalizado
     useEffect(() => {
         const handleUserChange = () => {
-            setCurrentUser(JSON.parse(localStorage.getItem('currentUser')));
+            try {
+                const user = localStorage.getItem('currentUser');
+                const parsedUser = user ? JSON.parse(user) : null;
+                console.log('🔄 Navbar: Usuario actualizado:', parsedUser);
+                setCurrentUser(parsedUser);
+            } catch (error) {
+                console.warn('Error parsing currentUser from localStorage:', error);
+                setCurrentUser(null);
+            }
         };
+
+        // Verificar estado inicial
+        handleUserChange();
+
         window.addEventListener('user-auth-changed', handleUserChange);
         window.addEventListener('storage', handleUserChange);
         return () => {
@@ -45,10 +57,11 @@ const Navbar = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showProfile]);
 
-    // Verificar si el usuario logueado es cliente
-    const isClient = Array.isArray(currentUser?.roles)
-      ? currentUser.roles.includes('Cliente')
-      : currentUser?.rol?.toLowerCase() === 'cliente' || currentUser?.roles === 'Cliente';
+    // Verificar el rol del usuario de forma segura (comentado por ahora)
+    // const userRole = currentUser?.rol || currentUser?.roleName || '';
+    // const isClient = typeof userRole === 'string' && userRole.toLowerCase() === 'cliente';
+    // const isAdmin = typeof userRole === 'string' && userRole.toLowerCase() === 'administrador';
+    // const isEmployee = typeof userRole === 'string' && userRole.toLowerCase() === 'empleado';
 
     const handleLogout = () => {
         localStorage.removeItem('currentUser');
@@ -57,10 +70,10 @@ const Navbar = () => {
         navigate('/login');
     };
 
-    // Función para alternar el menú desplegable de productos
-    const toggleProductsDropdown = () => {
-        setIsProductsDropdownOpen(!isProductsDropdownOpen);
-    };
+    // Función para alternar el menú desplegable de productos (comentada por ahora)
+    // const toggleProductsDropdown = () => {
+    //     setIsProductsDropdownOpen(!isProductsDropdownOpen);
+    // };
 
     return (
         <nav className="bg-background p-2 shadow-lg">
@@ -95,11 +108,6 @@ const Navbar = () => {
                     <Link to="/landing/citas" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
                         Agendar Cita
                     </Link>
-                    {!currentUser && (
-                        <Link to="/login" className="bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md hover:bg-primary">
-                            Iniciar Sesión
-                        </Link>
-                    )}
                 </div>
 
                 {/* Botones de Autenticación (a la derecha) */}
