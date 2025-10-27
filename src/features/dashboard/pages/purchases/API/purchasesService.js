@@ -1,4 +1,4 @@
-// src/pages/private/dashboard/shopping/API/purchasesService.js
+ // src/pages/private/dashboard/shopping/API/purchasesService.js
 import apiRequest from '../../../../../shared/config/apiConfig';
 
 const PURCHASES_ENDPOINT = '/compras';
@@ -37,9 +37,9 @@ export const purchasesService = {
           estado: compra.estado === 'Completada' ? 'Registrada' : compra.estado === 'Cancelada' ? 'Anulada' : compra.estado,
           productos: compra.detalles?.map(det => ({
             id: det.id_producto,
-            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            codigo: det.id_producto ? `P${det.id_producto.toString().padStart(3, '0')}` : 'N/A',
             nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad,
+            cantidad: det.cantidad || 0,
             costo: parseFloat(det.precio_unitario || 0),
             precioBase: parseFloat(det.precio_unitario || 0),
             iva: det.producto?.iva ? parseFloat(det.producto.iva) / 100 : 0,
@@ -89,9 +89,9 @@ export const purchasesService = {
           estado: compra.estado === 'Completada' ? 'Registrada' : compra.estado === 'Cancelada' ? 'Anulada' : compra.estado,
           items: compra.detalles?.map(det => ({
             id: det.id_producto,
-            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            codigo: det.id_producto ? `P${det.id_producto.toString().padStart(3, '0')}` : 'N/A',
             nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad,
+            cantidad: det.cantidad || 0,
             costo: parseFloat(det.precio_unitario || 0),
             precioBase: parseFloat(det.precio_unitario || 0),
             iva: det.producto?.iva ? parseFloat(det.producto.iva) / 100 : 0,
