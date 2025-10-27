@@ -21,7 +21,7 @@ const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
   const [employees, setEmployees] = useState([]);
   const [schedulings, setSchedulings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -388,10 +388,10 @@ const EmployeesPage = () => {
             {editEmployee && (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold text-text-main mb-4">Editar Empleado</h2>
-                <EditEmployee 
-                  employee={editEmployee} 
-                  onCancel={handleEditCancel} 
-                  onSave={handleEditSave} 
+                <EditEmployee
+                  employee={editEmployee}
+                  onCancel={handleEditCancel}
+                  onSave={handleEditSave}
                 />
               </div>
             )}
@@ -426,6 +426,12 @@ const EmployeesPage = () => {
                         </div>
                       </div>
                     </div>
+                  ) : paginatedEmployees.length === 0 ? (
+                    <div className="text-center py-12">
+                      <i className="bi bi-people text-6xl text-gray-300"></i>
+                      <p className="mt-4 text-gray-500">No hay empleados registrados.</p>
+                      <p className="text-xs text-gray-400 mt-1">Los empleados aparecerán aquí cuando se registren.</p>
+                    </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
@@ -441,7 +447,7 @@ const EmployeesPage = () => {
                         </thead>
                         <tbody className="bg-white text-text-main">
                           {paginatedEmployees.map((emp) => (
-                            <tr key={emp.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <tr key={emp.id || `employee-${Math.random()}`} className="border-b border-gray-200 hover:bg-gray-50">
                               <td className="py-3 px-4 font-medium">{emp.nombre}</td>
                               <td className="py-3 px-4">{emp.documento}</td>
                               <td className="py-3 px-4">{emp.telefono}</td>

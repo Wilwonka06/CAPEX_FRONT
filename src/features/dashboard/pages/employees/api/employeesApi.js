@@ -1,239 +1,290 @@
-import axios from "axios";
+import apiRequest from '../../../../../shared/config/apiConfig';
 
-const BASE = "https://capex-back.onrender.com/api/empleados";
+/**
+ * Servicio API para gestión de empleados
+ * Endpoints base: /api/empleados
+ */
 
-// Obtener todos los empleados
+const EMPLOYEES_ENDPOINT = '/empleados';
+
+export const employeesService = {
+  /**
+   * Obtener todos los empleados con paginación y filtros
+   * @param {Object} params - Parámetros de consulta
+   * @param {number} params.page - Número de página (opcional)
+   * @param {number} params.limit - Límite de resultados por página (opcional)
+   * @param {string} params.search - Término de búsqueda (opcional)
+   * @param {string} params.status - Estado del empleado (opcional)
+   * @returns {Promise<Object>} Lista de empleados con metadatos de paginación
+   */
+  getAll: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+
+      // Agregar parámetros de consulta si existen
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status) queryParams.append('status', params.status);
+
+      const url = queryParams.toString()
+        ? `${EMPLOYEES_ENDPOINT}?${queryParams.toString()}`
+        : EMPLOYEES_ENDPOINT;
+
+      const response = await apiRequest.get(url);
+      return response;
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener todos los empleados activos (sin paginación)
+   * Útil para dropdowns y selects
+   * @returns {Promise<Array>} Lista de empleados activos
+   */
+  getActive: async () => {
+    try {
+      const response = await apiRequest.get(`${EMPLOYEES_ENDPOINT}?status=activo`);
+      return response;
+    } catch (error) {
+      console.error('Error fetching active employees:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener un empleado por ID
+   * @param {number|string} id - ID del empleado
+   * @returns {Promise<Object>} Datos del empleado
+   */
+  getById: async (id) => {
+    try {
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+
+      const response = await apiRequest.get(`${EMPLOYEES_ENDPOINT}/${id}`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching employee ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Crear un nuevo empleado
+   * @param {Object} employeeData - Datos del empleado
+   * @param {string} employeeData.nombre - Nombre del empleado
+   * @param {string} employeeData.documento - Documento del empleado
+   * @param {string} employeeData.tipo_documento - Tipo de documento
+   * @param {string} employeeData.telefono - Teléfono del empleado
+   * @param {string} employeeData.correo - Correo electrónico
+   * @param {string} employeeData.direccion - Dirección (opcional)
+   * @param {string} employeeData.estado - Estado ('activo' | 'inactivo')
+   * @returns {Promise<Object>} Empleado creado
+   */
+  create: async (employeeData) => {
+    try {
+      // Validaciones básicas
+      if (!employeeData.nombre || employeeData.nombre.trim() === '') {
+        throw new Error('El nombre del empleado es requerido');
+      }
+      if (!employeeData.documento || employeeData.documento.trim() === '') {
+        throw new Error('El documento del empleado es requerido');
+      }
+      if (!employeeData.tipo_documento || employeeData.tipo_documento.trim() === '') {
+        throw new Error('El tipo de documento es requerido');
+      }
+      if (!employeeData.telefono || employeeData.telefono.trim() === '') {
+        throw new Error('El teléfono del empleado es requerido');
+      }
+      if (!employeeData.correo || employeeData.correo.trim() === '') {
+        throw new Error('El correo electrónico es requerido');
+      }
+
+      // Limpiar y preparar datos
+      const cleanData = {
+        nombre: employeeData.nombre.trim(),
+        documento: employeeData.documento.trim(),
+        tipo_documento: employeeData.tipo_documento.trim(),
+        telefono: employeeData.telefono.trim(),
+        correo: employeeData.correo.trim(),
+        direccion: employeeData.direccion?.trim() || '',
+        estado: employeeData.estado || 'activo',
+      };
+
+      console.log('API Employee: Sending data to backend:', cleanData);
+      const response = await apiRequest.post(EMPLOYEES_ENDPOINT, cleanData);
+      return response;
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Actualizar un empleado existente
+   * @param {number|string} id - ID del empleado
+   * @param {Object} employeeData - Datos actualizados del empleado
+   * @returns {Promise<Object>} Empleado actualizado
+   */
+  update: async (id, employeeData) => {
+    try {
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+
+      // Validaciones básicas
+      if (employeeData.nombre && employeeData.nombre.trim() === '') {
+        throw new Error('El nombre del empleado no puede estar vacío');
+      }
+      if (employeeData.documento && employeeData.documento.trim() === '') {
+        throw new Error('El documento del empleado no puede estar vacío');
+      }
+      if (employeeData.correo && employeeData.correo.trim() === '') {
+        throw new Error('El correo electrónico no puede estar vacío');
+      }
+
+      // Limpiar y preparar datos
+      const cleanData = { ...employeeData };
+      if (cleanData.nombre) cleanData.nombre = cleanData.nombre.trim();
+      if (cleanData.documento) cleanData.documento = cleanData.documento.trim();
+      if (cleanData.tipo_documento) cleanData.tipo_documento = cleanData.tipo_documento.trim();
+      if (cleanData.telefono) cleanData.telefono = cleanData.telefono.trim();
+      if (cleanData.correo) cleanData.correo = cleanData.correo.trim();
+      if (cleanData.direccion) cleanData.direccion = cleanData.direccion.trim();
+
+      console.log('Frontend: Sending update data for employee', id, ':', cleanData);
+      const response = await apiRequest.put(`${EMPLOYEES_ENDPOINT}/${id}`, cleanData);
+      return response;
+    } catch (error) {
+      console.error(`Error updating employee ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Actualización parcial de un empleado
+   * @param {number|string} id - ID del empleado
+   * @param {Object} partialData - Datos parciales a actualizar
+   * @returns {Promise<Object>} Empleado actualizado
+   */
+  patch: async (id, partialData) => {
+    try {
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+
+      const response = await apiRequest.patch(`${EMPLOYEES_ENDPOINT}/${id}`, partialData);
+      return response;
+    } catch (error) {
+      console.error(`Error patching employee ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Eliminar un empleado
+   * @param {number|string} id - ID del empleado
+   * @returns {Promise<Object>} Confirmación de eliminación
+   */
+  delete: async (id) => {
+    try {
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+
+      const response = await apiRequest.delete(`${EMPLOYEES_ENDPOINT}/${id}`);
+      return response;
+    } catch (error) {
+      console.error(`Error deleting employee ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cambiar estado de un empleado (activar/desactivar)
+   * @param {number|string} id - ID del empleado
+   * @param {string} status - Nuevo estado ('activo' | 'inactivo')
+   * @returns {Promise<Object>} Empleado con estado actualizado
+   */
+  changeStatus: async (id, status) => {
+    try {
+      console.log('Front-end: changeStatus called with id:', id, 'status:', status);
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+      if (!['activo', 'inactivo'].includes(status)) {
+        throw new Error('Estado debe ser "activo" o "inactivo"');
+      }
+
+      const response = await apiRequest.patch(`${EMPLOYEES_ENDPOINT}/${id}/status`, { estado: status });
+      console.log('Front-end: changeStatus response:', response);
+      return response;
+    } catch (error) {
+      console.error(`Error changing employee status ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Buscar empleados por término
+   * @param {string} searchTerm - Término de búsqueda
+   * @param {Object} filters - Filtros adicionales (opcional)
+   * @returns {Promise<Object>} Resultados de búsqueda
+   */
+  search: async (searchTerm, filters = {}) => {
+    try {
+      if (!searchTerm || searchTerm.trim() === '') {
+        throw new Error('Término de búsqueda es requerido');
+      }
+
+      const params = {
+        search: searchTerm.trim(),
+        ...filters
+      };
+
+      return await employeesService.getAll(params);
+    } catch (error) {
+      console.error('Error searching employees:', error);
+      throw error;
+    }
+  },
+};
+
+// Mantener compatibilidad con el código existente
 export const getEmployees = async () => {
   try {
-    const res = await axios.get(BASE, { timeout: 12000 });
-    console.log("[API] getEmployees RAW response:", res.data);
-    
-    const raw = res?.data;
-
-    // Normalización defensiva de la respuesta
-    let list = [];
-    if (Array.isArray(raw)) {
-      list = raw;
-    } else if (raw?.data && Array.isArray(raw.data)) {
-      list = raw.data;
-    } else if (raw?.results && Array.isArray(raw.results)) {
-      list = raw.results;
-    }
-
-    console.log("[API] getEmployees list before mapping:", list);
-
-    // Asegurar campos esperados por la UI
-    const normalized = list.map((item) => {
-      console.log("[API] Processing item:", item);
-      
-      return {
-        id: item.id_usuario ?? item.id,
-        nombre: item.nombre ?? "",
-        apellido: "", // El modelo NO tiene apellido
-        documento: item.documento ?? "",
-        tipoDocumento: item.tipo_documento ?? "",
-        telefono: item.telefono ?? "",
-        correo: item.correo ?? "",
-        direccion: item.direccion ?? "",
-        estado: item.estado ?? "Activo",
-        rol: item.roleId === 2 ? "Empleado" : "Otro",
-        createdAt: item.createdAt ?? new Date().toISOString(),
-        updatedAt: item.updatedAt ?? new Date().toISOString(),
-      };
-    });
-
-    console.log("[API] getEmployees normalized:", normalized);
-    return normalized;
+    const response = await employeesService.getAll();
+    return response.data || response || [];
   } catch (error) {
     console.error("[API] getEmployees ERROR:", error?.message);
-    console.error("[API] getEmployees ERROR full:", error);
     return [];
   }
 };
 
-// Crear nuevo empleado
-// Crear nuevo empleado
-export const createEmployee = async (employee) => {
-  // Asegurar formato de teléfono internacional
-  let telefono = employee.telefono ?? employee.phone ?? '';
-  
-  // Si el teléfono no empieza con +, agregarlo (asumiendo Colombia +57)
-  if (telefono && !telefono.startsWith('+')) {
-    telefono = `+57${telefono}`;
-  }
-
-  const payload = {
-    nombre: employee.nombre ?? employee.name,
-    documento: employee.documento ?? employee.document,
-    tipo_documento: employee.tipo_documento ?? employee.tipoDocumento ?? employee.documentType,
-    telefono: telefono,
-    correo: employee.correo ?? employee.email,
-    direccion: employee.direccion ?? employee.address ?? '',
-    estado: employee.estado === 'Activo' ? 'Activo' : 'Inactivo',
-  };
-
-  // Validar campos requeridos
-  if (!payload.nombre || !payload.documento || !payload.tipo_documento || !payload.telefono || !payload.correo) {
-    console.error("[API] createEmployee - Missing required fields:", payload);
-    throw new Error("Faltan campos obligatorios");
-  }
-
-  // Validar formato de teléfono
-  const telefonoRegex = /^\+[0-9]{7,15}$/;
-  if (!telefonoRegex.test(payload.telefono)) {
-    console.error("[API] createEmployee - Invalid phone format:", payload.telefono);
-    throw new Error(`El teléfono debe tener formato internacional (+1234567890). Recibido: ${payload.telefono}`);
-  }
-
-  console.log("[API] POST Employee payload ->", payload);
-
-  try {
-    const res = await axios.post(BASE, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: 12000
-    });
-    console.log("[API] POST Employee response ->", res.status, res.data);
-
-    const created = res.data;
-    return {
-      id: created.id_usuario ?? created.id,
-      nombre: created.nombre ?? payload.nombre,
-      apellido: "",
-      documento: created.documento ?? payload.documento,
-      tipoDocumento: created.tipo_documento ?? payload.tipo_documento,
-      telefono: created.telefono ?? payload.telefono,
-      correo: created.correo ?? payload.correo,
-      direccion: created.direccion ?? payload.direccion,
-      estado: created.estado ?? "Activo",
-      rol: "Empleado",
-    };
-  } catch (err) {
-    console.error("[API] createEmployee ERROR:", err.response?.status);
-    console.error("[API] Error data:", err.response?.data);
-    console.error("[API] Error message:", err.message);
-    throw err;
-  }
+export const createEmployee = async (employeeData) => {
+  return await employeesService.create(employeeData);
 };
 
-// Actualizar empleado
-export const updateEmployee = async (id, employee) => {
-  const payload = {
-    nombre: employee.nombre ?? employee.name,
-    documento: employee.documento ?? employee.document,
-    tipo_documento: employee.tipoDocumento ?? employee.tipo_documento ?? employee.documentType,
-    telefono: employee.telefono ?? employee.phone ?? '',
-    correo: employee.correo ?? employee.email,
-    direccion: employee.direccion ?? employee.address ?? '',
-    estado: employee.estado,
-  };
-
-  // Remover campos undefined
-  Object.keys(payload).forEach(key => {
-    if (payload[key] === undefined || payload[key] === null) {
-      delete payload[key];
-    }
-  });
-
-  try {
-    console.log("[API] PUT Employee payload ->", payload);
-    const res = await axios.put(`${BASE}/${id}`, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: 12000
-    });
-    console.log("[API] PUT Employee response ->", res.status, res.data);
-
-    const updated = res.data;
-    return {
-      id: updated.id_usuario ?? updated.id ?? id,
-      nombre: updated.nombre ?? payload.nombre,
-      apellido: "",
-      documento: updated.documento ?? payload.documento,
-      tipoDocumento: updated.tipo_documento ?? payload.tipo_documento,
-      telefono: updated.telefono ?? payload.telefono,
-      correo: updated.correo ?? payload.correo,
-      direccion: updated.direccion ?? payload.direccion,
-      estado: updated.estado ?? payload.estado,
-      rol: "Empleado",
-    };
-  } catch (err) {
-    console.error("[API] updateEmployee ERROR:", err.response?.status, err.response?.data || err.message);
-    throw err;
-  }
+export const updateEmployee = async (id, employeeData) => {
+  return await employeesService.update(id, employeeData);
 };
 
-// Eliminar empleado
 export const deleteEmployee = async (id) => {
-  try {
-    console.log("[API] DELETE Employee ID ->", id);
-    const res = await axios.delete(`${BASE}/${id}`, {
-      timeout: 12000
-    });
-    console.log("[API] DELETE Employee response ->", res.status, res.data);
-    return res.data;
-  } catch (err) {
-    console.error("[API] deleteEmployee ERROR:", err.response?.status, err.response?.data || err.message);
-    throw err;
-  }
+  return await employeesService.delete(id);
 };
 
-// Cambiar estado del empleado
 export const toggleEmployeeStatus = async (id, newEstado) => {
-  try {
-    console.log("[API] PATCH Employee status ->", id, newEstado);
-    const res = await axios.patch(`${BASE}/${id}/status`, { 
-      estado: newEstado,
-      concepto_estado: "Cambio de estado desde la aplicación"
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: 12000
-    });
-    console.log("[API] PATCH Employee response ->", res.status, res.data);
-
-    const updated = res.data;
-    return {
-      id: updated.id_usuario ?? updated.id ?? id,
-      nombre: updated.nombre ?? "",
-      apellido: "",
-      documento: updated.documento ?? "",
-      tipoDocumento: updated.tipo_documento ?? "",
-      telefono: updated.telefono ?? "",
-      correo: updated.correo ?? "",
-      direccion: updated.direccion ?? "",
-      estado: updated.estado ?? newEstado,
-      rol: "Empleado",
-    };
-  } catch (err) {
-    console.error("[API] toggleEmployeeStatus ERROR:", err.response?.status, err.response?.data || err.message);
-    throw err;
-  }
+  return await employeesService.changeStatus(id, newEstado);
 };
 
-// Obtener empleado por ID
 export const getEmployeeById = async (id) => {
   try {
-    const res = await axios.get(`${BASE}/${id}`, { timeout: 12000 });
-    const item = res?.data;
-
-    if (!item) return null;
-
-    return {
-      id: item.id_usuario ?? item.id,
-      nombre: item.nombre ?? "",
-      apellido: "",
-      documento: item.documento ?? "",
-      tipoDocumento: item.tipo_documento ?? "",
-      telefono: item.telefono ?? "",
-      correo: item.correo ?? "",
-      direccion: item.direccion ?? "",
-      estado: item.estado ?? "Activo",
-      rol: "Empleado",
-    };
+    const response = await employeesService.getById(id);
+    return response.data || response || null;
   } catch (error) {
     console.error("[API] getEmployeeById ERROR:", error?.message);
     return null;
