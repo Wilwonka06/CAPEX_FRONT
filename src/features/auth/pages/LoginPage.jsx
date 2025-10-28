@@ -88,7 +88,8 @@ export default function LoginPage() {
 
         // Login exitoso - delegar al contexto
         await login(userData);
-        
+
+        // Solo mostrar el toast de bienvenido, sin redirigir aquí
         toast.success('¡Bienvenido!', { position: 'top-right', autoClose: 1000 });
       } else {
         throw new Error(response.message || 'Error en la autenticación');

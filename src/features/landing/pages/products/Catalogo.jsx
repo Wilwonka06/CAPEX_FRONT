@@ -340,26 +340,6 @@ const Catalogo = () => {
                 </div>
               )}
 
-              {/* Tipo de Producto */}
-              {tiposProducto.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="font-semibold mb-3 text-gray-800">Tipo de Producto</h3>
-                  <div className="space-y-2">
-                    {tiposProducto.map(tipo => (
-                      <label key={tipo} className="flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={filtroTipoProducto.includes(tipo)}
-                          onChange={() => toggleFiltro(tipo, filtroTipoProducto, setFiltroTipoProducto)}
-                          className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
-                        />
-                        <span className="text-sm text-gray-700">{tipo}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Especificaciones dinámicas */}
               {conceptosUnicos.map(concepto => {
                 const valores = obtenerValoresUnicos(concepto);

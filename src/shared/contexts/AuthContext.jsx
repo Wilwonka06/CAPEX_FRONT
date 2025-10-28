@@ -163,10 +163,8 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
       const redirectPath = getRoleRedirect(userData.rol);
       console.log('🔄 Redirigiendo a:', redirectPath);
 
-      // Pequeño delay para asegurar que el estado se actualice
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 100);
+      // Redirigir inmediatamente sin delay
+      window.location.href = redirectPath;
     } catch (error) {
       console.error('❌ Error en login:', error);
       throw error;

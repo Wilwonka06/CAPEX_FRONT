@@ -8,6 +8,14 @@ import {
 } from "../../../../../shared/validations";
 import categoriesService from '../../CatProducts/API/categoriesService';
 import characteristicsService from '../API/characteristicsService';
+import { 
+  compressImageToBase64, 
+  validateFileSize, 
+  validateFileType 
+} from '../../../../../shared/utils/imagesUploadHelper';
+import { toast } from 'react-toastify';
+import productsService from '../API/productsService';
+// Ajustar la ruta según la ubicación del componente
 
 const MAX_IMAGES = 3;
 
@@ -116,17 +124,41 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     }));
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
-      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+    if (files.length === 0) return;
 
-      setFormData((prev) => ({
-        ...prev,
-        fotos: [...prev.fotos, ...newImages]
-      }));
-      setPreviews((prev) => [...prev, ...newPreviews]);
+    const remainingSlots = MAX_IMAGES - formData.fotos.length;
+    if (files.length > remainingSlots) {
+      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) más`);
+      return;
+    }
+
+    try {
+      for (const file of files) {
+        if (!validateFileType(file)) {
+          toast.error(`${file.name}: Tipo de archivo no válido`);
+          continue;
+        }
+
+        if (!validateFileSize(file, 5)) {
+          toast.error(`${file.name}: Máximo 5MB`);
+          continue;
+        }
+
+        const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+        
+        setFormData((prev) => ({
+          ...prev,
+          fotos: [...prev.fotos, base64Image]
+        }));
+
+        const preview = URL.createObjectURL(file);
+        setPreviews((prev) => [...prev, preview]);
+      }
+    } catch (error) {
+      console.error('Error procesando imágenes:', error);
+      toast.error('Error al procesar las imágenes');
     }
   };
 
@@ -134,18 +166,43 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     e.preventDefault();
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
-    if (files.length > 0) {
-      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
-      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+    
+    if (files.length === 0) return;
 
-      setFormData((prev) => ({
-        ...prev,
-        fotos: [...prev.fotos, ...newImages]
-      }));
-      setPreviews((prev) => [...prev, ...newPreviews]);
+    const remainingSlots = MAX_IMAGES - formData.fotos.length;
+    if (files.length > remainingSlots) {
+      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) más`);
+      return;
+    }
+
+    try {
+      for (const file of files) {
+        if (!validateFileType(file)) {
+          toast.error(`${file.name}: Tipo no válido`);
+          continue;
+        }
+
+        if (!validateFileSize(file, 5)) {
+          toast.error(`${file.name}: Máximo 5MB`);
+          continue;
+        }
+
+        const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+        
+        setFormData((prev) => ({
+          ...prev,
+          fotos: [...prev.fotos, base64Image]
+        }));
+
+        const preview = URL.createObjectURL(file);
+        setPreviews((prev) => [...prev, preview]);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al procesar las imágenes');
     }
   };
 
@@ -154,11 +211,13 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       ...prev,
       fotos: prev.fotos.filter((_, i) => i !== index)
     }));
-    setPreviews((prev) => {
-      const newPreviews = prev.filter((_, i) => i !== index);
-      URL.revokeObjectURL(prev[index]);
-      return newPreviews;
-    });
+    
+    const previewUrl = previews[index];
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddEspecificacion = () => {
@@ -178,7 +237,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     let errors = {};
 
@@ -199,16 +258,9 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
 
     setFieldErrors({});
 
-    // Procesar las fotos - solo enviar la primera como string
-    let fotoUrl = '';
-    if (formData.fotos.length > 0) {
-      const firstPhoto = formData.fotos[0];
-      if (!(firstPhoto instanceof File)) {
-        fotoUrl = firstPhoto;
-      }
-    }
-
-    // Construir objeto con la estructura correcta para el backend
+    try {
+      // Procesar las imágenes: subir a Cloudinary si hay archivos nuevos
+      // Construir objeto con la estructura correcta para el backend
     const newProduct = {
       nombre: formData.nombre.trim(),
       descripcion: formData.descripcion.trim() || null,
@@ -217,37 +269,48 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
     };
 
-    // Solo enviar url_foto si es una URL válida (no blob)
-    if (fotoUrl) {
-      newProduct.url_foto = fotoUrl;
+    // Enviar la primera imagen (en base64, el backend la subirá a Cloudinary)
+    if (formData.fotos.length > 0) {
+      newProduct.url_foto = formData.fotos[0];
     }
 
-    // CORRECCIÓN: Mapear especificaciones a características
-    // Solo enviar nombre y valor (el backend creará/encontrará las características)
-    const caracteristicasValidas = especificaciones
-      .filter(e => {
-        const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
-        return nombre && nombre.trim() !== '' && e.valor && e.valor.trim() !== '';
-      })
-      .map(e => {
-        const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
-        return {
-          nombre: nombre.trim(),
-          valor: e.valor.trim()
-        };
-      });
+      // CORRECCIÓN: Mapear especificaciones a características
+      // Solo enviar nombre y valor (el backend creará/encontrará las características)
+      const caracteristicasValidas = especificaciones
+        .filter(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return nombre && nombre.trim() !== '' && e.valor && e.valor.trim() !== '';
+        })
+        .map(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return {
+            nombre: nombre.trim(),
+            valor: e.valor.trim()
+          };
+        });
 
-    if (caracteristicasValidas.length > 0) {
-      newProduct.caracteristicas = caracteristicasValidas;
+      if (caracteristicasValidas.length > 0) {
+        newProduct.caracteristicas = caracteristicasValidas;
+      }
+
+      console.log('CreateProduct: Sending product data:', newProduct);
+      console.log('CreateProduct: Características a enviar:', newProduct.caracteristicas);
+
+      // Crear el producto usando el servicio
+      const result = await productsService.create(newProduct);
+
+      if (result.success) {
+        if (onCreate) {
+          onCreate(result.data);
+        }
+        handleClose();
+      } else {
+        throw new Error(result.message || 'Error al crear el producto');
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+      setError(error.message || 'Error al crear el producto');
     }
-
-    console.log('CreateProduct: Sending product data:', newProduct);
-    console.log('CreateProduct: Características a enviar:', newProduct.caracteristicas);
-
-    if (onCreate) {
-      onCreate(newProduct);
-    }
-    handleClose();
   };
 
   const handleBlurNombre = (e) => {
