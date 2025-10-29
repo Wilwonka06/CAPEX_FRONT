@@ -76,7 +76,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
         setLoadingProducts(true);
         const response = await productsService.getAll({ limit: 100 });
         if (response.success) {
-          setProductsList(response.data || []);
+          // Filtrar productos que NO sean de categoría "Extensión natural"
+          const filteredProducts = (response.data || []).filter(product =>
+            product.categoria !== 'Extensión natural'
+          );
+          setProductsList(filteredProducts);
         }
       } catch (error) {
         console.error("Error loading products:", error);

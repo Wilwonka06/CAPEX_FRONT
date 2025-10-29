@@ -31,7 +31,7 @@ export default function Shopping() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailCompra, setDetailCompra] = useState(null);
-  const [setSuppliers] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
 
   const { setTitle } = useOutletContext();
 
@@ -114,7 +114,7 @@ export default function Shopping() {
   // Descargar reporte de compras
   const handleDownloadReport = async () => {
     try {
-      const response = await purchasesService.generateReport({
+      await purchasesService.generateReport({
         format: 'excel',
         startDate: '2024-01-01',
         endDate: new Date().toISOString().split('T')[0],
@@ -186,7 +186,8 @@ export default function Shopping() {
                 className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
                 onClick={handleDownloadReport}
               >
-                <i className="bi bi-file-earmark-excel"></i>
+                <i className="bi bi-file-earmark-excel mr-2"></i>
+                Generar Reporte
               </button>
             </div>
 

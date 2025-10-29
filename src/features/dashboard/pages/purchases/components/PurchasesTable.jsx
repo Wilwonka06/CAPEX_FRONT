@@ -30,14 +30,19 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
               <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor || 'N/A'}</td>
               <td className="py-4 px-4 text-xs text-gray-600 font-semibold">{formatNumber(p.total)}</td>
               <td className="py-4 px-4 text-xs text-gray-600">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.estado === 'Registrada' ? ' text-green-800' : ' text-red-800'}`}>{p.estado || 'N/A'}</span>
+                <span className={`text-xs font-semibold rounded-full px-2 py-1
+                  ${p.estado === 'Completada' ? 'bg-green-100 text-green-800' : ''}
+                  ${p.estado === 'Cancelada' ? 'bg-red-100 text-red-800' : ''}
+                `}>
+                  {p.estado === 'Completada' ? "Completada" : p.estado === 'Cancelada' ? "Cancelada" : p.estado || 'N/A'}
+                </span>
               </td>
               <td className="py-4 px-4 text-sm font-medium text-center">
                 <div className="flex justify-center space-x-2">
                   <button className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver detalles" onClick={() => onView(p)}>
                     <i className="bi bi-eye text-primary text-lg"></i>
                   </button>
-                  {p.estado !== 'Anulada' && (
+                  {p.estado !== 'Anulada' && p.estado !== 'Cancelada' && (
                     <button className="h-8 w-8 p-0 hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors" title="Anular" onClick={() => onAnnul(p.id)}>
                       <i className="bi bi-x-octagon text-red-500 text-lg"></i>
                     </button>

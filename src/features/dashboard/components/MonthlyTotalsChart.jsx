@@ -85,11 +85,11 @@ const MonthlyTotalsChart = ({ data }) => {
   };
 
   return (
-    <div className="w-full h-80 bg-white rounded-lg shadow p-4">
+    <div className="w-full h-96 bg-white rounded-lg shadow p-4">
       <div className="flex justify-end mb-2">
         <button
           onClick={handleDownloadExcel}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded shadow transition font-medium text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow transition font-medium text-sm"
         >
           <i className="bi bi-download"></i> Descargar Excel
         </button>

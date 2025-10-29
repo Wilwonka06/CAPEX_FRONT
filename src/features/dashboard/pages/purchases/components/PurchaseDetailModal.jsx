@@ -3,10 +3,19 @@ import PropTypes from "prop-types";
 const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
   if (!isOpen || !compra) return null;
   
-  const items = compra.productos || compra.items || [];
-  const subtotal = compra.subtotal || items.reduce((acc, p) => acc + (p.costo || p.precioBase) * p.cantidad, 0);
-  const totalIva = compra.totalIva || items.reduce((acc, p) => acc + (p.costo || p.precioBase) * p.cantidad * (p.iva || 0), 0);
-  const total = compra.total || subtotal + totalIva;
+  const items = compra.detalles || compra.productos || compra.items || [];
+  const subtotal = items.reduce((acc, p) => {
+    const precio = parseFloat(p.precio_unitario || p.costo || p.precioBase || 0);
+    const cantidad = parseInt(p.cantidad || 1);
+    return acc + (precio * cantidad);
+  }, 0);
+  const totalIva = items.reduce((acc, p) => {
+    const precio = parseFloat(p.precio_unitario || p.costo || p.precioBase || 0);
+    const cantidad = parseInt(p.cantidad || 1);
+    const ivaRate = parseFloat(p.iva || 0);
+    return acc + (precio * cantidad * ivaRate);
+  }, 0);
+  const total = parseFloat(compra.total || 0) || subtotal + totalIva;
 
   const getEstadoClass = (estado) => {
     switch (estado) {
@@ -69,17 +78,23 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {items.map((item, index) => (
+                  {items.length > 0 ? items.map((item, index) => (
                     <tr key={index}>
-                      <td className="py-2 px-3">{item.codigo || item.id}</td>
-                      <td className="py-2 px-3 text-sm">{item.nombre || item.descripcion}</td>
-                      <td className="py-2 px-3 text-right">{item.cantidad}</td>
-                      <td className="py-2 px-3 text-right">${(item.costo || item.precioBase || 0).toFixed(2)}</td>
-                      <td className="py-2 px-3 text-right">{((item.iva || 0) * 100).toFixed(0)}%</td>
-                      <td className="py-2 px-3 text-right">${item.precioConIva ? item.precioConIva : ((item.costo || item.precioBase || 0) * (1 + (item.iva || 0))).toFixed(2)}</td>
-                      <td className="py-2 px-3 text-right font-semibold">${(item.costo * item.cantidad).toFixed(2)}</td>
+                      <td className="py-2 px-3">{item.producto?.id_producto || item.id_producto || item.id || index + 1}</td>
+                      <td className="py-2 px-3 text-sm">{item.producto?.nombre || item.nombre || item.descripcion || 'Producto sin nombre'}</td>
+                      <td className="py-2 px-3 text-right">{item.cantidad || 1}</td>
+                      <td className="py-2 px-3 text-right">${parseFloat(item.precio_unitario || item.costo || item.precioBase || 0).toFixed(2)}</td>
+                      <td className="py-2 px-3 text-right">{(parseFloat(item.iva || 0) * 100).toFixed(0)}%</td>
+                      <td className="py-2 px-3 text-right">${(parseFloat(item.precio_unitario || item.costo || item.precioBase || 0) * (1 + parseFloat(item.iva || 0))).toFixed(2)}</td>
+                      <td className="py-2 px-3 text-right font-semibold">${(parseFloat(item.precio_unitario || item.costo || item.precioBase || 0) * parseInt(item.cantidad || 1)).toFixed(2)}</td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="7" className="py-4 px-3 text-center text-gray-500">
+                        No hay productos en esta compra
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -93,7 +108,7 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
                 <span className="font-semibold text-gray-800">${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">IVA ({((totalIva/subtotal) * 100 || 0).toFixed(0)}%):</span>
+                <span className="text-gray-600">IVA ({subtotal > 0 ? ((totalIva/subtotal) * 100).toFixed(0) : 0}%):</span>
                 <span className="font-semibold text-gray-800">${totalIva.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-lg border-t border-gray-500 pt-4 mt-4">
