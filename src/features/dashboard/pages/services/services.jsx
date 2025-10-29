@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {
@@ -14,6 +14,7 @@ import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
+import LoadingTable from '../../../../shared/components/LoadingTable';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import PropTypes from "prop-types";
@@ -39,7 +40,7 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) =>
         {services.map((service) => {
           const isActive = service.estado === "Activo";
           return (
-            <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
+            <tr key={service.id || `service-${Math.random()}`} className="hover:bg-gray-50 transition-colors duration-150">
               <td className="py-4 px-4 text-xs font-medium text-gray-900">{service.id}</td>
               <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.nombre}</td>
               <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">
@@ -115,7 +116,7 @@ const Services = () => {
   const { setTitle } = useOutletContext();
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -146,12 +147,12 @@ const Services = () => {
           if (service.categoria?.nombre || typeof service.categoria === 'string') {
             return service;
           }
-          
+
           const category = categoriesData.find(
             cat => (cat.id_categoria_servicio || cat.id) === service.id_categoria_servicio
           );
-          
-          return category 
+
+          return category
             ? { ...service, categoria: { nombre: category.nombre } }
             : service;
         });
@@ -373,34 +374,60 @@ const Services = () => {
             </div>
 
             {/* Tabla de servicios */}
-            {services.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">No hay servicios registrados.</p>
-            ) : (
-              <>
-                <ServicesTable
-                  services={paginatedServices}
-                  onToggleStatus={handleToggleStatus}
-                  onSee={(service) => {
-                    setSelectedService(service);
-                    setShowDetailModal(true);
-                  }}
-                  onEdit={(service) => {
-                    setSelectedService(service);
-                    setShowEditModal(true);
-                  }}
-                  onDelete={handleDeleteService}
-                />
-                
-                {/* Paginación */}
-                {totalPages > 1 && (
-                  <Paginator
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {loading ? (
+                <LoadingTable message="Cargando servicios..." />
+              ) : error ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <i className="bi bi-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error al cargar servicios</h3>
+                      <p className="text-sm text-red-700 mt-1">{error}</p>
+                      <button
+                        onClick={() => loadData()}
+                        className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : services.length === 0 ? (
+                <div className="text-center py-12">
+                  <i className="bi bi-tools text-6xl text-gray-300"></i>
+                  <p className="mt-4 text-gray-500">No hay servicios registrados.</p>
+                  <p className="text-xs text-gray-400 mt-1">Los servicios aparecerán aquí cuando se registren.</p>
+                </div>
+              ) : (
+                <>
+                  <ServicesTable
+                    services={paginatedServices}
+                    onToggleStatus={handleToggleStatus}
+                    onSee={(service) => {
+                      setSelectedService(service);
+                      setShowDetailModal(true);
+                    }}
+                    onEdit={(service) => {
+                      setSelectedService(service);
+                      setShowEditModal(true);
+                    }}
+                    onDelete={handleDeleteService}
                   />
-                )}
-              </>
-            )}
+
+                  {/* Paginación */}
+                  {totalPages > 1 && (
+                    <Paginator
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

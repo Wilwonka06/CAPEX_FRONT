@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { isDuplicateProductName } from '../../../../../shared/validations';
 import categoriesService from '../../CatProducts/API/categoriesService';
-import characteristicsService from '../API/characteristicsService'
+import { 
+  compressImageToBase64, 
+  validateFileSize, 
+  validateFileType 
+} from '../../../../../shared/utils/imagesUploadHelper';
+import { toast } from 'react-toastify';
+import characteristicsService from '../API/characteristicsService';
 
 const MAX_IMAGES = 3;
 
@@ -122,17 +128,47 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     }));
   };
 
-  const handleFileChange = (e) => {
+  // ✅ CORREGIDO: Procesar imágenes con Cloudinary
+  const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
-      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+    if (files.length === 0) return;
 
-      setFormData((prev) => ({
-        ...prev,
-        fotos: [...prev.fotos, ...newImages]
-      }));
-      setPreviews((prev) => [...prev, ...newPreviews]);
+    const remainingSlots = MAX_IMAGES - formData.fotos.length;
+    if (files.length > remainingSlots) {
+      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) más`);
+      return;
+    }
+
+    try {
+      for (const file of files) {
+        // Validar tipo
+        if (!validateFileType(file)) {
+          toast.error(`${file.name}: Tipo de archivo no válido. Solo se permiten imágenes JPG, PNG, GIF, WEBP`);
+          continue;
+        }
+
+        // Validar tamaño
+        if (!validateFileSize(file, 5)) {
+          toast.error(`${file.name}: El archivo es demasiado grande. Máximo 5MB`);
+          continue;
+        }
+
+        // Comprimir y convertir a base64
+        const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+        
+        // Agregar al estado
+        setFormData((prev) => ({
+          ...prev,
+          fotos: [...prev.fotos, base64Image]
+        }));
+
+        // Crear preview
+        const preview = URL.createObjectURL(file);
+        setPreviews((prev) => [...prev, preview]);
+      }
+    } catch (error) {
+      console.error('Error procesando imágenes:', error);
+      toast.error('Error al procesar las imágenes');
     }
   };
 
@@ -140,34 +176,69 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     e.preventDefault();
   };
 
-  const handleDrop = (e) => {
+  // ✅ CORREGIDO: Procesar drop con Cloudinary
+  const handleDrop = async (e) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-    if (files.length > 0) {
-      const newImages = files.slice(0, MAX_IMAGES - formData.fotos.length);
-      const newPreviews = newImages.map(file => URL.createObjectURL(file));
+    
+    if (files.length === 0) {
+      toast.warning('No se encontraron imágenes válidas');
+      return;
+    }
 
-      setFormData((prev) => ({
-        ...prev,
-        fotos: [...prev.fotos, ...newImages]
-      }));
-      setPreviews((prev) => [...prev, ...newPreviews]);
+    const remainingSlots = MAX_IMAGES - formData.fotos.length;
+    if (files.length > remainingSlots) {
+      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) más`);
+      return;
+    }
+
+    try {
+      for (const file of files) {
+        // Validar tipo
+        if (!validateFileType(file)) {
+          toast.error(`${file.name}: Tipo de archivo no válido`);
+          continue;
+        }
+
+        // Validar tamaño
+        if (!validateFileSize(file, 5)) {
+          toast.error(`${file.name}: El archivo es demasiado grande. Máximo 5MB`);
+          continue;
+        }
+
+        // Comprimir y convertir a base64
+        const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+        
+        // Agregar al estado
+        setFormData((prev) => ({
+          ...prev,
+          fotos: [...prev.fotos, base64Image]
+        }));
+
+        // Crear preview
+        const preview = URL.createObjectURL(file);
+        setPreviews((prev) => [...prev, preview]);
+      }
+    } catch (error) {
+      console.error('Error procesando imágenes:', error);
+      toast.error('Error al procesar las imágenes');
     }
   };
 
+  // ✅ CORREGIDO: Liberar memoria correctamente
   const removeImage = (index) => {
     setFormData((prev) => ({
       ...prev,
       fotos: prev.fotos.filter((_, i) => i !== index)
     }));
-    setPreviews((prev) => {
-      const newPreviews = prev.filter((_, i) => i !== index);
-      // Liberar memoria de la URL del objeto si es un archivo nuevo
-      if (formData.fotos[index] instanceof File) {
-        URL.revokeObjectURL(prev[index]);
-      }
-      return newPreviews;
-    });
+    
+    // Revocar URL del preview solo si es un blob
+    const previewUrl = previews[index];
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddEspecificacion = () => {
@@ -187,7 +258,8 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     setEspecificaciones(especificaciones.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = (e) => {
+  // ✅ CORREGIDO: Enviar imagen en base64 para que el backend la suba a Cloudinary
+  const handleSubmit = async (e) => {
     e.preventDefault();
     let errors = {};
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
@@ -208,16 +280,7 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
     setFieldErrors({});
 
     if (formData.nombre.trim() && formData.precio) {
-      // Procesar las fotos
-      const fotosUrls = formData.fotos.map(foto => {
-        if (foto instanceof File) {
-          return URL.createObjectURL(foto);
-        }
-        return foto;
-      });
-
-      // ✅ CORRECCIÓN: Mapear especificaciones correctamente para el backend
-      // El backend espera un array con { nombre, valor }
+      // Mapear características para el backend
       const caracteristicasParaBackend = especificaciones
         .filter(e => {
           const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
@@ -243,11 +306,10 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
         stock: parseInt(formData.cantidad),
         id_categoria_producto: parseInt(formData.categoryId),
         categoryId: formData.categoryId,
-        url_foto: fotosUrls[0] || null,
-        fotos: fotosUrls,
-        // ✅ Enviar características en el formato correcto
+        // ✅ Enviar la primera foto (puede ser base64 o URL de Cloudinary existente)
+        url_foto: formData.fotos[0] || null,
+        fotos: formData.fotos,
         caracteristicas: caracteristicasParaBackend,
-        // También mantener especificaciones para compatibilidad con el frontend
         especificaciones: especificaciones
           .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
           .map(e => ({
@@ -258,6 +320,8 @@ const EditProduct = ({ product, isOpen, onClose, onSave, products = [] }) => {
       };
 
       console.log('EditProduct: Sending updated product:', updatedProduct);
+      console.log('EditProduct: Image is base64:', updatedProduct.url_foto?.startsWith('data:image'));
+      
       onSave(updatedProduct);
       handleClose();
     }

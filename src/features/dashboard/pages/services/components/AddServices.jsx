@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
   validateServiceName,
@@ -151,6 +151,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
         duracion: Number(formData.duracion),
         precio: Number(formData.precio),
         foto: formData.foto && !(formData.foto instanceof File) ? String(formData.foto) : '',
+        estado: 'Activo', // Agregar estado por defecto
       };
 
       // Llamar la función onAdd que se encarga de la llamada a la API

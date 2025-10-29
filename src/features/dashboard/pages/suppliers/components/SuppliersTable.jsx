@@ -44,13 +44,13 @@ export default function SuppliersTable({ suppliers, onEdit, onDelete, onStatusCh
       <table className="min-w-full">
         <thead>
           <tr className="bg-gray-50 hover:bg-gray-100">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nombre</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contacto</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Correo</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Teléfono</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Estado</th>
-            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Acciones</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">ID</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Contacto</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Correo</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Teléfono</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">

@@ -1,5 +1,3 @@
-import React from 'react';
-
 const CartToast = ({ show, product, onClose }) => {
   if (!show || !product) return null;
 

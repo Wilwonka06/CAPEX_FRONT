@@ -49,27 +49,13 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
         <table className="min-w-full">
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100 ">
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Foto
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Categoría
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Stock
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Precio
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Fecha registro
-              </th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Acciones
-              </th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Foto</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Stock</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Fecha registro</th>
+              <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -87,7 +73,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                           : product.foto
                       }
                       alt={product.nombre}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                      className="w-10 h-10 rounded-full object-cover "
                     />
                   </div>
                 </td>

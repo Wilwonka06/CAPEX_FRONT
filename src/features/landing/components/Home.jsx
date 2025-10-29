@@ -1,4 +1,3 @@
-import React from 'react'; // Keep React import
 import FeaturedProducts from './FeaturedProducts'; // Assuming these components are in the same directory or correct relative path
 import ContactSection from './ContactSection';
 import FeaturedServices from './FeaturedServices';

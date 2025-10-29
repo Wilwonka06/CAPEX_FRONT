@@ -7,11 +7,11 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView })
       <table className="min-w-full">
         <thead>
           <tr className="bg-gray-50 hover:bg-gray-100">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nombre</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Descripción</th>
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Estado</th>
-            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Acciones</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">ID</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Descripción</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -46,13 +46,10 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView })
                       }`}
                     />
                   </button>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      category.estado === 'activo'
-                        ? ' text-gray-800'
-                        : ' text-gray-600 '
-                    }`}
-                  >
+                  <span className={`text-xs font-semibold rounded-full px-2 py-1
+                    ${category.estado === 'activo' ? 'bg-green-100 text-green-800' : ''}
+                    ${category.estado === 'inactivo' ? 'bg-red-100 text-red-800' : ''}
+                  `}>
                     {category.estado === 'activo' ? "Activo" : "Inactivo"}
                   </span>
                 </div>

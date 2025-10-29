@@ -19,7 +19,7 @@ import { useOutletContext } from 'react-router-dom';
 const CatServices = () => {
   const { setTitle } = useOutletContext();
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [error, setError] = useState("");
@@ -101,10 +101,12 @@ const CatServices = () => {
 const handleToggleStatus = async (category) => {
   setTogglingId(category.id_categoria_servicio);
   try {
-    await toggleServiceCategoryStatus(category.id_categoria_servicio, category);
+    const newStatus = category.estado === "Activo" ? "inactivo" : "activo";
+    await toggleServiceCategoryStatus(category.id_categoria_servicio, newStatus);
     await loadCategories();
-    const newStatus = category.estado === "Activo" ? "Inactivo" : "Activo";
-    toast.success(`Categoría ${newStatus.toLowerCase()}a`); 
+
+    const statusText = newStatus === "activo" ? "activada" : "desactivada";
+    toast.success(`Categoría ${statusText}`);
   } catch (error) {
     console.error("Error al cambiar estado:", error);
     toast.error("No se pudo cambiar el estado");

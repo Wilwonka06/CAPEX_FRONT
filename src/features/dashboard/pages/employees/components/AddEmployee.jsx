@@ -86,10 +86,10 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
         error = correoErrors.correo || '';
         break;
       case 'telefono':
-        // Validar formato de teléfono
-        const telefonoRegex = /^\+?[0-9]{7,15}$/;
+        // Validar formato de teléfono internacional
+        const telefonoRegex = /^\+[0-9]{7,15}$/;
         if (!telefonoRegex.test(value)) {
-          error = 'El teléfono debe tener entre 7 y 15 dígitos (puede incluir + al inicio)';
+          error = 'El teléfono debe tener formato internacional (+1234567890)';
         }
         break;
       default:
@@ -195,7 +195,22 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
           </div>
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Teléfono</label>
-            <input type="tel" name="telefono" value={form.telefono} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
+            <input
+              type="tel"
+              name="telefono"
+              value={form.telefono}
+              onChange={(e) => {
+                let value = e.target.value;
+                // Auto-agregar + si no está presente y el usuario empieza a escribir
+                if (value && !value.startsWith('+')) {
+                  value = '+' + value;
+                }
+                setForm(prev => ({ ...prev, telefono: value }));
+              }}
+              onBlur={handleBlur}
+              placeholder="+1234567890"
+              className="w-full border rounded px-3 py-2"
+            />
             {errors.telefono && <p className="text-red-500 text-xs">{errors.telefono}</p>}
           </div>
           <div>
