@@ -427,7 +427,7 @@ const Catalogo = () => {
                 productosFiltrados.map(prod => (
                   <div
                     key={prod.id}
-                    className="flex flex-col cursor-pointer group transition-all"
+                    className="flex flex-col cursor-pointer group transition-all bg-[0000]"
                     onClick={() => navigate(`/landing/productos/${prod.id}`)}
                   >
                     {/* Imagen */}

@@ -116,7 +116,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center bg-gradient-to-r from-[#f8ede3] via-[#fff6ee] to-[#f8ede3] relative">
+    <div className="min-h-screen flex flex-col justify-center font-inter bg-gradient-to-r from-[#f8ede3] via-[#fff6ee] to-[#f8ede3] relative">
       {/* Texto de bienvenida sobre el fondo */}
       <div className="absolute left-0 top-0 h-full w-1/2 flex flex-col justify-center pl-32 z-10">
         <h2 className="text-5xl font-bold text-[#6d3b3b] mb-6">¡Bienvenido de nuevo!</h2>

@@ -327,26 +327,10 @@ const ProductsPage = () => {
               />
             )}
 
-            {/* Mostrar información de paginación */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Mostrando {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} a{' '}
-                {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} de{' '}
-                {pagination.totalItems} productos.
-              </p>
-            </div>
           </div>
         </div>
       </div>
       <ToastContainer />
-
-      {/* Indicador de carga durante operaciones */}
-      {loading && products.length > 0 && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          <span>Procesando...</span>
-        </div>
-      )}
     </div>
   );
 };
