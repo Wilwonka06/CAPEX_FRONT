@@ -104,6 +104,7 @@ const handleToggleStatus = async (category) => {
     const newStatus = category.estado === "Activo" ? "inactivo" : "activo";
     await toggleServiceCategoryStatus(category.id_categoria_servicio, newStatus);
     await loadCategories();
+
     const statusText = newStatus === "activo" ? "activada" : "desactivada";
     toast.success(`Categoría ${statusText}`);
   } catch (error) {

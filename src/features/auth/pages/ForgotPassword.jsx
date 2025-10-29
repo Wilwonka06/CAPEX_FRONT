@@ -1,29 +1,62 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidEmail } from '../../../shared/validations';
+import { toast } from 'react-toastify';
+import authService from '../services/authServices';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const isFormValid = isValidEmail(email.trim());
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+
     const trimmedEmail = email.trim();
     if (!isValidEmail(trimmedEmail)) {
       setError('Por favor ingresa un correo válido.');
+      setLoading(false);
       return;
     }
-    const users = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const user = users.find(u => u.correo === trimmedEmail);
-    if (!user) {
-      setError('No existe un usuario con ese correo.');
-      return;
+
+    try {
+      console.log('🔑 Solicitando recuperación de contraseña para:', trimmedEmail);
+
+      const response = await authService.forgotPassword(trimmedEmail);
+
+      console.log('✅ Solicitud de recuperación enviada:', response);
+
+      toast.success('Si el correo existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña.', {
+        position: 'top-right',
+        autoClose: 5000
+      });
+
+      // Redirigir al login después de un breve delay
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
+
+    } catch (error) {
+      console.error('❌ Error en recuperación de contraseña:', error);
+
+      let errorMsg = 'Error al procesar la solicitud. Intenta nuevamente.';
+
+      if (error.response?.status === 400) {
+        errorMsg = error.response?.data?.message || 'Datos inválidos';
+      } else if (error.response?.status === 500) {
+        errorMsg = 'Error del servidor. Intenta más tarde.';
+      }
+
+      setError(errorMsg);
+      toast.error(errorMsg, { position: 'top-right' });
+    } finally {
+      setLoading(false);
     }
-    navigate('/reset-password', { state: { email: trimmedEmail } });
   };
 
   return (
@@ -36,28 +69,36 @@ const ForgotPassword = () => {
         >
           &times;
         </button>
-        <h2 className="text-2xl font-bold mb-6 text-text-main">Restablecer Contraseña</h2>
+        <h2 className="text-2xl font-bold mb-6 text-[#6d3b3b]">Restablecer Contraseña</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex items-center relative">
-            <label className="block font-semibold text-text-main mr-2 w-24 text-right">Correo:</label>
+            <label className="block font-semibold text-[#6d3b3b] mr-2 w-24 text-right">Correo:</label>
             <i className="bi bi-envelope absolute left-28 top-1/2 -translate-y-1/2 text-gray-400 text-base"></i>
             <input
               type="email"
-              className="flex-1 border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
               autoFocus
+              disabled={loading}
             />
           </div>
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
           <div className="flex justify-center">
             <button
               type="submit"
-              className="px-6 py-2 bg-white border border-primary text-primary rounded shadow hover:bg-primary hover:text-white transition font-semibold"
-              disabled={!isFormValid}
+              className="px-6 py-2 bg-[#a0522d] text-white rounded shadow hover:bg-[#7a3a1d] transition font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!isFormValid || loading}
             >
-              Obtener nueva contraseña
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Enviando...
+                </>
+              ) : (
+                'Obtener nueva contraseña'
+              )}
             </button>
           </div>
         </form>
