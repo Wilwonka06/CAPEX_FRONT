@@ -3,6 +3,7 @@ import productsService from "../../products/API/productsService";
 import suppliersService from "../../suppliers/API/suppliersService";
 import CreateSupplier from "../../suppliers/components/CreateSupplier";
 import CreateProduct from "../../products/components/CreateProduct";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [productsList, setProductsList] = useState([]);
@@ -141,11 +142,9 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     setTotal(newSubtotal + newTotalIva);
   }, [itemsCompra, ivaGeneral]);
 
-  const formatNumber = (num) => {
-    if (num === "" || num === undefined || num === null) return "";
-    const parts = num.toString().split(".");
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return parts.join(".");
+  // Función para formatear números usando el estándar del proyecto
+  const formatPrice = (num) => {
+    return formatNumber(num);
   };
 
   const cleanNumber = (str) => {
@@ -327,7 +326,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -565,7 +564,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         <tr key={index}>
                           <td className="py-2 px-3">{item.codigo}</td>
                           <td className="py-2 px-3">{item.nombre}</td>
-                          <td className="py-2 px-3">${(item.costo || 0).toFixed(2)}</td>
+                          <td className="py-2 px-3">${formatPrice(item.costo || 0)}</td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
@@ -581,7 +580,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           </td>
                           <td className="py-2 px-3">{(item.iva || 0).toFixed(0)}%</td>
                           <td className="py-2 px-3">
-                            ${((item.costo || 0) * (item.cantidad || 0)).toFixed(2)}
+                            ${formatPrice((item.costo || 0) * (item.cantidad || 0))}
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
@@ -608,14 +607,14 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Subtotal:</td>
                         <td className="py-2 px-3 font-bold" colSpan="2">
-                          ${(subtotal || 0).toFixed(2)}
+                          ${formatPrice(subtotal || 0)}
                         </td>
                       </tr>
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Total IVA:</td>
                         <td className="py-2 px-3 font-bold" colSpan="2">
-                          ${(totalIva || 0).toFixed(2)}
+                          ${formatPrice(totalIva || 0)}
                         </td>
                       </tr>
                       <tr>
@@ -624,7 +623,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           Total a Pagar:
                         </td>
                         <td className="py-2 px-3 font-bold text-primary" colSpan="2">
-                          ${(total || 0).toFixed(2)}
+                          ${formatPrice(total || 0)}
                         </td>
                       </tr>
                     </tfoot>

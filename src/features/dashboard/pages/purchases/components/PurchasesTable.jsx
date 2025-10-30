@@ -1,10 +1,11 @@
 import PropTypes from "prop-types";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function PurchasesTable({ purchases, onView, onAnnul, currentPage, totalPages, onPageChange }) {
-  const formatNumber = (num) => {
+  // Función para formatear números usando el estándar del proyecto
+  const formatPrice = (num) => {
     if (num === null || num === undefined) return '$0';
-    const parsedNum = typeof num === 'string' ? parseFloat(num) : num;
-    return isNaN(parsedNum) ? '$0' : new Intl.NumberFormat('es-MX').format(parsedNum);
+    return '$' + formatNumber(num);
   };
 
   return (
@@ -28,7 +29,7 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
               <td className="py-4 px-4 text-xs text-gray-600">{p.fechaRegistro || 'N/A'}</td>
               <td className="py-4 px-4 text-xs text-gray-600">{p.fechaCompra || 'N/A'}</td>
               <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor || 'N/A'}</td>
-              <td className="py-4 px-4 text-xs text-gray-600 font-semibold">{formatNumber(p.total)}</td>
+              <td className="py-4 px-4 text-xs text-gray-600 font-semibold">{formatPrice(p.total)}</td>
               <td className="py-4 px-4 text-xs text-gray-600">
                 <span className={`text-xs font-semibold rounded-full px-2 py-1
                   ${p.estado === 'Completada' ? 'bg-green-100 text-green-800' : ''}

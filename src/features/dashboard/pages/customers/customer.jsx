@@ -233,9 +233,6 @@ const CustomersPage = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            {/* El título ahora se muestra en el navbar */}
-          </div>
-          <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchCustomer searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar cliente..." />
               <button

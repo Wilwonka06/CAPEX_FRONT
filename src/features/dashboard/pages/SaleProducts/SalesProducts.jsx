@@ -4,6 +4,8 @@ import productsService from '../products/API/productsService';
 import salesService from './API/salesService';
 import Search from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
+import LoadingTable from '../../../../shared/components/LoadingTable';
+import { formatNumber } from '../../../../shared/utils/formatters';
 import CreateSaleModal from './components/CreateSaleModal';
 import SaleDetailModal from './components/SaleDetailModal';
 import SalesTable from './components/SalesTable';
@@ -302,35 +304,6 @@ const SalesProducts = () => {
   };
 
   // ===== RENDER =====
-  if (loading && sales.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando ventas...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && sales.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <i className="bi bi-exclamation-triangle text-red-500 text-4xl"></i>
-            <p className="mt-4 text-red-800 font-semibold">{error}</p>
-            <button
-              onClick={loadSales}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen font-inter">
@@ -359,12 +332,14 @@ const SalesProducts = () => {
             </div>
 
             {/* Tabla de ventas */}
-            {filteredSales.length === 0 ? (
+            {loading ? (
+              <LoadingTable message="Cargando ventas..." />
+            ) : filteredSales.length === 0 ? (
               <div className="text-center py-12">
                 <i className="bi bi-inbox text-6xl text-gray-300"></i>
                 <p className="mt-4 text-gray-500">
-                  {searchTerm 
-                    ? 'No se encontraron ventas que coincidan con tu búsqueda' 
+                  {searchTerm
+                    ? 'No se encontraron ventas que coincidan con tu búsqueda'
                     : 'No hay ventas registradas'}
                 </p>
               </div>

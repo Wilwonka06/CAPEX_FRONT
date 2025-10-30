@@ -4,6 +4,7 @@ import EditProduct from "./EditProduct";
 /* import DeleteProduct from "./DeleteProduct"; */
 import { useState } from "react";
 import TruncatedText from "../../../../../shared/components/TruncatedText";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function ProductsTable({ products, onEdit, onDelete }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -29,10 +30,9 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
     setSelectedProduct(null);
   };
 
-  // Función para convertir precio a número de forma segura
+  // Función para formatear precio usando el estándar del proyecto
   const formatPrice = (price) => {
-    const numPrice = parseFloat(price) || 0;
-    return numPrice.toFixed(2);
+    return formatNumber(price);
   };
 
   /* const handleConfirmDelete = async (productId) => {

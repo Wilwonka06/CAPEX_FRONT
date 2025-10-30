@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import OrderDetailModal from "./components/OrderDetailModal";
 import EditOrderModal from "./components/EditOrderModal";
 import Paginator from '../../../../shared/Paginator';
+import LoadingTable from '../../../../shared/components/LoadingTable';
+import Search from '../../../../shared/Search';
+import { formatNumber } from '../../../../shared/utils/formatters';
 import ordersService from './API/ordersService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -13,7 +16,6 @@ import { useOutletContext } from 'react-router-dom';
 const estados = ["Pendiente", "En proceso", "Enviado", "Entregado", "Cancelado"];
 
 function OrdersTable({ orders, onView, onEdit }) {
-  const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
   
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -211,35 +213,6 @@ export default function OrdersPage() {
   };
 
   // ===== RENDER =====
-  if (loading && orders.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando pedidos...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && orders.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <i className="bi bi-exclamation-triangle text-red-500 text-4xl"></i>
-            <p className="mt-4 text-red-800 font-semibold">{error}</p>
-            <button
-              onClick={loadOrders}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen font-inter">
@@ -247,21 +220,21 @@ export default function OrdersPage() {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <input
-                type="text"
+              <Search
+                searchTerm={searchTerm}
+                handleSearch={e => setSearchTerm(e.target.value)}
                 placeholder="Buscar por orden, cliente o estado..."
-                className="w-full px-3 py-2 border rounded-md text-sm"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
 
-            {filteredOrders.length === 0 ? (
+            {loading ? (
+              <LoadingTable message="Cargando pedidos..." />
+            ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12">
                 <i className="bi bi-inbox text-6xl text-gray-300"></i>
                 <p className="mt-4 text-gray-500">
-                  {searchTerm 
-                    ? 'No se encontraron pedidos que coincidan con tu búsqueda' 
+                  {searchTerm
+                    ? 'No se encontraron pedidos que coincidan con tu búsqueda'
                     : 'No hay pedidos registrados'}
                 </p>
               </div>
@@ -272,12 +245,12 @@ export default function OrdersPage() {
                   onView={setDetailOrder}
                   onEdit={setEditOrder}
                 />
-                
+
                 {totalPages > 1 && (
-                  <Paginator 
-                    currentPage={currentPage} 
-                    totalPages={totalPages} 
-                    onPageChange={setCurrentPage} 
+                  <Paginator
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
                   />
                 )}
               </>
