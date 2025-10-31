@@ -5,6 +5,7 @@ import EditSupplier from "./components/EditSupplier";
 import SupplierDetail from "./components/SupplierDetail";
 import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
+import LoadingTable from "../../../../shared/components/LoadingTable";
 import suppliersService from "./API/suppliersService";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -189,16 +190,8 @@ const SuppliersPage = () => {
     setSelectedSupplier(null);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen font-inter flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-text-main mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando proveedores...</p>
-        </div>
-      </div>
-    );
-  }
+  // Estado de carga inicial
+  const isInitialLoading = loading;
 
   return (
     <div className="min-h-screen font-inter">
@@ -217,17 +210,19 @@ const SuppliersPage = () => {
               />
             </div>
             
-            {filteredSuppliers.length === 0 ? (
-              <div className="text-center py-12">
-                <i className="bi bi-inbox text-6xl text-gray-300"></i>
-                <p className="mt-4 text-gray-500">
-                  {searchTerm 
-                    ? 'No se encontraron proveedores que coincidan con tu búsqueda' 
-                    : 'No hay proveedores registrados'}
-                </p>
-              </div>
-            ) : (
-              <>
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {isInitialLoading ? (
+                <LoadingTable message="Cargando proveedores..." />
+              ) : filteredSuppliers.length === 0 ? (
+                <div className="text-center py-12">
+                  <i className="bi bi-inbox text-6xl text-gray-300"></i>
+                  <p className="mt-4 text-gray-500">
+                    {searchTerm
+                      ? 'No se encontraron proveedores que coincidan con tu búsqueda'
+                      : 'No hay proveedores registrados'}
+                  </p>
+                </div>
+              ) : (
                 <SuppliersTable
                   suppliers={paginatedSuppliers}
                   onEdit={(supplier) => {
@@ -241,14 +236,14 @@ const SuppliersPage = () => {
                   }}
                   onStatusChange={handleStatusChange}
                 />
-                {totalPages > 1 && (
-                  <Paginator
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                )}
-              </>
+              )}
+            </div>
+            {totalPages > 1 && !isInitialLoading && (
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             )}
           </div>
         </div>

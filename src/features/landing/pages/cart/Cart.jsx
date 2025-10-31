@@ -15,7 +15,7 @@ const Cart = () => {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex flex-col items-center justify-center py-10 px-2">
-        <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full text-center border-2 border-[#FACC15]">
+        <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full text-center">
           <div className="text-6xl mb-4 text-[#FACC15]">🛒</div>
           <h2 className="text-2xl font-bold mb-2 text-[#1E1E1E]">Tu carrito está vacío</h2>
           <p className="text-gray-500 mb-6">Agrega productos para verlos aquí y realizar tu compra.</p>

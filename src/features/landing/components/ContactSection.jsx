@@ -48,7 +48,7 @@ const ContactSection = () => (
         </div>
       </div>
       {/* Columna de mapa a la derecha */}
-      <div className="flex-1 min-h-[300px] w-full max-w-md rounded-2xl overflow-hidden shadow-lg border-4 border-[#FACC15]">
+      <div className="flex-1 min-h-[300px] w-full max-w-md rounded-2xl overflow-hidden shadow-lg">
         <iframe
           title="Ubicación"
           src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.1414228156036!2d-75.5650838!3d6.245086699999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e44291c415d59af%3A0xe4b83cb2caa41fa1!2sExtensiones%20astrid%20parias!5e0!3m2!1ses-419!2sco!4v1751560166126!5m2!1ses-419!2sco"

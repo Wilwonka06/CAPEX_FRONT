@@ -8,7 +8,7 @@ const CreateCategory = ({ onCreate, categories }) => {
   const [description, setDescription] = useState("");
   const [isNameValid, setIsNameValid] = useState(true);
   const [nameError, setNameError] = useState("");
-  const [descriptionError, setDescriptionError] = useState("");
+  const [setDescriptionError] = useState("");
 
   const handleOpen = () => setOpen(true);
   

@@ -1,11 +1,14 @@
 // pages/Dashboard.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MonthlySalesChart from './MonthlySalesChart';
 import MonthlyTotalsChart from './MonthlyTotalsChart';
 import TopServicesChart from './TopServicesChart';
 import TopProductsChart from './TopProductsChart';
 import { FaMoneyBillWave, FaBoxOpen, FaUserTie } from 'react-icons/fa';
 import AnnualComparisonChart from './AnnualComparisonChart';
+import purchasesService from '../pages/purchases/API/purchasesService';
+import salesService from '../pages/SaleProducts/API/salesService';
+import ordersService from '../pages/orders/API/ordersService';
 
 // Mock de ventas de productos (2023-2025)
 const mockSales = [
@@ -72,16 +75,60 @@ const mockServices = [
 const mesesES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 const Dashboard = () => {
-  const sales = mockSales;
-  // Usa los mocks de ejemplo
-  const [services] = useState(mockServices);
+  // Estados para datos reales
+  const [realPurchases, setRealPurchases] = useState([]);
+  const [realSales, setRealSales] = useState([]);
+  const [realOrders, setRealOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Ventas de productos (solo completadas/no canceladas)
-  const ventasProductos = sales
-    .filter(sale => sale.estado !== 'Cancelada' && sale.estado !== 'Anulada')
-    .reduce((acc, sale) => acc + (sale.valor || sale.total || 0), 0);
+  // Estados para datos calculados - Usar datos reales cuando estén disponibles
+  const [sales] = useState(mockSales); // Mantener mock para gráficas por ahora
+  const [services] = useState(mockServices); // Mantener mock para gráficas por ahora
 
-  // Ventas de servicios (solo pagados/no anulados)
+  // ===== CARGAR DATOS REALES =====
+  useEffect(() => {
+    const loadRealData = async () => {
+      try {
+        setLoading(true);
+
+        // Cargar compras reales
+        const purchasesResponse = await purchasesService.getAll({ limit: 50 });
+        if (purchasesResponse.success) {
+          setRealPurchases(purchasesResponse.data || []);
+        }
+
+        // Cargar ventas reales
+        const salesResponse = await salesService.getAll({ limit: 50 });
+        if (salesResponse.success) {
+          setRealSales(salesResponse.data || []);
+        }
+
+        // Cargar pedidos reales
+        const ordersResponse = await ordersService.getAll({ limit: 50 });
+        if (ordersResponse.success) {
+          setRealOrders(ordersResponse.data || []);
+        }
+
+      } catch (error) {
+        console.error('Error loading real data for dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRealData();
+  }, []);
+
+  // Ventas de productos (solo completadas/no canceladas) - Usar datos reales cuando estén disponibles
+  const ventasProductos = realSales.length > 0
+    ? realSales
+        .filter(sale => sale.estado !== 'Cancelada' && sale.estado !== 'Anulada')
+        .reduce((acc, sale) => acc + (sale.total || sale.valor || 0), 0)
+    : sales
+        .filter(sale => sale.estado !== 'Cancelada' && sale.estado !== 'Anulada')
+        .reduce((acc, sale) => acc + (sale.valor || sale.total || 0), 0);
+
+  // Ventas de servicios (solo pagados/no anulados) - Mantener mock por ahora
   const ventasServicios = services
     .filter(order => order.status !== 'Anulado' && order.status !== 'Cancelada')
     .reduce((acc, order) => acc + (order.totalServices || 0), 0);
@@ -92,14 +139,14 @@ const Dashboard = () => {
     {
       title: 'Total Ventas',
       value: `$${totalVentas.toLocaleString('es-CO')}`,
-      color: 'bg-gradient-to-r from-purple-500 to-purple-700',
-      icon: <FaMoneyBillWave className="text-3xl text-purple-600" />,
+      color: 'bg-gradient-to-r from-purple-500 to-green-700',
+      icon: <FaMoneyBillWave className="text-3xl text-green-600" />,
     },
     {
       title: 'Ventas Productos',
       value: `$${ventasProductos.toLocaleString('es-CO')}`,
-      color: 'bg-gradient-to-r from-purple-500 to-purple-700',
-      icon: <FaBoxOpen className="text-3xl text-green-600" />,
+      color: 'bg-gradient-to-r from-purple-500 to-[cfb997]-700',
+      icon: <FaBoxOpen className="text-3xl text-[cfb997]-600" />,
     },
     {
       title: 'Ventas Servicios',
@@ -279,74 +326,198 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="space-y-6 bg-gray-200 min-h-screen p-6">
-      {/* Welcome Section + Selector de mes */}
-      <div className="bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">¡Bienvenido de vuelta!</h2>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-          <label className="text-sm font-semibold text-gray-700" htmlFor="mes-selector">Selecciona el mes a visualizar:</label>
-          <select
-            id="mes-selector"
-            className="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-gray-50"
-            value={selectedMonth}
-            onChange={e => setSelectedMonth(e.target.value)}
-          >
-            {monthOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      {/* Header Section */}
+      <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Dashboard Ejecutivo</h1>
+            <p className="text-gray-600">Bienvenido de vuelta. Aquí tienes un resumen completo de tu negocio.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-gray-700">Sistema activo</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-gray-700">Período de análisis:</label>
+              <select
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all"
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+              >
+                {monthOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-lg shadow-lg p-6 flex items-center gap-4">
-            <div>{stat.icon}</div>
-            <div>
-            <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
-            <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+          <div key={idx} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100 group">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-[#FACC15] to-yellow-400 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  {stat.icon}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
+                  <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+                </div>
+              </div>
+              <div className="text-4xl opacity-10 group-hover:opacity-20 transition-opacity">
+                📊
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Charts and Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
         {/* Resumen diario del mes seleccionado */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Resumen Diario ({mesesES[selMonth-1]} {selYear})
-          </h3>
+        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">
+                Resumen Diario
+              </h3>
+              <p className="text-sm text-gray-600">{mesesES[selMonth-1]} {selYear}</p>
+            </div>
+            <div className="p-2 bg-[#FACC15]/10 rounded-lg">
+              <i className="bi bi-bar-chart text-[#FACC15] text-xl"></i>
+            </div>
+          </div>
           <MonthlySalesChart data={dailyDataFiltered} />
         </div>
+
         {/* Gráfica de ventas mensuales (últimos 6 meses) */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Ventas Mensual (Comparativo 6 meses)
-          </h3>
+        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">
+                Tendencia Mensual
+              </h3>
+              <p className="text-sm text-gray-600">Comparativo últimos 6 meses</p>
+            </div>
+            <div className="p-2 bg-[#1E1E1E]/10 rounded-lg">
+              <i className="bi bi-graph-up text-[#1E1E1E] text-xl"></i>
+            </div>
+          </div>
           <MonthlyTotalsChart data={mesesData} />
         </div>
       </div>
 
-      {/* Top más vendidos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Servicios Más Vendidos <span className="text-gray-500 font-normal">{mesesES[selMonth-1]} {selYear}</span>
-          </h3>
+      {/* Top Products & Services */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">
+                Servicios Más Vendidos
+              </h3>
+              <p className="text-sm text-gray-600">{mesesES[selMonth-1]} {selYear}</p>
+            </div>
+            <div className="p-2 bg-[#1E1E1E]/10 rounded-lg">
+              <i className="bi bi-star text-[#1E1E1E] text-xl"></i>
+            </div>
+          </div>
           <TopServicesChart data={topServicios} />
         </div>
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Productos Más Vendidos <span className="text-gray-500 font-normal">{mesesES[selMonth-1]} {selYear}</span>
-        </h3>
+
+        <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">
+                Productos Más Vendidos
+              </h3>
+              <p className="text-sm text-gray-600">{mesesES[selMonth-1]} {selYear}</p>
+            </div>
+            <div className="p-2 bg-[#FACC15]/10 rounded-lg">
+              <i className="bi bi-trophy text-[#FACC15] text-xl"></i>
+            </div>
+          </div>
           <TopProductsChart data={topProductos} />
         </div>
       </div>
-      {/* Comparativa anual */}
-      <div className="bg-white rounded-lg shadow p-6 mt-6 overflow-x-auto">
-        <AnnualComparisonChart data={annualData} />
+
+      {/* Recent Orders & Annual Comparison */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        {/* Recent Orders */}
+        <div className="xl:col-span-1 bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">
+                Pedidos Recientes
+              </h3>
+              <p className="text-sm text-gray-600">Últimos 5 pedidos</p>
+            </div>
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <i className="bi bi-receipt text-blue-500 text-xl"></i>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {realOrders
+              .filter(order => order.estado === 'Pendiente' || order.estado === 'En proceso')
+              .slice(0, 5)
+              .map((order, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#FACC15] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="text-xs font-bold text-[#1E1E1E]">{idx + 1}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 group-hover:text-[#FACC15] transition-colors">
+                      PED-{order.id_pedido?.toString().padStart(6, '0') || order.id?.toString().padStart(6, '0') || '000001'}
+                    </p>
+                    <p className="text-xs text-gray-600">{order.fecha_pedido || order.fecha || 'Sin fecha'}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gray-800">
+                    ${order.total?.toLocaleString('es-CO') || order.valor?.toLocaleString('es-CO') || '0'}
+                  </p>
+                  <span className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
+                    order.estado === 'Completado' || order.estado === 'Completada' ? 'bg-green-100 text-green-800' :
+                    order.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                    order.estado === 'En proceso' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {order.estado || 'Sin estado'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-semibold py-2 px-4 rounded-lg transition-colors"
+              onClick={() => window.location.href = '/dashboard/pedidos'}
+            >
+              Gestionar pedidos
+            </button>
+          </div>
+        </div>
+
+        {/* Annual Comparison */}
+        <div className="xl:col-span-2 bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">
+                Comparativa Anual
+              </h3>
+              <p className="text-sm text-gray-600">Evolución de ventas por año</p>
+            </div>
+            <div className="p-2 bg-gradient-to-br from-[#FACC15] to-yellow-400 rounded-lg">
+              <i className="bi bi-calendar3 text-white text-xl"></i>
+            </div>
+          </div>
+          <AnnualComparisonChart data={annualData} />
+        </div>
       </div>
     </div>
   );

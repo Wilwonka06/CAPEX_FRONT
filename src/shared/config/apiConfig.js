@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// Base URL del backend
-
-const BASE_URL = 'https://capex-back.onrender.com/api';
+// Base URL del backend - Cambiar según el entorno
+const BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:3000/api'  // Desarrollo
+  : 'https://capex-back.onrender.com/api';  // Producción
 
 // Crear instancia de axios con configuración base
 const apiClient = axios.create({
@@ -13,23 +14,21 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  withCredentials: true, // Importante para incluir cookies HttpOnly
 });
 
-// Interceptor de request - agregar token de autenticación si existe
+// Interceptor de request - cookies HttpOnly manejan la autenticación automáticamente
 apiClient.interceptors.request.use(
   (config) => {
-    // Obtener token del localStorage o contexto de autenticación
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Las cookies HttpOnly se incluyen automáticamente con withCredentials: true
+    // No necesitamos agregar manualmente el header Authorization
 
     // Log de requests en desarrollo
     if (import.meta.env.DEV) {
       console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
         data: config.data,
         params: config.params,
+        withCredentials: config.withCredentials,
       });
     }
 
@@ -74,11 +73,12 @@ apiClient.interceptors.response.use(
           break;
         case 401:
           toast.error('No autorizado. Por favor, inicia sesión nuevamente');
-          // Limpiar tokens y redirigir al login
-          localStorage.removeItem('authToken');
-          sessionStorage.removeItem('authToken');
-          // Opcional: redirigir al login
-          // window.location.href = '/login';
+          // Limpiar datos de usuario del localStorage (las cookies HttpOnly se limpian automáticamente)
+          localStorage.removeItem('currentUser');
+          // Redirigir al login
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
           break;
         case 403:
           toast.error('No tienes permisos para realizar esta acción');

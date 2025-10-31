@@ -3,6 +3,8 @@ import SearchProduct from '../../../../shared/Search';
 import CreatePurchaseModal from './components/CreatePurchaseModal';
 import PurchaseDetailModal from './components/PurchaseDetailModal';
 import PurchasesTable from './components/PurchasesTable';
+import LoadingTable from '../../../../shared/components/LoadingTable';
+import { formatNumber } from '../../../../shared/utils/formatters';
 import productsService from '../products/API/productsService';
 import purchasesService from './API/purchasesService';
 import suppliersService from '../suppliers/API/suppliersService';
@@ -30,7 +32,7 @@ export default function Shopping() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailCompra, setDetailCompra] = useState(null);
-  const [suppliers, setSuppliers] = useState([]);
+  const [suppliers] = useState([]);
 
   const { setTitle } = useOutletContext();
 
@@ -79,7 +81,7 @@ export default function Shopping() {
     try {
       const response = await suppliersService.getActive();
       if (response.success) {
-        setSuppliers(response.data || []);
+        // suppliers se mantiene como estado local si es necesario
       }
     } catch (err) {
       console.error('Error loading suppliers:', err);
@@ -113,7 +115,7 @@ export default function Shopping() {
   // Descargar reporte de compras
   const handleDownloadReport = async () => {
     try {
-      const response = await purchasesService.generateReport({
+      await purchasesService.generateReport({
         format: 'excel',
         startDate: '2024-01-01',
         endDate: new Date().toISOString().split('T')[0],
@@ -166,9 +168,6 @@ export default function Shopping() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            {/* El título ahora se muestra en el navbar */}
-          </div>
-          <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct
                 searchTerm={searchTerm}
@@ -185,41 +184,44 @@ export default function Shopping() {
                 className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
                 onClick={handleDownloadReport}
               >
-                <i className="bi bi-file-earmark-excel"></i>
+                <i className="bi bi-file-earmark-excel mr-2"></i>
+                Generar Reporte
               </button>
             </div>
 
-            {/* Mostrar loading o error */}
-            {loading && (
-              <div className="flex justify-center items-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-2">Cargando compras...</span>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                <p className="text-red-800">Error: {error}</p>
-                <button
-                  onClick={() => loadPurchases()}
-                  className="mt-2 bg-red-600 text-white px-3 py-1 rounded text-sm"
-                >
-                  Reintentar
-                </button>
-              </div>
-            )}
-
-            {/* Tabla de compras */}
-            {!loading && !error && (
-              <PurchasesTable
-                purchases={purchases}
-                onView={setDetailCompra}
-                onAnnul={handleCancelPurchase}
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
+            {/* Tabla de compras con loading integrado */}
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {loading ? (
+                <LoadingTable message="Cargando compras..." />
+              ) : error ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <i className="bi bi-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error al cargar compras</h3>
+                      <p className="text-sm text-red-700 mt-1">{error}</p>
+                      <button
+                        onClick={() => loadPurchases()}
+                        className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <PurchasesTable
+                  purchases={purchases}
+                  onView={setDetailCompra}
+                  onAnnul={handleCancelPurchase}
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

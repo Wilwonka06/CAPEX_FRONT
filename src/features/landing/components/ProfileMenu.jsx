@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import UserProfileModal from '../../../shared/components/UserProfileModal';
 
 const ProfileMenu = ({ user, onClose, onLogout, showOrdersOption }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState(user);
-  const isClient = Array.isArray(currentUser?.roles)
-    ? currentUser.roles.includes('Cliente')
-    : currentUser?.rol?.toLowerCase() === 'cliente' || currentUser?.roles === 'Cliente';
+
+  // Función segura para obtener el rol del usuario
+  const getUserRole = (user) => {
+    if (!user) return '';
+    if (typeof user.rol === 'string') return user.rol;
+    if (user.rol && typeof user.rol === 'object' && user.rol.nombre) return user.rol.nombre;
+    return '';
+  };
+
+  const userRole = getUserRole(user);
+  const isClient = userRole.toLowerCase() === 'cliente' || userRole.toLowerCase() === 'usuario';
   const navigate = useNavigate();
 
   const handleGoToOrders = () => {
@@ -34,14 +41,14 @@ const ProfileMenu = ({ user, onClose, onLogout, showOrdersOption }) => {
           </button>
           <div className="flex flex-col items-center">
             <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center mb-2 overflow-hidden">
-              {currentUser?.foto || currentUser?.avatar ? (
-                <img src={currentUser.foto || currentUser.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
+              {user?.foto || user?.avatar ? (
+                <img src={user.foto || user.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
               ) : (
                 <i className="bi bi-person text-3xl text-gray-500"></i>
               )}
             </div>
-            <div className="text-lg font-semibold text-text-main text-center">{currentUser?.nombre} {currentUser?.apellido}</div>
-            <div className="text-gray-500 text-center text-sm mb-2">{currentUser?.correo}</div>
+            <div className="text-lg font-semibold text-text-main text-center">{user?.nombre} {user?.apellido}</div>
+            <div className="text-gray-500 text-center text-sm mb-2">{user?.correo}</div>
           </div>
           <hr className="my-3" />
           <div className="flex flex-col gap-2 mb-4">
@@ -62,7 +69,7 @@ const ProfileMenu = ({ user, onClose, onLogout, showOrdersOption }) => {
       </div>
       {showProfileModal && (
         <UserProfileModal
-          user={currentUser}
+          user={user}
           onClose={() => setShowProfileModal(false)}
           onGoToPurchases={isClient ? handleGoToOrders : undefined}
           onLogout={onLogout}

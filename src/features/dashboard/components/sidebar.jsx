@@ -5,7 +5,7 @@ import { useLocation, Link } from 'react-router-dom';
 import logo from '../../../shared/images/Logo.png';
 
 const Sidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   // Inicializa expandedGroups vacío y actualízalo en useEffect
   const [expandedGroups, setExpandedGroups] = useState({});
   const [loadingData] = useState(false); // Añadido para evitar error
@@ -37,9 +37,9 @@ const Sidebar = () => {
         id: 'config',
         title: 'Configuración',
         icon: 'bi-gear-fill',
-        module: 'Gestión de Usuarios', // O un módulo específico para configuración si lo tienes
+        module: 'Gestión de Usuarios',
         items: [
-          { name: 'Roles', icon: 'bi-shield-check', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
+          { name: 'Roles', icon: 'bi-shield', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
         ]
       },
       {
@@ -48,7 +48,7 @@ const Sidebar = () => {
         icon: 'bi-people-fill',
         module: 'Gestión de Usuarios',
         items: [
-          { name: 'Usuarios', icon: 'bi-person-fill', path: '/dashboard/usuarios', module: 'Gestión de Usuarios' },
+          { name: 'Usuarios', icon: 'bi-person', path: '/dashboard/usuarios', module: 'Gestión de Usuarios' },
         ]
       },
       {
@@ -59,8 +59,8 @@ const Sidebar = () => {
         items: [
           { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/dashboard/categorias-productos', module: 'Gestión de Compras' },
           { name: 'Productos', icon: 'bi-box-seam-fill', path: '/dashboard/productos', module: 'Gestión de Compras' },
-          { name: 'Proveedores', icon: 'bi-truck', path: '/dashboard/proveedores', module: 'Gestión de Compras' },
-          { name: 'Compras', icon: 'bi-cart-plus-fill', path: '/dashboard/compras', module: 'Gestión de Compras' }
+          { name: 'Proveedores', icon: 'bi-truck-front-fill', path: '/dashboard/proveedores', module: 'Gestión de Compras' },
+          { name: 'Compras', icon: 'bi-receipt-cutoff', path: '/dashboard/compras', module: 'Gestión de Compras' }
         ]
       },
       {
@@ -69,23 +69,23 @@ const Sidebar = () => {
         icon: 'bi-tools',
         module: 'Gestión de Servicios',
         items: [
-          { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/dashboard/categorias-servicios', module: 'Gestión de Servicios' },
+          { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/dashboard/categorias-servicios', module: 'Gestión de Servicios' },
           { name: 'Servicios', icon: 'bi-scissors', path: '/dashboard/servicios', module: 'Gestión de Servicios' },
-          { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/dashboard/empleados', module: 'Gestión de Servicios' },
-          { name: 'Agendamiento General', icon: 'bi-calendar-range-fill', path: '/dashboard/programacion', module: 'Gestión de Servicios' }
+          { name: 'Empleados', icon: 'bi-person-badge', path: '/dashboard/empleados', module: 'Gestión de Servicios' },
+          { name: 'Agendamiento General', icon: 'bi-calendar-week', path: '/dashboard/programacion', module: 'Gestión de Servicios' }
         ]
       },
       {
         id: 'sales',
-        title: 'Ventas',
+        title: 'Gestión de Ventas',
         icon: 'bi-graph-up-arrow',
         module: 'Ventas',
         items: [
-          { name: 'Clientes', icon: 'bi-person-fill', path: '/dashboard/clientes', module: 'Ventas' },
-          { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/dashboard/citas', module: 'Ventas' },
-          { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/dashboard/pedidos', module: 'Ventas' },
-          { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/dashboard/ventas-productos', module: 'Ventas' },
-          { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/dashboard/ventas-servicios', module: 'Ventas' }
+          { name: 'Clientes', icon: 'bi-person-lines', path: '/dashboard/clientes', module: 'Ventas' },
+          { name: 'Agendamiento de Citas', icon: 'bi-calendar-event', path: '/dashboard/citas', module: 'Ventas' },
+          { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/dashboard/pedidos', module: 'Ventas' },
+          { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/dashboard/ventas-productos', module: 'Ventas' },
+          { name: 'Venta de Servicios', icon: 'bi-bag-check', path: '/dashboard/ventas-servicios', module: 'Ventas' }
         ]
       }
     ];
@@ -148,15 +148,12 @@ const Sidebar = () => {
   // Efecto para expandir el grupo de la ruta actual al cargar o cambiar de ruta
   useEffect(() => {
     const currentGroup = getGroupIdByPath(location.pathname);
-    if (currentGroup) {
-      // Solo expandir si se permite la expansión automática
-      if (isExpanded) { // Si está expandido por hover, mantener/abrir grupo activo
-         setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
-      }
+    if (currentGroup && isExpanded) {
+      setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
     }
   }, [location.pathname, isExpanded]); // Depende de location, isExpanded
 
-  // Cambia toggleGroup para abrir/cerrar solo el grupo seleccionado, sin cerrar los demás
+  // Función para toggle (abrir/cerrar) un grupo específico
   const toggleGroup = (groupId) => {
     setExpandedGroups(prev => ({
       ...prev,
@@ -177,14 +174,15 @@ const Sidebar = () => {
     <div
       className={`bg-text-main shadow-lg transition-all duration-300 ease-in-out font-inter text-white ${
         isExpanded ? 'w-64' : 'w-16'
-      } flex flex-col h-full`}
+      } flex flex-col h-full cursor-pointer`}
+      onClick={() => !isExpanded && setIsExpanded(true)}
     >
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center">
           {(isExpanded) ? (
-            <span className="ml-3 font-semibold text-background text-3xl whitespace-nowrap flex items-center justify-center">
-              <img src={logo} alt="Logo" className=" w-30 h-30 object-contain" />
+            <span className="m-3 font-semibold flex items-center justify-center">
+              <img src={logo} alt="Logo" className=" w-29 h-29 object-contain" />
             </span>
           ) : (
             // Logo circular para el estado colapsado
@@ -219,17 +217,17 @@ const Sidebar = () => {
               {/* Group Header o Link directo */}
               {group.items ? (
                 <div
-                  className={`flex items-center px-4 py-2 cursor-pointer transition-colors rounded-lg relative ${
+                  className={`flex items-center px-4 py-3 cursor-pointer transition-colors rounded-lg relative ${
                     (isExpanded) ? 'justify-between' : 'justify-center'
                   } ${
-                    group.items.some(item => isActiveRoute(item.path))
-                      ? ' bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm' // Grupo activo
+                    expandedGroups[group.id]
+                      ? 'bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm' // Grupo expandido
                       : 'text-background/80 hover:bg-background/10 hover:text-background'
                   }`}
                   onClick={() => (isExpanded) && toggleGroup(group.id)}
                 >
                   <div className="flex items-center">
-                    <i className={`${group.icon} text-lg`}></i>
+                    <i className={`${group.icon} text-xl`}></i>
                     {(isExpanded) && (
                       <span className="ml-3 text-sm font-medium whitespace-nowrap">
                         {group.title}
@@ -243,7 +241,7 @@ const Sidebar = () => {
               ) : (
                 <Link
                   to={group.path}
-                  className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                  className={`flex items-center px-4 py-3 cursor-pointer transition-colors no-underline ${
                     (isExpanded) ? '' : 'justify-center'
                   } ${
                     isActiveRoute(group.path)
@@ -252,7 +250,7 @@ const Sidebar = () => {
                   }`}
                   title={!(isExpanded) ? group.name : ''}
                 >
-                  <i className={`${group.icon} text-base`}></i>
+                  <i className={`${group.icon} text-lg`}></i>
                   {(isExpanded) && (
                     <span className="ml-3 text-sm whitespace-nowrap ">
                       {group.name}
@@ -264,7 +262,7 @@ const Sidebar = () => {
               {/* Group Items - Solo mostrar si el sidebar está expandido o bloqueado */}
               {(group.items && (isExpanded)) && (
                 <div
-                  className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  className={`ml-4 overflow-hidden transition-all duration-500 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                   style={{ willChange: 'max-height, opacity' }}
                 >
                   {Array.isArray(group.items) && group.items.map((item, index) => (
@@ -272,14 +270,14 @@ const Sidebar = () => {
                       <Link
                         key={index}
                         to={item.path}
-                        className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline relative ${
+                        className={`flex items-center px-4 py-3 cursor-pointer transition-colors no-underline relative ${
                           isActiveRoute(item.path)
-                            ? 'text-yellow-500 bg-background/20 font-semibold rounded-lg shadow' // Amarillo fuerte y arqueado
+                            ? 'text-yellow-500 bg-background/17 font-semibold rounded-lg shadow' // Amarillo fuerte y arqueado
                             : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                         }`}
                         title={item.name}
                       >
-                        <i className={`${item.icon} text-base`}></i>
+                        <i className={`${item.icon} text-lg`}></i>
                         <span className="ml-3 text-sm whitespace-nowrap">
                           {item.name}
                         </span>
@@ -292,16 +290,22 @@ const Sidebar = () => {
           ))
         )}
       </nav>
-      {/* Botón de flechas para expandir/colapsar el menú */}
-      <div className="ml-2">
-        <button
-          onClick={() => setIsExpanded(prev => !prev)}
-          className="p-1 rounded transition-colors text-background/80 hover:text-background focus:outline-none"
-          title={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
-        >
-          <i className={`bi ${isExpanded ? 'bi-chevron-left' : 'bi-chevron-right'} text-2xl`}></i>
-        </button>
-      </div>
+      {/* Botón de cerrar solo cuando está expandido */}
+      {isExpanded && (
+        <div className="p-2 ">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(false);
+            }}
+            className="w-full flex items-center pl-2 py-2 rounded-lg transition-colors text-background/80 hover:text-background hover:bg-background/10 focus:outline-none"
+            title="Cerrar menú"
+          >
+            <i className="bi bi-x-lg text-xl mr-2"></i>
+            <span className="text-sm font-medium">Cerrar</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

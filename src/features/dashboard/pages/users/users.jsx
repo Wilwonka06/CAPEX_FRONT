@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Search from '../../../../shared/Search'
 import UserTable from './components/UserTable';
 import CreateUserModal from './components/CreateUserModal';
 import EditUserModal from './components/EditUserModal';
 import UserDetailModal from './components/UserDetailModal';
 import Paginator from '../../../../shared/Paginator';
+import LoadingTable from '../../../../shared/components/LoadingTable';
 import usersService from './API/usersService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -193,34 +194,9 @@ const Users = () => {
     return () => setTitle('');
   }, [setTitle]);
 
-  if (loading && !isLoaded) {
-    return (
-      <div className="min-h-screen font-inter flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-text-main mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando usuarios...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen font-inter flex items-center justify-center">
-        <div className="text-center">
-          <i className="bi bi-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error al cargar usuarios</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadUsers}
-            className="bg-text-main hover:bg-primary-dark text-white px-4 py-2 rounded-lg"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Estado de carga inicial
+  const isInitialLoading = loading && !isLoaded;
+  const hasError = error && !isLoaded;
 
   return (
     <div className="min-h-screen font-inter">
@@ -238,13 +214,37 @@ const Users = () => {
                 Crear usuario
               </button>
             </div>
-            <UserTable
-              users={paginatedUsers}
-              onView={openDetailModal}
-              onEdit={openEditModal}
-              onDelete={handleDeleteUser}
-              loading={loading}
-            />
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {isInitialLoading ? (
+                <LoadingTable message="Cargando usuarios..." />
+              ) : hasError ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <i className="bi bi-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error al cargar usuarios</h3>
+                      <p className="text-sm text-red-700 mt-1">{error}</p>
+                      <button
+                        onClick={loadUsers}
+                        className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <UserTable
+                  users={paginatedUsers}
+                  onView={openDetailModal}
+                  onEdit={openEditModal}
+                  onDelete={handleDeleteUser}
+                  loading={loading}
+                />
+              )}
+            </div>
             {filteredUsers.length > USERS_PER_PAGE && (
               <Paginator
                 currentPage={currentPage}

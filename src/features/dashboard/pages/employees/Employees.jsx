@@ -1,21 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {
-  getEmployees,
-  createEmployee,
-  updateEmployee,
-  deleteEmployee,
-  toggleEmployeeStatus,
-} from "./api/employeesApi";
-import {
-  getAllSchedulings,
-  getSchedulingsByUser,
-  createScheduling,
-  updateScheduling,
-  deleteScheduling,
-} from "./api/schedulingApi";
+import { getEmployees, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } from "./api/employeesApi";
+import { getAllSchedulings, getSchedulingsByUser, createScheduling, updateScheduling, deleteScheduling, } from "./api/schedulingApi";
 import Paginator from "../../../../shared/Paginator";
+import LoadingTable from "../../../../shared/components/LoadingTable";
 import Calendar from "../../../dashboard/pages/employees/components/Calendar";
 import AddEmployee from "../../../dashboard/pages/employees/components/AddEmployee";
 import EditEmployee from "../../../dashboard/pages/employees/components/EditEmployee";
@@ -32,7 +21,7 @@ const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
   const [employees, setEmployees] = useState([]);
   const [schedulings, setSchedulings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -326,32 +315,9 @@ const EmployeesPage = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando empleados...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={loadData}
-            className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark transition"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Estado de carga inicial
+  const isInitialLoading = loading;
+  const hasError = error && !isInitialLoading;
 
   return (
     <div className="min-h-screen p-6">
@@ -422,10 +388,10 @@ const EmployeesPage = () => {
             {editEmployee && (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold text-text-main mb-4">Editar Empleado</h2>
-                <EditEmployee 
-                  employee={editEmployee} 
-                  onCancel={handleEditCancel} 
-                  onSave={handleEditSave} 
+                <EditEmployee
+                  employee={editEmployee}
+                  onCancel={handleEditCancel}
+                  onSave={handleEditSave}
                 />
               </div>
             )}
@@ -439,79 +405,109 @@ const EmployeesPage = () => {
             {!showForm && !editEmployee && !seeEmployee && (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold text-text-main mb-4">Lista de Empleados</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm text-left">
-                    <thead className="bg-gray-50 text-text-main/80 uppercase">
-                      <tr>
-                        <th className="py-3 px-4 font-semibold">Nombre</th>
-                        <th className="py-3 px-4 font-semibold">Documento</th>
-                        <th className="py-3 px-4 font-semibold">Teléfono</th>
-                        <th className="py-3 px-4 font-semibold">Correo</th>
-                        <th className="py-3 px-4 font-semibold">Estado</th>
-                        <th className="py-3 px-4 font-semibold text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white text-text-main">
-                      {paginatedEmployees.map((emp) => (
-                        <tr key={emp.id} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="py-3 px-4 font-medium">{emp.nombre}</td>
-                          <td className="py-3 px-4">{emp.documento}</td>
-                          <td className="py-3 px-4">{emp.telefono}</td>
-                          <td className="py-3 px-4">{emp.correo}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-3">
-                              <button
-                                onClick={() => handleToggleStatus(emp.id)}
-                                className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
-                                  emp.estado === 'Activo' ? 'bg-text-main' : 'bg-gray-300'
-                                }`}
-                              >
-                                <span
-                                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                    emp.estado === 'Activo' ? 'translate-x-6' : 'translate-x-1'
-                                  }`}
-                                />
-                              </button>
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  emp.estado === 'Activo' ? 'text-green-800' : 'text-red-700'
-                                }`}
-                              >
-                                {emp.estado}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 px-4 text-sm font-medium text-right">
-                            <div className="flex gap-2 justify-end items-center">
-                              <button
-                                className="bg-transparent p-0 m-0 border-none focus:outline-none"
-                                title="Visualizar"
-                                onClick={() => handleSeeClick(emp)}
-                              >
-                                <i className="bi bi-eye text-xl" style={{ color: '#b8864b' }}></i>
-                              </button>
-                              <button
-                                className="bg-transparent p-0 m-0 border-none focus:outline-none"
-                                title="Editar"
-                                onClick={() => handleEditClick(emp)}
-                              >
-                                <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
-                              </button>
-                              <button
-                                className="bg-transparent p-0 m-0 border-none focus:outline-none"
-                                title="Eliminar"
-                                onClick={() => handleDeleteEmployee(emp)}
-                              >
-                                <i className="bi bi-trash text-xl" style={{ color: '#dc3545' }}></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+                  {isInitialLoading ? (
+                    <LoadingTable message="Cargando empleados..." />
+                  ) : hasError ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <i className="bi bi-exclamation-triangle text-red-400"></i>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-red-800">Error al cargar empleados</h3>
+                          <p className="text-sm text-red-700 mt-1">{error}</p>
+                          <button
+                            onClick={loadData}
+                            className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+                          >
+                            Reintentar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : paginatedEmployees.length === 0 ? (
+                    <div className="text-center py-12">
+                      <i className="bi bi-people text-6xl text-gray-300"></i>
+                      <p className="mt-4 text-gray-500">No hay empleados registrados.</p>
+                      <p className="text-xs text-gray-400 mt-1">Los empleados aparecerán aquí cuando se registren.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-text-main/80 uppercase">
+                          <tr>
+                            <th className="py-3 px-4 font-semibold">Nombre</th>
+                            <th className="py-3 px-4 font-semibold">Documento</th>
+                            <th className="py-3 px-4 font-semibold">Teléfono</th>
+                            <th className="py-3 px-4 font-semibold">Correo</th>
+                            <th className="py-3 px-4 font-semibold">Estado</th>
+                            <th className="py-3 px-4 font-semibold text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white text-text-main">
+                          {paginatedEmployees.map((emp) => (
+                            <tr key={emp.id || `employee-${Math.random()}`} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="py-3 px-4 font-medium">{emp.nombre}</td>
+                              <td className="py-3 px-4">{emp.documento}</td>
+                              <td className="py-3 px-4">{emp.telefono}</td>
+                              <td className="py-3 px-4">{emp.correo}</td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center space-x-3">
+                                  <button
+                                    onClick={() => handleToggleStatus(emp.id)}
+                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
+                                      emp.estado === 'Activo' ? 'bg-text-main' : 'bg-gray-300'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                        emp.estado === 'Activo' ? 'translate-x-6' : 'translate-x-1'
+                                      }`}
+                                    />
+                                  </button>
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      emp.estado === 'Activo' ? 'text-green-800' : 'text-red-700'
+                                    }`}
+                                  >
+                                    {emp.estado}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4 text-sm font-medium text-right">
+                                <div className="flex gap-2 justify-end items-center">
+                                  <button
+                                    className="bg-transparent p-0 m-0 border-none focus:outline-none"
+                                    title="Visualizar"
+                                    onClick={() => handleSeeClick(emp)}
+                                  >
+                                    <i className="bi bi-eye text-xl" style={{ color: '#b8864b' }}></i>
+                                  </button>
+                                  <button
+                                    className="bg-transparent p-0 m-0 border-none focus:outline-none"
+                                    title="Editar"
+                                    onClick={() => handleEditClick(emp)}
+                                  >
+                                    <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
+                                  </button>
+                                  <button
+                                    className="bg-transparent p-0 m-0 border-none focus:outline-none"
+                                    title="Eliminar"
+                                    onClick={() => handleDeleteEmployee(emp)}
+                                  >
+                                    <i className="bi bi-trash text-xl" style={{ color: '#dc3545' }}></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-                {totalPages > 1 && (
+                {totalPages > 1 && !isInitialLoading && (
                   <Paginator
                     currentPage={currentPage}
                     totalPages={totalPages}
