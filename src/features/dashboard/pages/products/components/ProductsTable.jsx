@@ -4,6 +4,7 @@ import EditProduct from "./EditProduct";
 /* import DeleteProduct from "./DeleteProduct"; */
 import { useState } from "react";
 import TruncatedText from "../../../../../shared/components/TruncatedText";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function ProductsTable({ products, onEdit, onDelete }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -29,10 +30,9 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
     setSelectedProduct(null);
   };
 
-  // Función para convertir precio a número de forma segura
+  // Función para formatear precio usando el estándar del proyecto
   const formatPrice = (price) => {
-    const numPrice = parseFloat(price) || 0;
-    return numPrice.toFixed(2);
+    return formatNumber(price);
   };
 
   /* const handleConfirmDelete = async (productId) => {
@@ -86,7 +86,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600">
                   <TruncatedText
-                    text={product.categoria?.nombre || "Sin categoría"}
+                    text={product.categoria || "Sin categoría"}
                     maxLength={20}
                     maxWidth="max-w-[120px]"
                   />
@@ -119,22 +119,26 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                     >
                       <i className="bi bi-eye text-primary text-lg"></i>
                     </button>
-                    <button
-                      className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
-                      onClick={() => handleEdit(product)}
-                      title="Editar"
-                    >
-                      <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
-                    </button>
-                    <button
-                      className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
-                      onClick={() =>
-                        onDelete(product.id_producto || product.id)
-                      }
-                      title="Eliminar"
-                    >
-                      <i className="bi bi-trash text-red-500 text-lg"></i>
-                    </button>
+                    {product.categoria !== 'Extensión natural' && (
+                      <>
+                        <button
+                          className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
+                          onClick={() => handleEdit(product)}
+                          title="Editar"
+                        >
+                          <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
+                        </button>
+                        <button
+                          className="h-8 w-8 p-0  hover:bg-red-50 hover:border-red-300 rounded-md flex items-center justify-center transition-colors"
+                          onClick={() =>
+                            onDelete(product.id_producto || product.id)
+                          }
+                          title="Eliminar"
+                        >
+                          <i className="bi bi-trash text-red-500 text-lg"></i>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

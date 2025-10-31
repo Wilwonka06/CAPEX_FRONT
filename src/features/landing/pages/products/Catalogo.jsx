@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { FaFilter, FaSearch, FaTimes } from 'react-icons/fa';
 import cartIcon from '../../../../shared/images/cart.png';
 import { useCartToast } from '../../components/CartToastContext';
-
-const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
+import { useCart } from '../../components/CartContext';
+import { formatNumber } from '../../../../shared/utils/formatters';
 
 const Catalogo = () => {
   // Estados para productos
@@ -20,6 +20,7 @@ const Catalogo = () => {
 
   const navigate = useNavigate();
   const { showCartToast } = useCartToast();
+  const { addToCart } = useCart();
 
   // Cargar productos al montar
   useEffect(() => {
@@ -209,13 +210,17 @@ const Catalogo = () => {
     return activos;
   };
 
-  // Estados de carga
+  // Estados de carga mejorados
   if (productsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FACC15] mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando productos...</p>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
+        <div className="text-center bg-white p-12 rounded-3xl shadow-xl border border-gray-100">
+          <div className="relative mb-8">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#FACC15]/20 border-t-[#FACC15] mx-auto"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#FACC15]/40 animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          </div>
+          <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">Cargando productos...</h3>
+          <p className="text-gray-600 font-lato">Estamos preparando lo mejor para ti</p>
         </div>
       </div>
     );
@@ -223,98 +228,145 @@ const Catalogo = () => {
 
   if (productsError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Error al cargar productos</h2>
-          <p className="text-gray-600 mb-4">{productsError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-[#FACC15] text-[#1E1E1E] rounded-lg hover:bg-yellow-400 transition"
-          >
-            Reintentar
-          </button>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
+        <div className="text-center bg-white p-12 rounded-3xl shadow-xl border border-gray-100 max-w-md">
+          <div className="text-8xl mb-6">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4 font-montserrat">Error al cargar productos</h2>
+          <p className="text-gray-600 mb-8 font-lato">{productsError}</p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-[#FACC15] text-[#1E1E1E] font-bold rounded-full hover:bg-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-lg"
+            >
+              Reintentar
+            </button>
+            <button
+              onClick={() => window.location.href = '/landing'}
+              className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-full hover:bg-gray-50 transition-all duration-300"
+            >
+              Ir al inicio
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Migas de pan */}
-        <nav className="text-xs text-gray-500 mb-6 flex items-center gap-2">
-          <span className="hover:underline cursor-pointer" onClick={() => window.location.href = '/landing'}>Home</span>
-          <span className="mx-1">/</span>
-          <span className="text-[#1E1E1E] font-semibold">Productos</span>
-        </nav>
-        <div className="max-w-7xl mx-auto px-2 py-4">
-          <h1 className="text-4xl font-bold text-[#1E1E1E] mb-2">Catálogo de Productos</h1>
-        </div>
-        {/* Barra de herramientas */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
-          {/* Búsqueda */}
-          <div className="flex-1 relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar productos..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white">
+      {/* Header mejorado */}
+      <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] text-white py-16 relative overflow-hidden">
+        {/* Elementos decorativos */}
+        <div className="absolute top-10 left-10 w-32 h-32 bg-[#FACC15]/10 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute bottom-10 right-10 w-24 h-24 bg-[#FACC15]/20 rounded-full blur-lg animate-bounce"></div>
+
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          {/* Migas de pan */}
+          <nav className="text-sm text-white/70 mb-6 flex items-center gap-2">
+            <span className="hover:text-[#FACC15] cursor-pointer transition-colors" onClick={() => window.location.href = '/landing'}>Home</span>
+            <span className="mx-2">/</span>
+            <span className="text-[#FACC15] font-semibold">Productos</span>
+          </nav>
+
+          <div className="text-center">
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 font-montserrat bg-gradient-to-r from-white via-[#FACC15] to-white bg-clip-text text-transparent">
+              Catálogo de Productos
+            </h1>
+            <p className="text-xl text-white/80 max-w-3xl mx-auto font-lato leading-relaxed">
+              Descubre nuestra colección exclusiva de productos de belleza premium.
+              Calidad excepcional para realzar tu belleza natural.
+            </p>
           </div>
-          {/* Ordenamiento */}
-          <select
-            value={ordenarPor}
-            onChange={e => setOrdenarPor(e.target.value)}
-            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-white"
-          >
-            <option value="nombre">Ordenar por nombre</option>
-            <option value="precio-asc">Precio: menor a mayor</option>
-            <option value="precio-desc">Precio: mayor a menor</option>
-            <option value="mas-recientes">Más recientes</option>
-          </select>
+        </div>
+      </div>
 
-          {/* Botón filtros móvil */}
-          <button
-            onClick={() => setMostrarFiltros(!mostrarFiltros)}
-            className="lg:hidden flex items-center gap-2 px-4 py-3 bg-[#FACC15] text-[#1E1E1E] rounded-lg hover:bg-yellow-400 transition"
-          >
-            <FaFilter />
-            Filtros
-          </button>
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        {/* Barra de herramientas mejorada */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Búsqueda */}
+            <div className="flex-1 relative">
+              <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg" />
+              <input
+                type="text"
+                placeholder="Buscar productos..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-gray-50 hover:bg-white transition-all duration-300 text-gray-700 placeholder-gray-400"
+              />
+            </div>
+
+            {/* Ordenamiento */}
+            <div className="relative">
+              <select
+                value={ordenarPor}
+                onChange={e => setOrdenarPor(e.target.value)}
+                className="appearance-none px-6 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-white pr-10 hover:border-[#FACC15] transition-all duration-300 text-gray-700"
+              >
+                <option value="nombre">Ordenar por nombre</option>
+                <option value="precio-asc">Precio: menor a mayor</option>
+                <option value="precio-desc">Precio: mayor a menor</option>
+                <option value="mas-recientes">Más recientes</option>
+              </select>
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Botón filtros móvil */}
+            <button
+              onClick={() => setMostrarFiltros(!mostrarFiltros)}
+              className="lg:hidden flex items-center gap-3 px-6 py-4 bg-[#FACC15] text-[#1E1E1E] rounded-xl hover:bg-yellow-400 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
+            >
+              <FaFilter className="text-lg" />
+              Filtros
+            </button>
+          </div>
         </div>
 
-        {/* Filtros activos */}
+        {/* Filtros activos mejorados */}
         {getFiltrosActivos().length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {getFiltrosActivos().map((filtro, idx) => (
-              <span key={idx} className="px-3 py-1 bg-[#FACC15] text-[#1E1E1E] text-sm rounded-full flex items-center gap-2">
-                {filtro}
-                <button onClick={limpiarFiltros} className="hover:bg-yellow-400 rounded-full p-1">
-                  <FaTimes size={12} />
-                </button>
-              </span>
-            ))}
-            <button
-              onClick={limpiarFiltros}
-              className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-full hover:bg-gray-300 transition"
-            >
-              Limpiar todos
-            </button>
+          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 mb-8">
+            <div className="flex flex-wrap gap-3 items-center">
+              <span className="text-sm font-medium text-gray-700 mr-2">Filtros activos:</span>
+              {getFiltrosActivos().map((filtro, idx) => (
+                <span key={idx} className="inline-flex items-center gap-2 px-4 py-2 bg-[#FACC15] text-[#1E1E1E] text-sm font-medium rounded-full shadow-sm hover:shadow-md transition-all duration-200">
+                  {filtro}
+                  <button
+                    onClick={limpiarFiltros}
+                    className="hover:bg-yellow-400 rounded-full p-1 transition-colors duration-200"
+                    title="Remover filtro"
+                  >
+                    <FaTimes size={12} />
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={limpiarFiltros}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-200 transition-all duration-200 border border-gray-200"
+              >
+                <FaTimes size={12} />
+                Limpiar todos
+              </button>
+            </div>
           </div>
         )}
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filtros sidebar */}
+          {/* Filtros sidebar mejorados */}
           <aside className={`lg:w-80 ${mostrarFiltros ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-white rounded-xl shadow-lg p-6 sticky top-4">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-[#1E1E1E]">Filtros</h2>
+            <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-4 border border-gray-100">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">Filtros</h2>
+                  <p className="text-sm text-gray-500 mt-1">Refina tu búsqueda</p>
+                </div>
                 <button
                   onClick={() => setMostrarFiltros(false)}
-                  className="lg:hidden text-gray-400 hover:text-gray-600"
+                  className="lg:hidden p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                  title="Cerrar filtros"
                 >
                   <FaTimes />
                 </button>
@@ -322,18 +374,23 @@ const Catalogo = () => {
 
               {/* Categoría */}
               {categoriasActivas.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="font-semibold mb-3 text-gray-800">Categoría</h3>
-                  <div className="space-y-2">
+                <div className="mb-8">
+                  <h3 className="font-bold mb-4 text-gray-800 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-[#FACC15] rounded-full"></span>
+                    Categoría
+                  </h3>
+                  <div className="space-y-3">
                     {categoriasActivas.map(categoria => (
-                      <label key={categoria} className="flex items-center cursor-pointer">
+                      <label key={categoria} className="flex items-center cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-all duration-200">
                         <input
                           type="checkbox"
                           checked={filtroCategoria.includes(categoria)}
                           onChange={() => toggleFiltro(categoria, filtroCategoria, setFiltroCategoria)}
-                          className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
+                          className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded border-gray-300"
                         />
-                        <span className="text-sm text-gray-700">{categoria}</span>
+                        <span className="text-sm text-gray-700 group-hover:text-[#FACC15] transition-colors duration-200 font-medium">
+                          {categoria}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -344,24 +401,31 @@ const Catalogo = () => {
               {conceptosUnicos.map(concepto => {
                 const valores = obtenerValoresUnicos(concepto);
                 if (valores.length === 0) return null;
-                
+
                 return (
-                  <div key={concepto} className="mb-6">
-                    <h3 className="font-semibold mb-3 text-gray-800">{concepto}</h3>
-                    <div className="space-y-2">
+                  <div key={concepto} className="mb-8">
+                    <h3 className="font-bold mb-4 text-gray-800 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-[#FACC15] rounded-full"></span>
+                      {concepto}
+                    </h3>
+                    <div className="space-y-3">
                       {valores.slice(0, 5).map(valor => (
-                        <label key={valor} className="flex items-center cursor-pointer">
+                        <label key={valor} className="flex items-center cursor-pointer group p-2 rounded-lg hover:bg-gray-50 transition-all duration-200">
                           <input
                             type="checkbox"
                             checked={filtroEspecificaciones[concepto]?.includes(valor) || false}
                             onChange={() => toggleEspecificacion(concepto, valor)}
-                            className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded"
+                            className="mr-3 text-[#FACC15] focus:ring-[#FACC15] rounded border-gray-300"
                           />
-                          <span className="text-sm text-gray-700">{valor}</span>
+                          <span className="text-sm text-gray-700 group-hover:text-[#FACC15] transition-colors duration-200 font-medium">
+                            {valor}
+                          </span>
                         </label>
                       ))}
                       {valores.length > 5 && (
-                        <span className="text-xs text-gray-500">+{valores.length - 5} más</span>
+                        <div className="text-xs text-[#FACC15] font-medium mt-2 px-2">
+                          +{valores.length - 5} opciones más disponibles
+                        </div>
                       )}
                     </div>
                   </div>
@@ -369,30 +433,36 @@ const Catalogo = () => {
               })}
 
               {/* Rango de Precio */}
-              <div className="mb-6">
-                <h3 className="font-semibold mb-3 text-gray-800">Rango de Precio</h3>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <div className="flex flex-col w-1/2">
-                      <label className="text-xs text-gray-500 mb-1 ml-1">Desde</label>
+              <div className="mb-8">
+                <h3 className="font-bold mb-4 text-gray-800 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-[#FACC15] rounded-full"></span>
+                  Rango de Precio
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Desde</label>
                       <input
                         type="number"
                         value={filtroPrecio[0]}
                         onChange={e => setFiltroPrecio([parseInt(e.target.value) || 0, filtroPrecio[1]])}
-                        className="px-3 py-2 border border-gray-300 rounded text-sm"
-                        placeholder="Mín"
+                        className="w-full px-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-gray-50 hover:bg-white transition-all duration-200 text-sm"
+                        placeholder="0"
                       />
                     </div>
-                    <div className="flex flex-col w-1/2">
-                      <label className="text-xs text-gray-500 mb-1 ml-1">Hasta</label>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Hasta</label>
                       <input
                         type="number"
                         value={filtroPrecio[1]}
                         onChange={e => setFiltroPrecio([filtroPrecio[0], parseInt(e.target.value) || 0])}
-                        className="px-3 py-2 border border-gray-300 rounded text-sm"
-                        placeholder="Máx"
+                        className="w-full px-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-gray-50 hover:bg-white transition-all duration-200 text-sm"
+                        placeholder="1000000"
                       />
                     </div>
+                  </div>
+                  <div className="text-xs text-gray-500 px-2">
+                    Rango: ${formatNumber(filtroPrecio[0])} - ${formatNumber(filtroPrecio[1])}
                   </div>
                 </div>
               </div>
@@ -409,53 +479,80 @@ const Catalogo = () => {
               </p>
             </div>
 
-            {/* Grid responsivo */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {/* Grid responsivo mejorado */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {productosFiltrados.length === 0 ? (
-                <div className="col-span-full text-center py-16">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-xl font-semibold text-[#1E1E1E] mb-2">No se encontraron productos</h3>
-                  <p className="text-gray-600 mb-4">Intenta ajustar tus filtros de búsqueda</p>
-                  <button
-                    onClick={limpiarFiltros}
-                    className="px-6 py-2 bg-[#FACC15] text-[#1E1E1E] rounded-lg hover:bg-yellow-400 transition"
-                  >
-                    Limpiar filtros
-                  </button>
+                <div className="col-span-full">
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-16 text-center">
+                    <div className="text-8xl mb-6">🔍</div>
+                    <h3 className="text-2xl font-bold text-[#1E1E1E] mb-4 font-montserrat">No se encontraron productos</h3>
+                    <p className="text-gray-600 mb-8 text-lg">Intenta ajustar tus filtros de búsqueda para encontrar más opciones</p>
+                    <button
+                      onClick={limpiarFiltros}
+                      className="px-8 py-3 bg-[#FACC15] text-[#1E1E1E] font-bold rounded-full hover:bg-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    >
+                      Limpiar filtros
+                    </button>
+                  </div>
                 </div>
               ) : (
-                productosFiltrados.map(prod => (
+                productosFiltrados.map((prod, idx) => (
                   <div
                     key={prod.id}
-                    className="flex flex-col cursor-pointer group transition-all bg-[0000]"
+                    className="group relative bg-white selection: shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden cursor-pointer"
                     onClick={() => navigate(`/landing/productos/${prod.id}`)}
+                    style={{ animationDelay: `${idx * 50}ms` }}
                   >
-                    {/* Imagen */}
-                    <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                    {/* Badge de oferta (opcional) */}
+                    {prod.precio < 100000 && (
+                      <div className="absolute top-4 left-4 z-10 bg-[#FACC15] text-[#1E1E1E] px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                        ¡Oferta!
+                      </div>
+                    )}
+
+                    {/* Imagen con overlay */}
+                    <div className="relative w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img
                         src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : (prod.foto || prod.imagen)}
                         alt={prod.nombre}
-                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
                       />
+                      {/* Overlay al hover */}
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                      {/* Botón de agregar al carrito */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          addToCart(prod, 1);
+                          showCartToast(prod);
+                        }}
+                        className="absolute bottom-4 right-4 bg-[#FACC15] text-[#1E1E1E] rounded-full p-3 shadow-lg hover:bg-yellow-400 transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
+                        title="Agregar al carrito"
+                      >
+                        <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
+                      </button>
                     </div>
-                    {/* Info */}
-                    <div className="p-5 flex flex-col gap-2 flex-1 justify-between">
-                      <h3 className="font-semibold text-lg text-[#1E1E1E] mb-1 truncate group-hover:text-[#FACC15] transition-colors">{prod.nombre}</h3>
+
+                    {/* Info del producto */}
+                    <div className="p-6 flex flex-col gap-3">
+                      <h3 className="font-bold text-lg text-[#1E1E1E] group-hover:text-[#FACC15] transition-colors duration-300 line-clamp-2 font-nunito leading-tight">
+                        {prod.nombre}
+                      </h3>
+
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm font-bold text-[#FACC15]">${formatNumber(prod.precio)}</span>
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            showCartToast(prod);
-                          }}
-                          className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center"
-                          title="Agregar al carrito"
-                        >
-                          <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
-                        </button>
+                        <span className="text-2xl font-bold text-[#FACC15] font-montserrat">
+                          ${formatNumber(prod.precio)}
+                        </span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {prod.categoria || 'General'}
+                        </span>
                       </div>
                     </div>
+
+                    {/* Elemento decorativo */}
+                    <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-[#FACC15]/10 rounded-full blur-lg group-hover:bg-[#FACC15]/20 transition-colors duration-500"></div>
                   </div>
                 ))
               )}
@@ -463,6 +560,59 @@ const Catalogo = () => {
           </main>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#1E1E1E] text-white py-12 mt-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="col-span-1 md:col-span-2">
+              <h3 className="text-2xl font-bold text-[#FACC15] mb-4 font-montserrat">CAPEX</h3>
+              <p className="text-white/80 mb-4 font-lato">
+                Tu destino para productos de belleza premium y servicios profesionales.
+                Transformamos tu imagen con calidad y pasión.
+              </p>
+              <div className="flex space-x-4">
+                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
+                  <i className="bi bi-facebook text-xl"></i>
+                </a>
+                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
+                  <i className="bi bi-instagram text-xl"></i>
+                </a>
+                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
+                  <i className="bi bi-whatsapp text-xl"></i>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Enlaces Rápidos</h4>
+              <ul className="space-y-2 text-white/80">
+                <li><a href="/landing" className="hover:text-[#FACC15] transition-colors">Inicio</a></li>
+                <li><a href="/landing/catalogo" className="hover:text-[#FACC15] transition-colors">Productos</a></li>
+                <li><a href="/landing/servicios" className="hover:text-[#FACC15] transition-colors">Servicios</a></li>
+                <li><a href="/landing" className="hover:text-[#FACC15] transition-colors">Sobre Nosotros</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Atención al Cliente</h4>
+              <ul className="space-y-2 text-white/80">
+                <li>📞 321 5956758</li>
+                <li>📧 info@capex.com</li>
+                <li>📍 Medellín, Colombia</li>
+                <li>🕒 Lun-Sáb: 9:30-18:40</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-white/10 mt-8 pt-8 text-center">
+            <p className="text-white/60 text-sm">
+              © 2025 CAPEX. Todos los derechos reservados. |
+              <span className="text-[#FACC15]"> Hecho con ❤️ para tu belleza</span>
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

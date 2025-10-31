@@ -1,5 +1,5 @@
 import DetailServices from './components/DetailServices';
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Paginator from '../../../../shared/Paginator';
 
 const EMPLOYEES_KEY = 'capex_employees';

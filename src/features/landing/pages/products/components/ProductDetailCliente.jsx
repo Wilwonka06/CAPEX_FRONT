@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import CartToast from '../../../components/CartToast';
 import cartIcon from '../../../../../shared/images/cart.png';
 import { useCartToast } from '../../../components/CartToastContext';
-
-const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+import { formatNumber } from '../../../../../shared/utils/formatters';
 
 const ProductDetailCliente = ({ product, recommended = [] }) => {
   const [quantity, setQuantity] = useState(1);

@@ -279,15 +279,11 @@ const ProductsPage = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
-          {/* El título ahora se muestra en el navbar */}
           <div className="p-6">
-            {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} />
               <CreateProduct onCreate={handleCreateProduct} products={products} />
             </div>
-
-            {/* Tabla de productos */}
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               {isInitialLoading ? (
                 <LoadingTable message="Cargando productos..." />

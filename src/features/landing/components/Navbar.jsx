@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ProfileMenu from './ProfileMenu';
 import { useCart } from './CartContext';
 import cartIcon from '../../../shared/images/cart.png';
+import logo from '../../../shared/images/Logo.png';
 
 
 const Navbar = () => {
@@ -76,77 +77,190 @@ const Navbar = () => {
     // };
 
     return (
-        <nav className="bg-background p-2 shadow-lg">
-            <div className="container mx-auto flex justify-between items-center flex-wrap">
-                {/* Logo o Nombre de la Marca */}
-                <div className="text-text-main text-2xl font-bold rounded-md flex items-center">
-                    <Link to="/Landing" className="p-2 rounded-md transition-colors duration-300 text-primary hover:text-primary">
-                        <h2 className='text-text-main'>CAP<span className='text-yellow-500'>EX</span></h2>
-                    </Link>
-                </div>
-
-                {/* Botón de Hamburguesa para Móvil */}
-                <button
-                    id="mobile-menu-button"
-                    className="text-text-main md:hidden focus:outline-none focus:ring-2 focus:ring-primary rounded-md p-2"
-                    onClick={toggleMobileMenu}
-                >
-                    <i className="fas fa-bars text-2xl"></i>
-                </button>
-
-                {/* Menú de Navegación Centrado (visible en desktop, oculto por defecto en móvil) */}
-                <div
-                    id="navigation-menu"
-                    className={`${isMobileMenuOpen ? 'flex flex-col' : 'hidden'} md:flex md:flex-row md:space-x-8 mt-4 md:mt-0 w-full md:w-auto items-center justify-center`}
-                >
-                    <Link to="/landing/servicios" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary ">
-                        Servicios
-                    </Link>
-                    <Link to="/landing/catalogo" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
-                        Productos
-                    </Link>
-                    <Link to="/landing/citas" className="text-text-main px-4 py-2 rounded-md transition-colors duration-300 w-full md:w-auto text-center md:text-center md:hover:bg-accent-light md:hover:text-primary">
-                        Agendar Cita
-                    </Link>
-                </div>
-
-                {/* Botones de Autenticación (a la derecha) */}
-                <div className="hidden md:flex md:space-x-4 items-center relative" ref={profileRef}>
-                    {/* Carrito */}
-                    <Link to="/landing/cart" className="relative mr-2 group">
-                    <img src={cartIcon} alt="Carrito" className="w-6 h-6" />
-                        {cart.length > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-white text-black text-xs rounded-full px-0.5 py-0.3 ">{cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}</span>
-                        )}
-                    </Link>
-                    {currentUser ? (
-                        <>
-                            <button
-                                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:ring-2 hover:ring-primary focus:outline-none"
-                                onClick={() => setShowProfile(v => !v)}
-                                title={currentUser.nombre}
-                            >
-                                {currentUser.foto || currentUser.avatar ? (
-                                    <img src={currentUser.foto || currentUser.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
-                                ) : (
-                                    <i className="bi bi-person text-2xl"></i>
-                                )}
-                            </button>
-                            {showProfile && (
-                                <ProfileMenu
-                                    user={currentUser}
-                                    onClose={() => setShowProfile(false)}
-                                    onLogout={handleLogout}
-                                    showOrdersOption={true}
-                                />
-                            )}
-                        </>
-                    ) : (
-                        <Link to="/login" className="bg-primary-dark text-white px-6 py-2 rounded-full font-semibold transition-colors duration-300 shadow-md hover:bg-primary">
-                            Iniciar Sesión
+        <nav className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-100 sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16">
+                    {/* Logo */}
+                    <div className="flex-shrink-0 flex items-center">
+                        <Link to="/landing" className="flex items-center space-x-2 group">
+                            <img src={logo} alt="CAPEX Logo" className="h-10 w-10 transition-transform duration-300 group-hover:scale-110" />
+                            <span className="text-2xl font-bold font-montserrat">
+                                <span className="text-[#1E1E1E]">CAP</span>
+                                <span className="text-[#FACC15]">EX</span>
+                            </span>
                         </Link>
-                    )}
+                    </div>
 
+                    {/* Desktop Navigation */}
+                    <div className="hidden md:flex items-center space-x-8">
+                        <Link
+                            to="/landing/servicios"
+                            className="text-gray-700 hover:text-[#FACC15] px-3 py-2 text-sm font-medium transition-all duration-300 relative group"
+                        >
+                            Servicios
+                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FACC15] transition-all duration-300 group-hover:w-full"></span>
+                        </Link>
+                        <Link
+                            to="/landing/catalogo"
+                            className="text-gray-700 hover:text-[#FACC15] px-3 py-2 text-sm font-medium transition-all duration-300 relative group"
+                        >
+                            Productos
+                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FACC15] transition-all duration-300 group-hover:w-full"></span>
+                        </Link>
+                        <Link
+                            to="/landing/citas"
+                            className="text-gray-700 hover:text-[#FACC15] px-3 py-2 text-sm font-medium transition-all duration-300 relative group"
+                        >
+                            Agendar Cita
+                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#FACC15] transition-all duration-300 group-hover:w-full"></span>
+                        </Link>
+                    </div>
+
+                    {/* Right side - Cart & Auth */}
+                    <div className="hidden md:flex items-center space-x-4" ref={profileRef}>
+                        {/* Cart */}
+                        <Link to="/landing/cart" className="relative p-2 rounded-full hover:bg-gray-100 transition-all duration-300 group">
+                            <img src={cartIcon} alt="Carrito" className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
+                            {cart.length > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-[#FACC15] text-[#1E1E1E] text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 shadow-lg">
+                                    {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}
+                                </span>
+                            )}
+                        </Link>
+
+                        {/* Auth */}
+                        {currentUser ? (
+                            <div className="relative">
+                                <button
+                                    className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:ring-offset-2"
+                                    onClick={() => setShowProfile(v => !v)}
+                                    title={currentUser.nombre}
+                                >
+                                    {currentUser.foto || currentUser.avatar ? (
+                                        <img
+                                            src={currentUser.foto || currentUser.avatar}
+                                            alt="avatar"
+                                            className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-200"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FACC15] to-yellow-400 flex items-center justify-center">
+                                            <i className="bi bi-person text-white text-sm"></i>
+                                        </div>
+                                    )}
+                                    <i className={`bi bi-chevron-${showProfile ? 'up' : 'down'} text-gray-500 transition-transform duration-200`}></i>
+                                </button>
+                                {showProfile && (
+                                    <ProfileMenu
+                                        user={currentUser}
+                                        onClose={() => setShowProfile(false)}
+                                        onLogout={handleLogout}
+                                        showOrdersOption={true}
+                                    />
+                                )}
+                            </div>
+                        ) : (
+                            <Link
+                                to="/login"
+                                className="bg-[#FACC15] text-[#1E1E1E] px-6 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                            >
+                                Iniciar Sesión
+                            </Link>
+                        )}
+                    </div>
+
+                    {/* Mobile menu button */}
+                    <div className="md:hidden">
+                        <button
+                            onClick={toggleMobileMenu}
+                            className="p-2 rounded-md text-gray-700 hover:text-[#FACC15] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#FACC15] transition-all duration-300"
+                        >
+                            <span className="sr-only">Abrir menú principal</span>
+                            <div className="w-6 h-6 flex flex-col justify-center items-center">
+                                <span className={`block w-5 h-0.5 bg-current transition-all duration-300 ${isMobileMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
+                                <span className={`block w-5 h-0.5 bg-current transition-all duration-300 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+                                <span className={`block w-5 h-0.5 bg-current transition-all duration-300 ${isMobileMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Mobile menu */}
+                <div className={`md:hidden transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                    <div className="px-2 pt-2 pb-3 space-y-1 bg-white/95 backdrop-blur-md rounded-lg mt-2 shadow-lg border border-gray-100">
+                        <Link
+                            to="/landing/servicios"
+                            className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#FACC15] hover:bg-gray-50 rounded-md transition-all duration-200"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            Servicios
+                        </Link>
+                        <Link
+                            to="/landing/catalogo"
+                            className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#FACC15] hover:bg-gray-50 rounded-md transition-all duration-200"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            Productos
+                        </Link>
+                        <Link
+                            to="/landing/citas"
+                            className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#FACC15] hover:bg-gray-50 rounded-md transition-all duration-200"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            Agendar Cita
+                        </Link>
+
+                        {/* Mobile Cart & Auth */}
+                        <div className="border-t border-gray-200 pt-4 mt-4">
+                            <div className="flex items-center justify-between">
+                                <Link
+                                    to="/landing/cart"
+                                    className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 transition-all duration-200"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    <div className="relative">
+                                        <img src={cartIcon} alt="Carrito" className="w-6 h-6" />
+                                        {cart.length > 0 && (
+                                            <span className="absolute -top-1 -right-1 bg-[#FACC15] text-[#1E1E1E] text-xs font-bold rounded-full min-w-[18px] h-4 flex items-center justify-center">
+                                                {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="text-gray-700 font-medium">Carrito</span>
+                                </Link>
+
+                                {currentUser ? (
+                                    <button
+                                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50 transition-all duration-200 w-full text-left"
+                                        onClick={() => {
+                                            setShowProfile(v => !v);
+                                            setIsMobileMenuOpen(false);
+                                        }}
+                                    >
+                                        {currentUser.foto || currentUser.avatar ? (
+                                            <img
+                                                src={currentUser.foto || currentUser.avatar}
+                                                alt="avatar"
+                                                className="w-8 h-8 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FACC15] to-yellow-400 flex items-center justify-center">
+                                                <i className="bi bi-person text-white text-sm"></i>
+                                            </div>
+                                        )}
+                                        <span className="text-gray-700 font-medium">{currentUser.nombre}</span>
+                                    </button>
+                                ) : (
+                                    <Link
+                                        to="/login"
+                                        className="block w-full text-center bg-[#FACC15] text-[#1E1E1E] px-4 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                    >
+                                        Iniciar Sesión
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </nav>
