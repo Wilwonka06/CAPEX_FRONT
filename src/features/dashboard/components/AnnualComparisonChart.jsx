@@ -105,11 +105,11 @@ const AnnualComparisonChart = ({ data }) => {
   };
 
   return (
-    <div className="w-full h-96 bg-white rounded-lg shadow p-4 mt-8">
+    <div className="w-full h-[500px] bg-white rounded-lg shadow p-4 mt-8">
       <div className="flex justify-end mb-2">
         <button
           onClick={handleDownload}
-          className="flex items-center gap-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded shadow transition font-medium text-xs"
+          className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded shadow transition font-medium text-xs"
           title="Descargar comparativa anual"
         >
           <i className="bi bi-download"></i> Descargar

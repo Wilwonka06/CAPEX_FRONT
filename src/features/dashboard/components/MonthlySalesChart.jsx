@@ -14,11 +14,11 @@ const MonthlySalesChart = ({ data }) => {
     XLSX.writeFile(wb, 'resumen_diario_mes.xlsx');
   };
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-80">
       <div className="flex justify-end mb-2">
         <button
           onClick={handleDownload}
-          className="flex items-center gap-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded shadow transition font-medium text-xs"
+          className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded shadow transition font-medium text-xs"
           title="Descargar resumen diario del mes seleccionado"
         >
           <i className="bi bi-download"></i> Descargar
@@ -31,8 +31,8 @@ const MonthlySalesChart = ({ data }) => {
           <YAxis tickFormatter={v => `$${v.toLocaleString('es-CO')}`} tick={{ fill: '#333' }} />
           <Tooltip formatter={v => `$${v.toLocaleString('es-CO')}`} labelFormatter={l => `Día ${l}`} />
           <Legend />
-          <Bar dataKey="productos" name="Productos" fill="#FFD700" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="servicios" name="Servicios" fill="#111" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="productos" name="Productos" fill="#FACC15" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="servicios" name="Servicios" fill="#1E1E1E" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

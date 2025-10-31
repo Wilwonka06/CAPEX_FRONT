@@ -32,17 +32,27 @@ const AdminNavbar = ({ title }) => {
       </div>
       <div className="flex items-center gap-4">
         {currentUser && (
-          <button
-            className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:ring-2 hover:ring-primary focus:outline-none"
-            onClick={() => setShowProfileModal(true)}
-            title={currentUser.nombre + ' ' + (currentUser.apellido || '')}
-          >
-            {currentUser.foto || currentUser.avatar ? (
-              <img src={currentUser.foto || currentUser.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
-            ) : (
-              <i className="bi bi-person text-2xl"></i>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-medium text-gray-800">
+                {currentUser.nombre} {currentUser.apellido || ''}
+              </p>
+              <p className="text-xs text-gray-500">
+                {currentUser.rol?.nombre || currentUser.role || 'Usuario'}
+              </p>
+            </div>
+            <button
+              className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 hover:ring-2 hover:ring-primary focus:outline-none transition-all"
+              onClick={() => setShowProfileModal(true)}
+              title="Ver perfil"
+            >
+              {currentUser.foto || currentUser.avatar ? (
+                <img src={currentUser.foto || currentUser.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <i className="bi bi-person text-2xl"></i>
+              )}
+            </button>
+          </div>
         )}
       </div>
       {showProfileModal && (

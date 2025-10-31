@@ -148,19 +148,16 @@ const Sidebar = () => {
   // Efecto para expandir el grupo de la ruta actual al cargar o cambiar de ruta
   useEffect(() => {
     const currentGroup = getGroupIdByPath(location.pathname);
-    if (currentGroup) {
-      // Solo expandir si se permite la expansión automática
-      if (isExpanded) { // Si está expandido por hover, mantener/abrir grupo activo
-         setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
-      }
+    if (currentGroup && isExpanded) {
+      setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
     }
   }, [location.pathname, isExpanded]); // Depende de location, isExpanded
 
-  // Función para abrir un grupo específico sin cerrar otros
-  const openGroup = (groupId) => {
+  // Función para toggle (abrir/cerrar) un grupo específico
+  const toggleGroup = (groupId) => {
     setExpandedGroups(prev => ({
       ...prev,
-      [groupId]: true
+      [groupId]: !prev[groupId]
     }));
   };
 
@@ -223,11 +220,11 @@ const Sidebar = () => {
                   className={`flex items-center px-4 py-3 cursor-pointer transition-colors rounded-lg relative ${
                     (isExpanded) ? 'justify-between' : 'justify-center'
                   } ${
-                    group.items.some(item => isActiveRoute(item.path))
-                      ? ' bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm' // Grupo activo
+                    expandedGroups[group.id]
+                      ? 'bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm' // Grupo expandido
                       : 'text-background/80 hover:bg-background/10 hover:text-background'
                   }`}
-                  onClick={() => (isExpanded) && openGroup(group.id)}
+                  onClick={() => (isExpanded) && toggleGroup(group.id)}
                 >
                   <div className="flex items-center">
                     <i className={`${group.icon} text-xl`}></i>
@@ -265,7 +262,7 @@ const Sidebar = () => {
               {/* Group Items - Solo mostrar si el sidebar está expandido o bloqueado */}
               {(group.items && (isExpanded)) && (
                 <div
-                  className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  className={`ml-4 overflow-hidden transition-all duration-500 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                   style={{ willChange: 'max-height, opacity' }}
                 >
                   {Array.isArray(group.items) && group.items.map((item, index) => (

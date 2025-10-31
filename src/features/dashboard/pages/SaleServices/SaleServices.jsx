@@ -242,9 +242,6 @@ const SaleServices = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            {/* El título ahora se muestra en el navbar */}
-          </div>
-          <div className="p-6">
             {/* Botones de filtrado por estado */}
             <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
               <button
