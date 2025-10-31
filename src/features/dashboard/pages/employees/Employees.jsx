@@ -172,62 +172,112 @@ const EmployeesPage = () => {
     setEditingScheduling(prog);
   };
 
-  const handleAddEmployee = async (data) => {
-    try {
-      console.log("[DEBUG] Creando empleado con datos:", data);
-      const createdEmployee = await createEmployee(data);
-      console.log("[DEBUG] Empleado creado:", createdEmployee);
-      setEmployees(prev => [...prev, createdEmployee]);
+  // Reemplaza la función handleAddEmployee en Employees.jsx
 
-      if (addEmployeeSchedulings.length > 0) {
-        console.log("[DEBUG] Creando programaciones para el empleado:", addEmployeeSchedulings);
-        const schedulingPromises = [];
+const handleAddEmployee = async (data) => {
+  try {
+    console.log("[DEBUG] Creando empleado con datos:", data);
+    
+    // PASO 1: Crear el empleado primero
+    const createdEmployee = await createEmployee(data);
+    console.log("[DEBUG] Empleado creado:", createdEmployee);
+    
+    // Actualizar lista de empleados inmediatamente
+    setEmployees(prev => [...prev, createdEmployee]);
 
-        addEmployeeSchedulings.forEach(prog => {
-          if (prog.dias && prog.dias.length > 0) {
+    // PASO 2: Si hay programaciones, crearlas una por una
+    if (addEmployeeSchedulings.length > 0) {
+      console.log("[DEBUG] Programaciones a crear:", addEmployeeSchedulings);
+      
+      const schedulingPromises = [];
+
+      // Iterar sobre cada programación
+      for (const prog of addEmployeeSchedulings) {
+        console.log("[DEBUG] Procesando programación:", prog);
+        
+        // Si la programación tiene días seleccionados
+        if (prog.dias && prog.dias.length > 0) {
+          // Para cada día seleccionado, crear una programación
+          for (const dia of prog.dias) {
+            // Calcular la próxima fecha para ese día de la semana
             const today = new Date();
-            prog.dias.forEach(dia => {
-              const dayIndex = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'].indexOf(dia);
-              if (dayIndex !== -1) {
-                const nextDate = new Date(today);
-                const daysUntilNext = (dayIndex - today.getDay() + 7) % 7;
-                nextDate.setDate(today.getDate() + (daysUntilNext === 0 ? 7 : daysUntilNext));
-
-                schedulingPromises.push(
-                  createScheduling({
-                    id_usuario: createdEmployee.id,
-                    fecha_inicio: nextDate.toISOString().split('T')[0],
-                    hora_entrada: prog.horaInicio,
-                    hora_salida: prog.horaFin,
-                  })
-                );
-              }
-            });
+            const dayIndex = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'].indexOf(dia);
+            
+            if (dayIndex !== -1) {
+              const nextDate = new Date(today);
+              const daysUntilNext = (dayIndex - today.getDay() + 7) % 7;
+              nextDate.setDate(today.getDate() + (daysUntilNext === 0 ? 7 : daysUntilNext));
+              
+              const fechaFormateada = nextDate.toISOString().split('T')[0];
+              
+              // Crear objeto con formato correcto para la API
+              const schedulingData = {
+                id_usuario: createdEmployee.id,
+                fecha_inicio: fechaFormateada,
+                hora_entrada: prog.horaInicio,
+                hora_salida: prog.horaFin,
+              };
+              
+              console.log("[DEBUG] Datos de programación para enviar:", schedulingData);
+              schedulingPromises.push(createScheduling(schedulingData));
+            }
           }
-        });
-
-        try {
-          const createdSchedulings = await Promise.all(schedulingPromises);
-          setSchedulings(prev => [...prev, ...createdSchedulings]);
-          console.log("Schedulings created:", createdSchedulings);
-        } catch (schedulingError) {
-          console.error("Error creating schedulings:", schedulingError);
-          toast.warning('Empleado creado, pero hubo un error con las programaciones');
+        } else if (prog.fechaInicio) {
+          // Si no hay días pero hay fecha específica, usar esa fecha
+          const schedulingData = {
+            id_usuario: createdEmployee.id,
+            fecha_inicio: prog.fechaInicio,
+            hora_entrada: prog.horaInicio,
+            hora_salida: prog.horaFin,
+          };
+          
+          console.log("[DEBUG] Datos de programación (fecha específica) para enviar:", schedulingData);
+          schedulingPromises.push(createScheduling(schedulingData));
         }
       }
 
-      setShowForm(false);
-      setAddEmployeeSchedulings([]);
+      // Ejecutar todas las promesas de programación
+      if (schedulingPromises.length > 0) {
+        try {
+          const createdSchedulings = await Promise.all(schedulingPromises);
+          console.log("[DEBUG] Programaciones creadas:", createdSchedulings);
+          
+          // Actualizar lista de programaciones
+          setSchedulings(prev => [...prev, ...createdSchedulings]);
+          toast.success('Empleado y programaciones creados exitosamente!');
+        } catch (schedulingError) {
+          console.error("[DEBUG] Error creando programaciones:", schedulingError);
+          toast.warning('Empleado creado, pero hubo un error con algunas programaciones');
+        }
+      } else {
+        toast.success('Empleado creado exitosamente!');
+      }
+    } else {
       toast.success('Empleado agregado exitosamente!');
-    } catch (error) {
-      console.error("Error agregando empleado:", error);
-      const isNetworkError = error.code === 'ERR_NETWORK' || error.message?.includes('ERR_NAME_NOT_RESOLVED') || !error.response;
-      const errorMsg = isNetworkError
-        ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
-        : (error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error || "Error al agregar empleado");
-      toast.error(errorMsg);
     }
-  };
+
+    // Limpiar y cerrar formulario
+    setShowForm(false);
+    setAddEmployeeSchedulings([]);
+    
+  } catch (error) {
+    console.error("[DEBUG] Error agregando empleado:", error);
+    console.error("[DEBUG] Error response:", error.response?.data);
+    
+    const isNetworkError = error.code === 'ERR_NETWORK' || 
+                          error.message?.includes('ERR_NAME_NOT_RESOLVED') || 
+                          !error.response;
+    
+    const errorMsg = isNetworkError
+      ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
+      : (error?.response?.data?.message || 
+         error?.response?.data?.msg || 
+         error?.response?.data?.error || 
+         "Error al agregar empleado");
+    
+    toast.error(errorMsg);
+  }
+};
 
   const handleEditClick = (employee) => {
     console.log("[DEBUG] handleEditClick called with employee:", employee);
@@ -235,31 +285,44 @@ const EmployeesPage = () => {
     setEditEmployee(employee);
   };
 
-  const handleEditSave = async (data) => {
-    try {
-      console.log("[DEBUG] handleEditSave called with data:", data);
-      console.log("[DEBUG] Employee ID to update:", data.id);
-      
-      if (!data.id) {
-        console.error("[DEBUG] ERROR: No ID in data");
-        toast.error("Error: ID de empleado no encontrado");
-        return;
-      }
+  // Reemplaza la función handleEditSave en Employees.jsx
 
-      const updatedEmployee = await updateEmployee(data.id, data);
-      console.log("[DEBUG] Employee updated successfully:", updatedEmployee);
-      
-      setEmployees(prev => prev.map(emp => 
-        String(emp.id) === String(updatedEmployee.id) ? updatedEmployee : emp
-      ));
-      setEditEmployee(null);
-      toast.success('Empleado actualizado exitosamente!');
-    } catch (error) {
-      console.error("Error actualizando empleado:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al actualizar empleado");
+// Reemplaza la función handleEditSave en Employees.jsx
+
+const handleEditSave = async (data) => {
+  try {
+    console.log("🔵 [DEBUG] handleEditSave INICIO");
+    console.log("🔵 [DEBUG] Data recibida:", data);
+    console.log("🔵 [DEBUG] Employee ID:", data.id);
+    
+    if (!data.id) {
+      console.error("❌ [DEBUG] ERROR: No ID in data");
+      toast.error("Error: ID de empleado no encontrado");
+      return;
     }
-  };
+
+    console.log("🔵 [DEBUG] Llamando a updateEmployee...");
+    const updatedEmployee = await updateEmployee(data.id, data);
+    console.log("✅ [DEBUG] Response de updateEmployee:", updatedEmployee);
+    
+    console.log("🔵 [DEBUG] Llamando a loadData para recargar lista...");
+    await loadData();
+    console.log("✅ [DEBUG] loadData completado");
+    
+    console.log("🔵 [DEBUG] Employees después de loadData:", employees.length);
+    
+    // Cerrar el modal de edición
+    setEditEmployee(null);
+    
+    toast.success('Empleado actualizado exitosamente!');
+  } catch (error) {
+    console.error("❌ [DEBUG] Error en handleEditSave:", error);
+    console.error("❌ [DEBUG] Error response:", error.response?.data);
+    console.error("❌ [DEBUG] Error status:", error.response?.status);
+    const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
+    toast.error(backendMsg || "Error al actualizar empleado");
+  }
+};
 
   const handleEditCancel = () => setEditEmployee(null);
   
