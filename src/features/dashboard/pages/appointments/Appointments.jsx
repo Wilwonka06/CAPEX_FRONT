@@ -11,6 +11,7 @@ import AppointmentDetailModal from './components/AppointmentDetailModal';
 import AppointmentEditModal from './components/AppointmentEditModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Search from '../../../../shared/Search';
 
 // Colores personalizados para los estados
 const ESTADO_COLORES = {
@@ -26,6 +27,8 @@ const ESTADO_COLORES = {
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState([]);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -44,6 +47,42 @@ const Appointments = () => {
     setTitle('Citas');
     return () => setTitle('');
   }, [setTitle]);
+
+  // Sincronizar filteredAppointments con appointments
+  useEffect(() => {
+    setFilteredAppointments(appointments);
+  }, [appointments]);
+
+  // Filtrar citas por término de búsqueda
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredAppointments(appointments);
+      return;
+    }
+    const lowerTerm = searchTerm.toLowerCase();
+    setFilteredAppointments(
+      appointments.filter(appointment =>
+        // Buscar por nombre del cliente (usuario o cliente)
+        ((appointment.usuario?.nombre || appointment.cliente?.nombre) &&
+         (appointment.usuario?.nombre || appointment.cliente?.nombre).toLowerCase().includes(lowerTerm)) ||
+        // Buscar por fecha
+        (appointment.fecha_servicio && appointment.fecha_servicio.includes(searchTerm)) ||
+        // Buscar por estado
+        (appointment.estado && appointment.estado.toLowerCase().includes(lowerTerm)) ||
+        // Buscar por servicios
+        (appointment.servicios && appointment.servicios.some(servicio =>
+          (servicio.servicio?.nombre || servicio.nombre_servicio) &&
+          (servicio.servicio?.nombre || servicio.nombre_servicio).toLowerCase().includes(lowerTerm)
+        )) ||
+        // Buscar por teléfono del cliente
+        ((appointment.usuario?.telefono || appointment.cliente?.telefono) &&
+         (appointment.usuario?.telefono || appointment.cliente?.telefono).includes(searchTerm)) ||
+        // Buscar por correo del cliente
+        ((appointment.usuario?.correo || appointment.cliente?.correo) &&
+         (appointment.usuario?.correo || appointment.cliente?.correo).toLowerCase().includes(lowerTerm))
+      )
+    );
+  }, [searchTerm, appointments]);
 
   // Cargar citas desde la API
   const loadAppointments = async () => {
@@ -93,7 +132,7 @@ const Appointments = () => {
   };
 
   // Convertir citas a eventos para FullCalendar
-  const calendarEvents = appointments.map(cita => {
+  const calendarEvents = filteredAppointments.map(cita => {
     // Usar horas de la cita del backend
     const horaInicio = cita.hora_entrada || '08:00:00';
     const horaFin = cita.hora_salida || '09:00:00';
@@ -102,7 +141,7 @@ const Appointments = () => {
     const estadoColor = ESTADO_COLORES[cita.estado] || { bg: '#A0522D', text: '#fff' };
     return {
       id: cita.id_cita,
-      title: (cita.cliente?.nombre || 'Cliente') + ' - ' + (cita.servicios?.map(s => s.nombre_servicio).join(', ') || 'Sin servicios'),
+      title: (cita.usuario?.nombre || cita.cliente?.nombre || 'Cliente') + ' - ' + (cita.servicios?.map(s => s.servicio?.nombre || s.nombre_servicio).join(', ') || 'Sin servicios'),
       start: `${cita.fecha_servicio}T${horaInicio}`,
       end: `${cita.fecha_servicio}T${horaFin}`,
       ...cita,
@@ -141,10 +180,14 @@ const Appointments = () => {
             </div>
           </div>
         )}
-        <div className="flex justify-between items-center mb-6">
-          <div></div>
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <Search
+            searchTerm={searchTerm}
+            handleSearch={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar citas por cliente, fecha, estado o servicio..."
+          />
           <button
-            className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition ml-auto"
+            className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
             onClick={() => setShowCreateModal(true)}
           >
             <i className="bi bi-calendar-plus text-lg"></i>

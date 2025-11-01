@@ -41,12 +41,12 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     notas: ''
   });
 
-  // Cargar datos necesarios
+  // Cargar datos necesarios desde el backend
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Por ahora usamos datos mock ya que no tenemos servicios/profesionales en el backend
-        // TODO: Implementar cuando estén disponibles los endpoints de servicios y empleados
+        // TODO: Implementar cuando estén disponibles los endpoints reales de servicios y empleados
+        // Por ahora mantenemos datos mock hasta que se implementen los endpoints
         setServices([
           { id: 1, name: 'Corte de cabello', duration: 30, price: 25000, description: 'Corte básico de cabello', active: true },
           { id: 2, name: 'Manicura', duration: 45, price: 35000, description: 'Manicura completa', active: true },
@@ -59,6 +59,13 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         ]);
       } catch (error) {
         console.error('Error loading data:', error);
+        // En caso de error, usar datos mock como fallback
+        setServices([
+          { id: 1, name: 'Corte de cabello', duration: 30, price: 25000, description: 'Corte básico de cabello', active: true }
+        ]);
+        setProfessionals([
+          { id: 1, name: 'Ana Torres', active: true }
+        ]);
       }
     };
     loadData();
@@ -67,21 +74,23 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   // Si es edición, cargar datos de la cita
   useEffect(() => {
     if (cita) {
+      console.log('Loading appointment data for editing:', cita);
       setFormData({
-        cliente: cita.cliente?.nombre || '',
-        telefono: cita.cliente?.telefono || '',
+        cliente: cita.usuario?.nombre || cita.cliente?.nombre || '',
+        telefono: cita.usuario?.telefono || cita.cliente?.telefono || '',
         fecha: cita.fecha_servicio || fecha || '',
         estado: cita.estado || 'Agendada',
         servicios: (cita.servicios || []).map(s => ({
           id: s.id_detalle_servicio || Date.now() + Math.random(),
-          servicioId: s.id_servicio,
-          nombre: s.nombre_servicio,
-          profesional: s.nombre_empleado || '',
-          inicio: s.hora_inicio || '08:00',
-          fin: s.hora_fin || calcularHoraFin(s.hora_inicio || '08:00', s.duracion || 30),
-          duracion: s.duracion || 30,
-          precio: s.precio || 0,
-          cantidad: s.cantidad || 1
+          servicioId: s.id_servicio || s.servicio?.id_servicio,
+          nombre: s.servicio?.nombre || s.nombre_servicio || 'Servicio',
+          profesional: s.empleado?.nombre || s.nombre_empleado || '',
+          inicio: s.hora_inicio ? s.hora_inicio.substring(0, 5) : '08:00', // Solo HH:MM
+          fin: s.hora_finalizacion ? s.hora_finalizacion.substring(0, 5) : calcularHoraFin(s.hora_inicio?.substring(0, 5) || '08:00', s.duracion || 30),
+          duracion: s.duracion || s.servicio?.duracion || 30,
+          precio: s.precio_unitario || s.precio || 0,
+          cantidad: s.cantidad || 1,
+          observaciones: s.observaciones || ''
         })),
         notas: cita.motivo || ''
       });
@@ -166,7 +175,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   // Validar un campo específico
   const validateField = (field) => {
     let error = '';
-    
+
     switch (field) {
       case 'cliente':
         error = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
@@ -192,6 +201,23 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       ...prev,
       [field]: error
     }));
+  };
+
+  // Validación en tiempo real para campos individuales
+  const handleFieldChange = (field, value) => {
+    // Actualizar el valor del campo
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Limpiar error si existe
+    clearError(field);
+
+    // Validar en tiempo real solo si el campo ya fue tocado
+    if (touchedFields[field]) {
+      // Usar un timeout para no validar en cada keystroke
+      setTimeout(() => {
+        validateField(field);
+      }, 300);
+    }
   };
 
   // Actualizar campos de un servicio seleccionado
@@ -320,6 +346,18 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
           return newErrors;
         });
       }
+    }
+  }, [formData.servicios, touchedFields.servicios]);
+
+  // Validación en tiempo real para servicios cuando cambian
+  useEffect(() => {
+    if (touchedFields.servicios && formData.servicios.length > 0) {
+      const serviciosError = haySolapamientoServicios(formData.servicios) ?
+        'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.' : '';
+      setErrors(prev => ({
+        ...prev,
+        servicios: serviciosError
+      }));
     }
   }, [formData.servicios, touchedFields.servicios]);
 
@@ -515,6 +553,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
       // Mapear nombre de profesional a ID (usando datos mock por ahora)
       const mapProfesionalToId = (nombreProfesional) => {
+        if (!nombreProfesional) return 1; // Default if no professional selected
         const profesional = professionals.find(p => p.name === nombreProfesional);
         return profesional ? profesional.id : 1; // Default to 1 if not found
       };
@@ -524,23 +563,19 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         cita: {
           id_cliente: clientId,
           fecha_servicio: formData.fecha,
-          hora_entrada: formData.servicios.length > 0 ? formData.servicios[0].inicio + ':00' : '08:00:00',
-          hora_salida: formData.servicios.length > 0 ? formData.servicios[formData.servicios.length - 1].fin + ':00' : '09:00:00',
           estado: formData.estado,
-          valor_total: calcularResumen().total,
           ...(formData.notas && { motivo: formData.notas.trim() })
         },
         servicios: formData.servicios.map(s => ({
           id_servicio: s.servicioId,
           id_empleado: mapProfesionalToId(s.profesional),
           hora_inicio: s.inicio + ':00',
-          precio_unitario: s.precio,
           cantidad: s.cantidad || 1,
           ...(s.observaciones && { observaciones: s.observaciones })
         }))
       };
 
-      console.log('Datos de cita a enviar:', appointmentData);
+      console.log('Appointment data to send:', JSON.stringify(appointmentData, null, 2));
 
       let result;
       if (cita) {
@@ -693,7 +728,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               <input
                 type="text"
                 value={formData.cliente}
-                onChange={e => setFormData(prev => ({ ...prev, cliente: e.target.value }))}
+                onChange={e => handleFieldChange('cliente', e.target.value)}
                 onFocus={() => clearError('cliente')}
                 onBlur={() => handleFieldBlur('cliente')}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.cliente && errors.cliente ? 'border-red-500' : 'border-gray-300'}`}
@@ -708,7 +743,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                 value={formData.telefono}
                 onChange={e => {
                   const val = e.target.value.replace(/[^0-9]/g, '');
-                  setFormData(prev => ({ ...prev, telefono: val }));
+                  handleFieldChange('telefono', val);
                 }}
                 onFocus={() => clearError('telefono')}
                 onBlur={() => handleFieldBlur('telefono')}
@@ -723,7 +758,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               <input
                 type="date"
                 value={formData.fecha}
-                onChange={e => setFormData(prev => ({ ...prev, fecha: e.target.value }))}
+                onChange={e => handleFieldChange('fecha', e.target.value)}
                 onFocus={() => clearError('fecha')}
                 onBlur={() => handleFieldBlur('fecha')}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.fecha && errors.fecha ? 'border-red-500' : 'border-gray-300'}`}

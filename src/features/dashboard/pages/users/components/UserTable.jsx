@@ -1,9 +1,10 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import ChangeUserStatus from './ChangeUserStatus';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=64';
 
-const UserTable = ({ users, onView, onEdit, onDelete, loading }) => {
+const UserTable = ({ users, onView, onEdit, onDelete, onStatusChange, loading }) => {
   console.log('UserTable users:', users);
 
   if (loading) {
@@ -25,13 +26,14 @@ const UserTable = ({ users, onView, onEdit, onDelete, loading }) => {
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Correo</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Rol</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
+            <th className="py-2 px-3 text-left font-semibold text-gray-700">Concepto</th>
             <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
           {users.length === 0 ? (
             <tr>
-              <td colSpan="6" className="text-center py-8 text-gray-400">No hay usuarios</td>
+              <td colSpan="7" className="text-center py-8 text-gray-400">No hay usuarios</td>
             </tr>
           ) : (
             users.map(user => (
@@ -49,16 +51,22 @@ const UserTable = ({ users, onView, onEdit, onDelete, loading }) => {
                   {user.rol ? user.rol.nombre : 'Sin rol asignado'}
                 </td>
                 <td className="py-2 px-3">
-                  <span className={`text-xs font-semibold rounded-full px-2 py-1
-                    ${user.estado === 'Activo' ? 'bg-green-100 text-green-800' : ''}
-                    ${user.estado === 'Inactivo' ? 'bg-red-100 text-red-800' : ''}
-                    ${user.estado === 'Suspendido' ? 'bg-orange-100 text-orange-800' : ''}
-                    ${user.estado === 'Vacaciones' ? 'bg-blue-100 text-blue-800' : ''}
-                    ${user.estado === 'Enfermo' ? 'bg-purple-100 text-purple-800' : ''}
-                    ${user.estado === 'Incapacitado' ? 'bg-gray-100 text-gray-800' : ''}
-                    ${user.estado === 'Luto' ? 'bg-indigo-100 text-indigo-800' : ''}
-                    ${user.estado === 'Fallecido' ? 'bg-black text-white' : ''}
-                  `}>{user.estado}</span>
+                  <div className="flex items-center space-x-3">
+                    <ChangeUserStatus user={user} onStatusChange={onStatusChange} />
+                    <span className={`text-xs font-semibold rounded-full px-2 py-1
+                      ${user.estado === 'Activo' ? 'bg-green-100 text-green-800' : ''}
+                      ${user.estado === 'Inactivo' ? 'bg-red-100 text-red-800' : ''}
+                      ${user.estado === 'Suspendido' ? 'bg-orange-100 text-orange-800' : ''}
+                      ${user.estado === 'Vacaciones' ? 'bg-blue-100 text-blue-800' : ''}
+                      ${user.estado === 'Enfermo' ? 'bg-purple-100 text-purple-800' : ''}
+                      ${user.estado === 'Incapacitado' ? 'bg-gray-100 text-gray-800' : ''}
+                      ${user.estado === 'Luto' ? 'bg-indigo-100 text-indigo-800' : ''}
+                      ${user.estado === 'Fallecido' ? 'bg-black text-white' : ''}
+                    `}>{user.estado}</span>
+                  </div>
+                </td>
+                <td className="py-2 px-3 text-xs text-gray-600">
+                  {user.concepto_estado || '—'}
                 </td>
                 <td className="py-2 px-3 text-center flex gap-2 justify-center">
                   <button title="Ver" onClick={() => onView(user)} className="text-primary hover:text-primary-dark text-lg">
@@ -85,6 +93,7 @@ UserTable.propTypes = {
   onView: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  onStatusChange: PropTypes.func,
   loading: PropTypes.bool,
 };
 
