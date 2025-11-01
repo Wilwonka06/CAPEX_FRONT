@@ -74,6 +74,12 @@ const UserDetailModal = ({ onClose, user }) => {
                     <span className="text-xs text-gray-500">Estado</span>
                     <span className="font-semibold text-gray-800 text-sm">{user.estado}</span>
                   </div>
+                  {user.concepto_estado && (
+                    <div className="flex justify-between px-4 py-2">
+                      <span className="text-xs text-gray-500">Concepto de estado</span>
+                      <span className="font-semibold text-gray-800 text-sm">{user.concepto_estado}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
