@@ -56,27 +56,31 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView })
               </td>
               <td className="py-4 px-4 text-sm font-medium text-right">
                 <div className="flex justify-end space-x-2">
-                  <button 
+                  <button
                     className="h-8 w-8 p-0 flex items-center justify-center"
                     onClick={() => onView(category)}
                     title="Ver detalles"
                   >
                     <i className="bi bi-eye text-primary text-lg"></i>
                   </button>
-                  <button 
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onEdit(category)}
-                    title="Editar"
-                  >
-                    <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
-                  </button>
-                  <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onDelete(category.id_categoria_producto)}
-                    title="Eliminar"
-                  >
-                    <i className="bi bi-trash text-red-500 text-lg"></i>
-                  </button>
+                  {category.nombre !== 'Extensión natural' && (
+                    <>
+                      <button
+                        className="h-8 w-8 p-0 flex items-center justify-center"
+                        onClick={() => onEdit(category)}
+                        title="Editar"
+                      >
+                        <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
+                      </button>
+                      <button
+                        className="h-8 w-8 p-0 flex items-center justify-center"
+                        onClick={() => onDelete(category.id_categoria_producto)}
+                        title="Eliminar"
+                      >
+                        <i className="bi bi-trash text-red-500 text-lg"></i>
+                      </button>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>

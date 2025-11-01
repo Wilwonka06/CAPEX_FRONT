@@ -25,6 +25,9 @@ const CreateCategory = ({ onCreate, categories }) => {
     if (!name.trim()) {
       setNameError("El nombre es obligatorio");
       setIsNameValid(false);
+    } else if (name.trim().length < 5) {
+      setNameError("El nombre debe tener al menos 5 caracteres");
+      setIsNameValid(false);
     } else if (isDuplicateCategoryName(name, categories)) {
       setNameError("Ya existe una categoría con este nombre");
       setIsNameValid(false);
@@ -45,6 +48,10 @@ const CreateCategory = ({ onCreate, categories }) => {
       setNameError("El nombre es obligatorio");
       setIsNameValid(false);
       valid = false;
+    } else if (name.trim().length < 5) {
+      setNameError("El nombre debe tener al menos 5 caracteres");
+      setIsNameValid(false);
+      valid = false;
     }
     if (!isNameValid) valid = false;
     if (valid) {
@@ -56,9 +63,23 @@ const CreateCategory = ({ onCreate, categories }) => {
   };
 
   const handleNameChange = (e) => {
-    setName(e.target.value);
-    setNameError("");
-    setIsNameValid(true);
+    const value = e.target.value;
+    setName(value);
+
+    // Validación en tiempo real
+    if (!value.trim()) {
+      setNameError("El nombre es obligatorio");
+      setIsNameValid(false);
+    } else if (value.trim().length < 5) {
+      setNameError("El nombre debe tener al menos 5 caracteres");
+      setIsNameValid(false);
+    } else if (isDuplicateCategoryName(value, categories)) {
+      setNameError("Ya existe una categoría con este nombre");
+      setIsNameValid(false);
+    } else {
+      setNameError("");
+      setIsNameValid(true);
+    }
   };
 
   const handleDescriptionChange = (e) => {
@@ -77,7 +98,7 @@ const CreateCategory = ({ onCreate, categories }) => {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in max-h-[90vh] flex flex-col">
             {/* Header fijo */}
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">

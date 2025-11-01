@@ -30,7 +30,15 @@ const Catalogo = () => {
         const response = await productsService.getAll({ limit: 100 });
         if (response.success) {
           console.log('Productos cargados:', response.data);
-          setProducts(response.data || []);
+          // Filtrar productos de categorías activas
+          const activeProducts = (response.data || []).filter(product => {
+            // Si el producto tiene una categoría y está inactiva, no mostrarlo
+            if (product.categoriaObj && product.categoriaObj.estado === 'inactivo') {
+              return false;
+            }
+            return true;
+          });
+          setProducts(activeProducts);
         } else {
           setProductsError('Error al cargar productos');
         }
