@@ -51,12 +51,15 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   const cargarProgramaciones = async () => {
     try {
       setLoading(true);
+      console.log('[EditScheduling] 🔍 Cargando programaciones para empleadoId:', empleadoId);
       const progs = await getSchedulingsByUser(empleadoId);
-      console.log('[EditScheduling] Programaciones cargadas:', progs);
+      console.log('[EditScheduling] ✅ Programaciones cargadas:', progs);
       setProgramaciones(progs);
     } catch (error) {
-      console.error('[EditScheduling] Error cargando programaciones:', error);
-      toast.error('Error al cargar programaciones');
+      console.error('[EditScheduling] ❌ Error cargando programaciones:', error);
+      console.error('[EditScheduling] ❌ Error completo:', error.response || error);
+      toast.error('Error al cargar programaciones del empleado');
+      setProgramaciones([]); // Establecer array vacío en caso de error
     } finally {
       setLoading(false);
     }

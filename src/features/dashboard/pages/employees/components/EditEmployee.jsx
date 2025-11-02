@@ -27,14 +27,6 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
   });
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('empleado');
-  const [schedulings, setSchedulings] = useState(employee?.schedulings || []);
-  const [editingScheduling, setEditingScheduling] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3;
-
-  const totalPages = Math.ceil(schedulings.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const pageSchedulings = schedulings.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => {
     if (employee) {
@@ -53,17 +45,9 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
         direccion: employee.direccion || '',
         estado: employee.estado || 'Activo',
       });
-      setSchedulings(employee.schedulings || []);
       setErrors({});
     }
   }, [employee]);
-
-  useEffect(() => {
-    const newTotalPages = Math.ceil(schedulings.length / itemsPerPage);
-    if (currentPage > newTotalPages && newTotalPages > 0) {
-      setCurrentPage(newTotalPages);
-    }
-  }, [schedulings, currentPage, itemsPerPage]);
 
   const validate = () => {
     const newErrors = validateEmployeeEditForm(form, employees, employee);
@@ -158,36 +142,6 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
     if (onSave) {
       onSave(updatedEmployee);
     }
-  };
-
-  const handleEditScheduling = (prog) => {
-    setEditingScheduling(prog);
-  };
-
-  const handleSaveScheduling = (updatedProg) => {
-    const updatedSchedulings = schedulings.map(s =>
-      String(s.id) === String(updatedProg.id) ? updatedProg : s
-    );
-    setSchedulings(updatedSchedulings);
-    setEditingScheduling(null);
-    toast.success('Programación actualizada');
-  };
-
-  const handleDeleteScheduling = (id) => {
-    console.log('=== DEBUG ELIMINACIÓN ===');
-    console.log('ID a eliminar:', id);
-    console.log('Programaciones actuales:', schedulings);
-
-    if (window.confirm('¿Seguro que deseas eliminar esta programación?')) {
-      const updatedSchedulings = schedulings.filter(s => String(s.id) !== String(id));
-      console.log('Programaciones después de eliminar:', updatedSchedulings.length);
-      setSchedulings(updatedSchedulings);
-      toast.success('Programación eliminada');
-    }
-  };
-
-  const handleCancelEditScheduling = () => {
-    setEditingScheduling(null);
   };
 
   return (
@@ -371,77 +325,11 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
       )}
 
       {activeTab === 'programacion' && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-2 text-text-main">Programaciones</h3>
-
-          {editingScheduling ? (
-            <EditScheduling
-              editing={editingScheduling}
-              onSave={handleSaveScheduling}
-              onCancelEdit={handleCancelEditScheduling}
-            />
-          ) : schedulings.length > 0 ? (
-            <>
-              <ul className="list-disc pl-6">
-                {pageSchedulings.map((s, idx) => (
-                  <li key={s.id || idx} className="mb-2 flex items-center gap-4">
-                    <span>
-                      {s.fechaInicio} - {s.fechaFin} | {s.horaInicio} - {s.horaFin} | {s.repeticion} |
-                      Días: {s.dias && s.dias.length > 0 ? s.dias.join(', ') : '-'}
-                    </span>
-                    <button
-                      onClick={() => handleEditScheduling(s)}
-                      className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 transition text-xs"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDeleteScheduling(s.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition text-xs"
-                    >
-                      Eliminar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                  >
-                    <i className="bi bi-chevron-left"></i>
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="px-2 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                  >
-                    <i className="bi bi-chevron-right"></i>
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-text-main/60">No hay programaciones registradas.</p>
-          )}
-
-          <div className="flex justify-end mt-6">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
-            >
-              Cerrar
-            </button>
-          </div>
+        <div className="mt-4">
+          <EditScheduling
+            empleadoId={employee?.id}
+            onClose={onCancel}
+          />
         </div>
       )}
     </div>

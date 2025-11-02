@@ -25,6 +25,15 @@ const Scheduling = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // LOG TEMPORAL PARA DEBUG
+  useEffect(() => {
+    console.log("🔍 [Scheduling] Estado actual:");
+    console.log("  - employees:", employees);
+    console.log("  - employees.length:", employees.length);
+    console.log("  - schedulings:", schedulings);
+    console.log("  - schedulings.length:", schedulings.length);
+  }, [employees, schedulings]);
+
   // Cargar empleados y programaciones
   const loadData = async () => {
     setLoading(true);
@@ -176,7 +185,7 @@ const Scheduling = () => {
       // Convertir el formato del frontend al formato de la API (solo los 4 campos del modelo)
       const apiData = {
         id_usuario: parseInt(prog.id_usuario || prog.empleadoId),
-        fecha_inicio: prog.fecha || prog.fechaInicio,
+        fecha_inicio: prog.fecha || prog.fechaInicio || prog.fecha_inicio,
         hora_entrada: prog.hora_entrada || prog.horaInicio,
         hora_salida: prog.hora_salida || prog.horaFin,
       };
@@ -245,7 +254,9 @@ const Scheduling = () => {
             </div>
           </div>
           <div className="w-full">
-            {console.log("[DEBUG] Passing filteredEmployees to GeneralCalendar:", filteredEmployees)}
+            {console.log("[DEBUG] Passing to GeneralCalendar:")}
+            {console.log("  - filteredEmployees:", filteredEmployees)}
+            {console.log("  - schedulings:", schedulings)}
             <GeneralCalendar
               employees={filteredEmployees}
               schedulings={schedulings}

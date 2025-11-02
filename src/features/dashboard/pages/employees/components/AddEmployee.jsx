@@ -1,4 +1,4 @@
-// AddEmployee.jsx actualizado para NO expandir programaciones, solo guardar los datos seleccionados
+// AddEmployee.jsx - Corregido para guardar programaciones correctamente
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import AddScheduling from './AddScheduling';
@@ -63,7 +63,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
     
     // Validación para campos numéricos (documento y teléfono)
     if (name === 'documento' || name === 'telefono') {
-      // Solo permitir números, eliminar letras, espacios, signos (incluyendo 'e', '+', '-')
       const numericValue = value.replace(/[^\d]/g, '');
       setForm(prev => ({ ...prev, [name]: numericValue }));
     } else {
@@ -113,7 +112,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
     if (error) {
       setErrors(prev => ({ ...prev, [name]: error }));
     } else {
-      // Limpiar el error si no hay problema
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[name];
@@ -123,10 +121,12 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
   };
 
   const handleAddScheduling = (prog) => {
+    console.log('[AddEmployee] handleAddScheduling - prog recibido:', prog);
     const idBase = Date.now().toString();
     const nuevaProg = { ...prog, idBase };
     setSchedulings([...schedulings, nuevaProg]);
     setEditingScheduling(null);
+    console.log('[AddEmployee] Programación agregada al estado local');
   };
 
   const handleEditScheduling = (prog) => {
@@ -169,10 +169,15 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
         telefono: telefonoFormateado,
         correo: form.correo,
         direccion: form.direccion,
-        estado: form.estado
+        estado: form.estado,
+        schedulings: schedulings // ✅ AHORA SÍ INCLUYE LAS PROGRAMACIONES
       };
 
-      console.log("📤 DATOS A ENVIAR:", newEmployee);
+      console.log("📤 [AddEmployee] DATOS A ENVIAR:");
+      console.log("  - Empleado:", newEmployee);
+      console.log("  - Programaciones:", schedulings);
+      console.log("  - Total programaciones:", schedulings.length);
+
       onSave(newEmployee);
       setForm(initialForm);
       setErrors({});
@@ -327,6 +332,60 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
             <AddScheduling editing={editingScheduling} onAdd={handleSaveEditScheduling} onCancelEdit={handleCancelEditScheduling} />
           ) : (
             <AddScheduling onAdd={handleAddScheduling} />
+          )}
+
+          {schedulings.length > 0 && (
+            <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <h3 className="text-md font-semibold mb-3">Programaciones agregadas ({schedulings.length})</h3>
+              <ul className="space-y-2">
+                {pageSchedulings.map((s, idx) => (
+                  <li key={s.id || idx} className="flex items-center justify-between bg-white p-3 rounded border">
+                    <span className="text-sm">
+                      {s.fechaInicio} - {s.fechaFin} | {s.horaInicio} - {s.horaFin} | 
+                      Días: {s.dias && s.dias.length > 0 ? s.dias.join(', ') : '-'}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditScheduling(s)}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteScheduling(s.id)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    ‹
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="flex justify-end gap-2 mt-6">
