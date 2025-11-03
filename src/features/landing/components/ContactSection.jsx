@@ -6,13 +6,13 @@ const whatsappLink = 'https://wa.me/573215956758?text=Hola%20quiero%20más%20inf
 const mapsLink = 'https://goo.gl/maps/6Qw6Qw6Qw6Qw6Qw6A';
 
 const ContactSection = () => (
-  <section className="py-16 bg-[#1E1E1E]">
+  <section className="py-16 px-4 bg-[#1E1E1E]">
     <h2 className="text-3xl font-bold text-center mb-10 text-white font-montserrat">
       Contáctanos y <span className="text-[#FACC15]">visítanos</span>
     </h2>
     <div className="flex flex-col md:flex-row gap-10 max-w-5xl mx-auto items-center">
       {/* Columna de texto a la izquierda */}
-      <div className="flex-1 flex flex-col justify-center gap-8 bg-[#232323] rounded-2xl p-8 shadow-lg border border-[#FACC15] text-white">
+      <div className="flex-1 flex flex-col justify-center gap-8 bg-[#232323] rounded-2xl p-8 shadow-lg border text-white">
         {/* Dirección */}
         <div className="flex items-start gap-4">
           <FaMapMarkerAlt className="text-[#FACC15] text-2xl mt-1" />

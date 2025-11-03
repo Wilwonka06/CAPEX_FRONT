@@ -83,9 +83,6 @@ const BenefitsSection = () => (
           <button className="px-8 py-3 bg-[#FACC15] text-[#1E1E1E] font-bold rounded-full hover:bg-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-lg">
             Comienza Ahora
           </button>
-          <button className="px-8 py-3 border-2 border-[#FACC15] text-[#FACC15] font-semibold rounded-full hover:bg-[#FACC15] hover:text-[#1E1E1E] transition-all duration-300">
-            Más Información
-          </button>
         </div>
       </div>
     </div>

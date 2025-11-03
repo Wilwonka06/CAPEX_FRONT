@@ -120,7 +120,7 @@ const Navbar = () => {
                     <div className="hidden md:flex items-center space-x-4" ref={profileRef}>
                         {/* Cart */}
                         <Link to="/landing/cart" className="relative p-2 rounded-full hover:bg-gray-100 transition-all duration-300 group">
-                            <img src={cartIcon} alt="Carrito" className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
+                            <img src={cartIcon} alt="Carrito" className="w-6 h-6 min-w-[24px] min-h-[24px] transition-transform duration-300 group-hover:scale-110" />
                             {cart.length > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-[#FACC15] text-[#1E1E1E] text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 shadow-lg">
                                     {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}
@@ -218,7 +218,7 @@ const Navbar = () => {
                                     onClick={() => setIsMobileMenuOpen(false)}
                                 >
                                     <div className="relative">
-                                        <img src={cartIcon} alt="Carrito" className="w-6 h-6" />
+                                        <img src={cartIcon} alt="Carrito" className="w-6 h-6 min-w-[24px] min-h-[24px]" />
                                         {cart.length > 0 && (
                                             <span className="absolute -top-1 -right-1 bg-[#FACC15] text-[#1E1E1E] text-xs font-bold rounded-full min-w-[18px] h-4 flex items-center justify-center">
                                                 {cart.reduce((sum, item) => sum + (item.cantidad || 1), 0)}

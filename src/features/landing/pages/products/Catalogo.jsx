@@ -7,6 +7,7 @@ import cartIcon from '../../../../shared/images/cart.png';
 import { useCartToast } from '../../components/CartToastContext';
 import { useCart } from '../../components/CartContext';
 import { formatNumber } from '../../../../shared/utils/formatters';
+import Footer from '../../../../shared/components/Footer';
 
 const Catalogo = () => {
   // Estados para productos
@@ -570,57 +571,7 @@ const Catalogo = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-[#1E1E1E] text-white py-12 mt-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <h3 className="text-2xl font-bold text-[#FACC15] mb-4 font-montserrat">CAPEX</h3>
-              <p className="text-white/80 mb-4 font-lato">
-                Tu destino para productos de belleza premium y servicios profesionales.
-                Transformamos tu imagen con calidad y pasión.
-              </p>
-              <div className="flex space-x-4">
-                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
-                  <i className="bi bi-facebook text-xl"></i>
-                </a>
-                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
-                  <i className="bi bi-instagram text-xl"></i>
-                </a>
-                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
-                  <i className="bi bi-whatsapp text-xl"></i>
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 text-white">Enlaces Rápidos</h4>
-              <ul className="space-y-2 text-white/80">
-                <li><a href="/landing" className="hover:text-[#FACC15] transition-colors">Inicio</a></li>
-                <li><a href="/landing/catalogo" className="hover:text-[#FACC15] transition-colors">Productos</a></li>
-                <li><a href="/landing/servicios" className="hover:text-[#FACC15] transition-colors">Servicios</a></li>
-                <li><a href="/landing" className="hover:text-[#FACC15] transition-colors">Sobre Nosotros</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 text-white">Atención al Cliente</h4>
-              <ul className="space-y-2 text-white/80">
-                <li>📞 321 5956758</li>
-                <li>📧 info@capex.com</li>
-                <li>📍 Medellín, Colombia</li>
-                <li>🕒 Lun-Sáb: 9:30-18:40</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 mt-8 pt-8 text-center">
-            <p className="text-white/60 text-sm">
-              © 2025 CAPEX. Todos los derechos reservados. |
-              <span className="text-[#FACC15]"> Hecho con ❤️ para tu belleza</span>
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../components/CartContext';
 import ordersService from '../../pages/orders/API/OrdersService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
+import OrderProgressIndicator from './components/OrderProgressIndicator';
 
 const empresasEnvio = [
   { nombre: 'INTER rapidísimo', precio: { 'Bogotá': 13500, 'Medellín': 15000, 'default': 18000 } },
@@ -15,7 +16,7 @@ const Checkout = () => {
   const { cart, clearCart } = useCart();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const user = currentUser; // Usar currentUser en lugar de user
+  const user = currentUser;
 
   const [form, setForm] = useState({
     documentType: 'CC',
@@ -28,25 +29,26 @@ const Checkout = () => {
   const [envio, setEnvio] = useState('CO-ORDINADORA');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   // Autocompletar con datos del usuario autenticado
   useEffect(() => {
     if (user) {
-      console.log('Usuario en checkout:', user); // Debug
+      console.log('Usuario en checkout:', user);
       setForm(f => ({
         ...f,
         documentType: user.tipo_documento || 'CC',
         documento: user.numero_documento || user.documento || '',
         nombre: user.nombre || '',
-        apellidos: user.apellido || '', // Agregué apellido
+        apellidos: user.apellido || '',
         telefono: user.telefono || '',
         email: user.correo || '',
         direccion: user.direccion || '',
-        ciudad: '', // No está en el modelo básico
+        ciudad: '',
         pais: 'Colombia',
       }));
     } else {
-      console.log('No hay usuario en checkout'); // Debug
+      console.log('No hay usuario en checkout');
     }
   }, [user]);
 
@@ -60,56 +62,85 @@ const Checkout = () => {
   const subtotal = cart.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
   const total = subtotal + precioEnvio;
 
-  // Guardar pedido y redirigir
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!user) {
+  
+    // ✅ Validación mejorada del usuario
+    if (!user || !user.id_usuario) {
       setError('Debes iniciar sesión para realizar un pedido.');
+      console.error('❌ Usuario no autenticado o sin ID:', user);
       return;
     }
-
+  
     if (!form.direccion || !form.ciudad) {
       setError('Por favor completa todos los campos obligatorios.');
       return;
     }
-
+  
     if (cart.length === 0) {
       setError('El carrito está vacío.');
       return;
     }
-
+  
     setLoading(true);
     setError('');
-
+    setCurrentStep(1);
+  
     try {
-      // Crear pedido en el backend
+      // Paso 1: Validando datos
+      setCurrentStep(1);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      // Paso 2: Creando pedido
+      setCurrentStep(2);
+      
       const orderData = {
         id_usuario: user.id_usuario,
         fecha: new Date().toISOString().split('T')[0],
+        pais: form.pais,
+        ciudad: form.ciudad,
+        direccion_entrega: form.direccion,
+        apto: form.apto,
         productos: cart.map(p => ({
-          id: p.id,
+          id_producto: p.id,
           cantidad: p.cantidad,
           precio_unitario: p.precio
         }))
       };
-
+  
+      console.log('📦 Datos del pedido:', orderData);
+  
       const response = await ordersService.create(orderData);
-
+  
+      // Paso 3: Procesando pago
+      setCurrentStep(3);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
       if (response.success) {
+        setCurrentStep(4);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         clearCart();
-        navigate('/landing/gracias');
+        
+        // ✅ Pasar el pedido creado a través del state de navegación
+        navigate('/landing/gracias', {
+          state: {
+            order: response.data,
+            justCreated: true
+          }
+        });
       } else {
         throw new Error(response.message || 'Error al crear el pedido');
       }
     } catch (error) {
-      console.error('Error creating order:', error);
+      console.error('❌ Error creating order:', error);
       setError(error.message || 'Error al procesar el pedido. Inténtalo de nuevo.');
+      setCurrentStep(1);
     } finally {
       setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 py-10 px-2 flex flex-col items-center">
       <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8">
@@ -230,7 +261,15 @@ const Checkout = () => {
               </label>
             ))}
           </div>
+          
           {error && <div className="text-red-600 mb-4">{error}</div>}
+          
+          {loading && (
+            <div className="mb-6">
+              <OrderProgressIndicator currentStep={currentStep} />
+            </div>
+          )}
+          
           <button
             type="submit"
             disabled={loading}
@@ -239,6 +278,7 @@ const Checkout = () => {
             {loading ? 'Procesando pedido...' : 'Continuar con el pago'}
           </button>
         </form>
+        
         {/* Resumen */}
         <div className="w-full md:w-80 bg-white rounded-2xl shadow-lg p-6 h-fit">
           <h2 className="text-lg font-bold mb-4 text-[#1E1E1E]">Monto a pagar</h2>
@@ -269,4 +309,4 @@ const Checkout = () => {
   );
 };
 
-export default Checkout; 
+export default Checkout;
