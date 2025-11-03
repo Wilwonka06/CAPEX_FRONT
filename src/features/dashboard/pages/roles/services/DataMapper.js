@@ -1,25 +1,24 @@
 // src/features/dashboard/pages/roles/services/DataMapper.js
 
 class DataMapper {
-  // ✅ MAPEO CORRECTO: IDs del backend según initRoles.js
+  // ✅ CORREGIDO: Nombres consistentes con el backend
   static BACKEND_MODULE_IDS = {
     'Gestión de Compras': 1,
     'Gestión de Servicios': 2,
-    'Ventas': 3,
-    'Dashboard': 5,  // ⚠️ Nota: Dashboard es ID 5, no 4
-    'Gestión de Usuarios': 4
+    'Gestión de Ventas': 3,  // ⚠️ Ventas, no "Gestión de Ventas"
+    'Gestión de Usuarios': 4,
+    'Dashboard': 5
   };
 
-  // ✅ MAPEO INVERSO: De ID a nombre
+  // ✅ CORREGIDO: Mapeo inverso consistente
   static BACKEND_MODULE_NAMES = {
     1: 'Gestión de Compras',
     2: 'Gestión de Servicios',
-    3: 'Ventas',
+    3: 'Gestión de Ventas',  // ⚠️ Ventas, no "Gestión de Ventas"
     4: 'Gestión de Usuarios',
     5: 'Dashboard'
   };
 
-  // ✅ Mapeo de IDs de privilegios (acciones)
   static PRIVILEGE_IDS = {
     'Create': 1,
     'Read': 2,
@@ -27,7 +26,6 @@ class DataMapper {
     'Delete': 4
   };
 
-  // ✅ Mapeo inverso de privilegios
   static PRIVILEGE_NAMES = {
     1: 'Create',
     2: 'Read',
@@ -36,7 +34,38 @@ class DataMapper {
   };
 
   /**
-   * ✅ MEJORADO: Mapear permisos del backend al formato del frontend
+   * ✅ CORREGIDO: Normalizar nombre de módulo para manejar inconsistencias
+   */
+  static normalizeModuleName(moduleName) {
+    if (!moduleName) return null;
+    
+    // Mapeo de nombres alternativos
+    const alternativeNames = {
+      'Gestión de Ventas': 'Ventas',
+      'ventas': 'Ventas',
+      'gestion de ventas': 'Ventas'
+    };
+    
+    // Convertir a lowercase para comparación
+    const lowerName = moduleName.toLowerCase();
+    
+    // Si existe un mapeo alternativo, usarlo
+    if (alternativeNames[lowerName]) {
+      return alternativeNames[lowerName];
+    }
+    
+    // Buscar en BACKEND_MODULE_IDS (sin importar mayúsculas)
+    for (const [key] of Object.entries(this.BACKEND_MODULE_IDS)) {
+      if (key.toLowerCase() === lowerName) {
+        return key;
+      }
+    }
+    
+    return moduleName; // Retornar original si no hay mapeo
+  }
+
+  /**
+   * ✅ CORREGIDO: Mapear permisos del backend al formato del frontend
    */
   static mapPermissionsFromBackend(backendPermissions, separatePrivileges = []) {
     const frontendPermissions = {};
@@ -48,42 +77,66 @@ class DataMapper {
       return frontendPermissions;
     }
     
-    // Caso 1: Permisos con privilegios anidados (formato anterior)
+    // Inicializar TODOS los módulos conocidos con privilegios en false
+    Object.values(this.BACKEND_MODULE_NAMES).forEach(moduleName => {
+      frontendPermissions[moduleName] = {
+        Create: false,
+        Read: false,
+        Edit: false,
+        Delete: false
+      };
+    });
+    
+    // Caso 1: Permisos con privilegios anidados
     if (backendPermissions[0] && backendPermissions[0].privilegios) {
       console.log('📋 Formato con privilegios anidados');
       
       backendPermissions.forEach(permiso => {
-        const modulo = permiso.nombre;
-        frontendPermissions[modulo] = {};
+        const normalizedModulo = this.normalizeModuleName(permiso.nombre);
+        
+        // ✅ Validar que el módulo existe antes de acceder
+        if (!frontendPermissions[normalizedModulo]) {
+          console.warn(`⚠️ Módulo desconocido: "${permiso.nombre}" (normalizado: "${normalizedModulo}")`);
+          // Inicializar el módulo si no existe
+          frontendPermissions[normalizedModulo] = {
+            Create: false,
+            Read: false,
+            Edit: false,
+            Delete: false
+          };
+        }
         
         if (Array.isArray(permiso.privilegios)) {
           permiso.privilegios.forEach(privilegio => {
-            frontendPermissions[modulo][privilegio.nombre] = true;
+            frontendPermissions[normalizedModulo][privilegio.nombre] = true;
           });
         }
       });
     } 
-    // Caso 2: Permisos y privilegios separados (formato actual)
+    // Caso 2: Permisos y privilegios separados
     else if (Array.isArray(separatePrivileges) && separatePrivileges.length > 0) {
       console.log('📋 Formato con privilegios separados');
       
-      // Inicializar todos los módulos con privilegios en false
-      Object.values(this.BACKEND_MODULE_NAMES).forEach(moduleName => {
-        frontendPermissions[moduleName] = {
-          Create: false,
-          Read: false,
-          Edit: false,
-          Delete: false
-        };
-      });
-      
-      // Activar solo los módulos que tienen permisos
       backendPermissions.forEach(permiso => {
-        const modulo = permiso.nombre;
+        const normalizedModulo = this.normalizeModuleName(permiso.nombre);
         
-        // Solo activar los privilegios que existen en separatePrivileges
+        // ✅ Validar que el módulo existe antes de acceder
+        if (!frontendPermissions[normalizedModulo]) {
+          console.warn(`⚠️ Módulo desconocido: "${permiso.nombre}" (normalizado: "${normalizedModulo}")`);
+          // Inicializar el módulo si no existe
+          frontendPermissions[normalizedModulo] = {
+            Create: false,
+            Read: false,
+            Edit: false,
+            Delete: false
+          };
+        }
+        
+        // Activar solo los privilegios que existen en separatePrivileges
         separatePrivileges.forEach(privilegio => {
-          frontendPermissions[modulo][privilegio.nombre] = true;
+          if (frontendPermissions[normalizedModulo]) {
+            frontendPermissions[normalizedModulo][privilegio.nombre] = true;
+          }
         });
       });
     }
@@ -92,13 +145,18 @@ class DataMapper {
       console.log('📋 Formato solo permisos (sin privilegios activos)');
       
       backendPermissions.forEach(permiso => {
-        const modulo = permiso.nombre;
-        frontendPermissions[modulo] = {
-          Create: false,
-          Read: false,
-          Edit: false,
-          Delete: false
-        };
+        const normalizedModulo = this.normalizeModuleName(permiso.nombre);
+        
+        // ✅ Validar que el módulo existe
+        if (!frontendPermissions[normalizedModulo]) {
+          console.warn(`⚠️ Módulo desconocido: "${permiso.nombre}" (normalizado: "${normalizedModulo}")`);
+          frontendPermissions[normalizedModulo] = {
+            Create: false,
+            Read: false,
+            Edit: false,
+            Delete: false
+          };
+        }
       });
     }
     
@@ -107,7 +165,7 @@ class DataMapper {
   }
 
   /**
-   * ✅ MEJORADO: Mapear rol del backend al formato del frontend
+   * ✅ Mapear rol del backend al formato del frontend
    */
   static mapRoleFromBackend(role) {
     if (!role) return null;
@@ -129,7 +187,7 @@ class DataMapper {
   }
 
   /**
-   * ✅ MEJORADO: Mapear array de roles del backend al formato del frontend
+   * ✅ Mapear array de roles del backend al formato del frontend
    */
   static mapRolesFromBackend(roles) {
     if (!Array.isArray(roles)) return [];
@@ -138,7 +196,7 @@ class DataMapper {
   }
 
   /**
-   * ✅ SIMPLIFICADO: Mapear datos del frontend al formato del backend
+   * ✅ Mapear datos del frontend al formato del backend
    */
   static mapRoleToBackend(roleData) {
     const descripcion = (roleData.description || roleData.descripcion || '').trim();
@@ -172,13 +230,16 @@ class DataMapper {
       const permisos = frontendPrivileges[modulo];
       const privilegios = [];
 
-      // Solo procesar módulos que existen en el mapeo
-      if (!this.BACKEND_MODULE_IDS[modulo]) {
-        console.warn(`⚠️ Módulo "${modulo}" no encontrado en mapeo`);
+      // Normalizar nombre del módulo
+      const normalizedModulo = this.normalizeModuleName(modulo);
+
+      // ✅ Solo procesar módulos que existen en el mapeo
+      if (!this.BACKEND_MODULE_IDS[normalizedModulo]) {
+        console.warn(`⚠️ Módulo "${modulo}" (normalizado: "${normalizedModulo}") no encontrado en mapeo`);
         return;
       }
 
-      console.log(`📋 Procesando módulo ${modulo}:`, permisos);
+      console.log(`📋 Procesando módulo ${normalizedModulo}:`, permisos);
 
       // Recolectar privilegios activos
       if (permisos && typeof permisos === 'object') {
@@ -193,15 +254,15 @@ class DataMapper {
         });
       }
 
-      // ✅ IMPORTANTE: Solo incluir el módulo si tiene al menos un privilegio activo
+      // ✅ Solo incluir el módulo si tiene al menos un privilegio activo
       if (privilegios.length > 0) {
         backendFormat.push({
-          id_permiso: this.BACKEND_MODULE_IDS[modulo],
-          nombre: modulo,
+          id_permiso: this.BACKEND_MODULE_IDS[normalizedModulo],
+          nombre: normalizedModulo,
           privilegios: privilegios
         });
       } else {
-        console.log(`⚠️ Módulo ${modulo} no tiene privilegios activos, se omite`);
+        console.log(`⚠️ Módulo ${normalizedModulo} no tiene privilegios activos, se omite`);
       }
     });
 
@@ -210,7 +271,7 @@ class DataMapper {
   }
 
   /**
-   * ✅ NUEVO: Validar estructura de privilegios
+   * ✅ Validar estructura de privilegios
    */
   static validatePrivileges(privileges) {
     const errors = [];
@@ -223,7 +284,9 @@ class DataMapper {
     let hasAnyPrivilege = false;
 
     Object.keys(privileges).forEach(modulo => {
-      if (!this.BACKEND_MODULE_IDS[modulo]) {
+      const normalizedModulo = this.normalizeModuleName(modulo);
+      
+      if (!this.BACKEND_MODULE_IDS[normalizedModulo]) {
         errors.push(`Módulo "${modulo}" no es válido`);
         return;
       }

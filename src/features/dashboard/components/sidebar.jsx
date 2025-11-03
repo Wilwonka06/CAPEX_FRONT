@@ -6,9 +6,8 @@ import logo from '../../../shared/images/Logo.png';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  // Inicializa expandedGroups vacío y actualízalo en useEffect
   const [expandedGroups, setExpandedGroups] = useState({});
-  const [loadingData] = useState(false); // Añadido para evitar error
+  const [loadingData] = useState(false);
   const location = useLocation();
 
   // Función para verificar si el usuario tiene permisos para un módulo
@@ -18,20 +17,18 @@ const Sidebar = () => {
       if (module === 'Dashboard') return true; 
       return false;
     }
-    // Verificar si el módulo existe y si la acción específica es true
     return user.privileges[module] && user.privileges[module][action];
   };
 
-  // Función para filtrar los menús según los permisos del usuario
+  // ✅ CORREGIDO: Usuarios ahora está en Configuración
   const getFilteredMenuGroups = () => {
-    // Define TODOS los grupos y sus ítems con su 'module' asociado
     const allMenuGroups = [
       {
         id: 'main',
         name: 'Dashboard',
         icon: 'bi-speedometer2',
-        path: '/dashboard', // Asegura la consistencia con las rutas de Dashboard
-        module: 'Dashboard' // Módulo asociado para permisos
+        path: '/dashboard',
+        module: 'Dashboard'
       },
       {
         id: 'config',
@@ -40,15 +37,7 @@ const Sidebar = () => {
         module: 'Gestión de Usuarios',
         items: [
           { name: 'Roles', icon: 'bi-shield', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
-        ]
-      },
-      {
-        id: 'users',
-        title: 'Gestión de Usuarios',
-        icon: 'bi-people-fill',
-        module: 'Gestión de Usuarios',
-        items: [
-          { name: 'Usuarios', icon: 'bi-person', path: '/dashboard/usuarios', module: 'Gestión de Usuarios' },
+          { name: 'Usuarios', icon: 'bi-person', path: '/dashboard/usuarios', module: 'Gestión de Usuarios' }
         ]
       },
       {
@@ -90,20 +79,15 @@ const Sidebar = () => {
       }
     ];
 
-    // Filtrar grupos y sus ítems si el usuario no tiene privilegios de Admin
     return allMenuGroups.filter(group => {
-      // Si el grupo es Dashboard, siempre es visible
       if (group.id === 'main') return true;
 
-      // Si el grupo tiene sub-items, verificar si al menos uno de sus items tiene permisos
       if (group.items) {
         const hasAnyItemPermission = group.items.some(item => hasPermission(item.module, 'Visualizar'));
         return hasAnyItemPermission;
       }
-      // Si es un grupo sin sub-items (como Dashboard, pero ya lo manejamos), verificar permisos directos
       return hasPermission(group.module, 'Visualizar');
     }).map(group => {
-      // Si el grupo tiene items, filtrar solo los que tienen permisos de Visualizar
       if (group.items) {
         return {
           ...group,
@@ -114,10 +98,8 @@ const Sidebar = () => {
     });
   };
 
-  // Usar memoización o useCallback si getFilteredMenuGroups es costoso
-  const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, localStorage.getItem('currentUser')]); // Re-calcular si la ubicación o el usuario cambian
+  const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, localStorage.getItem('currentUser')]);
 
-  // useEffect para abrir el grupo correspondiente a la ruta actual al montar o cuando cambian location o menuGroups
   useEffect(() => {
     const expanded = {};
     menuGroups.forEach(group => {
@@ -126,16 +108,11 @@ const Sidebar = () => {
       }
     });
     setExpandedGroups(expanded);
-    // eslint-disable-next-line
   }, [location.pathname, menuGroups.length]);
 
-  // Elimina onMouseEnter y onMouseLeave del contenedor principal
-  // Elimina las funciones handleMouseEnter y handleMouseLeave (ya no se usan)
-
-  // Función para encontrar el ID del grupo padre de una ruta
   const getGroupIdByPath = (pathname) => {
     for (const group of menuGroups) {
-      if (group.path === pathname) return group.id; // Si es un link directo
+      if (group.path === pathname) return group.id;
       if (group.items) {
         for (const item of group.items) {
           if (item.path === pathname) return group.id;
@@ -145,15 +122,13 @@ const Sidebar = () => {
     return null;
   };
 
-  // Efecto para expandir el grupo de la ruta actual al cargar o cambiar de ruta
   useEffect(() => {
     const currentGroup = getGroupIdByPath(location.pathname);
     if (currentGroup && isExpanded) {
       setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
     }
-  }, [location.pathname, isExpanded]); // Depende de location, isExpanded
+  }, [location.pathname, isExpanded]);
 
-  // Función para toggle (abrir/cerrar) un grupo específico
   const toggleGroup = (groupId) => {
     setExpandedGroups(prev => ({
       ...prev,
@@ -161,12 +136,8 @@ const Sidebar = () => {
     }));
   };
 
-
   const isActiveRoute = (path) => {
-    // Ajustar para que si la ruta es '/' y el sidebar no está expandido/bloqueado, no se marque
-    // Esto es para que el icono del dashboard no se vea "activo" cuando el sidebar está minimizado
-    // y no hay una ruta activa específica dentro de él.
-    if (path === '/dashboard' && location.pathname === '/') return true; // Dashboard es el index del layout
+    if (path === '/dashboard' && location.pathname === '/') return true;
     return location.pathname === path;
   };
 
@@ -185,13 +156,11 @@ const Sidebar = () => {
               <img src={logo} alt="Logo" className=" w-29 h-29 object-contain" />
             </span>
           ) : (
-            // Logo circular para el estado colapsado
             <span className=" w-10 h-10 flex items-center justify-center">
               <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
             </span>
           )}
         </div>
-        {/* En el header, elimina el botón de candado y deja solo el botón de flechas */}
         <button
           onClick={() => setIsExpanded(prev => !prev)}
           className="p-1 rounded transition-colors text-background/80 hover:text-background focus:outline-none"
@@ -214,14 +183,13 @@ const Sidebar = () => {
         ) : (
           menuGroups.map((group) => (
             <div key={group.id} className="mb-2">
-              {/* Group Header o Link directo */}
               {group.items ? (
                 <div
                   className={`flex items-center px-4 py-3 cursor-pointer transition-colors rounded-lg relative ${
                     (isExpanded) ? 'justify-between' : 'justify-center'
                   } ${
                     expandedGroups[group.id]
-                      ? 'bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm' // Grupo expandido
+                      ? 'bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm'
                       : 'text-background/80 hover:bg-background/10 hover:text-background'
                   }`}
                   onClick={() => (isExpanded) && toggleGroup(group.id)}
@@ -259,7 +227,6 @@ const Sidebar = () => {
                 </Link>
               )}
 
-              {/* Group Items - Solo mostrar si el sidebar está expandido o bloqueado */}
               {(group.items && (isExpanded)) && (
                 <div
                   className={`ml-4 overflow-hidden transition-all duration-500 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
@@ -272,7 +239,7 @@ const Sidebar = () => {
                         to={item.path}
                         className={`flex items-center px-4 py-3 cursor-pointer transition-colors no-underline relative ${
                           isActiveRoute(item.path)
-                            ? 'text-yellow-500 bg-background/17 font-semibold rounded-lg shadow' // Amarillo fuerte y arqueado
+                            ? 'text-yellow-500 bg-background/17 font-semibold rounded-lg shadow'
                             : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                         }`}
                         title={item.name}
@@ -290,7 +257,6 @@ const Sidebar = () => {
           ))
         )}
       </nav>
-      {/* Botón de cerrar solo cuando está expandido */}
       {isExpanded && (
         <div className="p-2 ">
           <button
