@@ -1,12 +1,10 @@
 import React from "react";
-
-// Módulos que coinciden con el backend
 const MODULES = [
-  "Compras",
-  "Servicios", 
-  "Venta",
-  "Configuración",
-  "Usuarios"
+  "Gestión de Compras",
+  "Gestión de Servicios", 
+  "Ventas",
+  "Dashboard",
+  "Gestión de Usuarios"
 ];
 
 // Acciones que coinciden con el backend

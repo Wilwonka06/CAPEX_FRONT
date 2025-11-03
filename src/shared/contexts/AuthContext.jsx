@@ -27,69 +27,46 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
     }
   };
 
-  // Función para verificar si el usuario tiene privilegios específicos
-  const hasPrivilege = (module, action) => {
-    if (!currentUser) {
-      console.warn('No hay usuario autenticado');
-      return false;
-    }
+const hasPrivilege = (module, action) => {
+  if (!currentUser) {
+    console.warn('No hay usuario autenticado');
+    return false;
+  }
 
-    // Obtener nombre del rol (puede venir como string o objeto)
-    const roleName = typeof currentUser.rol === 'string'
-      ? currentUser.rol
-      : currentUser.rol?.nombre || '';
+  // Obtener nombre del rol (puede venir como string o objeto)
+  const roleName = typeof currentUser.rol === 'string'
+    ? currentUser.rol
+    : currentUser.rol?.nombre || '';
 
-    // Si el usuario es Administrador, tiene todos los privilegios
-    const isAdmin = roleName.toLowerCase() === 'administrador';
+  // Si el usuario es Administrador, tiene todos los privilegios
+  const isAdmin = roleName.toLowerCase() === 'administrador';
 
-    if (isAdmin) {
-      console.log('✅ Usuario es Administrador, tiene todos los privilegios');
-      return true;
-    }
+  if (isAdmin) {
+    console.log('✅ Usuario es Administrador, tiene todos los privilegios');
+    return true;
+  }
 
-    // Verificar si existen privilegios
-    if (!currentUser.privileges) {
-      console.warn('⚠️ Usuario no tiene privilegios definidos:', currentUser);
-      return false;
-    }
+  // Verificar si existen privilegios
+  if (!currentUser.privileges) {
+    console.warn('⚠️ Usuario no tiene privilegios definidos:', currentUser);
+    return false;
+  }
 
-    // Mapeo directo: módulo del frontend -> permiso del backend
-    const moduleToPermissionMap = {
-      'Dashboard': 'Dashboard',
-      'Gestión de Usuarios': 'Gestión de Usuarios',
-      'Gestión de Compras': 'Gestión de Compras',
-      'Gestión de Servicios': 'Gestión de Servicios',
-      'Ventas': 'Ventas'
-    };
+  const backendPermission = module;
 
-    // Obtener el permiso correspondiente al módulo solicitado
-    const backendPermission = moduleToPermissionMap[module] || module;
+  // Verificar si el módulo existe en los privilegios del usuario
+  const modulePrivileges = currentUser.privileges?.[backendPermission];
+  if (!modulePrivileges) {
+    console.warn(`⚠️ Módulo "${backendPermission}" no encontrado en privilegios del usuario`);
+    console.log('📋 Privilegios disponibles:', Object.keys(currentUser.privileges || {}));
+    return false;
+  }
 
-    // DEBUG: Log detallado para troubleshooting (comentado para producción)
-    // console.log('🔍 DEBUG hasPrivilege:', {
-    //   module,
-    //   action,
-    //   backendPermission,
-    //   userRole: roleName,
-    //   isAdmin,
-    //   userPrivileges: currentUser.privileges,
-    //   availablePermissions: Object.keys(currentUser.privileges || {}),
-    //   privilegeExists: currentUser.privileges?.[backendPermission]?.[action]
-    // });
-
-    // Verificar si el módulo existe en los privilegios del usuario
-    const modulePrivileges = currentUser.privileges?.[backendPermission];
-    if (!modulePrivileges) {
-      console.warn(`⚠️ Módulo "${backendPermission}" (mapeado desde "${module}") no encontrado en privilegios del usuario`);
-      return false;
-    }
-
-    // Verificar si tiene la acción específica
-    const hasPrivilege = modulePrivileges[action] === true;
-    console.log(`🔍 Verificando privilegio: ${module} -> ${backendPermission} -> ${action} = ${hasPrivilege}`);
-    return hasPrivilege;
-  };
-
+  // Verificar si tiene la acción específica
+  const hasPrivilege = modulePrivileges[action] === true;
+  console.log(`🔍 Verificando privilegio: ${module} -> ${action} = ${hasPrivilege}`);
+  return hasPrivilege;
+};
   // Función para obtener la ruta de redirección basada en el rol
   const getRoleRedirect = (role) => {
     // Normalizar el nombre del rol
