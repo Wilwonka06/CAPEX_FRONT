@@ -12,7 +12,7 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => { // eslint-disable-line react/prop-types
+export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,49 +27,51 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
     }
   };
 
-const hasPrivilege = (module, action) => {
-  if (!currentUser) {
-    console.warn('No hay usuario autenticado');
-    return false;
-  }
+  /**
+   * ✅ CORREGIDO: Verificar privilegios con nombres correctos
+   */
+  const hasPrivilege = (module, action) => {
+    if (!currentUser) {
+      console.warn('No hay usuario autenticado');
+      return false;
+    }
 
-  // Obtener nombre del rol (puede venir como string o objeto)
-  const roleName = typeof currentUser.rol === 'string'
-    ? currentUser.rol
-    : currentUser.rol?.nombre || '';
+    // Obtener nombre del rol
+    const roleName = typeof currentUser.rol === 'string'
+      ? currentUser.rol
+      : currentUser.rol?.nombre || '';
 
-  // Si el usuario es Administrador, tiene todos los privilegios
-  const isAdmin = roleName.toLowerCase() === 'administrador';
+    // Si el usuario es Administrador, tiene todos los privilegios
+    const isAdmin = roleName.toLowerCase() === 'administrador';
 
-  if (isAdmin) {
-    console.log('✅ Usuario es Administrador, tiene todos los privilegios');
-    return true;
-  }
+    if (isAdmin) {
+      console.log('✅ Usuario es Administrador, tiene todos los privilegios');
+      return true;
+    }
 
-  // Verificar si existen privilegios
-  if (!currentUser.privileges) {
-    console.warn('⚠️ Usuario no tiene privilegios definidos:', currentUser);
-    return false;
-  }
+    // Verificar si existen privilegios
+    if (!currentUser.privileges) {
+      console.warn('⚠️ Usuario no tiene privilegios definidos:', currentUser);
+      return false;
+    }
 
-  const backendPermission = module;
+    // ✅ USAR EL NOMBRE DEL MÓDULO DIRECTAMENTE
+    const modulePrivileges = currentUser.privileges?.[module];
+    
+    if (!modulePrivileges) {
+      console.warn(`⚠️ Módulo "${module}" no encontrado en privilegios del usuario`);
+      console.log('📋 Privilegios disponibles:', Object.keys(currentUser.privileges || {}));
+      return false;
+    }
 
-  // Verificar si el módulo existe en los privilegios del usuario
-  const modulePrivileges = currentUser.privileges?.[backendPermission];
-  if (!modulePrivileges) {
-    console.warn(`⚠️ Módulo "${backendPermission}" no encontrado en privilegios del usuario`);
-    console.log('📋 Privilegios disponibles:', Object.keys(currentUser.privileges || {}));
-    return false;
-  }
+    // Verificar si tiene la acción específica
+    const hasPrivilege = modulePrivileges[action] === true;
+    console.log(`🔍 Verificando privilegio: ${module} -> ${action} = ${hasPrivilege}`);
+    return hasPrivilege;
+  };
 
-  // Verificar si tiene la acción específica
-  const hasPrivilege = modulePrivileges[action] === true;
-  console.log(`🔍 Verificando privilegio: ${module} -> ${action} = ${hasPrivilege}`);
-  return hasPrivilege;
-};
   // Función para obtener la ruta de redirección basada en el rol
   const getRoleRedirect = (role) => {
-    // Normalizar el nombre del rol
     const roleName = typeof role === 'string' 
       ? role 
       : (role?.nombre || '');
@@ -99,7 +101,6 @@ const hasPrivilege = (module, action) => {
     try {
       console.log('🔍 Verificando autenticación con el backend...');
       
-      // Llamar al endpoint /auth/me para verificar el token en cookies
       const response = await apiRequest.get('/auth/me');
       
       if (response.success && response.data) {
@@ -140,8 +141,10 @@ const hasPrivilege = (module, action) => {
       const redirectPath = getRoleRedirect(userData.rol);
       console.log('🔄 Redirigiendo a:', redirectPath);
 
-      // Redirigir inmediatamente sin delay
-      window.location.href = redirectPath;
+      // Redirigir con un pequeño delay para mejor UX
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 1000);
     } catch (error) {
       console.error('❌ Error en login:', error);
       throw error;
@@ -163,7 +166,6 @@ const hasPrivilege = (module, action) => {
 
     if (result.isConfirmed) {
       try {
-        // Llamar al endpoint de logout para limpiar la cookie HttpOnly
         await apiRequest.post('/auth/logout');
       } catch (error) {
         console.warn('⚠️ Error al cerrar sesión en el backend:', error);
@@ -186,7 +188,6 @@ const hasPrivilege = (module, action) => {
     try {
       console.log('🔍 Verificando autenticación...');
       
-      // Primero verificar si hay usuario en localStorage
       const storedUser = getUserFromStorage();
       
       if (!storedUser) {
@@ -197,7 +198,6 @@ const hasPrivilege = (module, action) => {
 
       console.log('📝 Usuario en localStorage:', storedUser);
       
-      // Verificar token con el backend
       const isValid = await verifyAuth();
       
       if (!isValid) {

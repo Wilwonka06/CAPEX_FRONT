@@ -103,13 +103,16 @@ export default function LoginPage() {
         errorMsg = 'Credenciales inválidas';
       } else if (error.response?.status === 400) {
         errorMsg = error.response?.data?.message || 'Datos incorrectos';
+      } else if (error.response?.status === 403) {
+        errorMsg = 'No autorizado, por favor inicia sesión nuevamente';
       } else if (error.message) {
         errorMsg = error.message;
       }
 
       setError(errorMsg);
       toast.error(errorMsg, { position: 'top-right' });
-      setPassword('');
+      // No limpiar la contraseña para evitar que el usuario tenga que escribirla de nuevo
+      // setPassword('');
     } finally {
       setLoading(false);
     }
@@ -314,7 +317,7 @@ export default function LoginPage() {
       />
 
       {/* Estilos CSS personalizados */}
-      <style jsx>{`
+      <style>{`
         @keyframes gradient-x {
           0%, 100% {
             background-size: 200% 200%;

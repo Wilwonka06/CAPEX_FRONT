@@ -1,10 +1,9 @@
-import React from "react";
 const MODULES = [
   "Gestión de Compras",
   "Gestión de Servicios", 
-  "Ventas",
-  "Dashboard",
-  "Gestión de Usuarios"
+  "Gestión de Ventas", 
+  "Gestión de Usuarios",
+  "Dashboard"
 ];
 
 // Acciones que coinciden con el backend
@@ -74,4 +73,4 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
   );
 };
 
-export default PrivilegesTable; 
+export default PrivilegesTable;
