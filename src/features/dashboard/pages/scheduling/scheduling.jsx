@@ -83,36 +83,53 @@ const Scheduling = () => {
     : employees;
 
   // Función para calcular las fechas específicas basadas en días seleccionados
-  const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
-    const fechas = [];
-    const startDate = new Date(fechaInicio);
-    const endDate = new Date(fechaFin);
+  // Reemplaza SOLO la función calculateSpecificDates en scheduling.jsx (línea ~88)
 
-    // Mapear nombres de días a números (0 = Domingo, 1 = Lunes, etc.)
-    const diasMap = {
-      'Domingo': 0,
-      'Lunes': 1,
-      'Martes': 2,
-      'Miercoles': 3,
-      'Jueves': 4,
-      'Viernes': 5,
-      'Sabado': 6
-    };
+// Función para calcular las fechas específicas basadas en días seleccionados
+const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
+  const fechas = [];
+  
+  // Agregar 'T00:00:00' para evitar problemas de zona horaria
+  const startDate = new Date(fechaInicio + 'T00:00:00');
+  const endDate = new Date(fechaFin + 'T00:00:00');
 
-    const diasNumeros = diasSeleccionados.map(dia => diasMap[dia]).filter(dia => dia !== undefined);
+  console.log('[calculateSpecificDates] Rango:', fechaInicio, 'a', fechaFin);
+  console.log('[calculateSpecificDates] Días seleccionados:', diasSeleccionados);
 
-    // Iterar por cada día en el rango
-    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
-      const diaSemana = date.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+  // Mapear nombres de días a números (0 = Domingo, 1 = Lunes, etc.)
+  const diasMap = {
+    'Domingo': 0,
+    'Lunes': 1,
+    'Martes': 2,
+    'Miercoles': 3,
+    'Jueves': 4,
+    'Viernes': 5,
+    'Sabado': 6
+  };
 
-      // Si el día de la semana está en los días seleccionados, agregarlo
-      if (diasNumeros.includes(diaSemana)) {
-        fechas.push(new Date(date));
-      }
+  const diasNumeros = diasSeleccionados.map(dia => diasMap[dia]).filter(dia => dia !== undefined);
+  console.log('[calculateSpecificDates] Días números:', diasNumeros);
+
+  // Iterar por cada día en el rango usando while
+  const currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const diaSemana = currentDate.getDay();
+    
+    console.log('[calculateSpecificDates] Verificando fecha:', currentDate.toISOString().split('T')[0], 'día:', diaSemana);
+
+    // Si el día de la semana está en los días seleccionados, agregarlo
+    if (diasNumeros.includes(diaSemana)) {
+      fechas.push(new Date(currentDate));
+      console.log('[calculateSpecificDates] ✓ Fecha agregada:', currentDate.toISOString().split('T')[0]);
     }
 
-    return fechas;
-  };
+    // Avanzar al siguiente día
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  console.log('[calculateSpecificDates] Total fechas calculadas:', fechas.length);
+  return fechas;
+};
 
   // Handler para agregar programación
   const handleAddEvent = async (prog) => {
