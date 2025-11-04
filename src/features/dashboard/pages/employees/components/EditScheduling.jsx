@@ -28,7 +28,6 @@ const diasSemana = [
 const initialProg = {
   fechaInicio: '',
   fechaFin: '',
-  repeticion: 'No se repite',
   dias: [],
   horaInicio: '08:00',
   horaFin: '09:00',
@@ -41,25 +40,43 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   const [editing, setEditing] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     if (empleadoId) {
       cargarProgramaciones();
+    } else {
+      setLoading(false);
+      setLoadError('No se proporcionó ID de empleado');
     }
   }, [empleadoId]);
 
   const cargarProgramaciones = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       console.log('[EditScheduling] 🔍 Cargando programaciones para empleadoId:', empleadoId);
+      
       const progs = await getSchedulingsByUser(empleadoId);
       console.log('[EditScheduling] ✅ Programaciones cargadas:', progs);
-      setProgramaciones(progs);
+      setProgramaciones(progs || []);
     } catch (error) {
       console.error('[EditScheduling] ❌ Error cargando programaciones:', error);
       console.error('[EditScheduling] ❌ Error completo:', error.response || error);
-      toast.error('Error al cargar programaciones del empleado');
-      setProgramaciones([]); // Establecer array vacío en caso de error
+      
+      // Determinar mensaje de error específico
+      let errorMsg = 'Error al cargar programaciones';
+      
+      if (error.response?.status === 500) {
+        errorMsg = 'Error del servidor al cargar programaciones. Contacte al administrador.';
+      } else if (error.response?.status === 404) {
+        errorMsg = 'No se encontró el empleado';
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMsg = 'No se puede conectar al servidor';
+      }
+      
+      setLoadError(errorMsg);
+      setProgramaciones([]);
     } finally {
       setLoading(false);
     }
@@ -82,7 +99,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
       const fechaInicio = items[0].fechaInicio;
       const fechaFin = items[items.length - 1].fechaInicio;
       
-      // Calcular qué días de la semana están incluidos
       const diasIncluidos = items.map(item => {
         const fecha = new Date(item.fechaInicio + 'T00:00:00');
         const diaSemana = fecha.getDay();
@@ -95,7 +111,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
         horaFin: items[0].horaFin,
         fechaInicio: fechaInicio,
         fechaFin: fechaFin,
-        repeticion: items.length > 1 ? 'Mensual' : 'No se repite',
         dias: [...new Set(diasIncluidos)],
         ids: items.map(i => i.id),
         items: items,
@@ -113,6 +128,14 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     });
   };
 
+  const formatDateRange = (fechas) => {
+    if (!fechas || fechas.length === 0) return '';
+    if (fechas.length === 1) {
+      return formatDate(fechas[0]);
+    }
+    return `${formatDate(fechas[0])} - ${formatDate(fechas[fechas.length - 1])}`;
+  };
+
   const handleEditarGrupo = (grupo) => {
     const editingData = {
       id: grupo.primerItem.id,
@@ -123,7 +146,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
       horaFin: grupo.horaFin,
       empleadoId: grupo.primerItem.empleadoId || empleadoId,
       dias: grupo.dias,
-      repeticion: grupo.repeticion
     };
     
     setEditing(editingData);
@@ -135,7 +157,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
       horaFin: grupo.horaFin,
       empleadoId: grupo.primerItem.empleadoId || empleadoId,
       dias: grupo.dias,
-      repeticion: grupo.repeticion
     });
     
     setMostrarFormulario(true);
@@ -143,7 +164,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   };
 
   const handleEliminarGrupo = async (grupo) => {
-    if (window.confirm(`¿Eliminar esta programación?`)) {
+    if (window.confirm(`¿Eliminar esta programación de ${grupo.ids.length} día(s)?`)) {
       try {
         for (const id of grupo.ids) {
           await deleteScheduling(id);
@@ -196,10 +217,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
         const horaFinErrors = validateSchedulingEndTime(value, prog.horaInicio);
         error = horaFinErrors.horaFin || '';
         break;
-      case 'repeticion':
-        const repeticionErrors = validateSchedulingRepetition(value);
-        error = repeticionErrors.repeticion || '';
-        break;
       default:
         break;
     }
@@ -246,64 +263,97 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     setErrors({});
   };
 
-  const handleGuardarTodo = () => {
-    if (onClose) {
-      onClose();
-    }
-  };
-
   const gruposProgramaciones = agruparProgramaciones(programaciones);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <div className="text-gray-500">Cargando programaciones...</div>
+      <div className="flex justify-center items-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3"></div>
+          <p className="text-gray-500 text-sm">Cargando programaciones...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">Error al cargar programaciones</h3>
+            <p className="text-sm text-red-700 mt-2">{loadError}</p>
+            <p className="text-xs text-red-600 mt-2">ID del empleado: {empleadoId}</p>
+            <button
+              onClick={cargarProgramaciones}
+              className="mt-3 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-4 py-2 rounded transition"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-lg p-6">
-      <h3 className="text-2xl font-bold text-gray-800 mb-6">Programaciones</h3>
+      <h3 className="text-xl font-bold text-gray-800 mb-6">Programaciones</h3>
 
       {!mostrarFormulario ? (
         <div className="space-y-4">
           {gruposProgramaciones.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p>No hay programaciones registradas</p>
+            <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="mt-4">No hay programaciones registradas</p>
             </div>
           ) : (
             gruposProgramaciones.map((grupo, index) => (
               <div 
                 key={index}
-                className="border-b border-gray-200 pb-4"
+                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="text-gray-800 mb-1">
-                      <span className="font-medium">
-                        {formatDate(grupo.fechaInicio)} - {formatDate(grupo.fechaFin)}
-                      </span>
-                      <span className="mx-2">|</span>
-                      <span className="font-medium">
-                        {grupo.horaInicio} - {grupo.horaFin}
-                      </span>
-                      <span className="mx-2">|</span>
-                      <span>{grupo.repeticion}</span>
-                      <span className="mx-2">|</span>
-                      <span>Días: {grupo.dias.join(', ')}</span>
+                    <div className="flex items-center gap-4 mb-2">
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="font-medium">
+                          {formatDate(grupo.fechaInicio)} - {formatDate(grupo.fechaFin)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">
+                          {grupo.horaInicio} - {grupo.horaFin}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {grupo.ids.length} día{grupo.ids.length > 1 ? 's' : ''}: {grupo.dias.join(', ')}
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleEditarGrupo(grupo)}
-                      className="bg-orange-600 text-white px-4 py-1 rounded hover:bg-orange-700 transition text-sm font-medium"
+                      className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded transition text-sm font-medium"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleEliminarGrupo(grupo)}
-                      className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 transition text-sm font-medium"
+                      className="px-3 py-1 text-red-600 hover:bg-red-50 rounded transition text-sm font-medium"
                     >
                       Eliminar
                     </button>
@@ -313,17 +363,18 @@ const EditScheduling = ({ empleadoId, onClose }) => {
             ))
           )}
           
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end mt-6 pt-6 border-t border-gray-200">
             <button
-              onClick={handleGuardarTodo}
-              className="bg-amber-900 text-white px-8 py-2 rounded font-semibold hover:bg-amber-800 transition"
+              onClick={onClose}
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded font-semibold hover:bg-gray-300 transition"
             >
-              Guardar Todo
+              Cerrar
             </button>
           </div>
         </div>
       ) : (
         <div>
+          <h4 className="text-lg font-semibold mb-4 text-gray-700">Editar Programación</h4>
           <form onSubmit={handleEditEvent}>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
@@ -346,29 +397,15 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                   value={prog.fechaFin} 
                   onChange={handleProgChange} 
                   onBlur={handleBlur} 
-                  className="border border-gray-300 rounded px-3 py-2 w-full" 
+                  className="border border-gray-300 rounded px-3 py-2 w-full"
+                  disabled
+                  title="No se puede cambiar el rango de fechas en edición"
                 />
                 {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
               </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-800 mb-2">Repetición</label>
-              <select 
-                name="repeticion" 
-                value={prog.repeticion} 
-                onChange={handleProgChange} 
-                onBlur={handleBlur} 
-                className="border border-gray-300 rounded px-3 py-2 w-full"
-              >
-                <option>No se repite</option>
-                <option>Semanal</option>
-                <option>Mensual</option>
-              </select>
-              {errors.repeticion && <p className="text-red-500 text-xs mt-1">{errors.repeticion}</p>}
-            </div>
-
-            <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-4 gap-3 mb-4 opacity-50">
               {diasSemana.map(dia => (
                 <label key={dia.key} className="flex items-center gap-2 text-gray-800 text-sm">
                   <input
@@ -377,14 +414,15 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                     checked={prog.dias.includes(dia.key)}
                     onChange={handleProgChange}
                     className="w-4 h-4 accent-orange-600"
+                    disabled
                   />
                   <span>{dia.label}</span>
                 </label>
               ))}
             </div>
-            {errors.dias && <p className="text-red-500 text-xs mb-4">{errors.dias}</p>}
 
             <div className="flex items-center gap-4 mb-6">
+              <label className="block text-sm font-medium text-gray-800">Horario</label>
               <select 
                 name="horaInicio" 
                 value={prog.horaInicio} 
@@ -422,15 +460,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
               </button>
             </div>
           </form>
-
-          <div className="flex justify-end mt-6 pt-6 border-t border-gray-200">
-            <button
-              onClick={handleGuardarTodo}
-              className="bg-amber-900 text-white px-8 py-2 rounded font-semibold hover:bg-amber-800 transition"
-            >
-              Guardar Todo
-            </button>
-          </div>
         </div>
       )}
     </div>
