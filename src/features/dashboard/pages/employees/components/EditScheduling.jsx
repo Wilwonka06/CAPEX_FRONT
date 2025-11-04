@@ -8,6 +8,7 @@ import {
   validateSchedulingEndTime,
 } from '../../../../../shared/validations';
 import { getSchedulingsByUser, updateScheduling, deleteScheduling } from '../api/schedulingApi';
+import Paginator from '../../../../../shared/Paginator';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -28,6 +29,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 1;
 
   useEffect(() => {
     if (empleadoId) {
@@ -212,6 +215,12 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     setErrors({});
   };
 
+  const totalPages = Math.ceil(programaciones.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedProgramaciones = programaciones.slice(startIndex, startIndex + itemsPerPage);
+
+  const handlePageChange = (page) => setCurrentPage(page);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -262,70 +271,78 @@ const EditScheduling = ({ empleadoId, onClose }) => {
               <p className="mt-4">No hay programaciones registradas</p>
             </div>
           ) : (
-            programaciones.map((programacion) => (
-              <div 
-                key={programacion.id}
-                className="border border-gray-200 rounded-lg p-6 bg-gray-50"
-              >
-                <h4 className="text-lg font-bold text-gray-800 mb-4">Detalle de Programación</h4>
-                
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
-                  {/* Fecha inicio */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Fecha inicio:</p>
-                    <p className="text-base text-gray-900">{formatDate(programacion.fechaInicio || programacion.fecha)}</p>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              {paginatedProgramaciones.map((programacion) => (
+                <div
+                  key={programacion.id}
+                  className="border border-gray-200 rounded-lg p-6 bg-gray-50"
+                >
+                  <h4 className="text-lg font-bold text-gray-800 mb-4">Detalle de Programación</h4>
+
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
+                    {/* Fecha */}
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-1">Fecha:</p>
+                      <p className="text-base text-gray-900">{formatDate(programacion.fechaInicio || programacion.fecha)}</p>
+                    </div>
+
+                    {/* Hora inicio */}
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-1">Hora inicio:</p>
+                      <p className="text-base text-gray-900">{formatTime(programacion.horaInicio || programacion.hora_entrada)}</p>
+                    </div>
+
+                    {/* Hora fin */}
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 mb-1">Hora fin:</p>
+                      <p className="text-base text-gray-900">{formatTime(programacion.horaFin || programacion.hora_salida)}</p>
+                    </div>
                   </div>
 
-                  {/* Fecha fin (igual a fecha inicio) */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Fecha fin:</p>
-                    <p className="text-base text-gray-900">{formatDate(programacion.fechaInicio || programacion.fecha)}</p>
-                  </div>
-
-                  {/* Repetición */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Repetición:</p>
-                    <p className="text-base text-gray-900">Mensual</p>
-                  </div>
-
-                  {/* Días */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Días:</p>
-                    <p className="text-base text-gray-900">{getDayName(programacion.fechaInicio || programacion.fecha)}</p>
-                  </div>
-
-                  {/* Hora inicio */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Hora inicio:</p>
-                    <p className="text-base text-gray-900">{formatTime(programacion.horaInicio || programacion.hora_entrada)}</p>
-                  </div>
-
-                  {/* Hora fin */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Hora fin:</p>
-                    <p className="text-base text-gray-900">{formatTime(programacion.horaFin || programacion.hora_salida)}</p>
+                  {/* Botones de acción */}
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-300">
+                    <button
+                      onClick={() => handleEditarProgramacion(programacion)}
+                      className="bg-blue-600 text-white px-5 py-2 rounded font-semibold hover:bg-blue-700 transition"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleEliminarProgramacion(programacion)}
+                      className="bg-red-600 text-white px-5 py-2 rounded font-semibold hover:bg-red-700 transition"
+                    >
+                      Eliminar
+                    </button>
                   </div>
                 </div>
-
-                {/* Botones de acción */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-300">
-                  <button
-                    onClick={() => handleEditarProgramacion(programacion)}
-                    className="bg-blue-600 text-white px-5 py-2 rounded font-semibold hover:bg-blue-700 transition"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleEliminarProgramacion(programacion)}
-                    className="bg-red-600 text-white px-5 py-2 rounded font-semibold hover:bg-red-700 transition"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
-          
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-4 mt-6">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-text-main text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
+              >
+                <i className="bi bi-chevron-left text-sm"></i>
+              </button>
+
+              <span className="text-sm text-text-main/70">
+                {formatDate(paginatedProgramaciones[0]?.fechaInicio || paginatedProgramaciones[0]?.fecha)}
+              </span>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-text-main text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
+              >
+                <i className="bi bi-chevron-right text-sm"></i>
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-end mt-6 pt-6 border-t border-gray-200">
             <button
               onClick={onClose}
