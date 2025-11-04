@@ -6,7 +6,6 @@ import {
   validateSchedulingEndDate,
   validateSchedulingStartTime,
   validateSchedulingEndTime,
-  validateSchedulingRepetition,
 } from '../../../../../shared/validations';
 import { getSchedulingsByUser, updateScheduling, deleteScheduling } from '../api/schedulingApi';
 
@@ -15,20 +14,8 @@ const horas = [
   '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
 ];
 
-const diasSemana = [
-  { key: 'Lunes', label: 'Lunes' },
-  { key: 'Martes', label: 'Martes' },
-  { key: 'Miercoles', label: 'Miercoles' },
-  { key: 'Jueves', label: 'Jueves' },
-  { key: 'Viernes', label: 'Viernes' },
-  { key: 'Sabado', label: 'Sabado' },
-  { key: 'Domingo', label: 'Domingo' }
-];
-
 const initialProg = {
   fechaInicio: '',
-  fechaFin: '',
-  dias: [],
   horaInicio: '08:00',
   horaFin: '09:00',
 };
@@ -62,9 +49,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
       setProgramaciones(progs || []);
     } catch (error) {
       console.error('[EditScheduling] ❌ Error cargando programaciones:', error);
-      console.error('[EditScheduling] ❌ Error completo:', error.response || error);
       
-      // Determinar mensaje de error específico
       let errorMsg = 'Error al cargar programaciones';
       
       if (error.response?.status === 500) {
@@ -82,43 +67,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     }
   };
 
-  const agruparProgramaciones = (progs) => {
-    const grupos = {};
-    
-    progs.forEach(p => {
-      const key = `${p.horaInicio}-${p.horaFin}`;
-      if (!grupos[key]) {
-        grupos[key] = [];
-      }
-      grupos[key].push(p);
-    });
-
-    return Object.entries(grupos).map(([key, items]) => {
-      items.sort((a, b) => new Date(a.fechaInicio) - new Date(b.fechaInicio));
-      
-      const fechaInicio = items[0].fechaInicio;
-      const fechaFin = items[items.length - 1].fechaInicio;
-      
-      const diasIncluidos = items.map(item => {
-        const fecha = new Date(item.fechaInicio + 'T00:00:00');
-        const diaSemana = fecha.getDay();
-        const diasMap = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
-        return diasMap[diaSemana];
-      });
-      
-      return {
-        horaInicio: items[0].horaInicio,
-        horaFin: items[0].horaFin,
-        fechaInicio: fechaInicio,
-        fechaFin: fechaFin,
-        dias: [...new Set(diasIncluidos)],
-        ids: items.map(i => i.id),
-        items: items,
-        primerItem: items[0]
-      };
-    });
-  };
-
   const formatDate = (dateString) => {
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('es-ES', { 
@@ -128,47 +76,41 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     });
   };
 
-  const formatDateRange = (fechas) => {
-    if (!fechas || fechas.length === 0) return '';
-    if (fechas.length === 1) {
-      return formatDate(fechas[0]);
-    }
-    return `${formatDate(fechas[0])} - ${formatDate(fechas[fechas.length - 1])}`;
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    const parts = timeString.split(':');
+    return `${parts[0]}:${parts[1]}`;
   };
 
-  const handleEditarGrupo = (grupo) => {
-    const editingData = {
-      id: grupo.primerItem.id,
-      idsGrupo: grupo.ids,
-      fechaInicio: grupo.fechaInicio,
-      fechaFin: grupo.fechaFin,
-      horaInicio: grupo.horaInicio,
-      horaFin: grupo.horaFin,
-      empleadoId: grupo.primerItem.empleadoId || empleadoId,
-      dias: grupo.dias,
-    };
+  const getDayName = (dateString) => {
+    const date = new Date(dateString + 'T00:00:00');
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return dias[date.getDay()];
+  };
+
+  const handleEditarProgramacion = (programacion) => {
+    console.log('[EditScheduling] Editando programación:', programacion);
     
-    setEditing(editingData);
+    setEditing({
+      id: programacion.id,
+      empleadoId: programacion.empleadoId || empleadoId,
+    });
     
     setProg({
-      fechaInicio: grupo.fechaInicio,
-      fechaFin: grupo.fechaFin,
-      horaInicio: grupo.horaInicio,
-      horaFin: grupo.horaFin,
-      empleadoId: grupo.primerItem.empleadoId || empleadoId,
-      dias: grupo.dias,
+      fechaInicio: programacion.fechaInicio || programacion.fecha,
+      horaInicio: formatTime(programacion.horaInicio || programacion.hora_entrada),
+      horaFin: formatTime(programacion.horaFin || programacion.hora_salida),
+      empleadoId: programacion.empleadoId || empleadoId,
     });
     
     setMostrarFormulario(true);
     setErrors({});
   };
 
-  const handleEliminarGrupo = async (grupo) => {
-    if (window.confirm(`¿Eliminar esta programación de ${grupo.ids.length} día(s)?`)) {
+  const handleEliminarProgramacion = async (programacion) => {
+    if (window.confirm(`¿Eliminar la programación del ${formatDate(programacion.fechaInicio)}?`)) {
       try {
-        for (const id of grupo.ids) {
-          await deleteScheduling(id);
-        }
+        await deleteScheduling(programacion.id);
         toast.success('Programación eliminada correctamente');
         await cargarProgramaciones();
       } catch (error) {
@@ -179,17 +121,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   };
 
   const handleProgChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === 'checkbox') {
-      setProg((prev) => ({
-        ...prev,
-        dias: checked
-          ? [...prev.dias, value]
-          : prev.dias.filter((d) => d !== value),
-      }));
-    } else {
-      setProg((prev) => ({ ...prev, [name]: value }));
-    }
+    const { name, value } = e.target;
+    setProg((prev) => ({ ...prev, [name]: value }));
     
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -204,10 +137,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
       case 'fechaInicio':
         const fechaInicioErrors = validateSchedulingStartDate(value);
         error = fechaInicioErrors.fechaInicio || '';
-        break;
-      case 'fechaFin':
-        const fechaFinErrors = validateSchedulingEndDate(value, prog.fechaInicio);
-        error = fechaFinErrors.fechaFin || '';
         break;
       case 'horaInicio':
         const horaInicioErrors = validateSchedulingStartTime(value);
@@ -228,7 +157,25 @@ const EditScheduling = ({ empleadoId, onClose }) => {
 
   const handleEditEvent = async (e) => {
     e.preventDefault();
-    const formErrors = validateSchedulingForm(prog);
+    
+    const formErrors = {};
+    
+    if (!prog.fechaInicio) {
+      formErrors.fechaInicio = 'La fecha es obligatoria';
+    }
+    
+    if (!prog.horaInicio) {
+      formErrors.horaInicio = 'La hora de inicio es obligatoria';
+    }
+    
+    if (!prog.horaFin) {
+      formErrors.horaFin = 'La hora de fin es obligatoria';
+    }
+    
+    if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
+      formErrors.horaFin = 'La hora de fin debe ser mayor que la hora de inicio';
+    }
+    
     setErrors(formErrors);
   
     if (Object.keys(formErrors).length === 0) {
@@ -240,6 +187,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
           hora_salida: prog.horaFin,
         };
 
+        console.log('[EditScheduling] Actualizando programación:', progToSave);
         await updateScheduling(editing.id, progToSave);
         
         toast.success('Programación actualizada correctamente');
@@ -251,7 +199,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
         await cargarProgramaciones();
       } catch (error) {
         console.error('[EditScheduling] Error actualizando programación:', error);
-        toast.error('Error al actualizar programación');
+        const errorMsg = error.response?.data?.message || 'Error al actualizar programación';
+        toast.error(errorMsg);
       }
     }
   };
@@ -262,8 +211,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     setProg(initialProg);
     setErrors({});
   };
-
-  const gruposProgramaciones = agruparProgramaciones(programaciones);
 
   if (loading) {
     return (
@@ -307,7 +254,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
 
       {!mostrarFormulario ? (
         <div className="space-y-4">
-          {gruposProgramaciones.length === 0 ? (
+          {programaciones.length === 0 ? (
             <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -315,49 +262,65 @@ const EditScheduling = ({ empleadoId, onClose }) => {
               <p className="mt-4">No hay programaciones registradas</p>
             </div>
           ) : (
-            gruposProgramaciones.map((grupo, index) => (
+            programaciones.map((programacion) => (
               <div 
-                key={index}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
+                key={programacion.id}
+                className="border border-gray-200 rounded-lg p-6 bg-gray-50"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-2">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="font-medium">
-                          {formatDate(grupo.fechaInicio)} - {formatDate(grupo.fechaFin)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="font-medium">
-                          {grupo.horaInicio} - {grupo.horaFin}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {grupo.ids.length} día{grupo.ids.length > 1 ? 's' : ''}: {grupo.dias.join(', ')}
-                    </div>
+                <h4 className="text-lg font-bold text-gray-800 mb-4">Detalle de Programación</h4>
+                
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
+                  {/* Fecha inicio */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Fecha inicio:</p>
+                    <p className="text-base text-gray-900">{formatDate(programacion.fechaInicio || programacion.fecha)}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditarGrupo(grupo)}
-                      className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded transition text-sm font-medium"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleEliminarGrupo(grupo)}
-                      className="px-3 py-1 text-red-600 hover:bg-red-50 rounded transition text-sm font-medium"
-                    >
-                      Eliminar
-                    </button>
+
+                  {/* Fecha fin (igual a fecha inicio) */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Fecha fin:</p>
+                    <p className="text-base text-gray-900">{formatDate(programacion.fechaInicio || programacion.fecha)}</p>
                   </div>
+
+                  {/* Repetición */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Repetición:</p>
+                    <p className="text-base text-gray-900">Mensual</p>
+                  </div>
+
+                  {/* Días */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Días:</p>
+                    <p className="text-base text-gray-900">{getDayName(programacion.fechaInicio || programacion.fecha)}</p>
+                  </div>
+
+                  {/* Hora inicio */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Hora inicio:</p>
+                    <p className="text-base text-gray-900">{formatTime(programacion.horaInicio || programacion.hora_entrada)}</p>
+                  </div>
+
+                  {/* Hora fin */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Hora fin:</p>
+                    <p className="text-base text-gray-900">{formatTime(programacion.horaFin || programacion.hora_salida)}</p>
+                  </div>
+                </div>
+
+                {/* Botones de acción */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-300">
+                  <button
+                    onClick={() => handleEditarProgramacion(programacion)}
+                    className="bg-blue-600 text-white px-5 py-2 rounded font-semibold hover:bg-blue-700 transition"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleEliminarProgramacion(programacion)}
+                    className="bg-red-600 text-white px-5 py-2 rounded font-semibold hover:bg-red-700 transition"
+                  >
+                    Eliminar
+                  </button>
                 </div>
               </div>
             ))
@@ -366,89 +329,95 @@ const EditScheduling = ({ empleadoId, onClose }) => {
           <div className="flex justify-end mt-6 pt-6 border-t border-gray-200">
             <button
               onClick={onClose}
-              className="bg-gray-200 text-gray-700 px-6 py-2 rounded font-semibold hover:bg-gray-300 transition"
+              className="bg-gray-600 text-white px-6 py-2 rounded font-semibold hover:bg-gray-700 transition"
             >
               Cerrar
             </button>
           </div>
         </div>
       ) : (
-        <div>
-          <h4 className="text-lg font-semibold mb-4 text-gray-700">Editar Programación</h4>
+        <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+          <h4 className="text-lg font-bold text-gray-800 mb-6">Editar Programación</h4>
           <form onSubmit={handleEditEvent}>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* Fecha inicio */}
               <div>
-                <label className="block text-sm font-medium text-gray-800 mb-2">Fecha inicio</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Fecha inicio:
+                </label>
                 <input 
                   type="date" 
                   name="fechaInicio" 
                   value={prog.fechaInicio} 
                   onChange={handleProgChange} 
                   onBlur={handleBlur} 
-                  className="border border-gray-300 rounded px-3 py-2 w-full" 
+                  className={`border rounded px-3 py-2 w-full ${
+                    errors.fechaInicio ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  required
                 />
                 {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
               </div>
+
+              {/* Fecha fin (mismo valor) */}
               <div>
-                <label className="block text-sm font-medium text-gray-800 mb-2">Fecha fin</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Fecha fin:
+                </label>
                 <input 
                   type="date" 
-                  name="fechaFin" 
-                  value={prog.fechaFin} 
+                  value={prog.fechaInicio}
+                  className="border rounded px-3 py-2 w-full border-gray-300 bg-gray-100"
+                  disabled
+                />
+              </div>
+
+              {/* Hora inicio */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Hora inicio:
+                </label>
+                <select 
+                  name="horaInicio" 
+                  value={prog.horaInicio} 
                   onChange={handleProgChange} 
                   onBlur={handleBlur} 
-                  className="border border-gray-300 rounded px-3 py-2 w-full"
-                  disabled
-                  title="No se puede cambiar el rango de fechas en edición"
-                />
-                {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
+                  className={`border rounded px-3 py-2 w-full ${
+                    errors.horaInicio ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  required
+                >
+                  {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+                {errors.horaInicio && <p className="text-red-500 text-xs mt-1">{errors.horaInicio}</p>}
+              </div>
+
+              {/* Hora fin */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Hora fin:
+                </label>
+                <select 
+                  name="horaFin" 
+                  value={prog.horaFin} 
+                  onChange={handleProgChange} 
+                  onBlur={handleBlur} 
+                  className={`border rounded px-3 py-2 w-full ${
+                    errors.horaFin ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  required
+                >
+                  {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+                {errors.horaFin && <p className="text-red-500 text-xs mt-1">{errors.horaFin}</p>}
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-3 mb-4 opacity-50">
-              {diasSemana.map(dia => (
-                <label key={dia.key} className="flex items-center gap-2 text-gray-800 text-sm">
-                  <input
-                    type="checkbox"
-                    value={dia.key}
-                    checked={prog.dias.includes(dia.key)}
-                    onChange={handleProgChange}
-                    className="w-4 h-4 accent-orange-600"
-                    disabled
-                  />
-                  <span>{dia.label}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-4 mb-6">
-              <label className="block text-sm font-medium text-gray-800">Horario</label>
-              <select 
-                name="horaInicio" 
-                value={prog.horaInicio} 
-                onChange={handleProgChange} 
-                onBlur={handleBlur} 
-                className="border border-gray-300 rounded px-3 py-2"
-              >
-                {horas.map(h => <option key={h}>{h}</option>)}
-              </select>
-              <span className="text-gray-600">-</span>
-              <select 
-                name="horaFin" 
-                value={prog.horaFin} 
-                onChange={handleProgChange} 
-                onBlur={handleBlur} 
-                className="border border-gray-300 rounded px-3 py-2"
-              >
-                {horas.map(h => <option key={h}>{h}</option>)}
-              </select>
-            </div>
-
-            <div className="flex gap-3">
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-300">
               <button 
                 type="button" 
                 onClick={handleCancelar} 
-                className="bg-gray-200 text-gray-700 px-6 py-2 rounded font-semibold hover:bg-gray-300 transition"
+                className="bg-gray-600 text-white px-6 py-2 rounded font-semibold hover:bg-gray-700 transition"
               >
                 Cancelar
               </button>
@@ -456,7 +425,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                 type="submit" 
                 className="bg-amber-900 text-white px-6 py-2 rounded font-semibold hover:bg-amber-800 transition"
               >
-                Guardar cambios
+                Guardar
               </button>
             </div>
           </form>
