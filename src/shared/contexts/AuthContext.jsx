@@ -29,10 +29,11 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * ✅ CORREGIDO: Verificar privilegios con nombres correctos
+   * Ahora maneja tanto nombres en inglés como español para retrocompatibilidad
    */
   const hasPrivilege = (module, action) => {
     if (!currentUser) {
-      console.warn('No hay usuario autenticado');
+      console.warn('⚠️ No hay usuario autenticado');
       return false;
     }
 
@@ -55,18 +56,40 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
+    console.log('🔍 Verificando privilegio:', { module, action });
+    console.log('📋 Privilegios del usuario:', currentUser.privileges);
+
+    // ✅ MAPEO DE COMPATIBILIDAD para acciones
+    const actionMap = {
+      // Inglés -> Español
+      'Create': 'Crear',
+      'Read': 'Visualizar',
+      'Edit': 'Editar',
+      'Delete': 'Eliminar',
+      // Español (mantener)
+      'Crear': 'Crear',
+      'Visualizar': 'Visualizar',
+      'Editar': 'Editar',
+      'Eliminar': 'Eliminar'
+    };
+
+    // Obtener el nombre de la acción en español
+    const spanishAction = actionMap[action] || action;
+
     // ✅ USAR EL NOMBRE DEL MÓDULO DIRECTAMENTE
     const modulePrivileges = currentUser.privileges?.[module];
     
     if (!modulePrivileges) {
       console.warn(`⚠️ Módulo "${module}" no encontrado en privilegios del usuario`);
-      console.log('📋 Privilegios disponibles:', Object.keys(currentUser.privileges || {}));
+      console.log('📋 Módulos disponibles:', Object.keys(currentUser.privileges || {}));
       return false;
     }
 
-    // Verificar si tiene la acción específica
-    const hasPrivilege = modulePrivileges[action] === true;
-    console.log(`🔍 Verificando privilegio: ${module} -> ${action} = ${hasPrivilege}`);
+    // Verificar si tiene la acción específica (probar con ambos nombres)
+    const hasPrivilege = modulePrivileges[spanishAction] === true || 
+                        modulePrivileges[action] === true;
+    
+    console.log(`🔍 Resultado: ${module} -> ${spanishAction} = ${hasPrivilege}`);
     return hasPrivilege;
   };
 
@@ -129,6 +152,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('=== LOGIN INICIADO ===');
       console.log('📝 Datos del usuario recibidos:', userData);
+      console.log('🔑 Privilegios del usuario:', userData.privileges);
 
       // Guardar usuario en localStorage
       localStorage.setItem('currentUser', JSON.stringify(userData));
@@ -197,6 +221,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       console.log('📝 Usuario en localStorage:', storedUser);
+      console.log('🔑 Privilegios almacenados:', storedUser.privileges);
       
       const isValid = await verifyAuth();
       

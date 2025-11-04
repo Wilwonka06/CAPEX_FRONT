@@ -19,7 +19,7 @@ import productsService from '../API/productsService';
 
 const MAX_IMAGES = 3;
 
-const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
+const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -39,6 +39,36 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
   ]);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  // Inicializar datos del producto cuando se recibe
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        nombre: product.nombre || "",
+        descripcion: product.descripcion || "",
+        precio: product.precio_venta?.toString() || product.precio?.toString() || "",
+        cantidad: product.stock?.toString() || product.cantidad?.toString() || "",
+        categoryId: product.id_categoria_producto?.toString() || product.categoryId?.toString() || "",
+        fotos: product.fotos || [],
+      });
+
+      // Inicializar previews con imágenes existentes
+      if (product.fotos && Array.isArray(product.fotos)) {
+        setPreviews(product.fotos);
+      }
+
+      // Inicializar especificaciones desde características
+      if (product.caracteristicas && Array.isArray(product.caracteristicas)) {
+        const especs = product.caracteristicas.map(car => ({
+          concepto: car.nombre,
+          valor: car.FichaTecnica?.valor || car.valor || "",
+          otroConcepto: ""
+        }));
+        setEspecificaciones(especs.length > 0 ? especs : [{ concepto: "", valor: "", otroConcepto: "" }]);
+      }
+    }
+  }, [product]);
 
   // Cargar categorÃ­as al montar
   useEffect(() => {
@@ -251,60 +281,75 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       return;
     }
 
-    if (isDuplicateProductName(formData.nombre, products)) {
+    // Verificar nombre duplicado (excluyendo el producto actual)
+    const filteredProducts = products.filter(p => p.id_producto !== product.id_producto);
+    if (isDuplicateProductName(formData.nombre, filteredProducts)) {
       setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
       return;
     }
 
     setFieldErrors({});
+    setLoading(true);
 
     try {
-      // Procesar las imÃ¡genes: subir a Cloudinary si hay archivos nuevos
-      // Construir objeto con la estructura correcta para el backend
-      const updatedProduct = {
-        ...product,
+      // Preparar datos para actualizar
+      const updateData = {
         nombre: formData.nombre.trim(),
-        descripcion: formData.descripcion,
-        precio: parseFloat(formData.precio),
+        descripcion: formData.descripcion?.trim() || null,
         precio_venta: parseFloat(formData.precio),
-        cantidad: parseInt(formData.cantidad),
-        stock: parseInt(formData.cantidad),
+        stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
         id_categoria_producto: parseInt(formData.categoryId),
-        categoryId: formData.categoryId,
-        // ❌ REMOVER esta línea:
-        // url_foto: formData.fotos[0] || null,
-        // ✅ MANTENER solo esta:
-        fotos: formData.fotos, // Array completo de hasta 3 imágenes
-        caracteristicas: caracteristicasParaBackend,
-        especificaciones: especificaciones
-          .filter(e => (e.concepto === "otro" ? e.otroConcepto : e.concepto) && e.valor)
-          .map(e => ({
-            concepto: e.concepto === "otro" ? e.otroConcepto : e.concepto,
-            valor: e.valor,
-            otroConcepto: e.otroConcepto || ''
-          }))
       };
-      if (caracteristicasValidas.length > 0) {
-        newProduct.caracteristicas = caracteristicasValidas;
+
+      // Enviar array de imágenes (máximo 3)
+      if (formData.fotos && Array.isArray(formData.fotos) && formData.fotos.length > 0) {
+        // Filtrar solo imágenes válidas (base64 o URLs de Cloudinary)
+        const validImages = formData.fotos
+          .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
+          .slice(0, 3); // Máximo 3 imágenes
+
+        if (validImages.length > 0) {
+          updateData.fotos = validImages;
+        }
       }
 
-      console.log('CreateProduct: Sending product data:', newProduct);
-      console.log('CreateProduct: CaracterÃ­sticas a enviar:', newProduct.caracteristicas);
+      // Mapear especificaciones a características
+      const caracteristicasValidas = especificaciones
+        .filter(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return nombre && nombre.trim() !== '' && e.valor && e.valor.trim() !== '';
+        })
+        .map(e => {
+          const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+          return {
+            nombre: nombre.trim(),
+            valor: e.valor.trim()
+          };
+        });
 
-      // Crear el producto usando el servicio
-      const result = await productsService.create(newProduct);
+      if (caracteristicasValidas.length > 0) {
+        updateData.caracteristicas = caracteristicasValidas;
+      }
+
+      console.log('EditProduct: Sending update data:', updateData);
+      console.log('EditProduct: Características a enviar:', updateData.caracteristicas);
+
+      // Actualizar el producto usando el servicio
+      const result = await productsService.update(product.id_producto, updateData);
 
       if (result.success) {
-        if (onCreate) {
-          onCreate(result.data);
+        if (onUpdate) {
+          onUpdate(result.data);
         }
         handleClose();
       } else {
-        throw new Error(result.message || 'Error al crear el producto');
+        throw new Error(result.message || 'Error al actualizar el producto');
       }
     } catch (error) {
-      console.error('Error creating product:', error);
-      setError(error.message || 'Error al crear el producto');
+      console.error('Error updating product:', error);
+      setError(error.message || 'Error al actualizar el producto');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -341,7 +386,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
             {/* Header fijo */}
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-md flex items-center justify-between px-8 py-4">
               <h2 className="text-xl font-bold text-primary m-0">
-                Crear nuevo producto
+                Editar producto
               </h2>
               <button
                 className="text-gray-400 hover:text-primary text-xl font-bold"
@@ -571,9 +616,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
+                    disabled={loading}
+                    className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Guardar
+                    {loading ? 'Guardando...' : 'Guardar'}
                   </button>
                 </div>
               </form>
@@ -585,11 +631,12 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
   );
 };
 
-CreateProduct.propTypes = {
-  onCreate: PropTypes.func.isRequired,
+EditProduct.propTypes = {
+  product: PropTypes.object.isRequired,
+  onUpdate: PropTypes.func.isRequired,
   products: PropTypes.array,
   isOpen: PropTypes.bool,
   onClose: PropTypes.func,
 };
 
-export default CreateProduct;
+export default EditProduct;

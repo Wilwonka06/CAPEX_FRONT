@@ -1,10 +1,11 @@
 // src/features/dashboard/pages/roles/services/DataMapper.js
 
 class DataMapper {
+  // ✅ CORREGIDO: IDs y nombres actualizados para coincidir con el backend
   static BACKEND_MODULE_IDS = {
     'Gestión de Compras': 1,
     'Gestión de Servicios': 2,
-    'Gestión de Ventas': 3,
+    'Ventas': 3,                    // ⚠️ CAMBIO: Era "Gestión de Ventas"
     'Gestión de Usuarios': 4,
     'Dashboard': 5
   };
@@ -12,23 +13,24 @@ class DataMapper {
   static BACKEND_MODULE_NAMES = {
     1: 'Gestión de Compras',
     2: 'Gestión de Servicios',
-    3: 'Gestión de Ventas',
+    3: 'Ventas',                     // ⚠️ CAMBIO: Era "Gestión de Ventas"
     4: 'Gestión de Usuarios',
     5: 'Dashboard'
   };
 
+  // ✅ CORREGIDO: Usar nombres en español
   static PRIVILEGE_IDS = {
-    'Create': 1,
-    'Read': 2,
-    'Edit': 3,
-    'Delete': 4
+    'Crear': 1,
+    'Visualizar': 2,
+    'Editar': 3,
+    'Eliminar': 4
   };
 
   static PRIVILEGE_NAMES = {
-    1: 'Create',
-    2: 'Read',
-    3: 'Edit',
-    4: 'Delete'
+    1: 'Crear',
+    2: 'Visualizar',
+    3: 'Editar',
+    4: 'Eliminar'
   };
 
   static mapPermissionsFromBackend(backendPermissions, separatePrivileges = []) {
@@ -44,10 +46,10 @@ class DataMapper {
     // Inicializar TODOS los módulos con privilegios en false
     Object.values(this.BACKEND_MODULE_NAMES).forEach(moduleName => {
       frontendPermissions[moduleName] = {
-        Create: false,
-        Read: false,
-        Edit: false,
-        Delete: false
+        Crear: false,
+        Visualizar: false,
+        Editar: false,
+        Eliminar: false
       };
     });
     
@@ -61,10 +63,10 @@ class DataMapper {
         if (!frontendPermissions[moduleName]) {
           console.warn(`⚠️ Módulo desconocido: "${moduleName}"`);
           frontendPermissions[moduleName] = {
-            Create: false,
-            Read: false,
-            Edit: false,
-            Delete: false
+            Crear: false,
+            Visualizar: false,
+            Editar: false,
+            Eliminar: false
           };
         }
         
@@ -85,10 +87,10 @@ class DataMapper {
         if (!frontendPermissions[moduleName]) {
           console.warn(`⚠️ Módulo desconocido: "${moduleName}"`);
           frontendPermissions[moduleName] = {
-            Create: false,
-            Read: false,
-            Edit: false,
-            Delete: false
+            Crear: false,
+            Visualizar: false,
+            Editar: false,
+            Eliminar: false
           };
         }
         
@@ -177,6 +179,8 @@ class DataMapper {
           }
         });
       }
+
+      // ✅ SOLO agregar el módulo si tiene privilegios activos
       if (privilegios.length > 0) {
         backendFormat.push({
           id_permiso: this.BACKEND_MODULE_IDS[modulo],

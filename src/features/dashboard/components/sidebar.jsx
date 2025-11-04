@@ -152,21 +152,24 @@ const Sidebar = () => {
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center">
           {(isExpanded) ? (
-            <span className="m-3 font-semibold flex items-center justify-center">
-              <img src={logo} alt="Logo" className=" w-29 h-29 object-contain" />
+            <span className="font-semibold flex items-center justify-center">
+              <img src={logo} alt="Logo" className="w-16 h-16 object-contain" />
             </span>
           ) : (
-            <span className=" w-10 h-10 flex items-center justify-center">
+            <span className="w-10 h-10 flex items-center justify-center">
               <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
             </span>
           )}
         </div>
-        <button
-          onClick={() => setIsExpanded(prev => !prev)}
-          className="p-1 rounded transition-colors text-background/80 hover:text-background focus:outline-none"
-          title={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
-        >
-        </button>
+        {isExpanded && (
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="p-2 rounded-lg transition-colors text-background/80 hover:text-background hover:bg-background/10 focus:outline-none"
+            title="Colapsar menú"
+          >
+            <i className="bi bi-chevron-left text-lg"></i>
+          </button>
+        )}
       </div>
 
       {/* Menu con scroll */}
@@ -213,7 +216,7 @@ const Sidebar = () => {
                     (isExpanded) ? '' : 'justify-center'
                   } ${
                     isActiveRoute(group.path)
-                      ? 'border-l-4  bg-background/10'
+                      ? 'border-l-4 border-yellow-500 bg-yellow-500/10 text-yellow-500 font-semibold'
                       : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                   }`}
                   title={!(isExpanded) ? group.name : ''}
@@ -239,7 +242,7 @@ const Sidebar = () => {
                         to={item.path}
                         className={`flex items-center px-4 py-3 cursor-pointer transition-colors no-underline relative ${
                           isActiveRoute(item.path)
-                            ? 'text-yellow-500 bg-background/17 font-semibold rounded-lg shadow'
+                            ? 'text-yellow-500 bg-yellow-500/10 font-semibold rounded-lg shadow border-l-2 border-yellow-500'
                             : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                         }`}
                         title={item.name}
@@ -257,21 +260,6 @@ const Sidebar = () => {
           ))
         )}
       </nav>
-      {isExpanded && (
-        <div className="p-2 ">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(false);
-            }}
-            className="w-full flex items-center pl-2 py-2 rounded-lg transition-colors text-background/80 hover:text-background hover:bg-background/10 focus:outline-none"
-            title="Cerrar menú"
-          >
-            <i className="bi bi-x-lg text-xl mr-2"></i>
-            <span className="text-sm font-medium">Cerrar</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };
