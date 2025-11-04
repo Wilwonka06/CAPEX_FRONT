@@ -17,7 +17,7 @@ const UserDetailModal = ({ onClose, user }) => {
             <div className="flex flex-col justify-center items-center md:w-1/2 w-full">
               <div className="w-40 h-40 bg-gray-50 border-2 border-gray-200 rounded-lg flex items-center justify-end mb-4 shadow-sm p-0 overflow-hidden">
                 <img
-                  src={user.avatar || DEFAULT_AVATAR}
+                  src={user.foto || DEFAULT_AVATAR}
                   alt={user.nombre}
                   className="w-full h-full object-cover rounded-lg m-0"
                 />

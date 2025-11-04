@@ -133,7 +133,7 @@ const Appointments = () => {
 
   // Convertir citas a eventos para FullCalendar
   const calendarEvents = filteredAppointments.map(cita => {
-    // Usar horas de la cita del backend
+    // Usar horas reales del backend (hora_entrada y hora_salida calculadas)
     const horaInicio = cita.hora_entrada || '08:00:00';
     const horaFin = cita.hora_salida || '09:00:00';
 

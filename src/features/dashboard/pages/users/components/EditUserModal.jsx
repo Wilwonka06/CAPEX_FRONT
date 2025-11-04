@@ -414,7 +414,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                           className="accent-green-500"
                         />
                         <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
                           Activo
                         </span>
                       </label>
@@ -428,7 +427,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                           className="accent-gray-500"
                         />
                         <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-gray-500"></div>
                           Inactivo
                         </span>
                       </label>

@@ -1,28 +1,34 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import appointmentsService from '../API/appointmentsService';
-import usersService from '@/features/dashboard/pages/users/API/usersService';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import Swal from 'sweetalert2';
 
-// Estados posibles de la cita
+// Mock de servicios para demostración
+const appointmentsService = {
+  getEmployees: async () => ({ success: true, data: [{ id: 1, nombre: 'Ana Torres', estado: 'Activo' }] }),
+  getServices: async () => ({ success: true, data: [{ id_servicio: 1, nombre: 'Corte de cabello', duracion: 30, precio: 25000, descripcion: 'Corte básico', estado: 'Activo' }] }),
+  create: async (data) => ({ success: true, data }),
+  update: async (id, data) => ({ success: true, data })
+};
+
+const usersService = {
+  getAll: async () => ({ success: true, data: [] }),
+  create: async (data) => ({ success: true, data: { id_usuario: 1 } })
+};
+
 const APPOINTMENT_STATES = [
   { nombre: 'Agendada', descripcion: 'La cita ha sido creada por el cliente.' },
   { nombre: 'Confirmada', descripcion: 'El establecimiento ha confirmado la disponibilidad.' },
-  { nombre: 'Reprogramada', descripcion: 'La cita ha sido modificada en fecha u hora.' },
-  { nombre: 'En proceso', descripcion: 'El servicio está siendo realizado actualmente.' },
-  { nombre: 'Finalizada', descripcion: 'El servicio fue realizado con éxito.' },
-  { nombre: 'Pagada', descripcion: 'El cliente pagó la cita.' },
-  { nombre: 'Cancelada por el usuario', descripcion: 'El cliente canceló la cita.' },
-  { nombre: 'No asistio', descripcion: 'El cliente no se presentó a la cita.' },
 ];
-import Swal from 'sweetalert2';
 
 function limpiarPrecio(valor) {
   return Number(String(valor).replace(/[^\d]/g, '')) || 0;
 }
 
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
-  // Estados para el buscador
   const [serviceQuery, setServiceQuery] = useState('');
   const [filteredServices, setFilteredServices] = useState([]);
   const [services, setServices] = useState([]);
@@ -30,54 +36,72 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
+  
+  // Estado para el teléfono (como en proveedores)
+  const [numero, setNumero] = useState('');
 
-  // Formulario principal
   const [formData, setFormData] = useState({
     cliente: '',
     telefono: '',
+    correo: '',
     fecha: fecha || '',
     servicios: [],
     estado: 'Agendada',
     notas: ''
   });
 
-  // Cargar datos necesarios desde el backend
+  // Cargar datos
   useEffect(() => {
     const loadData = async () => {
       try {
-        // TODO: Implementar cuando estén disponibles los endpoints reales de servicios y empleados
-        // Por ahora mantenemos datos mock hasta que se implementen los endpoints
-        setServices([
-          { id: 1, name: 'Corte de cabello', duration: 30, price: 25000, description: 'Corte básico de cabello', active: true },
-          { id: 2, name: 'Manicura', duration: 45, price: 35000, description: 'Manicura completa', active: true },
-          { id: 3, name: 'Pedicura', duration: 60, price: 40000, description: 'Pedicura completa', active: true }
-        ]);
-        setProfessionals([
-          { id: 1, name: 'Ana Torres', active: true },
-          { id: 2, name: 'Carlos Mendoza', active: true },
-          { id: 3, name: 'Lucía Gómez', active: true }
-        ]);
+        const employeesResponse = await appointmentsService.getEmployees();
+        if (employeesResponse.success && employeesResponse.data) {
+          const employees = employeesResponse.data.map(emp => ({
+            id: emp.id,
+            name: emp.nombre,
+            active: emp.estado === 'Activo'
+          }));
+          setProfessionals(employees);
+        }
+
+        const servicesResponse = await appointmentsService.getServices();
+        if (servicesResponse.success && servicesResponse.data) {
+          const services = servicesResponse.data.map(svc => ({
+            id: svc.id_servicio,
+            name: svc.nombre,
+            duration: svc.duracion,
+            price: svc.precio,
+            description: svc.descripcion,
+            active: svc.estado === 'Activo'
+          }));
+          setServices(services);
+        }
       } catch (error) {
         console.error('Error loading data:', error);
-        // En caso de error, usar datos mock como fallback
-        setServices([
-          { id: 1, name: 'Corte de cabello', duration: 30, price: 25000, description: 'Corte básico de cabello', active: true }
-        ]);
-        setProfessionals([
-          { id: 1, name: 'Ana Torres', active: true }
-        ]);
       }
     };
     loadData();
   }, []);
 
-  // Si es edición, cargar datos de la cita
+  // Función para parsear teléfono desde el backend (igual que en proveedores)
+  const parsePhoneFromBackend = (telefono) => {
+    if (!telefono) return '';
+    // Remover el símbolo + y retornar solo números
+    return telefono.replace(/[^0-9]/g, '');
+  };
+
+  // Cargar datos de edición
   useEffect(() => {
     if (cita) {
-      console.log('Loading appointment data for editing:', cita);
+      const telefono = cita.usuario?.telefono || cita.cliente?.telefono || '';
+      const phoneNumber = parsePhoneFromBackend(telefono);
+      
+      setNumero(phoneNumber); // IMPORTANTE: Establecer el número parseado
+      
       setFormData({
         cliente: cita.usuario?.nombre || cita.cliente?.nombre || '',
-        telefono: cita.usuario?.telefono || cita.cliente?.telefono || '',
+        telefono: telefono,
+        correo: cita.usuario?.correo || cita.cliente?.correo || '',
         fecha: cita.fecha_servicio || fecha || '',
         estado: cita.estado || 'Agendada',
         servicios: (cita.servicios || []).map(s => ({
@@ -85,7 +109,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
           servicioId: s.id_servicio || s.servicio?.id_servicio,
           nombre: s.servicio?.nombre || s.nombre_servicio || 'Servicio',
           profesional: s.empleado?.nombre || s.nombre_empleado || '',
-          inicio: s.hora_inicio ? s.hora_inicio.substring(0, 5) : '08:00', // Solo HH:MM
+          inicio: s.hora_inicio ? s.hora_inicio.substring(0, 5) : '08:00',
           fin: s.hora_finalizacion ? s.hora_finalizacion.substring(0, 5) : calcularHoraFin(s.hora_inicio?.substring(0, 5) || '08:00', s.duracion || 30),
           duracion: s.duracion || s.servicio?.duracion || 30,
           precio: s.precio_unitario || s.precio || 0,
@@ -94,10 +118,13 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         })),
         notas: cita.motivo || ''
       });
+
+      setErrors({});
+      setTouchedFields({});
     }
   }, [cita, fecha]);
 
-  // useEffect para actualizar la fecha cuando cambia la prop fecha y NO hay cita (modo creación)
+  // Actualizar fecha cuando cambia (modo creación)
   useEffect(() => {
     if (!cita && fecha) {
       setFormData(prev => ({
@@ -120,7 +147,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }
   }, [serviceQuery, services]);
 
-  // Agregar servicio desde el buscador (ahora al inicio)
   const handleAddService = (service) => {
     setFormData(prev => ({
       ...prev,
@@ -134,7 +160,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
           fin: calcularHoraFin('08:00', service.duration),
           duracion: parseInt(service.duration?.toString().replace(/[^\d]/g, '') || 0, 10),
           precio: parseInt(service.price?.toString().replace(/[^\d]/g, '') || 0, 10),
-
           cantidad: 1
         },
         ...prev.servicios
@@ -142,12 +167,10 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }));
     setServiceQuery('');
     setFilteredServices([]);
-    // Marcar servicios como tocado y limpiar error
     setTouchedFields(prev => ({ ...prev, servicios: true }));
     clearError('servicios');
   };
 
-  // Eliminar servicio de la lista
   const removeService = (index) => {
     setFormData(prev => ({
       ...prev,
@@ -155,13 +178,11 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }));
   };
 
-  // Función para marcar un campo como "tocado" y validar
   const handleFieldBlur = (field) => {
     setTouchedFields(prev => ({ ...prev, [field]: true }));
     validateField(field);
   };
 
-  // Función para limpiar errores cuando el usuario empieza a escribir
   const clearError = (field) => {
     if (errors[field]) {
       setErrors(prev => {
@@ -172,7 +193,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }
   };
 
-  // Validar un campo específico
   const validateField = (field) => {
     let error = '';
 
@@ -181,7 +201,10 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         error = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
         break;
       case 'telefono':
-        error = validarTelefono(formData.telefono);
+        error = validarTelefono();
+        break;
+      case 'correo':
+        error = !formData.correo.trim() ? 'El correo es requerido' : (!isValidEmail(formData.correo) ? 'Formato de correo inválido' : '');
         break;
       case 'fecha':
         error = validarFecha(formData.fecha);
@@ -189,8 +212,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       case 'servicios':
         if (formData.servicios.length === 0) {
           error = 'Debe agregar al menos un servicio';
-        } else if (haySolapamientoServicios(formData.servicios)) {
-          error = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
         }
         break;
       default:
@@ -203,29 +224,40 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }));
   };
 
-  // Validación en tiempo real para campos individuales
+  // Validación de teléfono (igual que en proveedores)
+  function validarTelefono() {
+    if (!numero || numero.trim() === '' || numero.replace(/\D/g, '').length < 7) {
+      return 'El teléfono es requerido y debe tener al menos 7 dígitos';
+    }
+    if (numero.replace(/\D/g, '').length > 15) {
+      return 'El teléfono debe tener máximo 15 dígitos';
+    }
+    return '';
+  }
+
+  function validarFecha(fecha) {
+    if (!fecha) return 'La fecha es requerida';
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+    const fechaCita = new Date(fecha);
+    if (fechaCita < hoy) return 'No puedes agendar una cita en una fecha pasada';
+    return '';
+  }
+
   const handleFieldChange = (field, value) => {
-    // Actualizar el valor del campo
     setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Limpiar error si existe
     clearError(field);
-
-    // Validar en tiempo real solo si el campo ya fue tocado
     if (touchedFields[field]) {
-      // Usar un timeout para no validar en cada keystroke
       setTimeout(() => {
         validateField(field);
       }, 300);
     }
   };
 
-  // Actualizar campos de un servicio seleccionado
   const updateService = (index, field, value) => {
     setFormData(prev => {
       const newServicios = [...prev.servicios];
       newServicios[index] = { ...newServicios[index], [field]: value };
-      // Si cambia hora inicio o duración, recalcular hora fin
       if (['inicio', 'duracion', 'cantidad'].includes(field)) {
         const inicio = field === 'inicio' ? value : newServicios[index].inicio;
         const duracion = field === 'duracion' ? value : newServicios[index].duracion;
@@ -237,7 +269,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     });
   };
 
-  // Calcular hora fin a partir de inicio y duración
   function calcularHoraFin(inicio, duracion) {
     if (!inicio || !/^\d{2}:\d{2}$/.test(inicio)) return '';
     const [h, m] = inicio.split(':').map(Number);
@@ -245,176 +276,19 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     const newH = Math.floor(totalMin / 60);
     const newM = totalMin % 60;
     return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
-  }  
-
-  // Validación de teléfono
-  function validarTelefono(telefono) {
-    const soloNumeros = /^[0-9]{7,10}$/;
-    if (!telefono) return 'El teléfono es requerido';
-    if (!soloNumeros.test(telefono)) return 'El teléfono debe tener solo números (7 a 10 dígitos)';
-    return '';
   }
 
-  // Validación de fecha
-  function validarFecha(fecha) {
-    if (!fecha) return 'La fecha es requerida';
-    const hoy = new Date();
-    hoy.setHours(0,0,0,0);
-    const fechaCita = new Date(fecha);
-    if (fechaCita < hoy) return 'No puedes agendar una cita en una fecha pasada';
-    return '';
-  }
-
-  // Validación de solapamiento de servicios para el mismo profesional (en el formulario)
-  function haySolapamientoServicios(servicios) {
-    for (let i = 0; i < servicios.length; i++) {
-      for (let j = i + 1; j < servicios.length; j++) {
-        if (
-          servicios[i].profesional &&
-          servicios[i].profesional === servicios[j].profesional
-        ) {
-          // Convertir a minutos para comparar
-          const inicioA = parseInt(servicios[i].inicio.split(':')[0]) * 60 + parseInt(servicios[i].inicio.split(':')[1]);
-          const finA = parseInt(servicios[i].fin.split(':')[0]) * 60 + parseInt(servicios[i].fin.split(':')[1]);
-          const inicioB = parseInt(servicios[j].inicio.split(':')[0]) * 60 + parseInt(servicios[j].inicio.split(':')[1]);
-          const finB = parseInt(servicios[j].fin.split(':')[0]) * 60 + parseInt(servicios[j].fin.split(':')[1]);
-          // Si se solapan
-          if (inicioA < finB && inicioB < finA) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
-  // Validación de choque con otras citas del mismo empleado en el mismo día
-  async function hayChoqueConOtrasCitas(servicio, fecha, idCitaActual) {
-    try {
-      // Obtener citas del día desde la API
-      const response = await appointmentsService.getAll({ fecha_servicio: fecha });
-      
-      // Manejar la estructura de respuesta correcta
-      let todasCitas = [];
-      if (response.success && response.data) {
-        // La API devuelve { success: true, data: { citas: [...] } }
-        todasCitas = response.data.citas || response.data || [];
-      }
-      
-      // Asegurar que todasCitas es un array
-      if (!Array.isArray(todasCitas)) {
-        console.warn('todasCitas is not an array:', todasCitas);
-        todasCitas = [];
-      }
-      
-      const citasMismoDia = todasCitas.filter(c => c.fecha_servicio === fecha && c.id_cita !== idCitaActual);
-
-      for (const cita of citasMismoDia) {
-        for (const s of cita.servicios || []) {
-          if (s.nombre_empleado === servicio.profesional) {
-            // Comparar horarios
-            const inicioA = parseInt(servicio.inicio.split(':')[0]) * 60 + parseInt(servicio.inicio.split(':')[1]);
-            const finA = parseInt(servicio.fin.split(':')[0]) * 60 + parseInt(servicio.fin.split(':')[1]);
-            const inicioB = parseInt(s.hora_inicio.split(':')[0]) * 60 + parseInt(s.hora_inicio.split(':')[1]);
-            const finB = parseInt(s.hora_fin.split(':')[0]) * 60 + parseInt(s.hora_fin.split(':')[1]);
-            if (inicioA < finB && inicioB < finA) {
-              return true;
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error checking appointment conflicts:', error);
-      console.error('Response structure:', response);
-      // En caso de error, permitir continuar (mejor UX que bloquear)
-    }
-    return false;
-  }
-
-  // Validaciones solo para campos que han sido tocados
-  useEffect(() => {
-    // Solo validar servicios si ya hay servicios o si ya hay un error
-    if (touchedFields.servicios || formData.servicios.length > 0) {
-      if (formData.servicios.length === 0) {
-        setErrors(prev => ({ ...prev, servicios: 'Debe agregar al menos un servicio' }));
-      } else if (haySolapamientoServicios(formData.servicios)) {
-        setErrors(prev => ({ ...prev, servicios: 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.' }));
-      } else {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.servicios;
-          return newErrors;
-        });
-      }
-    }
-  }, [formData.servicios, touchedFields.servicios]);
-
-  // Validación en tiempo real para servicios cuando cambian
-  useEffect(() => {
-    if (touchedFields.servicios && formData.servicios.length > 0) {
-      const serviciosError = haySolapamientoServicios(formData.servicios) ?
-        'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.' : '';
-      setErrors(prev => ({
-        ...prev,
-        servicios: serviciosError
-      }));
-    }
-  }, [formData.servicios, touchedFields.servicios]);
-
-  // Validación de choque con otras citas (por cada servicio) - DESHABILITADA temporalmente
-  // TODO: Rehabilitar cuando el backend esté funcionando correctamente
-  /*
-  useEffect(() => {
-    async function validarChoques() {
-      const newErrors = { ...errors };
-      for (let i = 0; i < formData.servicios.length; i++) {
-        const s = formData.servicios[i];
-        if (s.profesional && s.inicio && s.fin) {
-          const choca = await hayChoqueConOtrasCitas(s, formData.fecha, cita?.id);
-          if (choca) {
-            newErrors[`servicio_${i}`] = 'Este horario choca con otra cita del mismo profesional en este día.';
-          } else {
-            delete newErrors[`servicio_${i}`];
-          }
-        }
-      }
-      setErrors(newErrors);
-    }
-    validarChoques();
-    // eslint-disable-next-line
-  }, [formData.servicios, formData.fecha]);
-  */
-
-  // Generar opciones de hora disponibles para un servicio
-  function getHorasDisponibles(idx, profesional, duracion) {
-    if (!profesional) return [];
+  function getHorasDisponibles() {
     const horas = [];
     for (let h = 6; h <= 20; h++) {
       for (let m = 0; m < 60; m += 15) {
         const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        // Verificar si esta hora se solapa con otro servicio del mismo profesional
-        let disponible = true;
-        const inicioA = h * 60 + m;
-        const finA = inicioA + Number(duracion);
-        for (let i = 0; i < formData.servicios.length; i++) {
-          if (i === idx) continue;
-          const s = formData.servicios[i];
-          if (s.profesional === profesional) {
-            const inicioB = parseInt(s.inicio.split(':')[0]) * 60 + parseInt(s.inicio.split(':')[1]);
-            const finB = parseInt(s.fin.split(':')[0]) * 60 + parseInt(s.fin.split(':')[1]);
-            if (inicioA < finB && inicioB < finA) {
-              disponible = false;
-              break;
-            }
-          }
-        }
-        horas.push({ hora, disponible });
+        horas.push({ hora, disponible: true });
       }
     }
     return horas;
   }
 
-  // Calcular duración total, hora inicio/fin global y valor total
   const calcularResumen = () => {
     if (formData.servicios.length === 0) return { duracion: 0, inicio: '', fin: '', total: 0 };
     const inicios = formData.servicios.map(s => s.inicio).sort();
@@ -430,115 +304,98 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   };
   const resumen = calcularResumen();
 
-  // Función para buscar o crear cliente
-  const findOrCreateClient = async (clientName, clientPhone) => {
-    try {
-      console.log('Buscando cliente:', clientName, clientPhone);
+  // Manejo del cambio de teléfono (igual que en proveedores)
+  const handlePhoneChange = (value) => {
+    // PhoneInput incluye el código del país en 'value'
+    setNumero(value);
+    
+    // Actualizar formData.telefono con el formato completo
+    setFormData(prev => ({
+      ...prev,
+      telefono: '+' + value
+    }));
+    
+    // Validar
+    const error = validarTelefono();
+    setErrors(prev => ({ ...prev, telefono: error }));
+  };
 
-      // Buscar usuario existente por nombre y teléfono
-      const searchPhoneDigits = clientPhone.trim().replace(/\D/g, ''); // Solo números para búsqueda
+  const findOrCreateClient = async (clientName, clientPhone, clientEmail) => {
+    try {
+      console.log('Buscando/Creando cliente:', clientName, clientPhone, clientEmail);
+      
       const searchResponse = await usersService.getAll({
         nombre: clientName.trim(),
-        telefono: searchPhoneDigits // Buscar sin + para compatibilidad
+        telefono: clientPhone.replace(/\D/g, ''),
+        correo: clientEmail.trim()
       });
 
-      console.log('Respuesta de búsqueda:', searchResponse);
-
       if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
-        // Encontrar usuario que coincida exactamente por nombre
-        // Ser más flexible con el teléfono (comparar dígitos)
-        const clientPhoneDigits = clientPhone.trim().replace(/\D/g, '');
         const existingUser = searchResponse.data.find(user => {
           const userNameMatch = user.nombre?.toLowerCase() === clientName.toLowerCase().trim();
           const userPhoneDigits = user.telefono?.replace(/\D/g, '') || '';
+          const clientPhoneDigits = clientPhone.trim().replace(/\D/g, '');
           const userPhoneMatch = userPhoneDigits === clientPhoneDigits;
-          return userNameMatch && userPhoneMatch;
+          const userEmailMatch = user.correo?.toLowerCase() === clientEmail.toLowerCase().trim();
+          return userNameMatch && userPhoneMatch && userEmailMatch;
         });
 
         if (existingUser) {
-          console.log('Cliente encontrado:', existingUser);
           return existingUser.id_usuario || existingUser.id;
         }
       }
 
-      // Si no se encontró, crear nuevo usuario/cliente
-      console.log('Cliente no encontrado, creando nuevo usuario...');
-
-      // Generar datos que cumplan con las validaciones del backend
-      const cleanName = clientName.trim();
-      const cleanPhoneDigits = clientPhone.trim().replace(/\D/g, ''); // Solo números
-      const cleanPhone = cleanPhoneDigits.startsWith('+') ? cleanPhoneDigits : `+${cleanPhoneDigits}`; // Agregar + si no existe
+      // Crear nuevo usuario
       const timestamp = Date.now();
-
       const newUserData = {
-        nombre: cleanName,
-        telefono: cleanPhone, // Formato: +573001234567
-        correo: `${cleanName.toLowerCase().replace(/\s+/g, '.')}.${timestamp}@cliente.com`,
-        contrasena: 'Cliente123!', // Cumple: 8+ chars, mayúscula, minúscula, número
-        tipo_documento: 'Cedula de ciudadania', // Tipo válido
-        documento: `TEMP${timestamp}`, // Documento único temporal
-        roleId: 2, // Asumir rol de cliente
+        nombre: clientName.trim(),
+        telefono: clientPhone.startsWith('+') ? clientPhone : `+${clientPhone}`,
+        correo: clientEmail.trim(),
+        contrasena: 'Temp1234@',
+        tipo_documento: 'Cedula de ciudadania',
+        documento: `TEMP${timestamp}`,
+        roleId: 3,
         estado: 'Activo'
       };
 
-      console.log('Datos del nuevo usuario:', newUserData);
-
       const createResponse = await usersService.create(newUserData);
       if (createResponse.success && createResponse.data) {
-        console.log('Nuevo cliente creado:', createResponse.data);
         return createResponse.data.id_usuario || createResponse.data.id;
       }
 
-      throw new Error('No se pudo crear el cliente');
+      return 1; // ID por defecto
     } catch (error) {
       console.error('Error en findOrCreateClient:', error);
-      console.error('Error details:', error.response?.data);
-
-      // Si falla la creación, usar cliente por defecto
-      console.warn('Usando cliente por defecto debido a error en creación');
-      return 1; // ID de cliente por defecto
+      return 1;
     }
   };
 
-  // Guardar cita
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     let newErrors = {};
     newErrors.cliente = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
-    newErrors.telefono = validarTelefono(formData.telefono);
+    newErrors.telefono = validarTelefono();
+    newErrors.correo = !formData.correo.trim() ? 'El correo es requerido' : (!isValidEmail(formData.correo) ? 'Formato de correo inválido' : '');
     newErrors.fecha = validarFecha(formData.fecha);
     if (formData.servicios.length === 0) {
       newErrors.servicios = 'Debe agregar al menos un servicio';
-    } else {
-      const haySolapamiento = haySolapamientoServicios(formData.servicios);
-      console.log('Verificando solapamiento:', haySolapamiento, 'Servicios:', formData.servicios);
-      if (haySolapamiento) {
-        newErrors.servicios = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
-      }
     }
 
-    // Validar choques con otras citas - DESHABILITADA temporalmente
-    // TODO: Rehabilitar cuando el backend esté funcionando correctamente
-    /*
-    for (let i = 0; i < formData.servicios.length; i++) {
-      const s = formData.servicios[i];
-      if (s.profesional && s.inicio && s.fin) {
-        const choca = await hayChoqueConOtrasCitas(s, formData.fecha, cita?.id_cita);
-        if (choca) {
-          newErrors[`servicio_${i}`] = 'Este horario choca con otra cita del mismo profesional en este día.';
-        } else {
-          delete newErrors[`servicio_${i}`];
-        }
-      }
-    }
-    */
+    setTouchedFields({
+      cliente: true,
+      telefono: true,
+      correo: true,
+      fecha: true,
+      servicios: true
+    });
 
     setErrors(newErrors);
-    
-    // Debug: mostrar errores en consola
+
     console.log('Errores detectados:', newErrors);
     console.log('FormData:', formData);
-    
+    console.log('Número de teléfono:', numero);
+
     if (Object.values(newErrors).some(Boolean)) {
       Swal.fire('Error', 'Por favor corrige los errores en el formulario antes de guardar.', 'error');
       return;
@@ -546,45 +403,44 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
     setLoading(true);
     try {
-      // Buscar o crear cliente
-      console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.telefono);
-      const clientId = await findOrCreateClient(formData.cliente, formData.telefono);
-      console.log('Client ID obtenido:', clientId);
-
-      // Mapear nombre de profesional a ID (usando datos mock por ahora)
+      // Usar '+' + numero para el teléfono completo
+      const fullPhone = '+' + numero;
+      console.log('Teléfono completo a enviar:', fullPhone);
+      
+      const clientId = await findOrCreateClient(formData.cliente, fullPhone, formData.correo);
+      
       const mapProfesionalToId = (nombreProfesional) => {
-        if (!nombreProfesional) return 1; // Default if no professional selected
+        if (!nombreProfesional) throw new Error('Debe seleccionar un profesional');
         const profesional = professionals.find(p => p.name === nombreProfesional);
-        return profesional ? profesional.id : 1; // Default to 1 if not found
+        if (!profesional) throw new Error(`No se encontró el profesional: ${nombreProfesional}`);
+        return profesional.id;
       };
 
-      // Preparar datos para el backend según la estructura esperada
       const appointmentData = {
         cita: {
           id_cliente: clientId,
           fecha_servicio: formData.fecha,
+          hora_entrada: formData.servicios[0]?.inicio + ':00' || '08:00:00',
           estado: formData.estado,
           ...(formData.notas && { motivo: formData.notas.trim() })
         },
         servicios: formData.servicios.map(s => ({
-          id_servicio: s.servicioId,
-          id_empleado: mapProfesionalToId(s.profesional),
-          hora_inicio: s.inicio + ':00',
-          cantidad: s.cantidad || 1,
-          ...(s.observaciones && { observaciones: s.observaciones })
+          id_servicio: parseInt(s.servicioId),
+          id_empleado: parseInt(mapProfesionalToId(s.profesional)),
+          hora_inicio: s.inicio.includes(':') ? (s.inicio.length === 5 ? s.inicio + ':00' : s.inicio) : s.inicio,
+          cantidad: parseInt(s.cantidad) || 1,
+          ...(s.observaciones && { observaciones: s.observaciones.trim() })
         }))
       };
 
-      console.log('Appointment data to send:', JSON.stringify(appointmentData, null, 2));
+      console.log('Datos a enviar:', JSON.stringify(appointmentData, null, 2));
 
-      let result;
       if (cita) {
-        // Para actualización, incluir id_cliente en la cita
         appointmentData.cita.id_cliente = cita.id_cliente;
-        result = await appointmentsService.update(cita.id_cita, appointmentData);
+        await appointmentsService.update(cita.id_cita, appointmentData);
         Swal.fire('¡Cita editada!', 'La cita se editó correctamente.', 'success');
       } else {
-        result = await appointmentsService.create(appointmentData);
+        await appointmentsService.create(appointmentData);
         Swal.fire('¡Cita registrada!', 'La cita se registró correctamente.', 'success');
       }
 
@@ -592,28 +448,34 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       onClose();
     } catch (error) {
       console.error('Error saving appointment:', error);
-      Swal.fire('Error', error.message || 'Ocurrió un error al guardar la cita.', 'error');
+      let errorMessage = 'Ocurrió un error al guardar la cita.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      Swal.fire('Error', errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none font-inter">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 font-inter">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col mt-8">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-5">
           <h2 className="text-2xl font-bold text-primary m-0">{cita ? 'Editar' : 'Crear'} Cita</h2>
-          <button className="text-gray-400 hover:text-primary text-2xl font-bold" onClick={onClose} aria-label="Cerrar">×</button>
+          <button className="text-gray-400 hover:text-primary text-2xl font-bold" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} className="overflow-y-auto p-8 flex-1 space-y-4">
           {/* Buscador de servicios */}
           <div className="mb-4">
-            <label className="block text-xs font-medium text-text-main mb-1">Buscar Servicio <span className="text-red-500">*</span></label>
+            <label className="block text-xs font-medium mb-1">Buscar Servicio <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={serviceQuery}
               onChange={e => setServiceQuery(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               placeholder="Buscar por nombre de servicio..."
             />
             {filteredServices.length > 0 && (
@@ -622,192 +484,154 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                   <div key={service.id} className="flex justify-between items-center px-4 py-2 hover:bg-gray-50">
                     <div>
                       <div className="font-semibold">{service.name}</div>
-                      <div className="text-xs text-gray-500">{service.description}</div>
                       <div className="text-xs text-gray-500">{service.duration} min ${service.price}</div>
                     </div>
                     <button
                       type="button"
-                      className="bg-primary text-white px-3 py-1 rounded hover:bg-primary-dark text-sm"
+                      className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
                       onClick={() => handleAddService(service)}
                     >Agregar</button>
                   </div>
                 ))}
               </div>
             )}
-            {touchedFields.servicios && errors.servicios && <span className="text-red-500 text-xs block mt-1">{errors.servicios}</span>}
+            {touchedFields.servicios && errors.servicios && <span className="text-red-500 text-xs mt-1">{errors.servicios}</span>}
           </div>
 
           {/* Servicios seleccionados */}
           <div className="mb-6">
-            <div className="font-semibold mb-2">Servicios seleccionados ({formData.servicios.length})</div>
-            {touchedFields.servicios && errors.servicios && <p className="text-red-500 text-xs mb-2">{errors.servicios}</p>}
-            <div className="space-y-4">
-              {formData.servicios.map((service, idx) => (
-                <div key={service.id} className="border rounded-lg p-4 bg-gray-50 relative">
-                  <button
-                    type="button"
-                    className="absolute top-2 right-2 text-gray-400 hover:text-red-600 text-lg"
-                    onClick={() => removeService(idx)}
-                  >×</button>
-                  <div className="font-semibold mb-1">{service.nombre}</div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Profesional</label>
-                      <select
-                        value={service.profesional}
-                        onChange={e => updateService(idx, 'profesional', e.target.value)}
-                        className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      >
-                        <option value="">Seleccionar profesional</option>
-                        {professionals.map(p => (
-                          <option key={p.id} value={p.name}>{p.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Hora inicio</label>
-                      <select
-                        value={service.inicio}
-                        onChange={e => updateService(idx, 'inicio', e.target.value)}
-                        className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      >
-                        {getHorasDisponibles(idx, service.profesional, service.duracion).map(opt => (
-                          <option key={opt.hora} value={opt.hora} disabled={!opt.disponible} style={!opt.disponible ? {color:'#aaa'} : {}}>
-                            {opt.hora} {!opt.disponible ? ' (hora no disponible)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                      {(!getHorasDisponibles(idx, service.profesional, service.duracion).some(opt => opt.hora === service.inicio && opt.disponible)) && (
-                        <span className="text-xs text-red-500">hora no disponible</span>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Hora finalización</label>
-                      <input
-                        type="time"
-                        value={service.fin}
-                        readOnly
-                        className="w-full px-2 py-1 border rounded-md bg-gray-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Duración (min)</label>
-                      <input
-                        type="number"
-                        value={service.duracion}
-                        disabled
-                        className="w-full px-2 py-1 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
-                      <input
-                        type="number"
-                        value={service.cantidad}
-                        onChange={e => updateService(idx, 'cantidad', e.target.value)}
-                        className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        min="1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Precio</label>
-                      <div className="font-semibold">${Number(service.precio) * (Number(service.cantidad) || 1)}</div>
-                    </div>
+            <div className="font-semibold mb-2">Servicios ({formData.servicios.length})</div>
+            {formData.servicios.map((service, idx) => (
+              <div key={service.id} className="border rounded p-4 mb-2 bg-gray-50">
+                <button
+                  type="button"
+                  className="float-right text-red-500"
+                  onClick={() => removeService(idx)}
+                >×</button>
+                <div className="font-semibold mb-2">{service.nombre}</div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs mb-1">Profesional</label>
+                    <select
+                      value={service.profesional}
+                      onChange={e => updateService(idx, 'profesional', e.target.value)}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                    >
+                      <option value="">Seleccionar</option>
+                      {professionals.map(p => (
+                        <option key={p.id} value={p.name}>{p.name}</option>
+                      ))}
+                    </select>
                   </div>
-                  {errors[`servicio_${idx}`] && <span className="text-red-500 text-xs block mt-1">{errors[`servicio_${idx}`]}</span>}
+                  <div>
+                    <label className="block text-xs mb-1">Hora inicio</label>
+                    <select
+                      value={service.inicio}
+                      onChange={e => updateService(idx, 'inicio', e.target.value)}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                    >
+                      {getHorasDisponibles().map(opt => (
+                        <option key={opt.hora} value={opt.hora}>{opt.hora}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1">Cantidad</label>
+                    <input
+                      type="number"
+                      value={service.cantidad}
+                      onChange={e => updateService(idx, 'cantidad', e.target.value)}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                      min="1"
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
 
-          {/* Datos del cliente y resumen */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Datos del cliente */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del cliente <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium mb-1">Nombre <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={formData.cliente}
                 onChange={e => handleFieldChange('cliente', e.target.value)}
-                onFocus={() => clearError('cliente')}
                 onBlur={() => handleFieldBlur('cliente')}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.cliente && errors.cliente ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full px-3 py-2 border rounded-md ${touchedFields.cliente && errors.cliente ? 'border-red-500' : ''}`}
                 placeholder="Nombre completo"
               />
               {touchedFields.cliente && errors.cliente && <p className="text-red-500 text-xs mt-1">{errors.cliente}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
-              <input
-                type="tel"
-                value={formData.telefono}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  handleFieldChange('telefono', val);
+              <label className="block text-sm font-medium mb-1">Teléfono <span className="text-red-500">*</span></label>
+              <PhoneInput
+                country={'co'}
+                value={numero}
+                onChange={handlePhoneChange}
+                inputClass={`w-full px-3 py-2 border rounded-md ${touchedFields.telefono && errors.telefono ? 'border-red-500' : ''}`}
+                containerClass="w-full"
+                inputProps={{
+                  name: 'telefono',
+                  required: true,
+                  placeholder: 'Ej: 3001234567'
                 }}
-                onFocus={() => clearError('telefono')}
-                onBlur={() => handleFieldBlur('telefono')}
-                maxLength={10}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.telefono && errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="Número de teléfono"
+                specialLabel=""
               />
               {touchedFields.telefono && errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
+              {numero && !errors.telefono && (
+                <p className="text-green-600 text-xs mt-1">✓ Teléfono: +{numero}</p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium mb-1">Correo <span className="text-red-500">*</span></label>
+              <input
+                type="email"
+                value={formData.correo}
+                onChange={e => handleFieldChange('correo', e.target.value)}
+                onBlur={() => handleFieldBlur('correo')}
+                className={`w-full px-3 py-2 border rounded-md ${touchedFields.correo && errors.correo ? 'border-red-500' : ''}`}
+                placeholder="correo@ejemplo.com"
+              />
+              {touchedFields.correo && errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Fecha <span className="text-red-500">*</span></label>
               <input
                 type="date"
                 value={formData.fecha}
                 onChange={e => handleFieldChange('fecha', e.target.value)}
-                onFocus={() => clearError('fecha')}
                 onBlur={() => handleFieldBlur('fecha')}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.fecha && errors.fecha ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full px-3 py-2 border rounded-md ${touchedFields.fecha && errors.fecha ? 'border-red-500' : ''}`}
               />
               {touchedFields.fecha && errors.fecha && <p className="text-red-500 text-xs mt-1">{errors.fecha}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estado de la cita</label>
-              <select
-                value={formData.estado}
-                onChange={e => setFormData(prev => ({ ...prev, estado: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                {APPOINTMENT_STATES.map(estado => (
-                  <option key={estado.nombre} value={estado.nombre}>{estado.nombre}</option>
-                ))}
-              </select>
             </div>
           </div>
 
           {/* Resumen */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 bg-gray-50 p-4 rounded">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Hora inicio</label>
-              <input type="text" value={resumen.inicio} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
+              <span className="text-xs text-gray-600">Hora inicio</span>
+              <div className="font-semibold">{resumen.inicio || '--:--'}</div>
             </div>
             <div>
-  <label className="block text-xs font-medium text-gray-700 mb-1">Hora fin</label>
-  <input
-    type="text"
-    value={resumen.fin || ''}
-    disabled
-    className="w-full px-2 py-1 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-  />
-</div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Duración total</label>
-              <input type="text" value={resumen.duracion + ' min'} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
+              <span className="text-xs text-gray-600">Hora fin</span>
+              <div className="font-semibold">{resumen.fin || '--:--'}</div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Valor total</label>
-              <input type="text" value={`$${resumen.total}`} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
+              <span className="text-xs text-gray-600">Duración</span>
+              <div className="font-semibold">{resumen.duracion} min</div>
+            </div>
+            <div>
+              <span className="text-xs text-gray-600">Valor total</span>
+              <div className="font-semibold text-green-600">${resumen.total}</div>
             </div>
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition">{loading ? 'Guardando...' : (cita ? 'Guardar cambios' : 'Crear cita')}</button>
+            <button type="button" className="px-4 py-2 rounded bg-gray-200 text-gray-700" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white font-semibold">{loading ? 'Guardando...' : (cita ? 'Guardar' : 'Crear')}</button>
           </div>
         </form>
       </div>
@@ -822,4 +646,29 @@ AppointmentEditModal.propTypes = {
   onSave: PropTypes.func.isRequired,
 };
 
-export default AppointmentEditModal; 
+// Demo component
+export default function Demo() {
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <div className="p-8">
+      <button
+        onClick={() => setShowModal(true)}
+        className="bg-blue-600 text-white px-4 py-2 rounded"
+      >
+        Abrir Modal de Cita
+      </button>
+
+      {showModal && (
+        <AppointmentEditModal
+          fecha="2025-11-10"
+          onClose={() => setShowModal(false)}
+          onSave={() => {
+            alert('Cita guardada correctamente');
+            setShowModal(false);
+          }}
+        />
+      )}
+    </div>
+  );
+} 

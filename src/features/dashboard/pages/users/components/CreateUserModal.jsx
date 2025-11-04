@@ -8,7 +8,6 @@ import 'react-phone-input-2/lib/style.css';
 import './phoneinput-search.css';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=128';
-const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
 const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
 
 function fileToBase64(file) {
@@ -66,7 +65,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     correo: '',
     password: '',
     confirmPassword: '',
-    estado: '',
     avatar: '',
     avatarCompressed: '',
   });
@@ -104,9 +102,14 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
         if (users.some(u => u.correo === value)) return 'Correo ya registrado';
         return '';
       case 'telefono':
-        // Validar el teléfono completo (código de país + número)
-        const telefonoCompleto = country.dialCode + numero;
-        return validateUserPhone(telefonoCompleto);
+        // Validar que el número tenga al menos 7 dígitos (sin contar el código de país)
+        if (!numero || numero.trim() === '' || numero.replace(/\D/g, '').length < 7) {
+          return 'El teléfono es requerido y debe tener al menos 7 dígitos';
+        }
+        if (numero.replace(/\D/g, '').length > 15) {
+          return 'El teléfono debe tener máximo 15 dígitos';
+        }
+        return '';
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
@@ -161,7 +164,7 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     // Validar todos los campos obligatorios
     let valid = true;
     let newError = {};
-    for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo','password','confirmPassword','estado']) {
+    for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo','password','confirmPassword']) {
       const err = validate(key, form[key]);
       if (err) {
         newError[key] = err;
@@ -188,7 +191,7 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
       documento: form.documento,
       telefono: telefonoFinal,
       roleId: parseInt(form.roles[0]) || 1, // Asignar el primer rol seleccionado o rol por defecto
-      estado: form.estado,
+      estado: 'Activo', // Siempre 'Activo' por defecto al crear usuario
       ...(foto && { foto }),
       ...(form.direccion && { direccion: form.direccion }),
     };
@@ -292,24 +295,16 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                       setNumero(val.slice(0, 15));
                       // Validación en tiempo real del número
                       let err = '';
-                      if (val && !/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else if (val && val.length >= 4) {
-                        // Validar teléfono completo si tenemos suficientes dígitos
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
+                      if (val && !/^\d{7,15}$/.test(val)) {
+                        err = 'El número debe tener entre 7 y 15 dígitos';
                       }
                       setError(prev => ({ ...prev, telefono: err }));
                     }}
                     onBlur={e => {
                       const val = e.target.value;
                       let err = '';
-                      if (!/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else {
-                        // Validar teléfono completo
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
+                      if (!/^\d{7,15}$/.test(val)) {
+                        err = 'El número debe tener entre 7 y 15 dígitos';
                       }
                       setError(prev => ({ ...prev, telefono: err }));
                     }}
@@ -362,14 +357,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
                 </div>
                 {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
-                <select name="estado" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.estado} onChange={handleChange} onBlur={handleBlur} required>
-                  <option value="">Seleccionar</option>
-                  {ESTADOS.map(est => <option key={est} value={est}>{est}</option>)}
-                </select>
-                {error.estado && <span className="text-red-500 text-xs">{error.estado}</span>}
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
