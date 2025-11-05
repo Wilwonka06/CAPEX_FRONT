@@ -605,9 +605,11 @@ export function isDuplicateRoleName(nombre, roles, rolActual = null) {
   });
 }
 
-// Valida nombre de rol (requerido, mínimo 3 caracteres)
+// Valida nombre de rol (requerido, mínimo 3 y máximo 16 caracteres)
 export function isValidRoleName(nombre) {
-  return nombre && nombre.trim().length >= 3;
+  if (!nombre) return false;
+  const len = nombre.trim().length;
+  return len >= 3 && len <= 16;
 }
 
 // Valida que se hayan seleccionado al menos un privilegio
@@ -637,13 +639,18 @@ export function validateRole(formData, privileges, roles = [], rolActual = null)
 
   // Validar nombre
   if (!isValidRoleName(formData.nombre)) {
-    errors.nombre = 'El nombre es requerido y debe tener al menos 3 caracteres.';
+    errors.nombre = 'El nombre es requerido, debe tener entre 3 y 16 caracteres.';
   } else if (!isValidAlphaNumericSpace(formData.nombre)) {
     errors.nombre = 'El nombre solo puede contener letras, números y espacios.';
   } else if (!startsWithAlpha(formData.nombre)) {
     errors.nombre = 'El nombre debe comenzar con una letra.';
   } else if (isDuplicateRoleName(formData.nombre, roles, rolActual)) {
     errors.nombre = 'Ya existe un rol con ese nombre.';
+  }
+
+  // Validar descripción (opcional, máximo 100 caracteres)
+  if (formData.descripcion && formData.descripcion.trim().length > 100) {
+    errors.descripcion = 'La descripción no puede exceder 100 caracteres.';
   }
 
   // Validar privilegios

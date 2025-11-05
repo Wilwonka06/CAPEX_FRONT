@@ -99,6 +99,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
                 value={formData.nombre}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={16}
               />
               {(touched.nombre || showErrors) && errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
             </div>
@@ -111,6 +112,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
                 value={formData.descripcion}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={100}
               />
             </div>
           </div>

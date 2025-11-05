@@ -17,12 +17,12 @@ class RolesValidationService {
       return { isValid: false, error: 'El nombre no puede estar vacío' };
     }
 
-    if (trimmedName.length < 2) {
-      return { isValid: false, error: 'El nombre debe tener al menos 2 caracteres' };
+    if (trimmedName.length < 3) {
+      return { isValid: false, error: 'El nombre debe tener al menos 3 caracteres' };
     }
 
-    if (trimmedName.length > 50) {
-      return { isValid: false, error: 'El nombre no puede exceder 50 caracteres' };
+    if (trimmedName.length > 16) {
+      return { isValid: false, error: 'El nombre no puede exceder 16 caracteres' };
     }
 
     // Verificar duplicados
@@ -53,13 +53,9 @@ class RolesValidationService {
       return { isValid: true };
     }
 
-    // Si tiene contenido, validar longitud mínima
-    if (trimmedDescription.length < 5) {
-      return { isValid: false, error: 'La descripción debe tener al menos 5 caracteres' };
-    }
-
-    if (trimmedDescription.length > 200) {
-      return { isValid: false, error: 'La descripción no puede exceder 200 caracteres' };
+    // Si tiene contenido, validar longitud máxima (sin mínimo)
+    if (trimmedDescription.length > 100) {
+      return { isValid: false, error: 'La descripción no puede exceder 100 caracteres' };
     }
 
     return { isValid: true };

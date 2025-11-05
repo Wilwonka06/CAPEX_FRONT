@@ -125,6 +125,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
                 value={formData.name}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={16}
               />
               {touched.name && errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
             </div>
@@ -137,6 +138,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
                 value={formData.description}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={100}
               />
             </div>
           </div>
