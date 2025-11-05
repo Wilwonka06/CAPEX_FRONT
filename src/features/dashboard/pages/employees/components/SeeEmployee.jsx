@@ -122,30 +122,14 @@ const SeeEmployee = ({ employee, onClose }) => {
         </>
       )}
 
-      {activeTab === 'programacion' &&
-        employee &&
-        Array.isArray(employee.schedulings) &&
-        employee.schedulings.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold mb-2 text-text-main">Programaciones</h3>
-            <SeeScheduling schedulings={employee.schedulings} onClose={onClose} />
-          </div>
-        )}
-
-      {activeTab === 'programacion' &&
-        (!employee.schedulings || employee.schedulings.length === 0) && (
-          <div className="mt-8 text-center py-8">
-            <i className="bi bi-calendar-x text-4xl text-gray-300"></i>
-            <p className="text-gray-500 mt-2">No hay programaciones registradas</p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-4 bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
-            >
-              Cerrar
-            </button>
-          </div>
-        )}
+      {activeTab === 'programacion' && (
+        <div className="mt-4">
+          <SeeScheduling 
+            empleadoId={employee.id || employee.id_usuario} 
+            onClose={onClose} 
+          />
+        </div>
+      )}
     </div>
   );
 };

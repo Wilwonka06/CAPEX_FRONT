@@ -8,7 +8,6 @@ import {
   validateSchedulingEndTime,
 } from '../../../../../shared/validations';
 import { getSchedulingsByUser, updateScheduling, deleteScheduling } from '../api/schedulingApi';
-import Paginator from '../../../../../shared/Paginator';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -50,6 +49,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
       const progs = await getSchedulingsByUser(empleadoId);
       console.log('[EditScheduling] ✅ Programaciones cargadas:', progs);
       setProgramaciones(progs || []);
+      setCurrentPage(1);
     } catch (error) {
       console.error('[EditScheduling] ❌ Error cargando programaciones:', error);
       
@@ -85,12 +85,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     return `${parts[0]}:${parts[1]}`;
   };
 
-  const getDayName = (dateString) => {
-    const date = new Date(dateString + 'T00:00:00');
-    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    return dias[date.getDay()];
-  };
-
   const handleEditarProgramacion = (programacion) => {
     console.log('[EditScheduling] Editando programación:', programacion);
     
@@ -111,7 +105,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   };
 
   const handleEliminarProgramacion = async (programacion) => {
-    if (window.confirm(`¿Eliminar la programación del ${formatDate(programacion.fechaInicio)}?`)) {
+    if (window.confirm(`¿Eliminar la programación del ${formatDate(programacion.fechaInicio || programacion.fecha)}?`)) {
       try {
         await deleteScheduling(programacion.id);
         toast.success('Programación eliminada correctamente');
@@ -190,7 +184,6 @@ const EditScheduling = ({ empleadoId, onClose }) => {
           hora_salida: prog.horaFin,
         };
 
-        console.log('[EditScheduling] Actualizando programación:', progToSave);
         await updateScheduling(editing.id, progToSave);
         
         toast.success('Programación actualizada correctamente');
@@ -215,11 +208,14 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     setErrors({});
   };
 
-  const totalPages = Math.ceil(programaciones.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedProgramaciones = programaciones.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = programaciones.length;
+  const paginatedProgramaciones = programaciones.slice(currentPage - 1, currentPage);
 
-  const handlePageChange = (page) => setCurrentPage(page);
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   if (loading) {
     return (
@@ -259,107 +255,123 @@ const EditScheduling = ({ empleadoId, onClose }) => {
 
   return (
     <div className="bg-white rounded-lg p-6">
-      <h3 className="text-xl font-bold text-gray-800 mb-6">Programaciones</h3>
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Programaciones</h3>
 
       {!mostrarFormulario ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {programaciones.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg">
+            <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p className="mt-4">No hay programaciones registradas</p>
+              <p className="mt-4 text-base">No hay programaciones registradas</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <>
               {paginatedProgramaciones.map((programacion) => (
-                <div
-                  key={programacion.id}
-                  className="border border-gray-200 rounded-lg p-6 bg-gray-50"
-                >
-                  <h4 className="text-lg font-bold text-gray-800 mb-4">Detalle de Programación</h4>
+                <div key={programacion.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4">Detalle de Programación</h4>
 
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6">
-                    {/* Fecha */}
+                  <div className="grid grid-cols-2 gap-x-12 gap-y-4 text-base mb-6">
+                    {/* Fecha inicio */}
                     <div>
-                      <p className="text-sm font-semibold text-gray-700 mb-1">Fecha:</p>
-                      <p className="text-base text-gray-900">{formatDate(programacion.fechaInicio || programacion.fecha)}</p>
+                      <span className="text-gray-900 font-medium">Fecha inicio: </span>
+                      <span className="text-gray-700">{formatDate(programacion.fechaInicio || programacion.fecha)}</span>
+                    </div>
+
+                    {/* Fecha fin (igual a fecha inicio) */}
+                    <div>
+                      <span className="text-gray-900 font-medium">Fecha fin: </span>
+                      <span className="text-gray-700">{formatDate(programacion.fechaInicio || programacion.fecha)}</span>
                     </div>
 
                     {/* Hora inicio */}
                     <div>
-                      <p className="text-sm font-semibold text-gray-700 mb-1">Hora inicio:</p>
-                      <p className="text-base text-gray-900">{formatTime(programacion.horaInicio || programacion.hora_entrada)}</p>
+                      <span className="text-gray-900 font-medium">Hora inicio: </span>
+                      <span className="text-gray-700">{formatTime(programacion.horaInicio || programacion.hora_entrada)}</span>
                     </div>
 
                     {/* Hora fin */}
                     <div>
-                      <p className="text-sm font-semibold text-gray-700 mb-1">Hora fin:</p>
-                      <p className="text-base text-gray-900">{formatTime(programacion.horaFin || programacion.hora_salida)}</p>
+                      <span className="text-gray-900 font-medium">Hora fin: </span>
+                      <span className="text-gray-700">{formatTime(programacion.horaFin || programacion.hora_salida)}</span>
                     </div>
                   </div>
 
                   {/* Botones de acción */}
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-300">
+                  <div className="flex justify-center gap-3 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => handleEditarProgramacion(programacion)}
-                      className="bg-blue-600 text-white px-5 py-2 rounded font-semibold hover:bg-blue-700 transition"
+                      className="text-sm bg-amber-900 text-white px-6 py-2 rounded hover:bg-amber-800 transition font-semibold"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleEliminarProgramacion(programacion)}
-                      className="bg-red-600 text-white px-5 py-2 rounded font-semibold hover:bg-red-700 transition"
+                      className="text-sm bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700 transition font-semibold"
                     >
                       Eliminar
                     </button>
                   </div>
                 </div>
               ))}
-            </div>
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-6">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-2 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  <span className="text-sm text-gray-700 font-medium">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={onClose}
+                    className="ml-auto bg-amber-900 text-white px-8 py-2 rounded font-semibold hover:bg-amber-800 transition"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+
+              {totalPages === 1 && (
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={onClose}
+                    className="bg-amber-900 text-white px-8 py-2 rounded font-semibold hover:bg-amber-800 transition"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+            </>
           )}
-
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-4 mt-6">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-text-main text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
-              >
-                <i className="bi bi-chevron-left text-sm"></i>
-              </button>
-
-              <span className="text-sm text-text-main/70">
-                {formatDate(paginatedProgramaciones[0]?.fechaInicio || paginatedProgramaciones[0]?.fecha)}
-              </span>
-
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-text-main text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
-              >
-                <i className="bi bi-chevron-right text-sm"></i>
-              </button>
-            </div>
-          )}
-
-          <div className="flex justify-end mt-6 pt-6 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="bg-gray-600 text-white px-6 py-2 rounded font-semibold hover:bg-gray-700 transition"
-            >
-              Cerrar
-            </button>
-          </div>
         </div>
       ) : (
         <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-          <h4 className="text-lg font-bold text-gray-800 mb-6">Editar Programación</h4>
+          <h4 className="text-lg font-bold text-gray-900 mb-6">Editar Programación</h4>
           <form onSubmit={handleEditEvent}>
             <div className="grid grid-cols-2 gap-6 mb-6">
-              {/* Fecha inicio */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Fecha inicio:
                 </label>
                 <input 
@@ -376,9 +388,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                 {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
               </div>
 
-              {/* Fecha fin (mismo valor) */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Fecha fin:
                 </label>
                 <input 
@@ -389,9 +400,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                 />
               </div>
 
-              {/* Hora inicio */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Hora inicio:
                 </label>
                 <select 
@@ -409,9 +419,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                 {errors.horaInicio && <p className="text-red-500 text-xs mt-1">{errors.horaInicio}</p>}
               </div>
 
-              {/* Hora fin */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Hora fin:
                 </label>
                 <select 
@@ -434,13 +443,13 @@ const EditScheduling = ({ empleadoId, onClose }) => {
               <button 
                 type="button" 
                 onClick={handleCancelar} 
-                className="bg-gray-600 text-white px-6 py-2 rounded font-semibold hover:bg-gray-700 transition"
+                className="bg-gray-200 text-gray-700 px-6 py-2 rounded font-semibold hover:bg-gray-300 transition"
               >
                 Cancelar
               </button>
               <button 
                 type="submit" 
-                className="bg-amber-900 text-white px-6 py-2 rounded font-semibold hover:bg-amber-800 transition"
+                className="bg-amber-900 text-white px-8 py-2 rounded font-semibold hover:bg-amber-800 transition"
               >
                 Guardar
               </button>
