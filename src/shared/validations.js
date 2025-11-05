@@ -692,7 +692,9 @@ export function isValidCustomerName(name) {
 }
 
 export function isValidPassword(password) {
-  return typeof password === 'string' && password.length >= 6;
+  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%?&])[A-Za-z\d@$!%?&]{8,}$/;
+  return regex.test(password);
 }
 
 // Valida teléfono de cliente (requerido, mínimo 7 caracteres)

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidEmail, isValidPassword, isValidCustomerName, validatePasswordConfirmation, isValidPhone } from '../../../shared/validations';
-import { getUsers, addUser } from '../../../shared/services/ModuleDataService';
 import { toast } from 'react-toastify';
 import PasswordEye from '../../../shared/components/PasswordEye';
+import authService from '../services/authServices';
 
-const DOC_TYPES = ['CC', 'PPT', 'TI'];
+const DOC_TYPES = ['Cedula de ciudadania', 'Pasaporte', 'Cedula de extranjeria'];
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -19,14 +19,10 @@ const RegisterPage = () => {
     confirmPassword: ''
   });
   const [error, setError] = useState({});
-  const [users, setUsers] = useState([]);
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  useEffect(() => {
-    getUsers().then(setUsers);
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const validate = (name, value) => {
     switch (name) {
@@ -34,7 +30,6 @@ const RegisterPage = () => {
         return isValidCustomerName(value) ? '' : 'Nombre inválido';
       case 'correo':
         if (!isValidEmail(value)) return 'Correo inválido';
-        if (users.some(u => u.correo === value)) return 'Correo ya registrado';
         return '';
       case 'telefono':
         if (!isValidPhone(value)) return 'Teléfono inválido. Usa formato internacional, ej: +573001234567';
@@ -42,17 +37,15 @@ const RegisterPage = () => {
       case 'documento':
         if (form.tipoDocumento === 'Pasaporte') {
           if (!/^[a-zA-Z0-9]{6,12}$/.test(value)) return 'Pasaporte inválido (6-12 caracteres alfanuméricos)';
-        } else {
-          if (!/^[0-9]{1,12}$/.test(value)) return 'Documento inválido (máx 12 dígitos, solo números)';
+        } else if (form.tipoDocumento === 'Cedula de ciudadania' || form.tipoDocumento === 'Cedula de extranjeria') {
+          if (!/^[0-9]{5,20}$/.test(value)) return 'Documento inválido (5-20 dígitos, solo números)';
         }
-        if (form.tipoDocumento && users.some(u => u.tipoDocumento === form.tipoDocumento && u.documento === value)) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
       case 'tipoDocumento':
         if (!value.trim()) return 'Campo obligatorio';
-        if (form.documento && users.some(u => u.tipoDocumento === value && u.documento === form.documento)) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
       case 'password':
-        return value ? (isValidPassword(value) ? '' : 'Contraseña débil (mínimo 6 caracteres)') : 'Campo obligatorio';
+        return value ? (isValidPassword(value) ? '' : 'Contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo (@$!%?&)') : 'Campo obligatorio';
       case 'confirmPassword':
         return validatePasswordConfirmation(form.password, value).confirmarContrasena || '';
       default:
@@ -104,19 +97,31 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateStep()) return;
-    // Validar documento único antes de registrar
-    if (users.some(u => u.tipoDocumento === form.tipoDocumento && u.documento === form.documento)) {
-      setError(prev => ({ ...prev, documento: 'Ya existe un usuario con ese tipo y número de documento' }));
-      return;
-    }
-    const newUser = {
-      ...form,
-      roles: ['Cliente'],
-      estado: 'Activo',
-    };
+
+    setLoading(true);
+
     try {
-      await addUser(newUser);
-      toast.success('¡Registro exitoso! Ahora puedes iniciar sesión.', { position: 'top-right' });
+      console.log('📝 Registrando nuevo usuario...');
+
+      const userData = {
+        nombre: form.nombre.trim(),
+        correo: form.correo.trim().toLowerCase(),
+        contrasena: form.password,
+        tipo_documento: form.tipoDocumento,
+        documento: form.documento.trim(),
+        telefono: form.telefono.trim()
+      };
+
+      const response = await authService.register(userData);
+
+      console.log('✅ Usuario registrado exitosamente:', response);
+
+      toast.success('¡Registro exitoso! Revisa tu correo electrónico para confirmar tu cuenta.', {
+        position: 'top-right',
+        duration: 5000
+      });
+
+      // Limpiar formulario
       setForm({
         nombre: '',
         tipoDocumento: '',
@@ -127,9 +132,28 @@ const RegisterPage = () => {
         confirmPassword: ''
       });
       setStep(1);
-      setTimeout(() => navigate('/login'), 1000);
-    } catch (err) {
-      toast.error('Error al registrar usuario. Intenta de nuevo.', { position: 'top-right' });
+
+      // Redirigir al login después de un breve delay
+      setTimeout(() => navigate('/login'), 3000);
+
+    } catch (error) {
+      console.error('❌ Error en registro:', error);
+
+      let errorMsg = 'Error al registrar usuario. Intenta de nuevo.';
+
+      if (error.response?.status === 409) {
+        errorMsg = error.response?.data?.message || 'El correo o documento ya están registrados';
+      } else if (error.response?.status === 400) {
+        errorMsg = error.response?.data?.message || 'Datos inválidos. Verifica la información proporcionada.';
+      } else if (error.response?.status === 422) {
+        errorMsg = 'Datos de registro inválidos. Verifica todos los campos.';
+      } else if (error.response?.status === 500) {
+        errorMsg = 'Error del servidor. Si el problema persiste, contacta al soporte.';
+      }
+
+      toast.error(errorMsg, { position: 'top-right' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,7 +172,7 @@ const RegisterPage = () => {
       {/* Formulario en tarjeta blanca */}
       <div className="flex justify-end items-center min-h-screen">
         <div className="w-full max-w-lg bg-white rounded-xl shadow-lg p-10 z-20 mt-10 mr-32">
-          <h2 className="text-3xl font-bold mb-6 text-center text-[#6d3b3b]">Registrate</h2>
+          <h2 className="text-3xl font-bold mb-6 text-center text-[#6d3b3b]">Regístrate</h2>
           <form onSubmit={step === 1 ? handleNext : handleSubmit} className="space-y-4">
             {step === 1 && (
               <>
@@ -158,7 +182,7 @@ const RegisterPage = () => {
                     Nombre completo <span className="text-red-500">*</span>
                   </label>
                   <i className="bi bi-person absolute left-3 top-9 text-gray-400 text-base"></i>
-                  <input type="text" name="nombre" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.nombre} onChange={handleChange} onBlur={handleBlur} required />
+                  <input type="text" name="nombre" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.nombre} onChange={handleChange} onBlur={handleBlur} required disabled={loading} />
                   {error.nombre && <span className="text-red-500 text-xs">{error.nombre}</span>}
                 </div>
                 {/* Tipo de documento */}
@@ -167,7 +191,7 @@ const RegisterPage = () => {
                     Tipo de documento <span className="text-red-500">*</span>
                   </label>
                   <i className="bi bi-card-list absolute left-3 top-9 text-gray-400 text-base"></i>
-                  <select name="tipoDocumento" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} required>
+                  <select name="tipoDocumento" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} required disabled={loading}>
                     <option value="">Seleccionar</option>
                     {DOC_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                   </select>
@@ -179,7 +203,7 @@ const RegisterPage = () => {
                     Documento <span className="text-red-500">*</span>
                   </label>
                   <i className="bi bi-file-earmark-text absolute left-3 top-9 text-gray-400 text-base"></i>
-                  <input type="text" name="documento" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.documento} onChange={handleChange} onBlur={handleBlur} required />
+                  <input type="text" name="documento" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.documento} onChange={handleChange} onBlur={handleBlur} required disabled={loading} />
                   {error.documento && <span className="text-red-500 text-xs">{error.documento}</span>}
                 </div>
                 {/* Teléfono */}
@@ -188,10 +212,10 @@ const RegisterPage = () => {
                     Teléfono <span className="text-red-500">*</span>
                   </label>
                   <i className="bi bi-telephone absolute left-3 top-9 text-gray-400 text-base"></i>
-                  <input type="text" name="telefono" placeholder="+573001234567" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.telefono} onChange={handleChange} onBlur={handleBlur} required />
+                  <input type="text" name="telefono" placeholder="+573001234567" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.telefono} onChange={handleChange} onBlur={handleBlur} required disabled={loading} />
                   {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
                 </div>
-                <button type="submit" className="w-full bg-[#a0522d] text-white py-2 rounded hover:bg-[#7a3a1d] transition font-semibold text-lg flex items-center justify-center gap-2 mt-4">Siguiente</button>
+                <button type="submit" className="w-full bg-[#a0522d] text-white py-2 rounded hover:bg-[#7a3a1d] transition font-semibold text-lg flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>Siguiente</button>
               </>
             )}
             {step === 2 && (
@@ -202,7 +226,7 @@ const RegisterPage = () => {
                     Correo electrónico <span className="text-red-500">*</span>
                   </label>
                   <i className="bi bi-envelope absolute left-3 top-9 text-gray-400 text-base"></i>
-                  <input type="email" name="correo" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.correo} onChange={handleChange} onBlur={handleBlur} required />
+                  <input type="email" name="correo" className="w-full border rounded pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.correo} onChange={handleChange} onBlur={handleBlur} required disabled={loading} />
                   {error.correo && <span className="text-red-500 text-xs">{error.correo}</span>}
                 </div>
                 {/* Contraseña */}
@@ -211,7 +235,7 @@ const RegisterPage = () => {
                     Contraseña <span className="text-red-500">*</span>
                   </label>
                   <i className="bi bi-lock absolute left-3 top-9 text-gray-400 text-base"></i>
-                  <input type={showPassword ? 'text' : 'password'} name="password" className="w-full border rounded pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.password} onChange={handleChange} onBlur={handleBlur} required />
+                  <input type={showPassword ? 'text' : 'password'} name="password" className="w-full border rounded pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.password} onChange={handleChange} onBlur={handleBlur} required disabled={loading} />
                   <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
                   {error.password && <span className="text-red-500 text-xs">{error.password}</span>}
                 </div>
@@ -221,13 +245,22 @@ const RegisterPage = () => {
                     Confirmar contraseña <span className="text-red-500">*</span>
                   </label>
                   <i className="bi bi-lock-fill absolute left-3 top-9 text-gray-400 text-base"></i>
-                  <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" className="w-full border rounded pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} required />
+                  <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" className="w-full border rounded pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-[#ffb76b]" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} required disabled={loading} />
                   <PasswordEye visible={showConfirmPassword} onToggle={() => setShowConfirmPassword(v => !v)} />
                   {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
                 </div>
                 <div className="flex gap-2 mt-4">
-                  <button onClick={handleBack} className="w-1/2 bg-gray-200 text-[#6d3b3b] py-2 rounded font-semibold hover:bg-gray-300 transition">Atrás</button>
-                  <button type="submit" className="w-1/2 bg-[#a0522d] text-white py-2 rounded hover:bg-[#7a3a1d] transition font-semibold text-lg flex items-center justify-center gap-2">Registrarme</button>
+                  <button onClick={handleBack} className="w-1/2 bg-gray-200 text-[#6d3b3b] py-2 rounded font-semibold hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>Atrás</button>
+                  <button type="submit" className="w-1/2 bg-[#a0522d] text-white py-2 rounded hover:bg-[#7a3a1d] transition font-semibold text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Registrando...
+                      </>
+                    ) : (
+                      'Registrarme'
+                    )}
+                  </button>
                 </div>
               </>
             )}

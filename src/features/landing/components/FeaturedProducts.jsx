@@ -1,99 +1,181 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import cartIcon from '../../../shared/images/cart.png';
-import { useCartToast } from '../components/CartToastContext';
-import { useCart } from '../components/CartContext';
-
-const productos = [
-  {
-    id: 1,
-    nombre: "Extensión Lacia Natural",
-    descripcion: "Extensión de cabello natural, textura lisa, color castaño oscuro.",
-    precio: 350.00,
-    categoria: "Extensiones",
-    foto: "https://placehold.co/80x80/EEE/31343C?text=Producto",
-  },
-  {
-    id: 2,
-    nombre: "Shampoo Nutritivo",
-    descripcion: "Shampoo para cabello seco, nutre y fortalece desde la raíz.",
-    precio: 120.00,
-    categoria: "Shampoo",
-    foto: "https://placehold.co/80x80/EEE/31343C?text=Producto",
-  },
-  {
-    id: 3,
-    nombre: "Acondicionador Suavizante",
-    descripcion: "Acondicionador que deja el cabello suave y manejable.",
-    precio: 95.00,
-    categoria: "Acondicionador",
-    foto: "https://placehold.co/80x80/EEE/31343C?text=Producto",
-  },
-  {
-    id: 4,
-    nombre: "Mascarilla Reparadora",
-    descripcion: "Mascarilla intensiva para reparar puntas abiertas y daño químico.",
-    precio: 150.00,
-    categoria: "Mascarilla",
-    foto: "https://placehold.co/80x80/EEE/31343C?text=Producto",
-  },
-];
+import { Link, useNavigate } from "react-router-dom";
+import cartIcon from "../../../shared/images/cart.png";
+import { useCartToast } from "../components/CartToastContext";
+import { useCart } from "../components/CartContext";
+import productsService from "../../dashboard/pages/products/API/productsService";
+import { useState, useEffect } from "react";
+import { formatNumber } from "../../../shared/utils/formatters";
 
 const FeaturedProducts = () => {
   const { showCartToast } = useCartToast();
   const { addToCart } = useCart();
+  const navigate = useNavigate();
+
+  // Estados para productos
+  const [productos, setProductos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Cargar productos destacados
+  useEffect(() => {
+    const loadFeaturedProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await productsService.getAll({ limit: 4 }); // Obtener máximo 4 productos destacados
+        if (response.success) {
+          setProductos(response.data || []);
+        } else {
+          setError("Error al cargar productos destacados");
+        }
+      } catch (err) {
+        setError("Error al cargar productos destacados");
+        console.error("Error loading featured products:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedProducts();
+  }, []);
+
+  // Estados de carga y error
+  if (loading) {
+    return (
+      <section className="py-16 bg-[#1E1E1E]">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-white font-montserrat">
+            Productos <span className="text-[#FACC15]">destacados</span>
+          </h2>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FACC15]"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-16 bg-[#1E1E1E]">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-white font-montserrat">
+            Productos <span className="text-[#FACC15]">destacados</span>
+          </h2>
+          <div className="text-center text-white">
+            <p>{error}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
-  <section className="py-16 bg-[#1E1E1E]">
-    <div className="max-w-6xl mx-auto px-4">
-      <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-white font-montserrat">
-        Productos <span className="text-[#FACC15]">destacados</span>
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-        {productos.map((prod) => (
-          <div
-            key={prod.id}
-              className="flex flex-col cursor-pointer group transition-all"
-          >
-              <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
-            <img
-              src={prod.foto}
-              alt={prod.nombre}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-            />
-              </div>
-              <div className="p-5 flex flex-col gap-2 flex-1 justify-between">
-                <h3 className="font-semibold text-lg text-[#1E1E1E] mb-1 truncate group-hover:text-[#FACC15] transition-colors">{prod.nombre}</h3>
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2 font-lato">{prod.descripcion}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm font-bold text-[#FACC15]">${prod.precio.toLocaleString('es-MX', {minimumFractionDigits:2})}</span>
+    <section className="py-20 bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] relative overflow-hidden">
+      {/* Elementos decorativos */}
+      <div className="absolute top-20 right-20 w-40 h-40 bg-[#FACC15]/5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 left-20 w-32 h-32 bg-[#FACC15]/10 rounded-full blur-2xl"></div>
+
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-white font-montserrat mb-6">
+            Productos <span className="text-[#FACC15]">destacados</span>
+          </h2>
+          <p className="text-xl text-white/80 max-w-3xl mx-auto font-lato">
+            Descubre nuestra selección exclusiva de productos de alta calidad,
+            diseñados para realzar tu belleza natural.
+          </p>
+        </div>
+
+        {/* Carousel container */}
+        <div className="relative overflow-hidden">
+          <div className="flex gap-8">
+            {productos.slice(0, 4).map((prod, idx) => (
+              <div
+                key={prod.id}
+                className="group relative bg-white rounded-xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 overflow-hidden cursor-pointer flex-shrink-0 w-72"
+                onClick={() => navigate(`/landing/productos/${prod.id}`)}
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                {/* Badge de oferta (opcional) */}
+                {prod.precio < 100000 && (
+                  <div className="absolute top-4 left-4 z-10 bg-[#FACC15] text-[#1E1E1E] px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                    ¡Oferta!
+                  </div>
+                )}
+
+                {/* Imagen con overlay */}
+                <div className="relative w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={
+                      prod.fotos && prod.fotos.length > 0
+                        ? prod.fotos[0]
+                        : prod.foto || prod.imagen
+                    }
+                    alt={prod.nombre}
+                    className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  {/* Overlay al hover */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                  {/* Botón de agregar al carrito */}
                   <button
-                    onClick={e => {
+                    onClick={(e) => {
                       e.stopPropagation();
                       addToCart(prod, 1);
                       showCartToast(prod);
                     }}
-                    className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center"
+                    className="absolute bottom-4 right-4 bg-[#FACC15] text-[#1E1E1E] rounded-full p-3 shadow-lg hover:bg-yellow-400 transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
                     title="Agregar al carrito"
                   >
                     <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
                   </button>
                 </div>
-                <span className="text-xs text-gray-500 mb-1 font-lato">{prod.categoria}</span>
+
+                {/* Info del producto */}
+                <div className="p-6 flex flex-col gap-3">
+                  <h3 className="font-bold text-lg text-[#1E1E1E] group-hover:text-[#FACC15] transition-colors duration-300 line-clamp-2 font-nunito leading-tight">
+                    {prod.nombre}
+                  </h3>
+
+                  {prod.descripcion && (
+                    <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                      {prod.descripcion}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-2xl font-bold text-[#FACC15] font-montserrat">
+                      ${formatNumber(prod.precio)}
+                    </span>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      {prod.categoria || "General"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Elemento decorativo */}
+                <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-[#FACC15]/10 rounded-full blur-lg group-hover:bg-[#FACC15]/20 transition-colors duration-500"></div>
               </div>
+            ))}
+
           </div>
-        ))}
-      </div>
-      <div className="flex justify-center mt-10">
-        <Link to="/landing/catalogo">
-          <button className="bg-[#FACC15] text-[#1E1E1E] font-semibold px-8 py-3 rounded-full shadow-lg hover:bg-yellow-400 transition-all text-lg font-poppins">
-            Ver más productos
-          </button>
-        </Link>
-      </div>
+
+          <div className="flex justify-center mt-16">
+            <Link to="/landing/catalogo">
+              <button className="group relative px-10 py-4 bg-transparent border-2 border-[#FACC15] text-[#FACC15] font-bold rounded-full shadow-lg hover:shadow-[#FACC15]/50 transition-all duration-300 transform hover:scale-105 font-poppins overflow-hidden">
+                <span className="relative">Ver todos los productos</span>
+                <div className="absolute inset-0 bg-[#FACC15] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute inset-0 bg-[#FACC15] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <span className="text-[#1E1E1E] font-bold">Explorar Catálogo</span>
+                </div>
+              </button>
+            </Link>
+          </div>
+        </div>
       </div>
     </section>
   );
 };
 
-export default FeaturedProducts; 
+export default FeaturedProducts;

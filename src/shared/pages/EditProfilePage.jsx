@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidPassword } from '../validations';
 
@@ -74,6 +74,7 @@ const EditProfilePage = () => {
         setForm(prev => ({ ...prev, foto: compressed }));
       } catch (err) {
         setError('No se pudo procesar la imagen. Usa otro archivo.');
+        err
       }
     }
   };

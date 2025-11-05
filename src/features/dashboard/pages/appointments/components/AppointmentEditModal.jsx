@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import usersService from '@/features/dashboard/pages/users/API/usersService';

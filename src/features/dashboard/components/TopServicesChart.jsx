@@ -1,5 +1,4 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
+ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import * as XLSX from 'xlsx';
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -39,19 +38,19 @@ const TopServicesChart = ({ data }) => {
           <i className="bi bi-download"></i> Descargar informe
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={350}>
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 10, right: 30, left: 40, bottom: 10 }}
+          margin={{ top: 10, right: 50, left: 200, bottom: 10 }}
           barCategoryGap={10}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis type="number" tick={{ fill: '#333' }} />
-          <YAxis dataKey="nombre" type="category" tick={{ fill: '#333', fontWeight: 500 }} width={180} />
+          <YAxis dataKey="nombre" type="category" tick={{ fill: '#333', fontWeight: 500 }} width={190} />
           <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="cantidad" fill="#34d399" radius={[0, 8, 8, 0]}>
-            <LabelList dataKey="cantidad" position="right" fill="#111" fontWeight={700} />
+          <Bar dataKey="cantidad" fill="#1E1E1E" radius={[0, 8, 8, 0]}>
+            <LabelList dataKey="cantidad" position="right" fill="#FACC15" fontWeight={700} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

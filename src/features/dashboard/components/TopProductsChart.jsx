@@ -1,4 +1,3 @@
-import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import * as XLSX from 'xlsx';
 
@@ -33,25 +32,25 @@ const TopProductsChart = ({ data }) => {
       <div className="flex justify-end mb-2">
         <button
           onClick={handleDownloadExcel}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded shadow transition font-medium text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow transition font-medium text-sm"
           title="Descargar top productos del mes seleccionado"
         >
           <i className="bi bi-download"></i> Descargar informe
         </button>
       </div>
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={350}>
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 10, right: 30, left: 40, bottom: 10 }}
+          margin={{ top: 10, right: 50, left: 250, bottom: 10 }}
           barCategoryGap={20}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis type="number" tick={{ fill: '#333' }} domain={[0, 'dataMax']} />
-          <YAxis dataKey="nombre" type="category" tick={{ fill: '#333', fontWeight: 500 }} width={220} />
+          <YAxis dataKey="nombre" type="category" tick={{ fill: '#333', fontWeight: 500 }} width={240} />
           <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="cantidad" fill="#a78bfa" radius={[0, 8, 8, 0]}>
-            <LabelList dataKey="cantidad" position="right" fill="#111" fontWeight={700} />
+          <Bar dataKey="cantidad" fill="#FACC15" radius={[0, 8, 8, 0]}>
+            <LabelList dataKey="cantidad" position="right" fill="#1E1E1E" fontWeight={700} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
