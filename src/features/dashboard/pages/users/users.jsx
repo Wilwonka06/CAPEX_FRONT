@@ -166,6 +166,37 @@ const Users = () => {
     }
   };
 
+  const handleStatusChange = async (userId, newStatus, conceptoEstado = null) => {
+    const user = users.find(u => (u.id_usuario || u.id) === userId);
+    if (user) {
+      const result = await Swal.fire({
+        title: '¿Confirmar cambio de estado?',
+        text: `¿Estás seguro de que deseas cambiar el estado de "${user.nombre}" a ${newStatus}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, cambiar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          const response = await usersService.changeStatus(userId, newStatus, conceptoEstado);
+          if (response.success) {
+            toast.success(`Estado cambiado a ${newStatus}`, { position: 'top-right' });
+            await loadUsers(); // Recargar lista
+          } else {
+            throw new Error(response.message || 'Error al cambiar el estado');
+          }
+        } catch (error) {
+          console.error('Error changing user status:', error);
+          toast.error(error.message || 'Error al cambiar el estado', { position: 'top-right' });
+        }
+      }
+    }
+  };
+
   // Abrir modales
   const openCreateModal = () => setShowCreateModal(true);
   const openEditModal = (user) => {
@@ -241,6 +272,7 @@ const Users = () => {
                   onView={openDetailModal}
                   onEdit={openEditModal}
                   onDelete={handleDeleteUser}
+                  onStatusChange={handleStatusChange}
                   loading={loading}
                 />
               )}

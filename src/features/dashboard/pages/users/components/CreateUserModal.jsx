@@ -172,14 +172,13 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
       setError(newError);
       return;
     }
-    // Procesar imagen si hay
     let foto = '';
     if (form.avatar && form.avatar instanceof File) {
-      foto = await compressImageToBase64(form.avatar, 64, 64, 0.3); // reducir tamaño para caber en VARCHAR(255)
+      // Comprimir a 512x512 para mejor calidad en perfiles
+      foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
-    // Crear usuario con los campos correctos para la API
-    const telefonoFinal = country.dialCode + numero; // Sin guion para formato internacional
+    const telefonoFinal = country.dialCode + numero;
     const newUser = {
       nombre: form.nombre,
       correo: form.correo,
@@ -187,7 +186,7 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
       tipo_documento: form.tipoDocumento,
       documento: form.documento,
       telefono: telefonoFinal,
-      roleId: parseInt(form.roles[0]) || 1, // Asignar el primer rol seleccionado o rol por defecto
+      roleId: parseInt(form.roles[0]) || 1,
       estado: form.estado,
       ...(foto && { foto }),
       ...(form.direccion && { direccion: form.direccion }),

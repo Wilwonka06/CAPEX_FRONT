@@ -29,39 +29,74 @@ const ProfileMenu = ({ user, onClose, onLogout, showOrdersOption }) => {
       <div className="absolute right-0 top-1 mt-8 w-72 z-50">
         {/* Flecha arriba */}
         <div className="flex justify-end pr-6">
-          <div className="w-4 h-4 bg-white rotate-45 -mb-2 shadow-lg"></div>
+          <div className="w-4 h-4 bg-white rotate-45 -mb-2 shadow-lg border-l border-t border-gray-200"></div>
         </div>
-        <div className="bg-white rounded-lg shadow-lg p-6 relative">
+        <div className="bg-white rounded-xl shadow-xl p-6 relative border border-gray-100">
           <button
-            className="absolute top-3 right-3 text-xl text-gray-400 hover:text-primary-dark"
+            className="absolute top-3 right-3 text-xl text-gray-400 hover:text-gray-600 transition-colors duration-200"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Cerrar menú"
           >
-            &times;
+            ×
           </button>
-          <div className="flex flex-col items-center">
-            <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center mb-2 overflow-hidden">
+
+          {/* Información del usuario */}
+          <div className="flex flex-col items-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-3 overflow-hidden ring-4 ring-gray-50">
               {user?.foto || user?.avatar ? (
                 <img src={user.foto || user.avatar} alt="avatar" className="w-full h-full object-cover rounded-full" />
               ) : (
-                <i className="bi bi-person text-3xl text-gray-500"></i>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
               )}
             </div>
-            <div className="text-lg font-semibold text-text-main text-center">{user?.nombre} {user?.apellido}</div>
-            <div className="text-gray-500 text-center text-sm mb-2">{user?.correo}</div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-800">{user?.nombre} {user?.apellido}</div>
+              <div className="text-sm text-gray-500">{user?.correo}</div>
+            </div>
           </div>
-          <hr className="my-3" />
-          <div className="flex flex-col gap-2 mb-4">
-            <button className="text-left text-primary hover:underline px-2 py-1 rounded transition" onClick={() => { onClose(); navigate('/perfil'); }}>Mi perfil</button>
+
+          <hr className="my-4 border-gray-200" />
+
+          {/* Opciones del menú */}
+          <div className="space-y-1 mb-4">
+            <button
+              className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition-all duration-200 group"
+              onClick={() => { onClose(); navigate('/perfil'); }}
+            >
+              <svg className="w-5 h-5 text-gray-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="font-medium">Mi perfil</span>
+            </button>
+
             {showOrdersOption && (
-              <button className="text-left text-primary hover:underline px-2 py-1 rounded transition" onClick={handleGoToOrders}>Mis pedidos</button>
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 text-left text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 rounded-lg transition-all duration-200 group"
+                onClick={handleGoToOrders}
+              >
+                <svg className="w-5 h-5 text-gray-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <span className="font-medium">Mis pedidos</span>
+              </button>
             )}
           </div>
+
+          <hr className="my-4 border-gray-200" />
+
+          {/* Botón de cerrar sesión */}
           <div className="flex justify-end">
             <button
-              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition font-semibold"
+              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-semibold shadow-sm hover:shadow-md"
               onClick={onLogout}
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
               Cerrar sesión
             </button>
           </div>

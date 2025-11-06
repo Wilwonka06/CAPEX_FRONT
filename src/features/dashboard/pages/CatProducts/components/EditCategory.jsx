@@ -5,7 +5,7 @@ import { isDuplicateCategoryName } from "../../../../../shared/validations";
 const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [setOriginalName] = useState("");
+  const [originalName, setOriginalName] = useState("");
   const [isNameValid, setIsNameValid] = useState(true);
   const [nameError, setNameError] = useState("");
   const [setDescriptionError] = useState("");
@@ -56,9 +56,20 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
   };
 
   const handleNameChange = (e) => {
-    setName(e.target.value);
-    setNameError("");
-    setIsNameValid(true);
+    const value = e.target.value;
+    setName(value);
+
+    // Validación en tiempo real
+    if (!value.trim()) {
+      setNameError("El nombre es obligatorio");
+      setIsNameValid(false);
+    } else if (isDuplicateCategoryName(value, categories, category)) {
+      setNameError("Ya existe una categoría con este nombre");
+      setIsNameValid(false);
+    } else {
+      setNameError("");
+      setIsNameValid(true);
+    }
   };
 
   const handleDescriptionChange = (e) => {
@@ -76,7 +87,7 @@ const EditCategory = ({ category, isOpen, onClose, onSave, categories }) => {
   if (!isOpen || !category) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">

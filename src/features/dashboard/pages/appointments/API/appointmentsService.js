@@ -208,6 +208,7 @@ export const appointmentsService = {
   create: async (appointmentData) => {
     try {
       console.log('Validating appointment data:', appointmentData);
+
       // Validaciones básicas
       if (!appointmentData.cita || !appointmentData.cita.id_cliente) {
         console.error('Validation failed: cita or id_cliente missing', {
@@ -220,14 +221,22 @@ export const appointmentsService = {
       if (!appointmentData.cita.fecha_servicio) {
         throw new Error('La fecha del servicio es requerida');
       }
-      if (!appointmentData.cita.hora_entrada) {
-        throw new Error('La hora de entrada es requerida');
-      }
-      if (!appointmentData.cita.hora_salida) {
-        throw new Error('La hora de salida es requerida');
-      }
       if (!appointmentData.servicios || !Array.isArray(appointmentData.servicios) || appointmentData.servicios.length === 0) {
         throw new Error('Al menos un servicio es requerido');
+      }
+
+      // Validar que todos los servicios tengan IDs válidos
+      const invalidServices = appointmentData.servicios.filter(s => !s.id_servicio || s.id_servicio <= 0);
+      if (invalidServices.length > 0) {
+        console.error('Invalid services found:', invalidServices);
+        throw new Error('Uno o más servicios no tienen ID válido');
+      }
+
+      // Validar que todos los empleados tengan IDs válidos
+      const invalidEmployees = appointmentData.servicios.filter(s => !s.id_empleado || s.id_empleado <= 0);
+      if (invalidEmployees.length > 0) {
+        console.error('Invalid employees found:', invalidEmployees);
+        throw new Error('Uno o más empleados no tienen ID válido');
       }
 
       // Estructurar datos según lo esperado por el backend
@@ -235,23 +244,19 @@ export const appointmentsService = {
         cita: {
           id_cliente: appointmentData.cita.id_cliente,
           fecha_servicio: appointmentData.cita.fecha_servicio,
-          hora_entrada: appointmentData.cita.hora_entrada,
-          hora_salida: appointmentData.cita.hora_salida,
           estado: appointmentData.cita.estado || 'Agendada',
-          valor_total: parseFloat(appointmentData.cita.valor_total) || 0,
           ...(appointmentData.cita.motivo && { motivo: appointmentData.cita.motivo.trim() })
         },
         servicios: appointmentData.servicios.map(s => ({
           id_servicio: s.id_servicio,
           id_empleado: s.id_empleado,
           hora_inicio: s.hora_inicio,
-          precio_unitario: s.precio_unitario || s.precio,
           cantidad: s.cantidad || 1,
           ...(s.observaciones && { observaciones: s.observaciones })
         }))
       };
 
-      console.log('API Service: Sending appointment data to backend:', cleanData);
+      console.log('API Service: Sending appointment data to backend:', JSON.stringify(cleanData, null, 2));
       const response = await apiRequest.post(APPOINTMENTS_ENDPOINT, cleanData);
       return response;
     } catch (error) {
@@ -272,14 +277,26 @@ export const appointmentsService = {
         throw new Error('ID de la cita es requerido');
       }
 
+      // Validar que todos los servicios tengan IDs válidos si se incluyen
+      if (appointmentData.servicios && appointmentData.servicios.length > 0) {
+        const invalidServices = appointmentData.servicios.filter(s => !s.id_servicio || s.id_servicio <= 0);
+        if (invalidServices.length > 0) {
+          console.error('Invalid services found:', invalidServices);
+          throw new Error('Uno o más servicios no tienen ID válido');
+        }
+
+        const invalidEmployees = appointmentData.servicios.filter(s => !s.id_empleado || s.id_empleado <= 0);
+        if (invalidEmployees.length > 0) {
+          console.error('Invalid employees found:', invalidEmployees);
+          throw new Error('Uno o más empleados no tienen ID válido');
+        }
+      }
+
       // Estructurar datos según lo esperado por el backend para actualización
       const cleanData = {
         cita: {
           ...(appointmentData.fecha_servicio && { fecha_servicio: appointmentData.fecha_servicio }),
-          ...(appointmentData.hora_entrada && { hora_entrada: appointmentData.hora_entrada }),
-          ...(appointmentData.hora_salida && { hora_salida: appointmentData.hora_salida }),
           ...(appointmentData.estado && { estado: appointmentData.estado }),
-          ...(appointmentData.valor_total !== undefined && { valor_total: parseFloat(appointmentData.valor_total) }),
           ...(appointmentData.motivo !== undefined && { motivo: appointmentData.motivo?.trim() }),
           ...(appointmentData.id_cliente && { id_cliente: appointmentData.id_cliente })
         },
@@ -288,13 +305,13 @@ export const appointmentsService = {
             id_servicio: s.id_servicio,
             id_empleado: s.id_empleado,
             hora_inicio: s.hora_inicio,
-            precio_unitario: s.precio_unitario || s.precio,
             cantidad: s.cantidad || 1,
             ...(s.observaciones && { observaciones: s.observaciones })
           }))
         })
       };
 
+      console.log('API Service: Updating appointment data:', JSON.stringify(cleanData, null, 2));
       const response = await apiRequest.put(`${APPOINTMENTS_ENDPOINT}/${id}`, cleanData);
       return response;
     } catch (error) {
@@ -315,7 +332,7 @@ export const appointmentsService = {
         throw new Error('ID de la cita es requerido');
       }
 
-      const data = motivoCancelacion ? { motivo_cancelacion: motivoCancelacion } : {};
+      const data = motivoCancelacion ? { motivo: motivoCancelacion } : {};
       const response = await apiRequest.patch(`${APPOINTMENTS_ENDPOINT}/${id}/cancelar`, data);
       return response;
     } catch (error) {
@@ -400,7 +417,15 @@ export const appointmentsService = {
         throw new Error('ID del empleado es requerido');
       }
 
-      const response = await apiRequest.get(`${APPOINTMENTS_ENDPOINT}/empleado/${employeeId}`, { params: filters });
+      const queryParams = new URLSearchParams();
+      if (filters.page) queryParams.append('page', filters.page);
+      if (filters.limit) queryParams.append('limit', filters.limit);
+
+      const url = queryParams.toString()
+        ? `${APPOINTMENTS_ENDPOINT}/empleado/${employeeId}?${queryParams.toString()}`
+        : `${APPOINTMENTS_ENDPOINT}/empleado/${employeeId}`;
+
+      const response = await apiRequest.get(url);
       return response;
     } catch (error) {
       console.error(`Error fetching appointments for employee ${employeeId}:`, error);
@@ -420,7 +445,15 @@ export const appointmentsService = {
         throw new Error('ID del usuario es requerido');
       }
 
-      const response = await apiRequest.get(`${APPOINTMENTS_ENDPOINT}/usuario/${userId}`, { params: filters });
+      const queryParams = new URLSearchParams();
+      if (filters.page) queryParams.append('page', filters.page);
+      if (filters.limit) queryParams.append('limit', filters.limit);
+
+      const url = queryParams.toString()
+        ? `${APPOINTMENTS_ENDPOINT}/usuario/${userId}?${queryParams.toString()}`
+        : `${APPOINTMENTS_ENDPOINT}/usuario/${userId}`;
+
+      const response = await apiRequest.get(url);
       return response;
     } catch (error) {
       console.error(`Error fetching appointments for user ${userId}:`, error);

@@ -53,8 +53,8 @@ export function isDuplicateCategoryName(nombre, categorias, categoriaActual = nu
     if (categoriaActual && c.id === categoriaActual.id) {
       return false;
     }
-    // Soporta tanto 'name' como 'Categoria'
-    return normalizeText(c.name || c.Categoria) === normalizedNombre;
+    // Soporta tanto 'name' como 'Categoria' y 'nombre'
+    return normalizeText(c.name || c.Categoria || c.nombre) === normalizedNombre;
   });
 }
 

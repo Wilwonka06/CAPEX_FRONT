@@ -15,7 +15,6 @@ import {
 } from '../../../../../shared/utils/imagesUploadHelper';
 import { toast } from 'react-toastify';
 import productsService from '../API/productsService';
-// Ajustar la ruta según la ubicación del componente
 
 const MAX_IMAGES = 3;
 
@@ -259,23 +258,19 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     setFieldErrors({});
 
     try {
-      // Procesar las imágenes: subir a Cloudinary si hay archivos nuevos
-      // Construir objeto con la estructura correcta para el backend
-    const newProduct = {
-      nombre: formData.nombre.trim(),
-      descripcion: formData.descripcion.trim() || null,
-      id_categoria_producto: parseInt(formData.categoryId),
-      precio_venta: parseFloat(formData.precio),
-      stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
-    };
+      const newProduct = {
+        nombre: formData.nombre.trim(),
+        descripcion: formData.descripcion.trim() || null,
+        id_categoria_producto: parseInt(formData.categoryId),
+        precio_venta: parseFloat(formData.precio),
+        stock: formData.cantidad ? parseInt(formData.cantidad) : 0,
+      };
 
-    // Enviar la primera imagen (en base64, el backend la subirá a Cloudinary)
-    if (formData.fotos.length > 0) {
-      newProduct.url_foto = formData.fotos[0];
-    }
+      if (formData.fotos.length > 0) {
+        newProduct.fotos = formData.fotos;
+      }
 
-      // CORRECCIÓN: Mapear especificaciones a características
-      // Solo enviar nombre y valor (el backend creará/encontrará las características)
+      // Mapear especificaciones a características
       const caracteristicasValidas = especificaciones
         .filter(e => {
           const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
@@ -296,7 +291,6 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       console.log('CreateProduct: Sending product data:', newProduct);
       console.log('CreateProduct: Características a enviar:', newProduct.caracteristicas);
 
-      // Crear el producto usando el servicio
       const result = await productsService.create(newProduct);
 
       if (result.success) {

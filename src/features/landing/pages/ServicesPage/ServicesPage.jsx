@@ -1,6 +1,7 @@
 import DetailServices from './components/DetailServices';
 import { useState, useEffect } from "react";
 import Paginator from '../../../../shared/Paginator';
+import Footer from '../../../../shared/components/Footer';
 
 const EMPLOYEES_KEY = 'capex_employees';
 const SERVICES_KEY = 'services';
@@ -114,6 +115,9 @@ const ServicesPage = () => {
       )}
 
       {selectedService && <DetailServices service={selectedService} onClose={() => setSelectedService(null)} />}
+
+      {/* Footer */}
+      <Footer />
     </div>
 
   );

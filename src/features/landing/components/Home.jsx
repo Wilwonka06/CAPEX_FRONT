@@ -4,6 +4,7 @@ import FeaturedProducts from './FeaturedProducts';
 import ContactSection from './ContactSection';
 import FeaturedServices from './FeaturedServices';
 import BenefitsSection from './BenefitsSection';
+import Footer from '../../../shared/components/Footer';
 import imagenLanding from '../../../shared/images/imagenLanding.jpg';
 
 const Home = () => {
@@ -20,13 +21,13 @@ const Home = () => {
         <img
           src={imagenLanding}
           alt="Fondo principal"
-          className="absolute inset-0 w-full h-full object-cover z-0 scale-105 animate-pulse"
+          className="absolute inset-0 w-full h-full object-cover z-0 scale-105 "
         />
         <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/70 z-10"></div>
 
         {/* Elementos decorativos */}
         <div className="absolute top-20 left-10 w-32 h-32 bg-[#FACC15]/10 rounded-full blur-xl animate-bounce"></div>
-        <div className="absolute bottom-20 right-10 w-24 h-24 bg-[#FACC15]/20 rounded-full blur-lg animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-24 h-24 bg-[#FACC15]/20 rounded-full blur-lg "></div>
 
         <div className={`relative z-20 flex flex-col items-center text-center text-white px-4 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="mb-6">
@@ -105,57 +106,7 @@ const Home = () => {
       <ContactSection />
 
       {/* Footer */}
-      <footer className="bg-[#1E1E1E] text-white py-12">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <h3 className="text-2xl font-bold text-[#FACC15] mb-4 font-montserrat">CAPEX</h3>
-              <p className="text-white/80 mb-4 font-lato">
-                Tu destino para productos de belleza premium y servicios profesionales.
-                Transformamos tu imagen con calidad y pasión.
-              </p>
-              <div className="flex space-x-4">
-                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
-                  <i className="bi bi-facebook text-xl"></i>
-                </a>
-                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
-                  <i className="bi bi-instagram text-xl"></i>
-                </a>
-                <a href="#" className="text-[#FACC15] hover:text-yellow-400 transition-colors">
-                  <i className="bi bi-whatsapp text-xl"></i>
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 text-white">Enlaces Rápidos</h4>
-              <ul className="space-y-2 text-white/80">
-                <li><Link to="/landing/catalogo" className="hover:text-[#FACC15] transition-colors">Productos</Link></li>
-                <li><Link to="/landing/servicios" className="hover:text-[#FACC15] transition-colors">Servicios</Link></li>
-                <li><Link to="/landing" className="hover:text-[#FACC15] transition-colors">Sobre Nosotros</Link></li>
-                <li><Link to="/landing" className="hover:text-[#FACC15] transition-colors">Contacto</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 text-white">Atención al Cliente</h4>
-              <ul className="space-y-2 text-white/80">
-                <li>📞 321 5956758</li>
-                <li>📧 info@capex.com</li>
-                <li>📍 Medellín, Colombia</li>
-                <li>🕒 Lun-Sáb: 9:30-18:40</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 mt-8 pt-8 text-center">
-            <p className="text-white/60 text-sm">
-              © 2025 CAPEX. Todos los derechos reservados. |
-              <span className="text-[#FACC15]"> Hecho con ❤️ para tu belleza</span>
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 };

@@ -119,8 +119,6 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                     >
                       <i className="bi bi-eye text-primary text-lg"></i>
                     </button>
-                    {product.categoria !== 'Extensión natural' && (
-                      <>
                         <button
                           className="h-8 w-8 p-0  hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
                           onClick={() => handleEdit(product)}
@@ -137,8 +135,6 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                         >
                           <i className="bi bi-trash text-red-500 text-lg"></i>
                         </button>
-                      </>
-                    )}
                   </div>
                 </td>
               </tr>
