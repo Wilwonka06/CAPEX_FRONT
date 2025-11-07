@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// Base URL del backend - Cambiar según el entorno
-const BASE_URL = import.meta.env.DEV
-  ? 'http://localhost:3000/api'  // Desarrollo
-  : 'https://capex-back.onrender.com/api';  // Producción
+/* const BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:3000/api' 
+  : 'https://capex-back.onrender.com/api';   */
+
+const BASE_URL = 'http://localhost:3000/api';
 
 // Crear instancia de axios con configuración base
 const apiClient = axios.create({
@@ -71,15 +72,27 @@ apiClient.interceptors.response.use(
         case 400:
           toast.error(data?.message || 'Solicitud incorrecta');
           break;
-        case 401:
-          toast.error('No autorizado. Por favor, inicia sesión nuevamente');
+        case 401: {
           // Limpiar datos de usuario del localStorage (las cookies HttpOnly se limpian automáticamente)
           localStorage.removeItem('currentUser');
-          // Redirigir al login
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 2000);
+          
+          // Solo redirigir al login si:
+          // 1. No estamos en una ruta pública
+          // 2. No es una petición de verificación de autenticación (/auth/me)
+          const currentPath = window.location.pathname;
+          const isPublicRoute = ['/', '/login', '/register', '/forgot-password', '/reset-password'].includes(currentPath) || 
+                               currentPath.startsWith('/landing');
+          const isAuthCheck = error.config?.url?.includes('/auth/me');
+          
+          // Solo mostrar toast y redirigir si no es una ruta pública y no es verificación de auth
+          if (!isPublicRoute && !isAuthCheck) {
+            toast.error('No autorizado. Por favor, inicia sesión nuevamente');
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 2000);
+          }
           break;
+        }
         case 403:
           toast.error('No tienes permisos para realizar esta acción');
           break;
