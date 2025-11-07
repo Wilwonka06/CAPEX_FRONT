@@ -1,4 +1,4 @@
-// AddEmployee.jsx actualizado para NO expandir programaciones, solo guardar los datos seleccionados
+// AddEmployee.jsx - Corregido para guardar programaciones correctamente
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import AddScheduling from './AddScheduling';
@@ -60,7 +60,14 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    
+    // Validación para campos numéricos (documento y teléfono)
+    if (name === 'documento' || name === 'telefono') {
+      const numericValue = value.replace(/[^\d]/g, '');
+      setForm(prev => ({ ...prev, [name]: numericValue }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
 
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
@@ -78,18 +85,24 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
         error = nombreErrors.nombre || '';
         break;
       case 'documento':
-        const documentoErrors = validateEmployeeDocument(value, employees);
-        error = documentoErrors.documento || '';
+        if (!value.trim()) {
+          error = 'El documento es obligatorio';
+        } else if (value.length < 6 || value.length > 15) {
+          error = 'El documento debe tener entre 6 y 15 dígitos';
+        } else {
+          const documentoErrors = validateEmployeeDocument(value, employees);
+          error = documentoErrors.documento || '';
+        }
         break;
       case 'correo':
         const correoErrors = validateEmployeeEmail(value, employees);
         error = correoErrors.correo || '';
         break;
       case 'telefono':
-        // Validar formato de teléfono internacional
-        const telefonoRegex = /^\+[0-9]{7,15}$/;
-        if (!telefonoRegex.test(value)) {
-          error = 'El teléfono debe tener formato internacional (+1234567890)';
+        if (!value.trim()) {
+          error = 'El teléfono es obligatorio';
+        } else if (value.length < 7 || value.length > 15) {
+          error = 'El teléfono debe tener entre 7 y 15 dígitos';
         }
         break;
       default:
@@ -98,14 +111,22 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
   
     if (error) {
       setErrors(prev => ({ ...prev, [name]: error }));
+    } else {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
   const handleAddScheduling = (prog) => {
+    console.log('[AddEmployee] handleAddScheduling - prog recibido:', prog);
     const idBase = Date.now().toString();
     const nuevaProg = { ...prog, idBase };
     setSchedulings([...schedulings, nuevaProg]);
     setEditingScheduling(null);
+    console.log('[AddEmployee] Programación agregada al estado local');
   };
 
   const handleEditScheduling = (prog) => {
@@ -135,15 +156,27 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
     setErrors(formErrors);
     
     if (Object.keys(formErrors).length === 0) {
+      // Asegurar que el teléfono tenga el formato +XXXXXXXXXX
+      let telefonoFormateado = form.telefono;
+      if (telefonoFormateado && !telefonoFormateado.startsWith('+')) {
+        telefonoFormateado = '+' + telefonoFormateado;
+      }
+
       const newEmployee = {
         nombre: form.nombre,
         tipo_documento: form.tipoDocumento,
         documento: form.documento,
-        telefono: form.telefono,
+        telefono: telefonoFormateado,
         correo: form.correo,
         direccion: form.direccion,
-        estado: form.estado
+        estado: form.estado,
+        schedulings: schedulings // ✅ AHORA SÍ INCLUYE LAS PROGRAMACIONES
       };
+
+      console.log("📤 [AddEmployee] DATOS A ENVIAR:");
+      console.log("  - Empleado:", newEmployee);
+      console.log("  - Programaciones:", schedulings);
+      console.log("  - Total programaciones:", schedulings.length);
 
       onSave(newEmployee);
       setForm(initialForm);
@@ -176,63 +209,119 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
         <form className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4" onSubmit={e => e.preventDefault()}>
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Nombre</label>
-            <input type="text" name="nombre" value={form.nombre} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
-            {errors.nombre && <p className="text-red-500 text-xs">{errors.nombre}</p>}
+            <input 
+              type="text" 
+              name="nombre" 
+              value={form.nombre} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              className={`w-full border rounded px-3 py-2 ${errors.nombre ? 'border-red-500' : ''}`}
+            />
+            {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Tipo de Documento</label>
-            <select name="tipoDocumento" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2">
+            <select 
+              name="tipoDocumento" 
+              value={form.tipoDocumento} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              className="w-full border rounded px-3 py-2"
+            >
               {tiposDocumento.map(tipo => (
                 <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
               ))}
             </select>
-            {errors.tipoDocumento && <p className="text-red-500 text-xs">{errors.tipoDocumento}</p>}
+            {errors.tipoDocumento && <p className="text-red-500 text-xs mt-1">{errors.tipoDocumento}</p>}
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Documento</label>
-            <input type="text" name="documento" value={form.documento} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
-            {errors.documento && <p className="text-red-500 text-xs">{errors.documento}</p>}
+            <input 
+              type="text" 
+              name="documento" 
+              value={form.documento} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              placeholder="Solo números"
+              maxLength={15}
+              className={`w-full border rounded px-3 py-2 ${errors.documento ? 'border-red-500' : ''}`}
+            />
+            {errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Teléfono</label>
             <input
-              type="tel"
+              type="text"
               name="telefono"
               value={form.telefono}
-              onChange={(e) => {
-                let value = e.target.value;
-                // Auto-agregar + si no está presente y el usuario empieza a escribir
-                if (value && !value.startsWith('+')) {
-                  value = '+' + value;
-                }
-                setForm(prev => ({ ...prev, telefono: value }));
-              }}
+              onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="+1234567890"
-              className="w-full border rounded px-3 py-2"
+              placeholder="Solo números"
+              maxLength={15}
+              className={`w-full border rounded px-3 py-2 ${errors.telefono ? 'border-red-500' : ''}`}
             />
-            {errors.telefono && <p className="text-red-500 text-xs">{errors.telefono}</p>}
+            {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Correo</label>
-            <input type="email" name="correo" value={form.correo} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
-            {errors.correo && <p className="text-red-500 text-xs">{errors.correo}</p>}
+            <input 
+              type="email" 
+              name="correo" 
+              value={form.correo} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              className={`w-full border rounded px-3 py-2 ${errors.correo ? 'border-red-500' : ''}`}
+            />
+            {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Dirección</label>
-            <input type="text" name="direccion" value={form.direccion} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2" />
-            {errors.direccion && <p className="text-red-500 text-xs">{errors.direccion}</p>}
+            <input 
+              type="text" 
+              name="direccion" 
+              value={form.direccion} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              className={`w-full border rounded px-3 py-2 ${errors.direccion ? 'border-red-500' : ''}`}
+            />
+            {errors.direccion && <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>}
           </div>
+          
           <div>
             <label className="block text-sm font-medium text-text-main mb-1">Estado</label>
-            <select name="estado" value={form.estado} onChange={handleChange} onBlur={handleBlur} className="w-full border rounded px-3 py-2">
+            <select 
+              name="estado" 
+              value={form.estado} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              className="w-full border rounded px-3 py-2"
+            >
               <option value="Activo">Activo</option>
               <option value="Inactivo">Inactivo</option>
             </select>
           </div>
+          
           <div className="col-span-2 flex justify-end mt-6 gap-2">
-            <button type="button" onClick={onCancel} className="border px-6 py-2 rounded">Cancelar</button>
-            <button type="button" onClick={() => { if (validate()) setStep(2); }} className="bg-primary-dark text-white px-6 py-2 rounded">Continuar</button>
+            <button 
+              type="button" 
+              onClick={onCancel} 
+              className="border border-gray-300 hover:bg-gray-100 px-6 py-2 rounded transition"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="button" 
+              onClick={() => { if (validate()) setStep(2); }} 
+              className="bg-primary-dark hover:bg-primary text-white px-6 py-2 rounded transition"
+              disabled={!isFormValid()}
+            >
+              Continuar
+            </button>
           </div>
         </form>
       )}
@@ -245,10 +334,79 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
             <AddScheduling onAdd={handleAddScheduling} />
           )}
 
+          {schedulings.length > 0 && (
+            <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <h3 className="text-md font-semibold mb-3">Programaciones agregadas ({schedulings.length})</h3>
+              <ul className="space-y-2">
+                {pageSchedulings.map((s, idx) => (
+                  <li key={s.id || idx} className="flex items-center justify-between bg-white p-3 rounded border">
+                    <span className="text-sm">
+                      {s.fechaInicio} - {s.fechaFin} | {s.horaInicio} - {s.horaFin} | 
+                      Días: {s.dias && s.dias.length > 0 ? s.dias.join(', ') : '-'}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditScheduling(s)}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteScheduling(s.id)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    ‹
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 mt-6">
-            <button onClick={onCancel} className="border px-6 py-2 rounded">Cancelar</button>
-            <button onClick={() => setStep(1)} className="border border-primary text-primary px-6 py-2 rounded">Atrás</button>
-            <button onClick={() => handleSubmit(new Event('submit'))} className="bg-primary-dark text-white px-6 py-2 rounded">Guardar todo</button>
+            <button 
+              onClick={onCancel} 
+              className="border border-gray-300 hover:bg-gray-100 px-6 py-2 rounded transition"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={() => setStep(1)} 
+              className="border border-primary text-primary hover:bg-primary hover:text-white px-6 py-2 rounded transition"
+            >
+              Atrás
+            </button>
+            <button 
+              onClick={() => handleSubmit(new Event('submit'))} 
+              className="bg-primary-dark hover:bg-primary text-white px-6 py-2 rounded transition"
+            >
+              Guardar todo
+            </button>
           </div>
         </div>
       )}

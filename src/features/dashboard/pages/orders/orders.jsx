@@ -31,8 +31,8 @@ function OrdersTable({ orders, onView, onEdit }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {orders.length > 0 ? orders.map((order) => (
-            <tr key={order.id} className="hover:bg-gray-50 transition-colors duration-150">
+          {orders.length > 0 ? orders.map((order, index) => (
+            <tr key={order.id || `order-${index}`} className="hover:bg-gray-50 transition-colors duration-150">
               <td className="py-4 px-4 text-xs font-medium text-gray-900">{order.fecha}</td>
               <td className="py-4 px-4 text-xs text-gray-600">{order.numeroOrden}</td>
               <td className="py-4 px-4 text-xs text-gray-600">
@@ -112,16 +112,16 @@ export default function OrdersPage() {
         // Transformar datos del backend al formato frontend
         const transformedOrders = (response.data || []).map(pedido => ({
           id: pedido.id_pedido,
-          numeroOrden: `PED-${pedido.id_pedido.toString().padStart(6, '0')}`,
-          fecha: pedido.fecha,
+          numeroOrden: `PED-${(pedido.id_pedido || 0).toString().padStart(6, '0')}`,
+          fecha: pedido.fecha || new Date().toISOString().split('T')[0],
           clienteId: pedido.id_usuario,
-          clienteNombre: pedido.usuario?.nombre || `Usuario ${pedido.id_usuario}`,
+          clienteNombre: pedido.usuario?.nombre || `Usuario ${pedido.id_usuario || 'N/A'}`,
           valor: parseFloat(pedido.total || 0),
-          estado: pedido.estado,
+          estado: pedido.estado || 'Pendiente',
           productos: (pedido.detalles || []).map(det => ({
-            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+            codigo: `P${(det.id_producto || 0).toString().padStart(3, '0')}`,
             nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad,
+            cantidad: det.cantidad || 0,
             precio: parseFloat(det.precio_unitario || 0)
           }))
         }));

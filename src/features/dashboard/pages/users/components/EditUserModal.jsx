@@ -210,11 +210,10 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
     // Procesar imagen si hay
     let foto = form.foto;
     if (form.avatar && form.avatar instanceof File) {
-      foto = await compressImageToBase64(form.avatar, 64, 64, 0.3); // reducir tamaño para caber en VARCHAR(255)
+      foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
-    // Preparar datos de actualización
-    const telefonoFinal = country.dialCode + numero; // Sin guion para formato internacional
+    const telefonoFinal = country.dialCode + numero;
     const updatedUser = {
       id_usuario: form.id_usuario || form.id,
       nombre: form.nombre,
@@ -225,7 +224,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       roleId: parseInt(form.roles[0]) || form.roleId,
       estado: form.estado,
       ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
-      ...(foto && { foto }),
+      ...(foto && { foto }), //
       ...(form.direccion && { direccion: form.direccion }),
     };
 

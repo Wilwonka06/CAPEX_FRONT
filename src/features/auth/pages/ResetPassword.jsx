@@ -10,8 +10,9 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
-  // Obtener token de URL query params o de location.state
-  const [token, setToken] = useState('');
+  // Obtener token de la URL (?token=...) o del state
+  const token = searchParams.get('token') || location.state?.token || '';
+  
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,29 +22,24 @@ const ResetPassword = () => {
   const [confirmError, setConfirmError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Obtener token al montar el componente
+  // Verificar si hay token al cargar el componente
   useEffect(() => {
-    const tokenFromUrl = searchParams.get('token');
-    const tokenFromState = location.state?.token;
-    const finalToken = tokenFromUrl || tokenFromState || '';
-    
-    console.log('🔑 Token obtenido:', finalToken ? 'Presente' : 'NO PRESENTE');
-    console.log('   Desde URL:', tokenFromUrl ? 'SÍ' : 'NO');
-    console.log('   Desde State:', tokenFromState ? 'SÍ' : 'NO');
-    
-    if (!finalToken) {
+    if (!token) {
       console.error('❌ No se encontró token de recuperación');
       setError('Token de recuperación no encontrado. Por favor, solicita un nuevo enlace de recuperación.');
+      toast.error('Token de recuperación inválido', { position: 'top-right' });
+    } else {
+      console.log('✅ Token de recuperación encontrado');
     }
-    
-    setToken(finalToken);
-  }, [searchParams, location.state]);
+  }, [token]);
 
-  const isFormValid = password.trim() && 
-                      confirm.trim() && 
-                      isValidPassword(password.trim()) && 
-                      password.trim() === confirm.trim() && 
-                      token;
+  // Validar formulario
+  const isFormValid = 
+    password.trim() && 
+    confirm.trim() && 
+    isValidPassword(password.trim()) && 
+    password.trim() === confirm.trim() && 
+    token;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,6 +50,13 @@ const ResetPassword = () => {
     const trimmedPassword = password.trim();
     const trimmedConfirm = confirm.trim();
 
+    // Validaciones
+    if (!token) {
+      setError('Token de recuperación inválido o expirado.');
+      setLoading(false);
+      return;
+    }
+
     if (!isValidPassword(trimmedPassword)) {
       setError('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.');
       setLoading(false);
@@ -62,12 +65,6 @@ const ResetPassword = () => {
 
     if (trimmedPassword !== trimmedConfirm) {
       setError('Las contraseñas no coinciden.');
-      setLoading(false);
-      return;
-    }
-
-    if (!token) {
-      setError('Token de recuperación inválido o expirado. Por favor, solicita un nuevo enlace.');
       setLoading(false);
       return;
     }
@@ -85,6 +82,7 @@ const ResetPassword = () => {
       setSuccess('¡Contraseña restablecida exitosamente!');
       toast.success('Contraseña actualizada correctamente', { position: 'top-right' });
 
+      // Redirigir al login después de 2 segundos
       setTimeout(() => navigate('/login'), 2000);
 
     } catch (error) {
@@ -93,7 +91,7 @@ const ResetPassword = () => {
       let errorMsg = 'Error al restablecer la contraseña. Intenta nuevamente.';
 
       if (error.response?.status === 400) {
-        errorMsg = error.response?.data?.message || 'Token inválido o expirado. Solicita un nuevo enlace de recuperación.';
+        errorMsg = error.response?.data?.message || 'Token inválido o expirado';
       } else if (error.response?.status === 500) {
         errorMsg = 'Error del servidor. Intenta más tarde.';
       }
@@ -105,37 +103,31 @@ const ResetPassword = () => {
     }
   };
 
-  // Si no hay token, mostrar mensaje de error
-  if (!token && !loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md text-center">
-          <div className="mb-4">
-            <i className="bi bi-exclamation-triangle text-6xl text-red-500"></i>
-          </div>
-          <h2 className="text-2xl font-bold mb-4 text-red-600">Token no válido</h2>
-          <p className="text-gray-700 mb-6">
-            No se encontró un token de recuperación válido. Por favor, solicita un nuevo enlace de recuperación de contraseña.
-          </p>
-          <button
-            onClick={() => navigate('/forgot-password')}
-            className="px-6 py-2 bg-[#a0522d] text-white rounded shadow hover:bg-[#7a3a1d] transition font-semibold"
-          >
-            Solicitar nuevo enlace
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
         <h2 className="text-2xl font-bold mb-6 text-[#6d3b3b] text-center">Restaurar contraseña</h2>
+        
+        {!token && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
+            <p className="text-red-600 text-sm text-center">
+              No se encontró el token de recuperación. Por favor, solicita un nuevo enlace.
+            </p>
+            <div className="flex justify-center mt-3">
+              <button
+                onClick={() => navigate('/forgot-password')}
+                className="px-4 py-2 bg-[#a0522d] text-white rounded hover:bg-[#7a3a1d] transition"
+              >
+                Solicitar nuevo enlace
+              </button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex items-center">
             <label className="block font-semibold text-[#6d3b3b] mr-2 w-40 text-right">
-              *Nueva contraseña:
+              Nueva contraseña <span className="text-red-500">*</span>
             </label>
             <div className="relative flex-1">
               <i className="bi bi-lock absolute left-3 top-3 text-gray-400 text-base"></i>
@@ -146,16 +138,16 @@ const ResetPassword = () => {
                 onChange={e => setPassword(e.target.value)}
                 required
                 autoFocus
-                disabled={loading}
+                disabled={loading || !token}
                 placeholder="Mínimo 8 caracteres"
               />
               <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
             </div>
           </div>
-
+          
           <div className="flex items-center">
             <label className="block font-semibold text-[#6d3b3b] mr-2 w-40 text-right">
-              *Confirmar contraseña:
+              Confirmar contraseña <span className="text-red-500">*</span>
             </label>
             <div className="relative flex-1">
               <i className="bi bi-lock absolute left-3 top-3 text-gray-400 text-base"></i>
@@ -172,7 +164,7 @@ const ResetPassword = () => {
                   }
                 }}
                 required
-                disabled={loading}
+                disabled={loading || !token}
                 placeholder="Repite la contraseña"
               />
               <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
@@ -187,23 +179,23 @@ const ResetPassword = () => {
             <p className="font-semibold mb-1">La contraseña debe contener:</p>
             <ul className="list-disc list-inside space-y-1">
               <li className={password.length >= 8 ? 'text-green-600' : ''}>
-                Al menos 8 caracteres
+                Mínimo 8 caracteres
               </li>
               <li className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>
-                Una letra mayúscula
+                Al menos una mayúscula
               </li>
               <li className={/[a-z]/.test(password) ? 'text-green-600' : ''}>
-                Una letra minúscula
+                Al menos una minúscula
               </li>
               <li className={/\d/.test(password) ? 'text-green-600' : ''}>
-                Un número
+                Al menos un número
               </li>
               <li className={/[@$!%?&]/.test(password) ? 'text-green-600' : ''}>
-                Un carácter especial (@$!%?&)
+                Al menos un carácter especial (@$!%?&)
               </li>
             </ul>
           </div>
-
+          
           {error && error !== 'Las contraseñas no coinciden.' && (
             <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded">
               {error}
@@ -215,7 +207,7 @@ const ResetPassword = () => {
               {success}
             </div>
           )}
-
+          
           <div className="flex justify-center gap-4 mt-4">
             <button
               type="button"
@@ -223,13 +215,12 @@ const ResetPassword = () => {
               onClick={() => navigate('/login')}
               disabled={loading}
             >
-              Cancelar
+              Volver al login
             </button>
             <button
               type="submit"
               className="px-6 py-2 bg-[#a0522d] text-white rounded shadow hover:bg-[#7a3a1d] transition font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!isFormValid || loading}
-              title={!isFormValid ? 'Complete todos los campos correctamente' : ''}
             >
               {loading ? (
                 <>
@@ -237,10 +228,7 @@ const ResetPassword = () => {
                   Restaurando...
                 </>
               ) : (
-                <>
-                  <i className="bi bi-check-circle"></i>
-                  Restaurar contraseña
-                </>
+                'Restaurar contraseña'
               )}
             </button>
           </div>

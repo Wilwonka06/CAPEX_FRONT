@@ -1,15 +1,13 @@
-import axios from "axios";
+import apiRequest from '../../../../../shared/config/apiConfig';
 
-const BASE = "https://capex-back.onrender.com/api/scheduling";
+const BASE = "/scheduling";
 
 // Obtener todas las programaciones
 export const getAllSchedulings = async () => {
   try {
-    const res = await axios.get(BASE, { timeout: 12000 });
-    console.log("[Employees-SchedulingAPI] getAllSchedulings RAW:", res.data);
+    const raw = await apiRequest.get(BASE, { timeout: 12000 });
+    console.log("[Employees-SchedulingAPI] getAllSchedulings RAW:", raw);
     
-    const raw = res?.data;
-
     let list = [];
     if (Array.isArray(raw)) {
       list = raw;
@@ -46,8 +44,7 @@ export const getAllSchedulings = async () => {
 export const getSchedulingsByUser = async (userId) => {
   try {
     console.log("[Employees-SchedulingAPI] getSchedulingsByUser for userId:", userId);
-    const res = await axios.get(`${BASE}/usuario/${userId}`, { timeout: 12000 });
-    const raw = res?.data;
+    const raw = await apiRequest.get(`${BASE}/usuario/${userId}`, { timeout: 12000 });
 
     let list = [];
     if (Array.isArray(raw)) {
@@ -83,8 +80,7 @@ export const getSchedulingsByUser = async (userId) => {
 // Obtener programación por ID
 export const getSchedulingById = async (id) => {
   try {
-    const res = await axios.get(`${BASE}/${id}`, { timeout: 12000 });
-    const item = res?.data;
+    const item = await apiRequest.get(`${BASE}/${id}`, { timeout: 12000 });
 
     if (!item) return null;
 
@@ -129,14 +125,9 @@ export const createScheduling = async (scheduling) => {
   console.log("[Employees-SchedulingAPI] createScheduling payload:", payload);
 
   try {
-    const res = await axios.post(BASE, payload, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 12000
-    });
-    
-    console.log("[Employees-SchedulingAPI] createScheduling response:", res.data);
+    const created = await apiRequest.post(BASE, payload);
+    console.log("[Employees-SchedulingAPI] createScheduling response:", created);
 
-    const created = res.data;
     return {
       id: created.id_programacion ?? created.id,
       id_usuario: created.id_usuario ?? payload.id_usuario,
@@ -179,14 +170,9 @@ export const updateScheduling = async (id, scheduling) => {
   console.log("[Employees-SchedulingAPI] updateScheduling payload:", payload);
 
   try {
-    const res = await axios.put(`${BASE}/${id}`, payload, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 12000
-    });
-    
-    console.log("[Employees-SchedulingAPI] updateScheduling response:", res.data);
+    const updated = await apiRequest.put(`${BASE}/${id}`, payload);
+    console.log("[Employees-SchedulingAPI] updateScheduling response:", updated);
 
-    const updated = res.data;
     return {
       id: updated.id_programacion ?? updated.id ?? id,
       id_usuario: updated.id_usuario ?? payload.id_usuario,
@@ -213,9 +199,9 @@ export const updateScheduling = async (id, scheduling) => {
 export const deleteScheduling = async (id) => {
   try {
     console.log("[Employees-SchedulingAPI] deleteScheduling ID:", id);
-    const res = await axios.delete(`${BASE}/${id}`, { timeout: 12000 });
-    console.log("[Employees-SchedulingAPI] deleteScheduling response:", res.data);
-    return res.data;
+    const res = await apiRequest.delete(`${BASE}/${id}`);
+    console.log("[Employees-SchedulingAPI] deleteScheduling response:", res);
+    return res;
   } catch (err) {
     console.error("[Employees-SchedulingAPI] deleteScheduling ERROR:", err.response?.status);
     console.error("[Employees-SchedulingAPI] Error data:", err.response?.data);

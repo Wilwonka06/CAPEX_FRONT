@@ -4,7 +4,7 @@ const PRODUCTS_ENDPOINT = '/productos';
 
 export const productsService = {
   /**
-   * Obtener todos los productos con paginación y filtros
+   * Obtener todos los productos con paginaciÃ³n y filtros
    */
   getAll: async (params = {}) => {
     try {
@@ -28,7 +28,7 @@ export const productsService = {
           id_producto: product.id_producto,
           id: product.id_producto,
           
-          // Información básica
+          // InformaciÃ³n bÃ¡sica
           nombre: product.nombre,
           descripcion: product.descripcion || '',
           
@@ -46,24 +46,24 @@ export const productsService = {
           fecha_registro: product.fecha_registro,
           fechaRegistro: product.fecha_registro,
           
-          // Imágenes
+          // IMÃGENES - Convertir string separado por comas en array
           url_foto: product.url_foto,
-          foto: product.url_foto,
-          fotos: product.url_foto ? [product.url_foto] : [],
-          imagen: product.url_foto,
+          foto: product.url_foto ? product.url_foto.split(',')[0] : null, // Primera imagen
+          fotos: product.url_foto ? product.url_foto.split(',').filter(url => url) : [],
+          imagen: product.url_foto ? product.url_foto.split(',')[0] : null,
           
-          // Categoría - compatible con ambos formatos
+          // CategorÃ­a - compatible con ambos formatos
           categoriaObj: product.categoria ? {
             id_categoria_producto: product.categoria.id_categoria_producto,
             nombre: product.categoria.nombre
           } : null,
-          categoria: product.categoria?.nombre || 'Sin categoría',
+          categoria: product.categoria?.nombre || 'Sin categorÃ­a',
           id_categoria_producto: product.categoria?.id_categoria_producto || null,
           
-          // Tipo de producto (puedes ajustarlo según tu lógica)
+          // Tipo de producto
           tipoProducto: product.categoria?.nombre || 'General',
           
-          // Características - formato completo
+          // CaracterÃ­sticas - formato completo
           caracteristicas: (product.caracteristicas || []).map(car => ({
             id_caracteristica: car.id_caracteristica,
             nombre: car.nombre,
@@ -112,7 +112,7 @@ export const productsService = {
             id_producto: product.id_producto,
             id: product.id_producto,
             
-            // Información básica
+            // InformaciÃ³n bÃ¡sica
             nombre: product.nombre,
             descripcion: product.descripcion || '',
             
@@ -130,24 +130,24 @@ export const productsService = {
             fecha_registro: product.fecha_registro,
             fechaRegistro: product.fecha_registro,
             
-            // Imágenes
+            //IMÃGENES - Convertir string separado por comas en array
             url_foto: product.url_foto,
-            foto: product.url_foto,
-            fotos: product.url_foto ? [product.url_foto] : [],
-            imagen: product.url_foto,
+            foto: product.url_foto ? product.url_foto.split(',')[0] : null,
+            fotos: product.url_foto ? product.url_foto.split(',').filter(url => url) : [],
+            imagen: product.url_foto ? product.url_foto.split(',')[0] : null,
             
-            // Categoría - compatible con ambos formatos
+            // CategorÃ­a - compatible con ambos formatos
             categoriaObj: product.categoria ? {
               id_categoria_producto: product.categoria.id_categoria_producto,
               nombre: product.categoria.nombre
             } : null,
-            categoria: product.categoria?.nombre || 'Sin categoría',
+            categoria: product.categoria?.nombre || 'Sin categorÃ­a',
             id_categoria_producto: product.categoria?.id_categoria_producto || null,
             
             // Tipo de producto
             tipoProducto: product.categoria?.nombre || 'General',
             
-            // Características - formato completo
+            // CaracterÃ­sticas - formato completo
             caracteristicas: (product.caracteristicas || []).map(car => ({
               id_caracteristica: car.id_caracteristica,
               nombre: car.nombre,
@@ -179,7 +179,7 @@ export const productsService = {
     try {
       console.log('API Service: Received productData:', productData);
 
-      // Validaciones básicas
+      // Validaciones bÃ¡sicas
       if (!productData.nombre) {
         throw new Error('El nombre del producto es requerido');
       }
@@ -187,7 +187,7 @@ export const productsService = {
         throw new Error('El precio es requerido');
       }
       if (!productData.id_categoria_producto && !productData.categoryId) {
-        throw new Error('La categoría es requerida');
+        throw new Error('La categorÃ­a es requerida');
       }
 
       // Mapeo para el backend
@@ -201,13 +201,19 @@ export const productsService = {
         iva: parseFloat(productData.iva || 0)
       };
 
-      // Solo incluir url_foto si es válida
-      const imagen = productData.url_foto || productData.imagen;
-      if (imagen && !imagen.startsWith('blob:')) {
-        mappedData.url_foto = imagen;
+      // Enviar array de imÃ¡genes (mÃ¡ximo 3)
+      if (productData.fotos && Array.isArray(productData.fotos) && productData.fotos.length > 0) {
+        // Filtrar solo imÃ¡genes vÃ¡lidas (base64 o URLs de Cloudinary)
+        const validImages = productData.fotos
+          .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
+          .slice(0, 3); // MÃ¡ximo 3 imÃ¡genes
+        
+        if (validImages.length > 0) {
+          mappedData.fotos = validImages;
+        }
       }
 
-      // Mapear características
+      // Mapear caracterÃ­sticas
       if (productData.caracteristicas && Array.isArray(productData.caracteristicas)) {
         mappedData.caracteristicas = productData.caracteristicas
           .filter(c => c.nombre && c.valor && c.nombre.trim() !== '' && c.valor.trim() !== '')
@@ -216,7 +222,7 @@ export const productsService = {
             valor: c.valor.trim()
           }));
 
-        console.log('API Service: Mapped características:', mappedData.caracteristicas);
+        console.log('API Service: Mapped caracterÃ­sticas:', mappedData.caracteristicas);
       }
 
       console.log('API Service: Sending mappedData to backend:', mappedData);
@@ -256,13 +262,19 @@ export const productsService = {
         );
       }
 
-      // Mapear url_foto si existe
-      const imagen = productData.url_foto || productData.imagen;
-      if (imagen && !imagen.startsWith('blob:')) {
-        mappedData.url_foto = imagen;
+      // Mapear array de imÃ¡genes (mÃ¡ximo 3)
+      if (productData.fotos && Array.isArray(productData.fotos)) {
+        // Filtrar solo imÃ¡genes vÃ¡lidas
+        const validImages = productData.fotos
+          .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
+          .slice(0, 3);
+        
+        if (validImages.length > 0) {
+          mappedData.fotos = validImages;
+        }
       }
 
-      // Mapear características correctamente desde especificaciones
+      // Mapear caracterÃ­sticas correctamente desde especificaciones
       if (productData.especificaciones && Array.isArray(productData.especificaciones)) {
         mappedData.caracteristicas = productData.especificaciones
           .filter(e => {
@@ -274,7 +286,7 @@ export const productsService = {
             valor: e.valor.trim()
           }));
 
-        console.log('API Service: Mapped características from especificaciones:', mappedData.caracteristicas);
+        console.log('API Service: Mapped caracterÃ­sticas from especificaciones:', mappedData.caracteristicas);
       } else if (productData.caracteristicas && Array.isArray(productData.caracteristicas)) {
         mappedData.caracteristicas = productData.caracteristicas
           .filter(c => c.nombre && c.valor && c.nombre.trim() !== '' && c.valor.trim() !== '')
@@ -283,7 +295,7 @@ export const productsService = {
             valor: c.valor.trim()
           }));
 
-        console.log('API Service: Mapped características:', mappedData.caracteristicas);
+        console.log('API Service: Mapped caracterÃ­sticas:', mappedData.caracteristicas);
       }
 
       console.log('API Service: Sending update data:', mappedData);

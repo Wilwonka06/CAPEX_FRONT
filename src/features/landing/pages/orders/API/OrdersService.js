@@ -21,7 +21,7 @@ export const ordersService = {
   getAll: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
+
       // Agregar parámetros de consulta si existen
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
@@ -29,7 +29,7 @@ export const ordersService = {
       if (params.estado) queryParams.append('estado', params.estado);
       if (params.userId) queryParams.append('userId', params.userId);
 
-      const url = queryParams.toString() 
+      const url = queryParams.toString()
         ? `${ORDERS_ENDPOINT}?${queryParams.toString()}`
         : ORDERS_ENDPOINT;
 
@@ -47,20 +47,62 @@ export const ordersService = {
    * @param {Object} options - Opciones de paginación y filtros
    * @returns {Promise<Object>} Lista de pedidos del usuario
    */
-  getByUser: async (userId, options = {}) => {
+  getByUsuario: async (userId, options = {}) => {
     try {
       if (!userId) {
         throw new Error('ID del usuario es requerido');
       }
 
-      const params = {
-        userId,
-        ...options
-      };
+      console.log('🔍 OrdersService.getByUsuario called with:', { userId, options });
 
-      return await ordersService.getAll(params);
+      const queryParams = new URLSearchParams();
+      if (options.page) queryParams.append('page', options.page);
+      if (options.limit) queryParams.append('limit', options.limit);
+
+      const url = queryParams.toString()
+        ? `${ORDERS_ENDPOINT}/usuario/${userId}?${queryParams.toString()}`
+        : `${ORDERS_ENDPOINT}/usuario/${userId}`;
+
+      console.log('📡 Fetching orders from:', url);
+
+      const response = await apiRequest.get(url);
+
+      console.log('📦 Orders response:', {
+        success: response.success,
+        dataLength: response.data?.length,
+        message: response.message,
+        fullResponse: response
+      });
+
+      return response;
     } catch (error) {
-      console.error(`Error fetching orders for user ${userId}:`, error);
+      console.error(`❌ Error fetching orders for user ${userId}:`, {
+        message: error.message,
+        status: error?.response?.status,
+        responseData: error?.response?.data,
+        fullError: error
+      });
+
+      if (error?.response?.status === 404) {
+        console.log('ℹ️ No orders found for user (404), returning empty array');
+        return {
+          success: true,
+          data: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 0
+          },
+          message: 'No se encontraron pedidos para este usuario'
+        };
+      }
+
+      if (error?.response?.status === 401) {
+        console.log('🚫 Authentication error (401) - user not authenticated');
+        throw new Error('Debes iniciar sesión para ver tus pedidos');
+      }
+
       throw error;
     }
   },
@@ -85,43 +127,63 @@ export const ordersService = {
   },
 
   /**
-   * Crear un nuevo pedido
-   * @param {Object} orderData - Datos del pedido
-   * @param {number} orderData.id_usuario - ID del usuario
-   * @param {string} orderData.fecha - Fecha del pedido
-   * @param {number} orderData.total - Total del pedido
-   * @param {string} orderData.estado - Estado del pedido
-   * @param {Array} orderData.detalles - Detalles del pedido
-   * @returns {Promise<Object>} Pedido creado
-   */
+  * Crear un nuevo pedido
+  * @param {Object} orderData - Datos del pedido
+  * @param {number} orderData.id_usuario - ID del usuario (REQUERIDO)
+  * @param {string} orderData.fecha - Fecha del pedido
+  * @param {Array} orderData.productos - Array de productos
+  * @returns {Promise<Object>} Pedido creado
+  */
   create: async (orderData) => {
     try {
-      // Validaciones básicas
+      // ✅ Validaciones mejoradas
       if (!orderData.id_usuario) {
         throw new Error('ID del usuario es requerido');
       }
-      if (!orderData.fecha) {
-        throw new Error('Fecha del pedido es requerida');
-      }
-      if (!orderData.total || orderData.total <= 0) {
-        throw new Error('Total del pedido debe ser mayor a 0');
+      if (!orderData.productos || !Array.isArray(orderData.productos) || orderData.productos.length === 0) {
+        throw new Error('El pedido debe tener al menos un producto');
       }
 
-      // Limpiar datos
+      // ✅ Validar que cada producto tenga los campos requeridos
+      orderData.productos.forEach((prod, index) => {
+        if (!prod.id_producto && !prod.id) {
+          throw new Error(`Producto en posición ${index + 1} no tiene ID`);
+        }
+        if (!prod.cantidad || prod.cantidad <= 0) {
+          throw new Error(`Producto en posición ${index + 1} no tiene cantidad válida`);
+        }
+        if (!prod.precio_unitario && !prod.precio) {
+          throw new Error(`Producto en posición ${index + 1} no tiene precio`);
+        }
+      });
+
+      // ✅ Preparar datos según lo que espera el backend
       const cleanData = {
         id_usuario: parseInt(orderData.id_usuario),
-        fecha: orderData.fecha,
-        total: parseFloat(orderData.total),
-        estado: orderData.estado || 'Pendiente',
-        detalles: orderData.detalles || []
+        fecha: orderData.fecha || new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+        productos: orderData.productos.map(prod => ({
+          id_producto: parseInt(prod.id_producto || prod.id),
+          cantidad: parseInt(prod.cantidad),
+          precio_unitario: parseFloat(prod.precio_unitario || prod.precio)
+        }))
       };
 
-      console.log('API Service: Sending order data to backend:', cleanData);
+      console.log('📤 Enviando pedido al backend:', cleanData);
+
       const response = await apiRequest.post(ORDERS_ENDPOINT, cleanData);
+
+      console.log('✅ Respuesta del backend:', response);
+
       return response;
     } catch (error) {
-      console.error('Error creating order:', error);
-      throw error;
+      console.error('❌ Error creating order:', error);
+
+      // Mejorar mensaje de error
+      const errorMessage = error?.response?.data?.message
+        || error?.message
+        || 'Error desconocido al crear el pedido';
+
+      throw new Error(errorMessage);
     }
   },
 
@@ -288,11 +350,11 @@ export const ordersService = {
    */
   getFormattedForLanding: async (userId, options = {}) => {
     try {
-      const response = await ordersService.getByUser(userId, { 
-        limit: 100, 
-        ...options 
+      const response = await ordersService.getByUsuario(userId, {
+        limit: 100,
+        ...options
       });
-      
+
       if (!response.success || !response.data) {
         return [];
       }
@@ -351,14 +413,14 @@ export const ordersService = {
    */
   calculateSubtotal: (order) => {
     if (order.subtotal) return order.subtotal;
-    
+
     // Si no hay subtotal, calcular desde detalles
     if (order.detalles && order.detalles.length > 0) {
       return order.detalles.reduce((sum, detalle) => {
         return sum + (detalle.subtotal || (detalle.cantidad * detalle.precio_unitario));
       }, 0);
     }
-    
+
     return order.total || 0;
   },
 
@@ -370,7 +432,7 @@ export const ordersService = {
   calculateShipping: (order) => {
     // Si tu backend tiene un campo específico para envío, úsalo
     if (order.costo_envio) return order.costo_envio;
-    
+
     // Si no, calcular: total - subtotal
     const subtotal = ordersService.calculateSubtotal(order);
     const total = order.total || 0;
@@ -384,7 +446,7 @@ export const ordersService = {
    */
   formatDate: (dateString) => {
     if (!dateString) return 'Fecha no disponible';
-    
+
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString('es-CO', {
@@ -404,7 +466,7 @@ export const ordersService = {
    */
   formatPrice: (price) => {
     if (price === null || price === undefined) return '0';
-    
+
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
     return numPrice.toFixed(2);
   },
@@ -417,7 +479,7 @@ export const ordersService = {
   getUserStats: async (userId) => {
     try {
       const orders = await ordersService.getFormattedForLanding(userId);
-      
+
       return {
         total: orders.length,
         pendientes: orders.filter(o => o.estado.toLowerCase() === 'pendiente').length,
