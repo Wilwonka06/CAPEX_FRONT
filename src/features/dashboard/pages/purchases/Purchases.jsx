@@ -4,6 +4,7 @@ import CreatePurchaseModal from './components/CreatePurchaseModal';
 import PurchaseDetailModal from './components/PurchaseDetailModal';
 import PurchasesTable from './components/PurchasesTable';
 import LoadingTable from '../../../../shared/components/LoadingTable';
+import { formatNumber } from '../../../../shared/utils/formatters';
 import productsService from '../products/API/productsService';
 import purchasesService from './API/purchasesService';
 import suppliersService from '../suppliers/API/suppliersService';
@@ -31,7 +32,7 @@ export default function Shopping() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailCompra, setDetailCompra] = useState(null);
-  const [setSuppliers] = useState([]);
+  const [suppliers] = useState([]);
 
   const { setTitle } = useOutletContext();
 
@@ -80,7 +81,7 @@ export default function Shopping() {
     try {
       const response = await suppliersService.getActive();
       if (response.success) {
-        setSuppliers(response.data || []);
+        // suppliers se mantiene como estado local si es necesario
       }
     } catch (err) {
       console.error('Error loading suppliers:', err);
@@ -114,7 +115,7 @@ export default function Shopping() {
   // Descargar reporte de compras
   const handleDownloadReport = async () => {
     try {
-      const response = await purchasesService.generateReport({
+      await purchasesService.generateReport({
         format: 'excel',
         startDate: '2024-01-01',
         endDate: new Date().toISOString().split('T')[0],
@@ -167,9 +168,6 @@ export default function Shopping() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            {/* El título ahora se muestra en el navbar */}
-          </div>
-          <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct
                 searchTerm={searchTerm}
@@ -186,7 +184,8 @@ export default function Shopping() {
                 className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
                 onClick={handleDownloadReport}
               >
-                <i className="bi bi-file-earmark-excel"></i>
+                <i className="bi bi-file-earmark-excel mr-2"></i>
+                Generar Reporte
               </button>
             </div>
 

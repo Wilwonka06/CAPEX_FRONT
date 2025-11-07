@@ -6,13 +6,13 @@ const whatsappLink = 'https://wa.me/573215956758?text=Hola%20quiero%20más%20inf
 const mapsLink = 'https://goo.gl/maps/6Qw6Qw6Qw6Qw6Qw6A';
 
 const ContactSection = () => (
-  <section className="py-16 bg-[#1E1E1E]">
+  <section className="py-16 px-4 bg-[#1E1E1E]">
     <h2 className="text-3xl font-bold text-center mb-10 text-white font-montserrat">
       Contáctanos y <span className="text-[#FACC15]">visítanos</span>
     </h2>
     <div className="flex flex-col md:flex-row gap-10 max-w-5xl mx-auto items-center">
       {/* Columna de texto a la izquierda */}
-      <div className="flex-1 flex flex-col justify-center gap-8 bg-[#232323] rounded-2xl p-8 shadow-lg border border-[#FACC15] text-white">
+      <div className="flex-1 flex flex-col justify-center gap-8 bg-[#232323] rounded-2xl p-8 shadow-lg border text-white">
         {/* Dirección */}
         <div className="flex items-start gap-4">
           <FaMapMarkerAlt className="text-[#FACC15] text-2xl mt-1" />
@@ -48,7 +48,7 @@ const ContactSection = () => (
         </div>
       </div>
       {/* Columna de mapa a la derecha */}
-      <div className="flex-1 min-h-[300px] w-full max-w-md rounded-2xl overflow-hidden shadow-lg border-4 border-[#FACC15]">
+      <div className="flex-1 min-h-[300px] w-full max-w-md rounded-2xl overflow-hidden shadow-lg">
         <iframe
           title="Ubicación"
           src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.1414228156036!2d-75.5650838!3d6.245086699999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e44291c415d59af%3A0xe4b83cb2caa41fa1!2sExtensiones%20astrid%20parias!5e0!3m2!1ses-419!2sco!4v1751560166126!5m2!1ses-419!2sco"

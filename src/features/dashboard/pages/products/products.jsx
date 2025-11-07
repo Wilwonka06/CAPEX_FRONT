@@ -279,15 +279,11 @@ const ProductsPage = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
-          {/* El título ahora se muestra en el navbar */}
           <div className="p-6">
-            {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} />
               <CreateProduct onCreate={handleCreateProduct} products={products} />
             </div>
-
-            {/* Tabla de productos */}
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               {isInitialLoading ? (
                 <LoadingTable message="Cargando productos..." />
@@ -327,26 +323,10 @@ const ProductsPage = () => {
               />
             )}
 
-            {/* Mostrar información de paginación */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Mostrando {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} a{' '}
-                {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} de{' '}
-                {pagination.totalItems} productos.
-              </p>
-            </div>
           </div>
         </div>
       </div>
       <ToastContainer />
-
-      {/* Indicador de carga durante operaciones */}
-      {loading && products.length > 0 && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          <span>Procesando...</span>
-        </div>
-      )}
     </div>
   );
 };

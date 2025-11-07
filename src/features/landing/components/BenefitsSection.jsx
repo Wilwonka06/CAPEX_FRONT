@@ -1,5 +1,3 @@
-import React from 'react';
-
 const beneficios = [
   {
     icon: (
@@ -37,18 +35,55 @@ const beneficios = [
 ];
 
 const BenefitsSection = () => (
-  <section className="py-16 bg-white">
-    <div className="max-w-5xl mx-auto px-4">
-      <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-[#1E1E1E] font-montserrat">
-        ¿Por qué elegir <span className="text-[#FACC15]">CAPEX</span>?
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+  <section className="py-20 bg-gradient-to-br from-white via-gray-50 to-white relative overflow-hidden">
+    {/* Elementos decorativos */}
+    <div className="absolute top-10 left-10 w-20 h-20 bg-[#FACC15]/10 rounded-full blur-xl"></div>
+    <div className="absolute bottom-10 right-10 w-32 h-32 bg-[#FACC15]/5 rounded-full blur-2xl"></div>
+
+    <div className="max-w-6xl mx-auto px-4 relative z-10">
+      <div className="text-center mb-16">
+        <h2 className="text-4xl md:text-5xl font-bold text-[#1E1E1E] font-montserrat mb-6">
+          ¿Por qué elegir <span className="text-[#FACC15]">CAPEX</span>?
+        </h2>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto font-lato">
+          Descubre por qué miles de clientes confían en nosotros para realzar su belleza natural
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {beneficios.map((b, idx) => (
-          <div key={idx} className="flex flex-col items-center text-center p-6 bg-[#1E1E1E] rounded-2xl border border-[#FACC15] shadow-lg hover:shadow-2xl transition-all">
-            <div className="mb-4">{b.icon}</div>
-            <span className="text-lg font-semibold text-white font-nunito">{b.texto}</span>
+          <div
+            key={idx}
+            className="group relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden"
+          >
+            {/* Efecto de fondo al hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            <div className="relative z-10">
+              <div className="mb-6 transform group-hover:scale-110 transition-transform duration-300">
+                {b.icon}
+              </div>
+              <span className="text-lg font-semibold text-[#1E1E1E] font-nunito group-hover:text-[#FACC15] transition-colors duration-300">
+                {b.texto}
+              </span>
+            </div>
+
+            {/* Elemento decorativo */}
+            <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-[#FACC15]/10 rounded-full blur-lg group-hover:bg-[#FACC15]/20 transition-colors duration-500"></div>
           </div>
         ))}
+      </div>
+
+      {/* Call to action adicional */}
+      <div className="text-center mt-16">
+        <p className="text-gray-600 mb-6 text-lg">
+          ¿Listo para transformar tu imagen?
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button className="px-8 py-3 bg-[#FACC15] text-[#1E1E1E] font-bold rounded-full hover:bg-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-lg">
+            Comienza Ahora
+          </button>
+        </div>
       </div>
     </div>
   </section>

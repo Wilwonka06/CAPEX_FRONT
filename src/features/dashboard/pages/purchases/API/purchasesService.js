@@ -1,112 +1,8 @@
- // src/pages/private/dashboard/shopping/API/purchasesService.js
 import apiRequest from '../../../../../shared/config/apiConfig';
 
 const PURCHASES_ENDPOINT = '/compras';
 
 export const purchasesService = {
-  /**
-   * Obtener todas las compras
-   */
-  getAll: async (params = {}) => {
-    try {
-      const queryParams = new URLSearchParams();
-      
-      if (params.page) queryParams.append('page', params.page);
-      if (params.limit) queryParams.append('limit', params.limit);
-      if (params.includeDetalles !== undefined) {
-        queryParams.append('includeDetalles', params.includeDetalles);
-      }
-
-      const url = queryParams.toString() 
-        ? `${PURCHASES_ENDPOINT}?${queryParams.toString()}`
-        : PURCHASES_ENDPOINT;
-
-      const response = await apiRequest.get(url);
-      
-      // Transformar respuesta del backend al formato frontend
-      if (response.success && response.data) {
-        response.data = response.data.map(compra => ({
-          id: compra.id_compra,
-          proveedor: compra.proveedor?.nombre || 'N/A',
-          nit: compra.proveedor?.nit || 'N/A',
-          fechaRegistro: compra.fecha_registro,
-          fechaCompra: compra.fecha_compra,
-          subtotal: parseFloat(compra.subtotal || 0),
-          iva: parseFloat(compra.iva || 0),
-          total: parseFloat(compra.total || 0),
-          estado: compra.estado === 'Completada' ? 'Registrada' : compra.estado === 'Cancelada' ? 'Anulada' : compra.estado,
-          productos: compra.detalles?.map(det => ({
-            id: det.id_producto,
-            codigo: det.id_producto ? `P${det.id_producto.toString().padStart(3, '0')}` : 'N/A',
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad || 0,
-            costo: parseFloat(det.precio_unitario || 0),
-            precioBase: parseFloat(det.precio_unitario || 0),
-            iva: det.producto?.iva ? parseFloat(det.producto.iva) / 100 : 0,
-            precioConIva: parseFloat(det.precio_unitario || 0) * (1 + (det.producto?.iva ? parseFloat(det.producto.iva) / 100 : 0))
-          })) || []
-        }));
-
-        // Transformar paginación
-        if (response.pagination) {
-          response.pagination = {
-            currentPage: response.pagination.page,
-            totalPages: response.pagination.totalPages,
-            totalItems: response.pagination.total,
-            itemsPerPage: response.pagination.limit
-          };
-        }
-      }
-
-      return response;
-    } catch (error) {
-      console.error('Error fetching purchases:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Obtener compra por ID
-   */
-  getById: async (id) => {
-    try {
-      if (!id) throw new Error('ID de la compra es requerido');
-
-      const response = await apiRequest.get(`${PURCHASES_ENDPOINT}/${id}`);
-      
-      // Transformar respuesta
-      if (response.success && response.data) {
-        const compra = response.data;
-        response.data = {
-          id: compra.id_compra,
-          proveedor: compra.proveedor?.nombre || 'N/A',
-          nit: compra.proveedor?.nit || 'N/A',
-          fechaRegistro: compra.fecha_registro,
-          fechaCompra: compra.fecha_compra,
-          subtotal: parseFloat(compra.subtotal || 0),
-          totalIva: parseFloat(compra.iva || 0),
-          total: parseFloat(compra.total || 0),
-          estado: compra.estado === 'Completada' ? 'Registrada' : compra.estado === 'Cancelada' ? 'Anulada' : compra.estado,
-          items: compra.detalles?.map(det => ({
-            id: det.id_producto,
-            codigo: det.id_producto ? `P${det.id_producto.toString().padStart(3, '0')}` : 'N/A',
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad || 0,
-            costo: parseFloat(det.precio_unitario || 0),
-            precioBase: parseFloat(det.precio_unitario || 0),
-            iva: det.producto?.iva ? parseFloat(det.producto.iva) / 100 : 0,
-            precioConIva: parseFloat(det.precio_unitario || 0) * (1 + (det.producto?.iva ? parseFloat(det.producto.iva) / 100 : 0))
-          })) || []
-        };
-      }
-
-      return response;
-    } catch (error) {
-      console.error(`Error fetching purchase ${id}:`, error);
-      throw error;
-    }
-  },
-
   /**
    * Crear compra
    */
@@ -123,16 +19,20 @@ export const purchasesService = {
         throw new Error('Debe agregar al menos un producto');
       }
 
-      // Transformar al formato del backend
+      // ✅ Transformar al formato del backend
       const backendData = {
         id_proveedor: purchaseData.supplierId,
         fecha_compra: purchaseData.fechaCompra,
+        ivaGeneral: purchaseData.ivaGeneral || 0, // IVA general de la compra
         detalles: purchaseData.detalles.map(det => ({
           id_producto: det.productId,
           cantidad: det.cantidad,
-          precio_unitario: det.precioUnitario
+          precio_unitario: det.precioUnitario, // Costo
+          precio_venta: det.precioVenta // Precio de venta (opcional)
         }))
       };
+
+      console.log('Enviando datos al backend:', backendData);
 
       const response = await apiRequest.post(PURCHASES_ENDPOINT, backendData);
       
@@ -158,14 +58,96 @@ export const purchasesService = {
   },
 
   /**
-   * Cancelar compra
+   * Obtener todas las compras con paginación y filtros
    */
-  cancel: async (id)=> {
+  getAll: async (params = {}) => {
     try {
-      if (!id) throw new Error('ID de la compra es requerido');
-      
-      const response = await apiRequest.patch(`${PURCHASES_ENDPOINT}/${id}/cancel`);
-      
+      const queryParams = new URLSearchParams();
+
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status) queryParams.append('status', params.status);
+
+      const url = queryParams.toString()
+        ? `${PURCHASES_ENDPOINT}?${queryParams.toString()}`
+        : PURCHASES_ENDPOINT;
+
+      const response = await apiRequest.get(url);
+
+      if (response.success && response.data) {
+        const mappedPurchases = response.data.map(purchase => ({
+          id: purchase.id_compra,
+          proveedor: purchase.proveedor?.nombre || 'N/A',
+          nit: purchase.proveedor?.nit || 'N/A',
+          fechaRegistro: purchase.fecha_registro,
+          fechaCompra: purchase.fecha_compra,
+          total: parseFloat(purchase.total || 0),
+          estado: purchase.estado || 'Registrada',
+          detalles: purchase.detalles || []
+        }));
+
+        return {
+          ...response,
+          data: mappedPurchases
+        };
+      }
+
+      return response;
+    } catch (error) {
+      console.error('Error fetching purchases:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener una compra por ID
+   */
+  getById: async (id) => {
+    try {
+      if (!id) {
+        throw new Error('ID de la compra es requerido');
+      }
+
+      const response = await apiRequest.get(`${PURCHASES_ENDPOINT}/${id}`);
+
+      if (response.success && response.data) {
+        const purchase = response.data;
+        return {
+          ...response,
+          data: {
+            id: purchase.id_compra,
+            proveedor: purchase.proveedor?.nombre || 'N/A',
+            nit: purchase.proveedor?.nit || 'N/A',
+            fechaRegistro: purchase.fecha_registro,
+            fechaCompra: purchase.fecha_compra,
+            total: parseFloat(purchase.total || 0),
+            estado: purchase.estado || 'Registrada',
+            detalles: purchase.detalles || []
+          }
+        };
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`Error fetching purchase ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cancelar una compra
+   */
+  cancel: async (id, reason) => {
+    try {
+      if (!id) {
+        throw new Error('ID de la compra es requerido');
+      }
+
+      const response = await apiRequest.patch(`${PURCHASES_ENDPOINT}/${id}/cancelar`, {
+        reason: reason || 'Cancelada por usuario'
+      });
+
       return response;
     } catch (error) {
       console.error(`Error canceling purchase ${id}:`, error);
@@ -174,55 +156,89 @@ export const purchasesService = {
   },
 
   /**
-   * Obtener compras por proveedor
+   * Generar reporte de compras
    */
-  getBySupplier: async (supplierId, params = {}) => {
+  generateReport: async (params = {}) => {
     try {
-      if (!supplierId) throw new Error('ID del proveedor es requerido');
+      // Obtener los últimos 100 registros de compras
+      const purchasesResponse = await apiRequest.get(`${PURCHASES_ENDPOINT}?limit=100&sort=fecha_registro:desc`);
 
-      const queryParams = new URLSearchParams();
-      if (params.page) queryParams.append('page', params.page);
-      if (params.limit) queryParams.append('limit', params.limit);
-
-      const url = `${PURCHASES_ENDPOINT}/proveedor/${supplierId}${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      
-      return await apiRequest.get(url);
-    } catch (error) {
-      console.error(`Error fetching purchases by supplier ${supplierId}:`, error);
-      throw error;
-    }
-  },
-
-  /**
-   * Obtener compras por rango de fechas
-   */
-  getByDateRange: async (startDate, endDate, params = {}) => {
-    try {
-      if (!startDate || !endDate) {
-        throw new Error('Fechas de inicio y fin son requeridas');
+      if (!purchasesResponse.success) {
+        throw new Error('Error al obtener datos de compras');
       }
 
-      const queryParams = new URLSearchParams({
-        fecha_inicio: startDate,
-        fecha_fin: endDate,
-        ...params
+      const purchases = purchasesResponse.data || [];
+
+      // Crear el archivo Excel con estructura específica
+      const XLSX = await import('xlsx');
+
+      // Preparar datos para el Excel - Solo nombres de campos y registros
+      const worksheetData = [
+        ['ID Compra', 'Fecha Registro', 'Fecha Compra', 'Proveedor', 'NIT', 'IVA General', 'Total', 'Estado']
+      ];
+
+      // Agregar datos de compras con todos los campos relevantes
+      purchases.forEach(purchase => {
+        worksheetData.push([
+          purchase.id || '',
+          purchase.fechaRegistro || purchase.fecha_registro || '',
+          purchase.fechaCompra || purchase.fecha_compra || '',
+          purchase.proveedor || '',
+          purchase.nit || '',
+          purchase.ivaGeneral || purchase.iva_general || 0,
+          parseFloat(purchase.total || 0),
+          purchase.estado || ''
+        ]);
       });
 
-      return await apiRequest.get(`${PURCHASES_ENDPOINT}/fecha?${queryParams.toString()}`);
-    } catch (error) {
-      console.error(`Error fetching purchases by date range:`, error);
-      throw error;
-    }
-  },
+      // Crear libro de trabajo
+      const workbook = XLSX.utils.book_new();
 
-  /**
-   * Obtener estadísticas
-   */
-  getStats: async () => {
-    try {
-      return await apiRequest.get(`${PURCHASES_ENDPOINT}/stats`);
+      // Crear hoja de trabajo
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+      // Estilos para el encabezado
+      const headerStyle = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: "FFFF00" } }, // Amarillo
+        alignment: { horizontal: "center" }
+      };
+
+      // Aplicar estilos al encabezado (primera fila)
+      worksheet['A1'] = { v: worksheetData[0][0], s: headerStyle };
+      worksheet['B1'] = { v: worksheetData[0][1], s: headerStyle };
+      worksheet['C1'] = { v: worksheetData[0][2], s: headerStyle };
+      worksheet['D1'] = { v: worksheetData[0][3], s: headerStyle };
+      worksheet['E1'] = { v: worksheetData[0][4], s: headerStyle };
+      worksheet['F1'] = { v: worksheetData[0][5], s: headerStyle };
+      worksheet['G1'] = { v: worksheetData[0][6], s: headerStyle };
+      worksheet['H1'] = { v: worksheetData[0][7], s: headerStyle };
+
+      // Agregar imagen del logo (si está disponible)
+      // Nota: XLSX no soporta imágenes fácilmente, se puede agregar manualmente
+
+      // Agregar hoja al libro
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Compras');
+
+      // Generar archivo
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      // Descargar archivo
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reporte_compras_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return { success: true, message: 'Reporte generado exitosamente' };
     } catch (error) {
-      console.error('Error fetching purchase stats:', error);
+      console.error('Error generating report:', error);
       throw error;
     }
   }

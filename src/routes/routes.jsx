@@ -11,12 +11,8 @@ import Landing from "../features/landing/landing";
 // Pages Dashboard
 import CategoriasProductos from "../features/dashboard/pages/CatProducts/CatProducts";
 import CategoriasServicios from "../features/dashboard/pages/CatServices/CatServices";
-
 import Appointments from "../features/dashboard/pages/appointments/Appointments";
-
-
 import Clientes from "../features/dashboard/pages/customers/Customer";
-
 import Compras from "../features/dashboard/pages/purchases/Purchases";
 import Dashboard from "../features/dashboard/components/Dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
@@ -53,15 +49,14 @@ const router = createBrowserRouter([
   // Ruta raíz - Home público con navbar
   {
     path: "/",
-    element: <Landing />, // Página de landing con navbar que incluye login
+    element: <Landing />,
     children: [
       {
         index: true,
-        element: <Home />, // Página principal (home)
+        element: <Home />,
       },
     ],
   },
-  // Rutas públicas de autenticación
   {
     path: "/login",
     element: <LoginPage />,
@@ -90,7 +85,6 @@ const router = createBrowserRouter([
     path: "/dashboard/perfil",
     element: <EditProfilePage />,
   },
-  // Landing page (pública - no requiere autenticación)
   {
     path: "/landing",
     element: <Landing />,
@@ -141,15 +135,14 @@ const router = createBrowserRouter([
       },
     ],
   },
-  // Rutas protegidas
   {
     element: <RequireAuth />,
     children: [
-      // Redirección automática basada en rol se maneja en AuthContext
       {
         path: "/dashboard",
         element: <Layout />,
         children: [
+          // Dashboard principal
           {
             index: true,
             element: (
@@ -161,10 +154,7 @@ const router = createBrowserRouter([
           {
             path: "roles",
             element: (
-              <RequirePrivilege
-                module="Gestión de Usuarios"
-                action="Visualizar"
-              >
+              <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
                 <RolesProvider>
                   <RolesPage />
                 </RolesProvider>
@@ -174,10 +164,7 @@ const router = createBrowserRouter([
           {
             path: "usuarios",
             element: (
-              <RequirePrivilege
-                module="Gestión de Usuarios"
-                action="Visualizar"
-              >
+              <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
                 <Users />
               </RequirePrivilege>
             ),
@@ -217,10 +204,7 @@ const router = createBrowserRouter([
           {
             path: "servicios",
             element: (
-              <RequirePrivilege
-                module="Gestión de Servicios"
-                action="Visualizar"
-              >
+              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
                 <Servicios />
               </RequirePrivilege>
             ),
@@ -228,10 +212,7 @@ const router = createBrowserRouter([
           {
             path: "empleados",
             element: (
-              <RequirePrivilege
-                module="Gestión de Servicios"
-                action="Visualizar"
-              >
+              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
                 <Empleados />
               </RequirePrivilege>
             ),
@@ -239,10 +220,7 @@ const router = createBrowserRouter([
           {
             path: "categorias-servicios",
             element: (
-              <RequirePrivilege
-                module="Gestión de Servicios"
-                action="Visualizar"
-              >
+              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
                 <CategoriasServicios />
               </RequirePrivilege>
             ),
@@ -289,18 +267,20 @@ const router = createBrowserRouter([
           },
           {
             path: "programacion",
-            element: <Scheduling />,
+            element: (
+              <RequirePrivilege module="Dashboard" action="Visualizar">
+                <Scheduling />
+              </RequirePrivilege>
+            ),
           },
         ],
-     },
-     // Redirección para compatibilidad
-     {
-       path: "/roles",
-       element: <Navigate to="/dashboard/roles" replace />,
-     },
-   ],
- },
-  // Alias para catálogo y servicios en la landing
+      },
+      {
+        path: "/roles",
+        element: <Navigate to="/dashboard/roles" replace />,
+      },
+    ],
+  },
   {
     path: "/catalogo",
     element: <Navigate to="/landing/catalogo" replace />,

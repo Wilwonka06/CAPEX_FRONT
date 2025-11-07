@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import PropTypes from "prop-types";
 import productsService from "../../products/API/productsService";
 import suppliersService from "../../suppliers/API/suppliersService";
 import CreateSupplier from "../../suppliers/components/CreateSupplier";
 import CreateProduct from "../../products/components/CreateProduct";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [productsList, setProductsList] = useState([]);
@@ -16,7 +16,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   // Estado del formulario principal
   const [proveedorId, setProveedorId] = useState("");
   const [nit, setNit] = useState("");
-  const [ivaGeneral, setIvaGeneral] = useState(0.19);
+  const [ivaGeneral, setIvaGeneral] = useState(0); // IVA general por defecto 19%
   const [fechaCompra, setFechaCompra] = useState(
     new Date().toISOString().slice(0, 10)
   );
@@ -50,7 +50,6 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     const loadSuppliers = async () => {
       try {
         setLoadingSuppliers(true);
-        // Intentar primero con getActive, si falla usar getAll
         let response;
         try {
           response = await suppliersService.getActive();
@@ -78,7 +77,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
         setLoadingProducts(true);
         const response = await productsService.getAll({ limit: 100 });
         if (response.success) {
-          setProductsList(response.data || []);
+          // Filtrar productos que NO sean de categoría "Extensión natural"
+          const filteredProducts = (response.data || []).filter(product =>
+            product.categoria !== 'Extensión natural'
+          );
+          setProductsList(filteredProducts);
         }
       } catch (error) {
         console.error("Error loading products:", error);
@@ -103,19 +106,19 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     setNit(proveedor ? proveedor.nit : "");
   }, [proveedorId, suppliersSelect]);
 
-  // Cargar datos del producto cuando se selecciona
+  // ✅ Cargar costo y precio de venta del producto
   useEffect(() => {
     const producto = productsSelect.find((p) => p.id === Number(productoSeleccionado));
     if (producto) {
-      setCosto(producto.precio?.toString() || producto.costo?.toString() || "");
-      setPrecioVenta(producto.precioVenta?.toString() || producto.precio_venta?.toString() || "");
+      setCosto(producto.costo?.toString() || "0");
+      setPrecioVenta(producto.precio_venta?.toString() || producto.precio?.toString() || "0");
     } else {
       setCosto("");
       setPrecioVenta("");
     }
   }, [productoSeleccionado, productsSelect]);
 
-  // Recalcular totales cuando cambia la lista de items o el IVA
+  // ✅ Recalcular totales con IVA general aplicado a todos los productos
   useEffect(() => {
     if (itemsCompra.length === 0) {
       setSubtotal(0);
@@ -124,44 +127,24 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       return;
     }
 
+    // Calcular subtotal (sin IVA)
     const newSubtotal = itemsCompra.reduce(
       (acc, item) => acc + (parseFloat(item.costo) || 0) * (parseInt(item.cantidad) || 0),
       0
     );
-    const newTotalIva = itemsCompra.reduce(
-      (acc, item) => acc + (parseFloat(item.costo) || 0) * (parseInt(item.cantidad) || 0) * ivaGeneral,
-      0
-    );
+
+    // Calcular IVA total usando el IVA general de la compra
+    const ivaDecimal = ivaGeneral / 100; // Convertir 19 a 0.19
+    const newTotalIva = newSubtotal * ivaDecimal;
+
     setSubtotal(newSubtotal);
     setTotalIva(newTotalIva);
     setTotal(newSubtotal + newTotalIva);
   }, [itemsCompra, ivaGeneral]);
 
-  // Actualizar IVA de todos los items cuando cambia el IVA general
-  useEffect(() => {
-    if (itemsCompra.length > 0) {
-      setItemsCompra((prev) =>
-        prev.map((item) => {
-          const costoNum = parseFloat(item.costo) || 0;
-          const cantidadNum = parseInt(item.cantidad) || 0;
-          const montoIva = costoNum * cantidadNum * ivaGeneral;
-          const precioConIva = (costoNum * (1 + ivaGeneral)).toFixed(2);
-          return {
-            ...item,
-            iva: ivaGeneral,
-            montoIva,
-            precioConIva: parseFloat(precioConIva),
-          };
-        })
-      );
-    }
-  }, [ivaGeneral]);
-
-  const formatNumber = (num) => {
-    if (num === "" || num === undefined || num === null) return "";
-    const parts = num.toString().split(".");
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return parts.join(".");
+  // Función para formatear números usando el estándar del proyecto
+  const formatPrice = (num) => {
+    return formatNumber(num);
   };
 
   const cleanNumber = (str) => {
@@ -171,7 +154,6 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
   const handleNumberInput = (e, setter) => {
     const value = e.target.value;
-    // Solo permitir números y un punto decimal
     if (value === "" || /^\d*\.?\d*$/.test(value)) {
       setter(value);
     }
@@ -180,7 +162,6 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const handleAddProduct = () => {
     let nuevosErrores = {};
 
-    // Validar proveedor primero
     if (!proveedorId) {
       alert("Debe seleccionar un proveedor antes de agregar productos.");
       return;
@@ -214,18 +195,28 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
     const costoNum = parseFloat(costo);
     const cantidadNum = parseInt(cantidad);
-    const montoIva = costoNum * cantidadNum * ivaGeneral;
-    const precioConIva = (costoNum * (1 + ivaGeneral)).toFixed(2);
+    const precioVentaNum = parseFloat(precioVenta);
+    
+    // Calcular subtotal sin IVA
+    const subtotalItem = costoNum * cantidadNum;
+    
+    // Calcular IVA del item usando el IVA general
+    const ivaDecimal = ivaGeneral / 100;
+    const montoIva = subtotalItem * ivaDecimal;
+    
+    // Precio con IVA (solo para mostrar)
+    const precioConIva = costoNum * (1 + ivaDecimal);
 
     const newItem = {
       ...producto,
       codigo: `P${producto.id.toString().padStart(3, "0")}`,
       cantidad: cantidadNum,
       costo: costoNum,
-      precioVenta: parseFloat(precioVenta) || costoNum,
+      precioVenta: precioVentaNum,
       iva: ivaGeneral,
       montoIva: montoIva,
-      precioConIva: parseFloat(precioConIva),
+      precioConIva: precioConIva,
+      subtotalItem: subtotalItem
     };
 
     setItemsCompra((prev) => [...prev, newItem]);
@@ -241,14 +232,17 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       prev.map((item, i) => {
         if (i === index) {
           const costoNum = parseFloat(item.costo) || 0;
-          const montoIva = costoNum * cantidadNum * ivaGeneral;
-          const precioConIva = (costoNum * (1 + ivaGeneral)).toFixed(2);
+          const ivaDecimal = ivaGeneral / 100;
+          const subtotalItem = costoNum * cantidadNum;
+          const montoIva = subtotalItem * ivaDecimal;
+          const precioConIva = costoNum * (1 + ivaDecimal);
+          
           return {
             ...item,
             cantidad: cantidadNum,
             montoIva,
-            iva: ivaGeneral,
-            precioConIva: parseFloat(precioConIva),
+            precioConIva,
+            subtotalItem
           };
         }
         return item;
@@ -277,10 +271,12 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       const purchaseData = {
         supplierId: Number(proveedorId),
         fechaCompra: fechaCompra,
+        ivaGeneral: ivaGeneral, // Enviar el IVA general de la compra
         detalles: itemsCompra.map((item) => ({
           productId: item.id,
           cantidad: item.cantidad,
-          precioUnitario: item.costo,
+          precioUnitario: item.costo, // Costo de compra
+          precioVenta: item.precioVenta // Precio de venta a actualizar (opcional)
         })),
       };
 
@@ -289,6 +285,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       // Limpiar formulario
       setProveedorId("");
       setItemsCompra([]);
+      setIvaGeneral(19);
       setFechaCompra(new Date().toISOString().slice(0, 10));
     } catch (error) {
       console.error("Error creating purchase:", error);
@@ -329,7 +326,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -435,8 +432,8 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   <input
                     type="text"
                     className="w-full px-3 py-2 border rounded-md text-sm"
-                    value={ivaGeneral * 100}
-                    onChange={(e) => handleNumberInput(e, (val) => setIvaGeneral(parseFloat(val) / 100 || 0))}
+                    value={ivaGeneral}
+                    onChange={(e) => handleNumberInput(e, (val) => setIvaGeneral(parseFloat(val) || 0))}
                   />
                 </div>
               </div>
@@ -567,7 +564,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         <tr key={index}>
                           <td className="py-2 px-3">{item.codigo}</td>
                           <td className="py-2 px-3">{item.nombre}</td>
-                          <td className="py-2 px-3">${(item.costo || 0).toFixed(2)}</td>
+                          <td className="py-2 px-3">${formatPrice(item.costo || 0)}</td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
@@ -581,9 +578,9 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                               }}
                             />
                           </td>
-                          <td className="py-2 px-3">{(item.iva * 100).toFixed(0)}%</td>
+                          <td className="py-2 px-3">{(item.iva || 0).toFixed(0)}%</td>
                           <td className="py-2 px-3">
-                            ${((item.costo || 0) * (item.cantidad || 0)).toFixed(2)}
+                            ${formatPrice((item.costo || 0) * (item.cantidad || 0))}
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
@@ -610,14 +607,14 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Subtotal:</td>
                         <td className="py-2 px-3 font-bold" colSpan="2">
-                          ${(subtotal || 0).toFixed(2)}
+                          ${formatPrice(subtotal || 0)}
                         </td>
                       </tr>
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Total IVA:</td>
                         <td className="py-2 px-3 font-bold" colSpan="2">
-                          ${(totalIva || 0).toFixed(2)}
+                          ${formatPrice(totalIva || 0)}
                         </td>
                       </tr>
                       <tr>
@@ -626,7 +623,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           Total a Pagar:
                         </td>
                         <td className="py-2 px-3 font-bold text-primary" colSpan="2">
-                          ${(total || 0).toFixed(2)}
+                          ${formatPrice(total || 0)}
                         </td>
                       </tr>
                     </tfoot>
@@ -659,9 +656,3 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     </div>
   );
 }
-
-CreatePurchaseModal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  onCreate: PropTypes.func.isRequired,
-};

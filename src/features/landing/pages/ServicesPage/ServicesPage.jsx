@@ -1,9 +1,13 @@
 import DetailServices from './components/DetailServices';
-import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Paginator from '../../../../shared/Paginator';
 import { getAllServices } from './api/servicesApi';
+import { useState, useEffect } from "react";
+import Paginator from '../../../../shared/Paginator';
+import Footer from '../../../../shared/components/Footer';
+
+const EMPLOYEES_KEY = 'capex_employees';
+const SERVICES_KEY = 'services';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -197,6 +201,10 @@ const ServicesPage = () => {
           onClose={() => setSelectedService(null)} 
         />
       )}
+
+      {/* Footer */}
+      <Footer />
+    </div>
 
       <ToastContainer
         position="top-right"

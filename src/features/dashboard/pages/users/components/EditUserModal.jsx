@@ -6,9 +6,11 @@ import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../../../../shared/contexts/AuthContext';
 
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
 const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
+const CONCEPTOS_ESTADO = ['vacaciones', 'enfermo', 'licencia', 'suspensión', 'renuncia', 'Otro'];
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -40,19 +42,22 @@ function compressImageToBase64(file, maxWidth = 80, maxHeight = 80, quality = 0.
 }
 
 const EditUserModal = ({ onClose, onEdit, user, users }) => {
+  const { hasPrivilege } = useAuth();
   const [form, setForm] = useState({
     ...user,
     tipoDocumento: user.tipo_documento, // Map backend field to frontend field
     telefono: user.telefono, // Ensure telefono field is properly set
     password: '',
     confirmPassword: '',
-    roles: user.roleId ? [user.roleId.toString()] : []
+    roles: user.roleId ? [user.roleId.toString()] : [],
+    conceptoEstado: user.concepto_estado || '' // Add concepto_estado field
   });
   const [availableRoles, setAvailableRoles] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState(user.avatarCompressed || '');
   const [error, setError] = useState({});
+  const canModifyStatus = hasPrivilege('Gestión de Usuarios', 'Editar');
 
   // Parsear teléfono guardado
   const parseTelefono = (telefono) => {
@@ -123,6 +128,13 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
         return value === form.password ? '' : 'No coincide';
       case 'roles':
         return value.length > 0 ? '' : 'Selecciona al menos un rol';
+      case 'estado':
+        return value ? '' : 'Campo obligatorio';
+      case 'conceptoEstado':
+        if (form.estado === 'Inactivo' && !value) {
+          return 'El concepto de estado es obligatorio cuando el estado es Inactivo';
+        }
+        return '';
       default:
         return value.trim() ? '' : 'Campo obligatorio';
     }
@@ -172,6 +184,14 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
         valid = false;
       }
     }
+    // Validar conceptoEstado si es requerido
+    if (form.estado === 'Inactivo') {
+      const err = validate('conceptoEstado', form.conceptoEstado);
+      if (err) {
+        newError.conceptoEstado = err;
+        valid = false;
+      }
+    }
     // Si se está cambiando la contraseña, validar ambas
     if (form.password || form.confirmPassword) {
       if (form.password !== form.confirmPassword) {
@@ -190,11 +210,10 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
     // Procesar imagen si hay
     let foto = form.foto;
     if (form.avatar && form.avatar instanceof File) {
-      foto = await compressImageToBase64(form.avatar, 64, 64, 0.3); // reducir tamaño para caber en VARCHAR(255)
+      foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
-    // Preparar datos de actualización
-    const telefonoFinal = country.dialCode + numero; // Sin guion para formato internacional
+    const telefonoFinal = country.dialCode + numero;
     const updatedUser = {
       id_usuario: form.id_usuario || form.id,
       nombre: form.nombre,
@@ -204,7 +223,8 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       telefono: telefonoFinal,
       roleId: parseInt(form.roles[0]) || form.roleId,
       estado: form.estado,
-      ...(foto && { foto }),
+      ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
+      ...(foto && { foto }), //
       ...(form.direccion && { direccion: form.direccion }),
     };
 
@@ -378,14 +398,65 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 </div>
                 {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
-                <select name="estado" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.estado} onChange={handleChange} onBlur={handleBlur} required>
-                  <option value="">Seleccionar</option>
-                  {ESTADOS.map(est => <option key={est} value={est}>{est}</option>)}
-                </select>
-                {error.estado && <span className="text-red-500 text-xs">{error.estado}</span>}
-              </div>
+              {canModifyStatus && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
+                    <div className="flex items-center gap-3 mb-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-text-main">
+                        <input
+                          type="radio"
+                          name="estado"
+                          value="Activo"
+                          checked={form.estado === 'Activo'}
+                          onChange={handleChange}
+                          className="accent-green-500"
+                        />
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          Activo
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm font-medium text-text-main">
+                        <input
+                          type="radio"
+                          name="estado"
+                          value="Inactivo"
+                          checked={form.estado === 'Inactivo'}
+                          onChange={handleChange}
+                          className="accent-gray-500"
+                        />
+                        <span className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+                          Inactivo
+                        </span>
+                      </label>
+                    </div>
+                    {error.estado && <span className="text-red-500 text-xs">{error.estado}</span>}
+                  </div>
+                  {form.estado === 'Inactivo' && (
+                    <div>
+                      <label className="block text-xs font-medium text-text-main mb-1">Concepto de estado <span className="text-red-500">*</span></label>
+                      <select
+                        name="conceptoEstado"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        value={form.conceptoEstado}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        required={form.estado === 'Inactivo'}
+                      >
+                        <option value="">Seleccionar concepto</option>
+                        {CONCEPTOS_ESTADO.map(concepto => (
+                          <option key={concepto} value={concepto}>
+                            {concepto.charAt(0).toUpperCase() + concepto.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                      {error.conceptoEstado && <span className="text-red-500 text-xs">{error.conceptoEstado}</span>}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>

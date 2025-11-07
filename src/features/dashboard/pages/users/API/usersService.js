@@ -179,20 +179,32 @@ export const usersService = {
   /**
    * Cambiar estado de un usuario
    * @param {number|string} id - ID del usuario
-   * @param {string} nuevoEstado - Nuevo estado ('Activo', 'Inactivo', 'Suspendido')
+   * @param {string} nuevoEstado - Nuevo estado ('Activo', 'Inactivo', etc.)
+   * @param {string} conceptoEstado - Concepto del estado (requerido si estado es Inactivo)
    * @returns {Promise<Object>} Usuario con estado actualizado
    */
-  changeStatus: async (id, nuevoEstado) => {
+  changeStatus: async (id, nuevoEstado, conceptoEstado = null) => {
     try {
-      console.log('Front-end: changeStatus called with id:', id, 'status:', nuevoEstado);
+      console.log('Front-end: changeStatus called with id:', id, 'status:', nuevoEstado, 'concepto:', conceptoEstado);
       if (!id) {
         throw new Error('ID del usuario es requerido');
       }
-      if (!['Activo', 'Inactivo', 'Suspendido'].includes(nuevoEstado)) {
-        throw new Error('Estado debe ser "Activo", "Inactivo" o "Suspendido"');
+      const estadosValidos = ['Activo', 'Inactivo', 'Vacaciones', 'Suspendido', 'Enfermo', 'Incapacitado', 'Luto', 'Fallecido'];
+      if (!estadosValidos.includes(nuevoEstado)) {
+        throw new Error('Estado no válido');
       }
 
-      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/cambiar-estado`, { nuevoEstado });
+      // Validar conceptoEstado si es requerido
+      if (nuevoEstado === 'Inactivo' && !conceptoEstado) {
+        throw new Error('El concepto de estado es obligatorio cuando el estado es Inactivo');
+      }
+
+      const requestData = { nuevoEstado };
+      if (conceptoEstado) {
+        requestData.conceptoEstado = conceptoEstado;
+      }
+
+      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/cambiar-estado`, requestData);
       console.log('Front-end: changeStatus response:', response);
       return response;
     } catch (error) {

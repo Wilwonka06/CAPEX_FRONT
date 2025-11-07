@@ -12,7 +12,7 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => { // eslint-disable-line react/prop-types
+export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,14 +27,17 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
     }
   };
 
-  // Función para verificar si el usuario tiene privilegios específicos
+  /**
+   * ✅ CORREGIDO: Verificar privilegios con nombres correctos
+   * Ahora maneja tanto nombres en inglés como español para retrocompatibilidad
+   */
   const hasPrivilege = (module, action) => {
     if (!currentUser) {
-      console.warn('No hay usuario autenticado');
+      console.warn('⚠️ No hay usuario autenticado');
       return false;
     }
 
-    // Obtener nombre del rol (puede venir como string o objeto)
+    // Obtener nombre del rol
     const roleName = typeof currentUser.rol === 'string'
       ? currentUser.rol
       : currentUser.rol?.nombre || '';
@@ -53,46 +56,45 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
       return false;
     }
 
-    // Mapeo directo: módulo del frontend -> permiso del backend
-    const moduleToPermissionMap = {
-      'Dashboard': 'Dashboard',
-      'Gestión de Usuarios': 'Gestión de Usuarios',
-      'Gestión de Compras': 'Gestión de Compras',
-      'Gestión de Servicios': 'Gestión de Servicios',
-      'Ventas': 'Ventas'
+    console.log('🔍 Verificando privilegio:', { module, action });
+    console.log('📋 Privilegios del usuario:', currentUser.privileges);
+
+    // ✅ MAPEO DE COMPATIBILIDAD para acciones
+    const actionMap = {
+      // Inglés -> Español
+      'Create': 'Crear',
+      'Read': 'Visualizar',
+      'Edit': 'Editar',
+      'Delete': 'Eliminar',
+      // Español (mantener)
+      'Crear': 'Crear',
+      'Visualizar': 'Visualizar',
+      'Editar': 'Editar',
+      'Eliminar': 'Eliminar'
     };
 
-    // Obtener el permiso correspondiente al módulo solicitado
-    const backendPermission = moduleToPermissionMap[module] || module;
+    // Obtener el nombre de la acción en español
+    const spanishAction = actionMap[action] || action;
 
-    // DEBUG: Log detallado para troubleshooting (comentado para producción)
-    // console.log('🔍 DEBUG hasPrivilege:', {
-    //   module,
-    //   action,
-    //   backendPermission,
-    //   userRole: roleName,
-    //   isAdmin,
-    //   userPrivileges: currentUser.privileges,
-    //   availablePermissions: Object.keys(currentUser.privileges || {}),
-    //   privilegeExists: currentUser.privileges?.[backendPermission]?.[action]
-    // });
-
-    // Verificar si el módulo existe en los privilegios del usuario
-    const modulePrivileges = currentUser.privileges?.[backendPermission];
+    // ✅ USAR EL NOMBRE DEL MÓDULO DIRECTAMENTE
+    const modulePrivileges = currentUser.privileges?.[module];
+    
     if (!modulePrivileges) {
-      console.warn(`⚠️ Módulo "${backendPermission}" (mapeado desde "${module}") no encontrado en privilegios del usuario`);
+      console.warn(`⚠️ Módulo "${module}" no encontrado en privilegios del usuario`);
+      console.log('📋 Módulos disponibles:', Object.keys(currentUser.privileges || {}));
       return false;
     }
 
-    // Verificar si tiene la acción específica
-    const hasPrivilege = modulePrivileges[action] === true;
-    console.log(`🔍 Verificando privilegio: ${module} -> ${backendPermission} -> ${action} = ${hasPrivilege}`);
+    // Verificar si tiene la acción específica (probar con ambos nombres)
+    const hasPrivilege = modulePrivileges[spanishAction] === true || 
+                        modulePrivileges[action] === true;
+    
+    console.log(`🔍 Resultado: ${module} -> ${spanishAction} = ${hasPrivilege}`);
     return hasPrivilege;
   };
 
   // Función para obtener la ruta de redirección basada en el rol
   const getRoleRedirect = (role) => {
-    // Normalizar el nombre del rol
     const roleName = typeof role === 'string' 
       ? role 
       : (role?.nombre || '');
@@ -122,7 +124,6 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
     try {
       console.log('🔍 Verificando autenticación con el backend...');
       
-      // Llamar al endpoint /auth/me para verificar el token en cookies
       const response = await apiRequest.get('/auth/me');
       
       if (response.success && response.data) {
@@ -151,6 +152,7 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
     try {
       console.log('=== LOGIN INICIADO ===');
       console.log('📝 Datos del usuario recibidos:', userData);
+      console.log('🔑 Privilegios del usuario:', userData.privileges);
 
       // Guardar usuario en localStorage
       localStorage.setItem('currentUser', JSON.stringify(userData));
@@ -163,10 +165,10 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
       const redirectPath = getRoleRedirect(userData.rol);
       console.log('🔄 Redirigiendo a:', redirectPath);
 
-      // Pequeño delay para asegurar que el estado se actualice
+      // Redirigir con un pequeño delay para mejor UX
       setTimeout(() => {
         window.location.href = redirectPath;
-      }, 100);
+      }, 1000);
     } catch (error) {
       console.error('❌ Error en login:', error);
       throw error;
@@ -188,7 +190,6 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
 
     if (result.isConfirmed) {
       try {
-        // Llamar al endpoint de logout para limpiar la cookie HttpOnly
         await apiRequest.post('/auth/logout');
       } catch (error) {
         console.warn('⚠️ Error al cerrar sesión en el backend:', error);
@@ -211,7 +212,6 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
     try {
       console.log('🔍 Verificando autenticación...');
       
-      // Primero verificar si hay usuario en localStorage
       const storedUser = getUserFromStorage();
       
       if (!storedUser) {
@@ -221,8 +221,8 @@ export const AuthProvider = ({ children }) => { // eslint-disable-line react/pro
       }
 
       console.log('📝 Usuario en localStorage:', storedUser);
+      console.log('🔑 Privilegios almacenados:', storedUser.privileges);
       
-      // Verificar token con el backend
       const isValid = await verifyAuth();
       
       if (!isValid) {

@@ -7,7 +7,7 @@ import { useState } from 'react';
 const Layout = () => {
   const [title, setTitle] = useState('');
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen font-inter">
       {/* Sidebar */}
       <Sidebar />
       {/* Main Content */}

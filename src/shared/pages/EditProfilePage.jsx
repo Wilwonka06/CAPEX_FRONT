@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidPassword } from '../validations';
 
-const tiposDocumento = ['Cédula', 'Pasaporte', 'RUT', 'DNI'];
+const tiposDocumento = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -10,9 +10,8 @@ const EditProfilePage = () => {
   const fileInputRef = useRef();
   const [form, setForm] = useState({
     nombre: user.nombre || '',
-    tipoDocumento: user.tipoDocumento || tiposDocumento[0],
+    tipo_documento: user.tipo_documento || user.tipoDocumento || tiposDocumento[0],
     documento: user.documento || '',
-    fechaNacimiento: user.fechaNacimiento || '',
     correo: user.correo || '',
     telefono: user.telefono || '',
     direccion: user.direccion || '',
@@ -113,9 +112,8 @@ const EditProfilePage = () => {
     const updatedUser = {
       ...usuarios[idx],
       nombre: form.nombre,
-      tipoDocumento: form.tipoDocumento,
+      tipo_documento: form.tipo_documento,
       documento: form.documento,
-      fechaNacimiento: form.fechaNacimiento,
       correo: form.correo,
       telefono: form.telefono,
       direccion: form.direccion,
@@ -186,7 +184,7 @@ const EditProfilePage = () => {
                 </div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">Tipo de documento</label>
-                  <select name="tipoDocumento" value={form.tipoDocumento} onChange={handleChange} className="w-full border rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base">
+                  <select name="tipo_documento" value={form.tipo_documento} onChange={(e) => setForm(prev => ({ ...prev, tipo_documento: e.target.value }))} className="w-full border rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base">
                     {tiposDocumento.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
                   </select>
                 </div>
@@ -196,10 +194,6 @@ const EditProfilePage = () => {
                     <i className="bi bi-credit-card-2-front absolute left-3 top-3 text-gray-400 text-base"></i>
                     <input name="documento" value={form.documento} onChange={handleChange} className="w-full border rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base" />
                   </div>
-                </div>
-                <div className="mb-2">
-                  <label className="block text-sm font-medium mb-2">Fecha de nacimiento</label>
-                  <input type="date" name="fechaNacimiento" value={form.fechaNacimiento} onChange={handleChange} className="w-full border rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base" />
                 </div>
               </div>
             </div>

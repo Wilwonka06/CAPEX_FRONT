@@ -53,8 +53,8 @@ export function isDuplicateCategoryName(nombre, categorias, categoriaActual = nu
     if (categoriaActual && c.id === categoriaActual.id) {
       return false;
     }
-    // Soporta tanto 'name' como 'Categoria'
-    return normalizeText(c.name || c.Categoria) === normalizedNombre;
+    // Soporta tanto 'name' como 'Categoria' y 'nombre'
+    return normalizeText(c.name || c.Categoria || c.nombre) === normalizedNombre;
   });
 }
 
@@ -685,7 +685,9 @@ export function isValidCustomerName(name) {
 }
 
 export function isValidPassword(password) {
-  return typeof password === 'string' && password.length >= 6;
+  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%?&])[A-Za-z\d@$!%?&]{8,}$/;
+  return regex.test(password);
 }
 
 // Valida teléfono de cliente (requerido, mínimo 7 caracteres)
