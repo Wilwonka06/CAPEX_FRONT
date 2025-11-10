@@ -2,11 +2,11 @@
 export const API_CONFIG = {
   // URL base del backend - usa proxy en desarrollo, URL directa en producción
 
- /*  BASE_URL: import.meta.env.DEV
+  BASE_URL: import.meta.env.DEV
     ? 'http://localhost:3000/api'
-    : 'https://capex-back.onrender.com/api', */
+    : 'https://capex-back.onrender.com/api',
 
-  BASE_URL: 'http://localhost:3000/api',
+  /* BASE_URL: 'http://localhost:3000/api', */
   
   // Timeout para las peticiones (en milisegundos)
   TIMEOUT: 30000,
