@@ -71,7 +71,40 @@ const UserTable = ({
                 <td className="py-2 px-3">{user.nombre}</td>
                 <td className="py-2 px-3">{user.correo}</td>
                 <td className="py-2 px-3">
-                  {user.rol ? user.rol.nombre : "Sin rol asignado"}
+                  {(() => {
+                    // Primero intentar obtener roles múltiples
+                    if (Array.isArray(user?.roles) && user.roles.length > 0) {
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.map((rol, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium"
+                            >
+                              {typeof rol === 'string' ? rol : rol?.nombre || '—'}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    }
+                    // Si no hay roles múltiples, intentar con rol singular
+                    if (user?.rol?.nombre) {
+                      return (
+                        <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                          {user.rol.nombre}
+                        </span>
+                      );
+                    }
+                    // Si el rol es un string directo
+                    if (typeof user?.rol === 'string' && user.rol) {
+                      return (
+                        <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                          {user.rol}
+                        </span>
+                      );
+                    }
+                    return <span className="text-gray-400 italic text-xs">Sin rol asignado</span>;
+                  })()}
                 </td>
                 <td className="py-2 px-3">
                   <div className="flex items-center space-x-3">

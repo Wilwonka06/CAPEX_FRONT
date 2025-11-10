@@ -54,19 +54,51 @@ const UserDetailModal = ({ onClose, user }) => {
                     <span className="font-semibold text-gray-800 text-sm">{user.documento}</span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
-                    <span className="text-xs text-gray-500">Rol</span>
+                    <span className="text-xs text-gray-500">Rol{Array.isArray(user?.roles) && user.roles.length > 1 ? 'es' : ''}</span>
                     <span className="font-semibold text-gray-800 text-sm">
-                      {user?.rol?.nombre
-                        ? user.rol.nombre
-                        : Array.isArray(user?.roles)
-                          ? (
-                            <ul className="list-disc list-inside">
+                      {(() => {
+                        // Primero intentar obtener roles múltiples (relación muchos-a-muchos)
+                        if (Array.isArray(user?.roles) && user.roles.length > 0) {
+                          return (
+                            <div className="flex flex-col gap-1">
                               {user.roles.map((rol, idx) => (
-                                <li key={idx}>{typeof rol === 'string' ? rol : rol?.nombre || '—'}</li>
+                                <span 
+                                  key={idx} 
+                                  className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium"
+                                >
+                                  {typeof rol === 'string' ? rol : rol?.nombre || '—'}
+                                </span>
                               ))}
-                            </ul>
-                          )
-                          : (user?.roles || 'Sin rol asignado')}
+                            </div>
+                          );
+                        }
+                        // Si no hay roles múltiples, intentar con rol singular
+                        if (user?.rol?.nombre) {
+                          return (
+                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                              {user.rol.nombre}
+                            </span>
+                          );
+                        }
+                        // Si el rol es un string directo
+                        if (typeof user?.rol === 'string' && user.rol) {
+                          return (
+                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                              {user.rol}
+                            </span>
+                          );
+                        }
+                        // Si hay roles como string
+                        if (typeof user?.roles === 'string') {
+                          return (
+                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                              {user.roles}
+                            </span>
+                          );
+                        }
+                        // Sin rol asignado
+                        return <span className="text-gray-400 italic">Sin rol asignado</span>;
+                      })()}
                     </span>
                   </div>
                   <div className="flex justify-between px-4 py-2">
