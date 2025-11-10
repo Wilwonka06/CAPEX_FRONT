@@ -1,9 +1,10 @@
 import PropTypes from "prop-types";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function SaleDetailModal({ sale, customer, isOpen, onClose }) {
   if (!isOpen || !sale || !customer) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -70,8 +71,8 @@ export default function SaleDetailModal({ sale, customer, isOpen, onClose }) {
                       <td className="py-2 px-3">{item.codigo}</td>
                       <td className="py-2 px-3">{item.nombre}</td>
                       <td className="py-2 px-3 text-right">{item.cantidad}</td>
-                      <td className="py-2 px-3 text-right">${item.precio.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right">${(item.precio * item.cantidad).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(item.precio)}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(item.precio * item.cantidad)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -82,7 +83,7 @@ export default function SaleDetailModal({ sale, customer, isOpen, onClose }) {
             <div className="w-full max-w-xs space-y-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Total:</span>
-                <span className="font-semibold text-gray-800">${sale.valor.toLocaleString()}</span>
+                <span className="font-semibold text-gray-800">${formatNumber(sale.valor)}</span>
               </div>
             </div>
           </div>

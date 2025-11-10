@@ -7,8 +7,7 @@ import SeeScheduling from '../../scheduling/components/SeeScheduling';
 import AddScheduling from './AddScheduling';
 import EditScheduling from './EditScheduling';
 import Swal from 'sweetalert2';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import { deleteScheduling, updateScheduling, createScheduling } from '../services/schedulingApi.js';
 
 const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdateEvent, onDeleteEvent }) => {
@@ -132,17 +131,29 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
     
     if (!result.isConfirmed) return;
 
-    try {
+    const deletePromise = (async () => {
       await deleteScheduling(schedulingId);
       if (onDeleteEvent) {
         onDeleteEvent(schedulingId);
       }
       setModalOpen(false);
-      toast.success('Programación eliminada correctamente');
+      return true;
+    })();
+
+    toast.promise(deletePromise, {
+      loading: 'Eliminando programación...',
+      success: 'Programación eliminada correctamente',
+      error: (err) => {
+        console.error("[GeneralCalendar] Error eliminando programación:", err);
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+        return backendMsg || "Error al eliminar programación";
+      },
+    });
+
+    try {
+      await deletePromise;
     } catch (error) {
-      console.error("[GeneralCalendar] Error eliminando programación:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al eliminar programación");
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -325,17 +336,6 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
         </SeeScheduling>
       )}
       
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
     </div>
   );
 };

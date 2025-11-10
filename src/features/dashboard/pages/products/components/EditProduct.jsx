@@ -13,8 +13,9 @@ import {
   validateFileSize, 
   validateFileType 
 } from '../../../../../shared/utils/imagesUploadHelper';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import productsService from '../API/productsService';
+import { formatNumber, cleanNumber } from '../../../../../shared/utils/formatters';
 // Ajustar la ruta segÃºn la ubicaciÃ³n del componente
 
 const MAX_IMAGES = 3;
@@ -40,23 +41,31 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Inicializar datos del producto cuando se recibe
   useEffect(() => {
     if (product) {
+      // Convertir url_foto (string separado por comas) a array si es necesario
+      let fotosArray = [];
+      if (product.fotos && Array.isArray(product.fotos)) {
+        fotosArray = product.fotos;
+      } else if (product.url_foto && typeof product.url_foto === 'string') {
+        // Si viene como string separado por comas, convertirlo a array
+        fotosArray = product.url_foto.split(',').filter(url => url && url.trim());
+      }
+      
       setFormData({
         nombre: product.nombre || "",
         descripcion: product.descripcion || "",
         precio: product.precio_venta?.toString() || product.precio?.toString() || "",
         cantidad: product.stock?.toString() || product.cantidad?.toString() || "",
         categoryId: product.id_categoria_producto?.toString() || product.categoryId?.toString() || "",
-        fotos: product.fotos || [],
+        fotos: fotosArray,
       });
 
       // Inicializar previews con imágenes existentes
-      if (product.fotos && Array.isArray(product.fotos)) {
-        setPreviews(product.fotos);
-      }
+      setPreviews(fotosArray);
 
       // Inicializar especificaciones desde características
       if (product.caracteristicas && Array.isArray(product.caracteristicas)) {
@@ -127,6 +136,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
     setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
     setError("");
     setFieldErrors({});
+    setIsSubmitting(false); // Resetear estado de envío
     if (externalOnClose) externalOnClose();
   };
 
@@ -269,24 +279,29 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevenir doble envío
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     let errors = {};
 
     // Validaciones obligatorias
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
-    if (!formData.categoryId) errors.categoryId = "La categorÃ­a es obligatoria";
+    if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      setIsSubmitting(false);
       return;
     }
 
-    // Verificar nombre duplicado (excluyendo el producto actual)
-    const filteredProducts = products.filter(p => p.id_producto !== product.id_producto);
-    if (isDuplicateProductName(formData.nombre, filteredProducts)) {
-      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
-      return;
-    }
+    // NO validar duplicados en el frontend antes de enviar
+    // El backend tiene la validación final y más precisa
+    // Esto evita problemas de sincronización con la lista
 
     setFieldErrors({});
     setLoading(true);
@@ -301,16 +316,17 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
         id_categoria_producto: parseInt(formData.categoryId),
       };
 
-      // Enviar array de imágenes (máximo 3)
-      if (formData.fotos && Array.isArray(formData.fotos) && formData.fotos.length > 0) {
+      // SIEMPRE enviar el array de fotos, incluso si está vacío
+      // Esto permite al backend saber que debe procesar las imágenes
+      // (incluyendo eliminar todas si el array está vacío)
+      if (formData.fotos !== undefined && Array.isArray(formData.fotos)) {
         // Filtrar solo imágenes válidas (base64 o URLs de Cloudinary)
         const validImages = formData.fotos
           .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
           .slice(0, 3); // Máximo 3 imágenes
 
-        if (validImages.length > 0) {
-          updateData.fotos = validImages;
-        }
+        // Enviar el array, incluso si está vacío (para eliminar todas las imágenes)
+        updateData.fotos = validImages;
       }
 
       // Mapear especificaciones a características
@@ -332,42 +348,80 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
       }
 
       console.log('EditProduct: Sending update data:', updateData);
+      console.log('EditProduct: Fotos a enviar:', updateData.fotos);
       console.log('EditProduct: Características a enviar:', updateData.caracteristicas);
 
-      // Actualizar el producto usando el servicio
-      const result = await productsService.update(product.id_producto, updateData);
-
-      if (result.success) {
-        if (onUpdate) {
-          onUpdate(result.data);
+      // Pasar los datos al componente padre para que maneje la actualización
+      // Esto evita problemas de sincronización
+      if (onUpdate) {
+        try {
+          // Actualizar el producto (esto recargará la lista automáticamente)
+          await onUpdate(product.id_producto, updateData);
+          // Solo cerrar el modal si la actualización fue exitosa
+          handleClose();
+        } catch (error) {
+          // Si hay error, mantener el modal abierto y mostrar el error
+          // El error ya se maneja en products.jsx con toast
+          console.error('Error updating product:', error);
+          const errorMessage = error.response?.data?.message || error.message || 'Error al actualizar el producto';
+          setError(errorMessage);
+          // No mostrar toast aquí porque ya se muestra en products.jsx
         }
-        handleClose();
       } else {
-        throw new Error(result.message || 'Error al actualizar el producto');
+        // Si no hay onUpdate, actualizar directamente (caso de uso independiente)
+        const result = await productsService.update(product.id_producto, updateData);
+        if (result.success) {
+          toast.success('Producto actualizado exitosamente');
+          handleClose();
+        } else {
+          throw new Error(result.message || 'Error al actualizar el producto');
+        }
       }
     } catch (error) {
-      console.error('Error updating product:', error);
-      setError(error.message || 'Error al actualizar el producto');
+      // Solo manejar errores si no fueron manejados ya en el bloque if (onUpdate)
+      if (onUpdate && error.response) {
+        // El error ya fue manejado arriba, no hacer nada más
+        console.error('Error already handled:', error);
+      } else {
+        console.error('Error updating product:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Error al actualizar el producto';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleBlurNombre = (e) => {
+    // No validar duplicados en blur si ya se está enviando el formulario
+    if (isSubmitting) {
+      return;
+    }
+    
     const value = e.target.value;
-    if (isDuplicateProductName(value, products)) {
-      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
+    // Solo validar si hay un valor, el modal está abierto y no estamos en proceso de envío
+    if (value && value.trim() && modalOpen && !isSubmitting) {
+      // Validación opcional en tiempo real (solo como advertencia visual)
+      // El backend tiene la validación final
+      const filteredProducts = products.filter(p => p.id_producto !== product.id_producto);
+      if (isDuplicateProductName(value, filteredProducts)) {
+        setFieldErrors(prev => ({
+          ...prev,
+          nombre: "Advertencia: Puede existir un producto con nombre similar"
+        }));
+      } else {
+        // Limpiar el error si no es duplicado
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.nombre;
+          return newErrors;
+        });
+      }
     }
   };
 
-  const formatNumber = (num) => {
-    if (num === '' || num === undefined || num === null) return '';
-    const parts = num.toString().split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
-  };
-
-  const cleanNumber = (str) => str.replace(/,/g, '');
 
   return (
     <>
@@ -616,10 +670,10 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={isSubmitting || loading}
                     className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Guardando...' : 'Guardar'}
+                    {isSubmitting || loading ? 'Guardando...' : 'Guardar'}
                   </button>
                 </div>
               </form>

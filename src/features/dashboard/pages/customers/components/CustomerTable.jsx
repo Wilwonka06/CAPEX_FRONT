@@ -1,8 +1,13 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import ChangeCustomerStatus from './ChangeCustomerStatus';
+import TableSkeleton from '../../../../../shared/components/TableSkeleton';
 
-const CustomerTable = ({ customers, onView, onEdit, onDelete, onToggleStatus }) => {
+const CustomerTable = ({ customers, onView, onEdit, onDelete, onToggleStatus, loading = false }) => {
+  if (loading) {
+    return <TableSkeleton columns={7} rows={5} hasAvatar={false} hasActions={true} />;
+  }
+
   return (
     <div className="overflow-x-auto rounded-lg shadow font-inter">
       <table className="min-w-full text-xs">

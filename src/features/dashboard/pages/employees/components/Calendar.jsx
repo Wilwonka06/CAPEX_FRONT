@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import AddScheduling from './AddScheduling';
 import { createScheduling } from '../api/schedulingApi';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 
 const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
   const [modalOpen, setModalOpen] = useState(false);

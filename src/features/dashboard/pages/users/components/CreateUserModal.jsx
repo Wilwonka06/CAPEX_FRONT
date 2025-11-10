@@ -201,7 +201,7 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-primary m-0">Crear usuario</h2>
@@ -322,10 +322,13 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Roles <span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-2">
+                <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-md bg-gray-50">
                   {availableRoles.map(role => (
-                    <label key={role.id_rol} className="flex items-center gap-2 text-sm font-medium text-text-main">
+                    <label 
+                      key={role.id_rol} 
+                      className="flex items-center gap-2 text-sm font-medium text-text-main cursor-pointer hover:text-primary transition-colors px-3 py-2 rounded-md hover:bg-white border border-transparent hover:border-gray-300"
+                    >
                       <input
                         type="checkbox"
                         name="roles"
@@ -333,13 +336,13 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                         checked={form.roles.includes(role.id_rol.toString())}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        className="accent-primary-dark"
+                        className="accent-primary-dark w-4 h-4 cursor-pointer"
                       />
-                      {role.nombre}
+                      <span>{role.nombre}</span>
                     </label>
                   ))}
                 </div>
-                {error.roles && <span className="text-red-500 text-xs">{error.roles}</span>}
+                {error.roles && <span className="text-red-500 text-xs mt-1 block">{error.roles}</span>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Correo <span className="text-red-500">*</span></label>

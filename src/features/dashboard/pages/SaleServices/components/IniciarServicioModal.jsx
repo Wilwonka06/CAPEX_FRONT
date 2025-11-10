@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { iniciarServicio } from '../services/CitasService';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 
 const IniciarServicioModal = ({ isOpen, onClose, cita, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -11,19 +11,19 @@ const IniciarServicioModal = ({ isOpen, onClose, cita, onSuccess }) => {
     setLoading(true);
     try {
       await iniciarServicio(cita.id);
-      toast.success('Servicio iniciado exitosamente', { position: 'top-right' });
+      toast.success('Servicio iniciado exitosamente');
       onSuccess && onSuccess();
       onClose();
     } catch (error) {
       console.error('Error al iniciar servicio:', error);
-      toast.error('Error al iniciar el servicio', { position: 'top-right' });
+      toast.error('Error al iniciar el servicio');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-8 relative animate-fade-in">
         <button 
           className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold" 

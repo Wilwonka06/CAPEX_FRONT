@@ -3,6 +3,7 @@ import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder } from "../../../../../shared/validations";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) => {
   const [formData, setFormData] = useState({
@@ -107,7 +108,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   if (!isOpen) return null;
 
   const CreateOrderCard = ({ children }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -206,19 +207,19 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Servicios:</span>
-                <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
+                <span className="text-blue-600 font-bold">${formatNumber(totalServices)}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Productos:</span>
-                <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
+                <span className="text-green-600 font-bold">${formatNumber(totalProducts)}</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total General:</span>
-                <span className="text-primary font-bold">${totalGeneral.toLocaleString()}</span>
+                <span className="text-primary font-bold">${formatNumber(totalGeneral)}</span>
               </div>
 
               <div>
@@ -245,7 +246,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
                   ${formData.dineroProporcionado && !isNaN(parseFloat(formData.dineroProporcionado)) 
-                    ? Math.max(0, parseFloat(formData.dineroProporcionado) - totalGeneral).toLocaleString() 
+                    ? formatNumber(Math.max(0, parseFloat(formData.dineroProporcionado) - totalGeneral))
                     : '0'}
                 </div>
               </div>

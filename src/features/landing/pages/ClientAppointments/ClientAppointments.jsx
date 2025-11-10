@@ -5,9 +5,9 @@ import { getProfessionals } from '../../../../shared/services/ProfessionalsDataS
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import Paginator from '../../../../shared/Paginator';
 import Search from '../../../../shared/Search';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { formatNumber } from '../../../../shared/utils/formatters';
 
 function limpiarPrecio(valor) {
   // Si el valor es null, undefined o vacío, devolver 0
@@ -175,13 +175,13 @@ const ClientAppointments = () => {
         notas: ''
       });
       setErrors({});
-      toast.success('¡Cita agendada correctamente!', { position: 'top-right' });
+      toast.success('¡Cita agendada correctamente!');
       // Recargar citas
       const updatedAppointments = await getAppointments();
       setAppointments(updatedAppointments);
       setActiveTab('misCitas');
     } catch (error) {
-      toast.error('Ocurrió un error al agendar la cita.', { position: 'top-right' });
+      toast.error('Ocurrió un error al agendar la cita.');
       console.error('Error al crear la cita:', error);
     } finally {
       setLoading(false);
@@ -267,13 +267,13 @@ const ClientAppointments = () => {
     // Permitir reprogramar si el estado es 'Agendada' o 'Reprogramada'
     if (!['Agendada', 'Reprogramada'].includes(appointment.estado)) return false;
     if (!appointment.servicios || appointment.servicios.length === 0) {
-      toast.error('La cita no tiene servicios asociados. No se puede reprogramar.', { position: 'top-right' });
+      toast.error('La cita no tiene servicios asociados. No se puede reprogramar.');
       return false;
     }
     // Tomar la hora de inicio más temprana de todos los servicios
     const inicios = appointment.servicios.map(s => s.inicio).filter(Boolean);
     if (inicios.length === 0) {
-      toast.error('No se encontró una hora de inicio válida para la cita.', { position: 'top-right' });
+      toast.error('No se encontró una hora de inicio válida para la cita.');
       return false;
     }
     const horaInicio = inicios.sort()[0];
@@ -282,7 +282,7 @@ const ClientAppointments = () => {
     const [hour, minute] = horaInicio.split(':').map(Number);
     const citaDate = new Date(year, month - 1, day, hour, minute);
     if (isNaN(citaDate.getTime())) {
-      toast.error('La fecha u hora de la cita es inválida.', { position: 'top-right' });
+      toast.error('La fecha u hora de la cita es inválida.');
       return false;
     }
     const now = new Date();
@@ -367,7 +367,7 @@ const ClientAppointments = () => {
   // Función para confirmar cancelación
   const confirmCancel = async () => {
     if (!cancelReason.trim()) {
-      toast.error('Por favor indica el motivo de cancelación.', { position: 'top-right' });
+      toast.error('Por favor indica el motivo de cancelación.');
       return;
     }
     const result = await Swal.fire({
@@ -383,7 +383,7 @@ const ClientAppointments = () => {
     if (result.isConfirmed) {
       await cancelAppointment(cancelId, cancelReason);
       setShowCancelModal(false);
-      toast.info('Cita cancelada', { position: 'top-right' });
+      toast('Cita cancelada');
     }
   };
 
@@ -418,11 +418,11 @@ const ClientAppointments = () => {
     try {
       await updateAppointment({ ...rescheduleData, estado: 'Reprogramada' });
       setShowRescheduleModal(false);
-      toast.success('¡Cita reprogramada correctamente!', { position: 'top-right' });
+      toast.success('¡Cita reprogramada correctamente!');
       const updatedAppointments = await getAppointments();
       setAppointments(updatedAppointments);
     } catch (error) {
-      toast.error('Ocurrió un error al reprogramar la cita.', { position: 'top-right' });
+      toast.error('Ocurrió un error al reprogramar la cita.');
       // Recargar citas para evitar inconsistencias visuales
       const updatedAppointments = await getAppointments();
       setAppointments(updatedAppointments);
@@ -432,7 +432,7 @@ const ClientAppointments = () => {
   // Función para abrir modal de reprogramar
   const openRescheduleModal = (appointment) => {
     if ((appointment.reprogramaciones || 0) >= 3) {
-      toast.error('Esta cita ya ha sido reprogramada 3 veces y no puede reprogramarse más.', { position: 'top-right' });
+      toast.error('Esta cita ya ha sido reprogramada 3 veces y no puede reprogramarse más.');
       return;
     }
     setRescheduleData({ ...appointment });
@@ -509,7 +509,7 @@ const ClientAppointments = () => {
                           <span><i className="bi bi-play"></i> Inicio: {s.inicio}</span>
                         </div>
                         </div>
-                      <div className="font-bold text-2xl text-[#a0522d] md:text-right mt-2 md:mt-0">${Number(s.precio || 0).toLocaleString('es-CO')}</div>
+                      <div className="font-bold text-2xl text-[#a0522d] md:text-right mt-2 md:mt-0">${formatNumber(Number(s.precio || 0))}</div>
                     </div>
                   ))}
                 </div>
@@ -517,7 +517,7 @@ const ClientAppointments = () => {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mt-2">
                   <div className="flex gap-6 text-[#a0522d] text-sm">
                     <span>Duración Total: {a.servicios && a.servicios.length > 0 ? `${Math.floor(a.servicios.reduce((acc, s) => acc + (Number(s.duracion) || 0), 0)/60)}h ${a.servicios.reduce((acc, s) => acc + (Number(s.duracion) || 0), 0)%60}min` : ''}</span>
-                    <span>Precio Total: ${a.servicios && a.servicios.reduce((acc, s) => acc + (Number(s.precio || 0) * (Number(s.cantidad) || 1)), 0).toLocaleString('es-CO')}</span>
+                    <span>Precio Total: ${formatNumber(a.servicios && a.servicios.reduce((acc, s) => acc + (Number(s.precio || 0) * (Number(s.cantidad) || 1)), 0))}</span>
                   </div>
                   <div className="flex gap-2 justify-end">
                     {a.estado === 'Agendada' && (
@@ -603,7 +603,7 @@ const ClientAppointments = () => {
                       <div className="font-semibold text-center">{serv.name}</div>
                       <div className="text-xs text-gray-500 mb-1 text-center">{serv.descripcion || ''}</div>
                       <div className="text-xs text-gray-500 mb-1">{serv.duracion ? `${Math.floor(serv.duracion/60)}h ${serv.duracion%60}min` : ''}</div>
-                      <div className="font-bold mb-2">${limpiarPrecio(serv.price ?? serv.precio ?? 0).toLocaleString()}</div>
+                      <div className="font-bold mb-2">${formatNumber(limpiarPrecio(serv.price ?? serv.precio ?? 0))}</div>
                       <button type="button" className="bg-primary text-white px-2 py-1 rounded text-xs" onClick={() => addService(serv)}>Agregar</button>
                     </div>
                   ))}
@@ -705,7 +705,7 @@ const ClientAppointments = () => {
                           <i className="bi bi-clock"></i>
                           {serv.duracion ? `${Math.floor(serv.duracion/60)}h ${serv.duracion%60}min` : ''}
                         </div>
-                        <div className="font-bold text-lg">${(Number(serv.precio || 0) * (Number(serv.cantidad) || 1)).toLocaleString()}</div>
+                        <div className="font-bold text-lg">${formatNumber((Number(serv.precio || 0) * (Number(serv.cantidad) || 1)))}</div>
                       </div>
                       {errors[`servicio_${idx}_duracion`] && <p className="text-red-500 text-xs mt-1">{errors[`servicio_${idx}_duracion`]}</p>}
                     </div>
@@ -719,7 +719,7 @@ const ClientAppointments = () => {
               <div className="text-sm mb-1">Fecha: <span className="font-medium">{formData.fecha || '-'}</span></div>
               <div className="text-sm mb-1">Hora inicio: <span className="font-medium">{formData.servicios[0]?.inicio || '-'}</span> - Hora fin: <span className="font-medium">{formData.servicios[formData.servicios.length-1]?.fin || '-'}</span></div>
               <div className="text-sm mb-1">Duración total: <span className="font-medium">{formData.servicios.reduce((acc, s) => acc + (Number(s.duracion) || 0), 0)} min</span></div>
-              <div className="text-sm mb-1">Precio total: <span className="font-medium">${formData.servicios.reduce((acc, s) => acc + (Number(s.precio || 0) * (Number(s.cantidad) || 1)), 0).toLocaleString()}</span></div>
+              <div className="text-sm mb-1">Precio total: <span className="font-medium">${formatNumber(formData.servicios.reduce((acc, s) => acc + (Number(s.precio || 0) * (Number(s.cantidad) || 1)), 0))}</span></div>
               <div className="flex gap-2 mt-4">
                 <button type="button" className="bg-gray-200 text-gray-700 px-4 py-2 rounded" onClick={() => setActiveTab('misCitas')}>Cancelar</button>
                 <button type="button" className="bg-primary text-white px-4 py-2 rounded" onClick={handleSubmit} disabled={loading}>Pedir cita</button>
@@ -876,7 +876,6 @@ const ClientAppointments = () => {
           </div>
         </div>
       )}
-      <ToastContainer />
     </div>
   );
 };

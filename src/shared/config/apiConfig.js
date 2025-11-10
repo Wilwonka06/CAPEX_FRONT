@@ -1,11 +1,22 @@
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 
 /* const BASE_URL = import.meta.env.DEV
   ? 'http://localhost:3000/api' 
   : 'https://capex-back.onrender.com/api';   */
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'https://capex-back.onrender.com/api';
+
+// Log de configuración en desarrollo
+if (import.meta.env.DEV) {
+  console.log('🔵 API Configuration:', {
+    BASE_URL,
+    MODE: import.meta.env.MODE,
+    DEV: import.meta.env.DEV,
+    '⚠️ Nota': 'El frontend en desarrollo está conectándose a la API de producción en Render',
+    '💡 Si el backend está "dormido"': 'El primer request puede tardar 30-60 segundos',
+  });
+}
 
 // Crear instancia de axios con configuración base
 const apiClient = axios.create({
@@ -22,14 +33,22 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Las cookies HttpOnly se incluyen automáticamente con withCredentials: true
-    // No necesitamos agregar manualmente el header Authorization
+    // Como respaldo, también agregamos el token del localStorage al header Authorization
+    // si existe (útil cuando las cookies no se envían correctamente por CORS o dominio)
+    const token = localStorage.getItem('authToken');
+    if (token && !config.headers['Authorization']) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
 
     // Log de requests en desarrollo
     if (import.meta.env.DEV) {
-      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, {
-        data: config.data,
-        params: config.params,
+      const fullUrl = `${config.baseURL}${config.url}`;
+      console.log(`🔵 API Request: ${config.method?.toUpperCase()} ${fullUrl}`, {
+        baseURL: config.baseURL,
+        url: config.url,
         withCredentials: config.withCredentials,
+        hasToken: !!token,
+        headers: config.headers,
       });
     }
 
@@ -64,13 +83,27 @@ apiClient.interceptors.response.use(
       data: error.response?.data,
     });
 
+    // Verificar si se debe omitir el manejo global de errores (cuando se usa toast.promise en componentes)
+    const skipGlobalErrorHandling = error.config?.skipGlobalErrorHandling === true;
+
+    // Si se omite el manejo global, solo rechazar la promesa sin mostrar toast
+    if (skipGlobalErrorHandling) {
+      return Promise.reject(error);
+    }
+
     // Manejo específico de errores por código de estado
     if (error.response) {
       const { status, data } = error.response;
 
       switch (status) {
         case 400:
-          toast.error(data?.message || 'Solicitud incorrecta');
+          // No mostrar toast automático para errores 400
+          // Los componentes manejan estos errores específicamente con toast.promise
+          // Solo loguear para debugging
+          if (import.meta.env.DEV) {
+            console.warn('Error 400:', data?.message || 'Solicitud incorrecta');
+          }
+          // No mostrar toast para evitar duplicados con toast.promise en componentes
           break;
         case 401: {
           // Limpiar datos de usuario del localStorage (las cookies HttpOnly se limpian automáticamente)
@@ -86,7 +119,9 @@ apiClient.interceptors.response.use(
           
           // Solo mostrar toast y redirigir si no es una ruta pública y no es verificación de auth
           if (!isPublicRoute && !isAuthCheck) {
-            toast.error('No autorizado. Por favor, inicia sesión nuevamente');
+            // Usar toastId para evitar duplicados
+            const toastId = 'auth-error-401';
+            toast.error('No autorizado. Por favor, inicia sesión nuevamente', { id: toastId });
             setTimeout(() => {
               window.location.href = '/login';
             }, 2000);
@@ -94,30 +129,74 @@ apiClient.interceptors.response.use(
           break;
         }
         case 403:
-          toast.error('No tienes permisos para realizar esta acción');
+          // Usar toastId basado en el mensaje para evitar duplicados
+          const toastId403 = `error-403-${error.config?.url || 'default'}`;
+          toast.error('No tienes permisos para realizar esta acción', { id: toastId403 });
           break;
         case 404:
-          toast.error(data?.message || 'Recurso no encontrado');
+          // Usar toastId basado en el mensaje para evitar duplicados
+          const toastId404 = `error-404-${error.config?.url || 'default'}`;
+          toast.error(data?.message || 'Recurso no encontrado', { id: toastId404 });
           break;
         case 422:
-          // Errores de validación
-          if (data?.errors && Array.isArray(data.errors)) {
-            data.errors.forEach(err => toast.error(err.message || err));
-          } else {
-            toast.error(data?.message || 'Error de validación');
+          // Errores de validación - No mostrar toast automático
+          // Los componentes manejan estos errores específicamente con toast.promise
+          if (import.meta.env.DEV) {
+            console.warn('Error 422:', data?.message || 'Error de validación', data?.errors);
           }
+          // No mostrar toast para evitar duplicados con toast.promise en componentes
           break;
         case 500:
-          toast.error('Error interno del servidor. Intenta nuevamente');
+          // Usar toastId para evitar duplicados
+          const toastId500 = `error-500-${error.config?.url || 'default'}`;
+          toast.error('Error interno del servidor. Intenta nuevamente', { id: toastId500 });
           break;
         default:
-          toast.error(data?.message || 'Error inesperado');
+          // Usar toastId basado en el mensaje para evitar duplicados
+          const toastIdDefault = `error-${status}-${error.config?.url || 'default'}`;
+          toast.error(data?.message || 'Error inesperado', { id: toastIdDefault });
       }
     } else if (error.request) {
-      // Error de red o timeout
-      toast.error('Error de conexión. Verifica tu conexión a internet');
+      // Error de red o timeout - Mensajes más específicos
+      console.error('🔴 Error de red completo:', {
+        message: error.message,
+        code: error.code,
+        config: {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          method: error.config?.method,
+        },
+        request: error.request,
+      });
+
+      // Usar toastId basado en el tipo de error para evitar duplicados
+      if (error.code === 'ECONNABORTED') {
+        toast.error('La petición tardó demasiado. El servidor puede estar ocupado o "dormido". Intenta nuevamente.', { 
+          id: 'error-timeout',
+          duration: 5000 
+        });
+      } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        const baseUrl = error.config?.baseURL || BASE_URL;
+        toast.error(`Error de conexión con ${baseUrl}. Verifica tu conexión a internet o que el servidor esté disponible.`, { 
+          id: 'error-network',
+          duration: 5000 
+        });
+        if (import.meta.env.DEV) {
+          console.error('💡 Sugerencias:', {
+            '1. Verifica que el backend esté desplegado': 'https://capex-back.onrender.com',
+            '2. El backend puede estar "dormido"': 'En Render Free, el primer request puede tardar 30-60 segundos',
+            '3. Verifica CORS': 'Asegúrate de que tu puerto local esté permitido en el backend',
+            '4. Revisa la consola del navegador': 'Busca errores de CORS en la pestaña Network',
+          });
+        }
+      } else {
+        toast.error(`Error de conexión: ${error.message || 'Error desconocido'}`, { 
+          id: 'error-connection' 
+        });
+      }
     } else {
-      toast.error('Error inesperado');
+      toast.error('Error inesperado', { id: 'error-unexpected' });
+      console.error('Error inesperado:', error);
     }
 
     return Promise.reject(error);
@@ -189,5 +268,32 @@ export { apiClient };
 
 // Exportar la URL base para referencia
 export { BASE_URL };
+
+// Configuración de la API (compatibilidad con código legacy)
+export const API_CONFIG = {
+  BASE_URL: BASE_URL,
+  TIMEOUT: 30000,
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000,
+};
+
+// Endpoints específicos (consolidados desde api.js)
+export const API_ENDPOINTS = {
+  ROLES: '/roles',
+  PRIVILEGES: '/privileges',
+  USERS: '/usuarios',
+  AUTH: '/auth',
+  CUSTOMERS: '/customers',
+};
+
+// Función para obtener headers (mantener compatibilidad)
+// Nota: Con cookies HttpOnly, no necesitamos agregar manualmente headers de autenticación
+// Las cookies se incluyen automáticamente con withCredentials: true
+export const getAuthHeaders = () => {
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+};
 
 export default apiRequest;

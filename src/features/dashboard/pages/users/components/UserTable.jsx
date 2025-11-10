@@ -1,6 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import ChangeUserStatus from "./ChangeUserStatus";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 
 const DEFAULT_AVATAR =
   "https://ui-avatars.com/api/?name=User&background=eee&color=888&size=64";
@@ -16,12 +17,7 @@ const UserTable = ({
   console.log("UserTable users:", users);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-text-main"></div>
-        <span className="ml-2 text-gray-600">Cargando usuarios...</span>
-      </div>
-    );
+    return <TableSkeleton columns={6} rows={5} hasAvatar={true} hasActions={true} />;
   }
 
   return (

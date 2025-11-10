@@ -5,7 +5,7 @@ const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&col
 const UserDetailModal = ({ onClose, user }) => {
   if (!user) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-primary m-0">Detalle del usuario</h2>

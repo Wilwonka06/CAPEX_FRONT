@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import PasswordEye from '../../../../../shared/components/PasswordEye';
-import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
+import { isValidEmail, isValidPhone, isValidNumber, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
 import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -47,14 +46,10 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
     ...user,
     tipoDocumento: user.tipo_documento, // Map backend field to frontend field
     telefono: user.telefono, // Ensure telefono field is properly set
-    password: '',
-    confirmPassword: '',
     roles: user.roleId ? [user.roleId.toString()] : [],
     conceptoEstado: user.concepto_estado || '' // Add concepto_estado field
   });
   const [availableRoles, setAvailableRoles] = useState([]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState(user.avatarCompressed || '');
   const [error, setError] = useState({});
   const canModifyStatus = hasPrivilege('Gestión de Usuarios', 'Editar');
@@ -122,10 +117,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
         if (!value.trim()) return 'Campo obligatorio';
         if (form.documento && users.some(u => (u.tipoDocumento || u.tipo_documento) === value && u.documento === form.documento && (u.id_usuario || u.id) !== (form.id_usuario || form.id))) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
-      case 'password':
-        return value ? (isValidPassword(value) ? '' : 'Contraseña débil') : '';
-      case 'confirmPassword':
-        return value === form.password ? '' : 'No coincide';
       case 'roles':
         return value.length > 0 ? '' : 'Selecciona al menos un rol';
       case 'estado':
@@ -192,17 +183,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
         valid = false;
       }
     }
-    // Si se está cambiando la contraseña, validar ambas
-    if (form.password || form.confirmPassword) {
-      if (form.password !== form.confirmPassword) {
-        newError.confirmPassword = 'Las contraseñas no coinciden';
-        valid = false;
-      }
-      if (!isValidPassword(form.password)) {
-        newError.password = 'Contraseña débil';
-        valid = false;
-      }
-    }
     if (!valid) {
       setError(newError);
       return;
@@ -237,7 +217,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-primary m-0">Editar usuario</h2>
@@ -358,10 +338,13 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Roles <span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-2">
+                <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-md bg-gray-50">
                   {availableRoles.map(role => (
-                    <label key={role.id_rol} className="flex items-center gap-2 text-sm font-medium text-text-main">
+                    <label 
+                      key={role.id_rol} 
+                      className="flex items-center gap-2 text-sm font-medium text-text-main cursor-pointer hover:text-primary transition-colors px-3 py-2 rounded-md hover:bg-white border border-transparent hover:border-gray-300"
+                    >
                       <input
                         type="checkbox"
                         name="roles"
@@ -369,34 +352,18 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                         checked={form.roles.includes(role.id_rol.toString())}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        className="accent-primary-dark"
+                        className="accent-primary-dark w-4 h-4 cursor-pointer"
                       />
-                      {role.nombre}
+                      <span>{role.nombre}</span>
                     </label>
                   ))}
                 </div>
-                {error.roles && <span className="text-red-500 text-xs">{error.roles}</span>}
+                {error.roles && <span className="text-red-500 text-xs mt-1 block">{error.roles}</span>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Correo <span className="text-red-500">*</span></label>
                 <input type="email" name="correo" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.correo} onChange={handleChange} onBlur={handleBlur} required />
                 {error.correo && <span className="text-red-500 text-xs">{error.correo}</span>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Contraseña</label>
-                <input type={showPassword ? 'text' : 'password'} name="password" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.password} onChange={handleChange} onBlur={handleBlur} />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
-                </div>
-                {error.password && <span className="text-red-500 text-xs">{error.password}</span>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Confirmar contraseña</label>
-                <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
-                </div>
-                {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
               </div>
               {canModifyStatus && (
                 <>
@@ -413,7 +380,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                           className="accent-green-500"
                         />
                         <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
                           Activo
                         </span>
                       </label>
@@ -427,7 +393,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                           className="accent-gray-500"
                         />
                         <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-gray-500"></div>
                           Inactivo
                         </span>
                       </label>

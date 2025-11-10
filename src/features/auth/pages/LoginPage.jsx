@@ -3,8 +3,7 @@ import { isValidEmail, isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { apiRequest } from '../../../shared/config/apiConfig';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -27,7 +26,7 @@ export default function LoginPage() {
       const errorMsg = 'Por favor ingresa un correo válido.';
       setError(errorMsg);
       setEmail('');
-      toast.error(errorMsg, { position: 'top-right' });
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
@@ -36,17 +35,20 @@ export default function LoginPage() {
       const errorMsg = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.';
       setError(errorMsg);
       setPassword('');
-      toast.error(errorMsg, { position: 'top-right' });
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
 
-    try {
+    const loginPromise = (async () => {
       console.log('🔐 Iniciando login...');
+      
+      // Normalizar correo a minúsculas para búsqueda case-insensitive
+      const normalizedEmail = trimmedEmail.toLowerCase();
       
       // Llamar a la API de autenticación del backend
       const response = await apiRequest.post('/auth/login', {
-        correo: trimmedEmail,
+        correo: normalizedEmail,
         contrasena: trimmedPassword
       });
 
@@ -89,30 +91,45 @@ export default function LoginPage() {
         // Login exitoso - delegar al contexto
         await login(userData);
 
-        // Solo mostrar el toast de bienvenido, sin redirigir aquí
-        toast.success('¡Bienvenido!', { position: 'top-right', autoClose: 1000 });
+        return userData;
       } else {
         throw new Error(response.message || 'Error en la autenticación');
       }
-    } catch (error) {
-      console.error('❌ Error en login:', error);
+    })();
 
-      let errorMsg = 'Error al iniciar sesión';
+    toast.promise(
+      loginPromise,
+      {
+        loading: 'Iniciando sesión...',
+        success: '¡Bienvenido!',
+        error: (err) => {
+          console.error('❌ Error en login:', err);
 
-      if (error.response?.status === 401) {
-        errorMsg = 'Credenciales inválidas';
-      } else if (error.response?.status === 400) {
-        errorMsg = error.response?.data?.message || 'Datos incorrectos';
-      } else if (error.response?.status === 403) {
-        errorMsg = 'No autorizado, por favor inicia sesión nuevamente';
-      } else if (error.message) {
-        errorMsg = error.message;
+          let errorMsg = 'Error al iniciar sesión';
+
+          if (err.response?.status === 401) {
+            errorMsg = 'Credenciales inválidas';
+          } else if (err.response?.status === 400) {
+            errorMsg = err.response?.data?.message || 'Datos incorrectos';
+          } else if (err.response?.status === 403) {
+            errorMsg = 'No autorizado, por favor inicia sesión nuevamente';
+          } else if (err.message) {
+            errorMsg = err.message;
+          }
+
+          setError(errorMsg);
+          return errorMsg;
+        },
+      },
+      {
+        id: 'login',
       }
+    );
 
-      setError(errorMsg);
-      toast.error(errorMsg, { position: 'top-right' });
-      // No limpiar la contraseña para evitar que el usuario tenga que escribirla de nuevo
-      // setPassword('');
+    try {
+      await loginPromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -155,33 +172,27 @@ export default function LoginPage() {
               <div className="w-3 h-3 rounded-full bg-gradient-to-r from-[#ff7c7c] to-[#ffb76b] animate-bounce animation-delay-100"></div>
               <div className="w-3 h-3 rounded-full bg-gradient-to-r from-[#ffb76b] to-[#ff7c7c] animate-bounce animation-delay-200"></div>
             </div>
-
-            {/* Estadísticas o features */}
-            <div className="space-y-4 animate-fade-in-up animation-delay-600">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#ffb76b]/20 flex items-center justify-center">
-                  <i className="bi bi-shield-check text-[#a0522d] text-sm"></i>
-                </div>
-                <span className="text-[#6d3b3b]/70">Acceso seguro y protegido</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#ff7c7c]/20 flex items-center justify-center">
-                  <i className="bi bi-speedometer2 text-[#a0522d] text-sm"></i>
-                </div>
-                <span className="text-[#6d3b3b]/70">Interfaz rápida y moderna</span>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* Panel derecho - Formulario */}
-        <div className="flex-1 flex items-center justify-center p-8 lg:p-16">
-          <div className="w-full max-w-md animate-fade-in-up">
-            {/* Header del formulario */}
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-[#6d3b3b] mb-2">Iniciar sesión</h2>
-              <p className="text-[#6d3b3b]/60">Accede a tu cuenta</p>
-            </div>
+      <div className="flex-1 flex items-center justify-center p-8 lg:p-16">
+        <div className="w-full max-w-md animate-fade-in-up">
+          {/* Botón de volver */}
+          <div className="mb-6">
+            <button
+              onClick={() => window.location.href = '/'}
+              className="flex items-center gap-2 text-[#6d3b3b]/70 hover:text-[#6d3b3b] transition-colors duration-200"
+            >
+              <i className="bi bi-arrow-left"></i>
+              <span>Volver al inicio</span>
+            </button>
+          </div>
+
+          {/* Header del formulario */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-[#6d3b3b] mb-2">Iniciar sesión</h2>
+          </div>
 
             {/* Formulario */}
             <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
@@ -246,7 +257,7 @@ export default function LoginPage() {
                 {/* Enlaces */}
                 <div className="flex justify-end">
                   <a
-                    href="/forgot-password"
+                    href="/olvide-contrasena"
                     className="text-[#a0522d] hover:text-[#7a3a1d] font-medium text-sm transition-colors duration-200 hover:underline"
                   >
                     ¿Olvidaste tu contraseña?
@@ -279,7 +290,6 @@ export default function LoginPage() {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">o</span>
                 </div>
               </div>
 
@@ -287,7 +297,7 @@ export default function LoginPage() {
               <div className="text-center">
                 <span className="text-gray-600">¿No tienes cuenta? </span>
                 <a
-                  href="/register"
+                  href="/registrarse"
                   className="text-[#a0522d] hover:text-[#7a3a1d] font-semibold transition-colors duration-200 hover:underline"
                 >
                   Regístrate aquí
@@ -303,18 +313,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
 
       {/* Estilos CSS personalizados */}
       <style>{`

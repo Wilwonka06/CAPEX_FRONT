@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
+import toast from "react-hot-toast";
 import {
   validateServiceName,
   validateServiceDescription,
   validateServiceDuration,
   validateServicePrice,
 } from "../../../../../shared/validations";
+import { 
+  compressImageToBase64, 
+  validateFileSize, 
+  validateFileType 
+} from '../../../../../shared/utils/imagesUploadHelper';
 
 const EditServices = ({ onClose, service, onEdit, categories = [], services = [] }) => {
   const activeCategories = categories.filter(cat => cat.estado === "Activo");
@@ -67,7 +73,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
     if (e.key === "Enter") e.preventDefault();
   };
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value, type, files } = e.target;
     if (name === 'duracion' || name === 'precio') {
       const numericValue = value.replace(/[^0-9]/g, '');
@@ -75,8 +81,30 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
     } else if (type === "file") {
       const file = files[0];
       if (file) {
-        setFormData((prev) => ({ ...prev, foto: file }));
-        setPreviews([URL.createObjectURL(file)]);
+        // Validar tipo de archivo
+        if (!validateFileType(file)) {
+          toast.error(`${file.name}: Tipo de archivo no válido`);
+          return;
+        }
+
+        // Validar tamaño (5MB máximo)
+        if (!validateFileSize(file, 5)) {
+          toast.error(`${file.name}: Máximo 5MB`);
+          return;
+        }
+
+        try {
+          // Convertir a base64 y comprimir
+          const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+          setFormData((prev) => ({ ...prev, foto: base64Image }));
+          
+          // Preview local
+          const preview = URL.createObjectURL(file);
+          setPreviews([preview]);
+        } catch (error) {
+          console.error('Error procesando imagen:', error);
+          toast.error('Error al procesar la imagen');
+        }
       }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -132,13 +160,28 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
     if (error) setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
     if (files.length > 0) {
       const file = files[0];
-      setFormData((prev) => ({ ...prev, foto: file }));
-      setPreviews([URL.createObjectURL(file)]);
+      if (!validateFileType(file)) {
+        toast.error(`${file.name}: Tipo de archivo no válido`);
+        return;
+      }
+      if (!validateFileSize(file, 5)) {
+        toast.error(`${file.name}: Máximo 5MB`);
+        return;
+      }
+      try {
+        const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+        setFormData((prev) => ({ ...prev, foto: base64Image }));
+        const preview = URL.createObjectURL(file);
+        setPreviews([preview]);
+      } catch (error) {
+        console.error('Error procesando imagen:', error);
+        toast.error('Error al procesar la imagen');
+      }
     }
   };
 
@@ -147,6 +190,10 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
   };
 
   const removeImage = () => {
+    // Liberar URL del preview si existe
+    if (previews.length > 0 && previews[0] && previews[0].startsWith('blob:')) {
+      URL.revokeObjectURL(previews[0]);
+    }
     setFormData((prev) => ({ ...prev, foto: null }));
     setPreviews([]);
   };
@@ -177,6 +224,18 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
 
     if (valid) {
       // Preparar datos para envío
+      // Si foto es base64 (nueva imagen), enviarlo. Si es URL (imagen existente), mantenerla solo si no cambió
+      let fotoToSend = null;
+      if (formData.foto) {
+        if (formData.foto.startsWith('data:image')) {
+          // Es una nueva imagen en base64
+          fotoToSend = formData.foto;
+        } else if (formData.foto.includes('cloudinary.com')) {
+          // Es una URL existente de Cloudinary, mantenerla
+          fotoToSend = formData.foto;
+        }
+      }
+
       const serviceData = {
         id: formData.id,
         nombre: formData.nombre.trim(),
@@ -184,7 +243,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
         descripcion: formData.descripcion.trim(),
         duracion: Number(formData.duracion),
         precio: Number(formData.precio),
-        foto: formData.foto && !(formData.foto instanceof File) ? String(formData.foto) : '',
+        foto: fotoToSend, // Enviar base64 o URL de Cloudinary
       };
 
       // Llamar la función onEdit que se encarga de la confirmación y llamada a la API
@@ -193,7 +252,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">

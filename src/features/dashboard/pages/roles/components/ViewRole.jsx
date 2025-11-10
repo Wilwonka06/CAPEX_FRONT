@@ -1,7 +1,7 @@
 import PrivilegesTable from './PrivilegesTable';
 
 const ViewRolesCard = ({ children, title, onClose }) => (
-  <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
+  <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl p-4 md:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto border border-gray-200">
     <button
       className="absolute top-3 right-3 text-gray-400 hover:text-primary text-xl font-bold"
       onClick={onClose}
@@ -18,7 +18,7 @@ const ViewRoles = ({ isOpen, onClose, role }) => {
   if (!isOpen || !role) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed top-0 left-0 right-0 bottom-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <ViewRolesCard title="Detalle del rol" onClose={onClose}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>

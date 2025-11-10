@@ -9,6 +9,12 @@ import { useCart } from '../../components/CartContext';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import Footer from '../../../../shared/components/Footer';
 
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=256&bold=true`;
+};
+
 const Catalogo = () => {
   // Estados para productos
   const [products, setProducts] = useState([]);
@@ -522,10 +528,17 @@ const Catalogo = () => {
                     {/* Imagen con overlay */}
                     <div className="relative w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img
-                        src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : (prod.foto || prod.imagen)}
+                        src={
+                          (prod.fotos && prod.fotos.length > 0 && prod.fotos[0])
+                            ? prod.fotos[0]
+                            : (prod.foto || prod.imagen || getDefaultProductImage(prod.nombre))
+                        }
                         alt={prod.nombre}
                         className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
+                        onError={(e) => {
+                          e.target.src = getDefaultProductImage(prod.nombre);
+                        }}
                       />
                       {/* Overlay al hover */}
                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

@@ -1,8 +1,13 @@
 import { useMemo } from 'react';
 import { useCart } from '../../components/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { formatNumber } from '../../../../shared/utils/formatters';
 
-const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=128&bold=true`;
+};
 
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart } = useCart();
@@ -56,7 +61,18 @@ const Cart = () => {
                 <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
                   <td className="py-3 flex items-center gap-4">
                     <Link to={`/landing/productos/${item.id}`} className="group">
-                        <img src={item.fotos && item.fotos.length > 0 ? item.fotos[0] : (item.foto || item.imagen)} alt={item.nombre} className="w-16 h-16 object-cover rounded-xl bg-gray-100 group-hover:ring-2 group-hover:ring-[#FACC15] transition shadow" />
+                        <img 
+                          src={
+                            (item.fotos && item.fotos.length > 0 && item.fotos[0])
+                              ? item.fotos[0]
+                              : (item.foto || item.imagen || getDefaultProductImage(item.nombre))
+                          }
+                          alt={item.nombre} 
+                          className="w-16 h-16 object-cover rounded-xl bg-gray-100 group-hover:ring-2 group-hover:ring-[#FACC15] transition shadow"
+                          onError={(e) => {
+                            e.target.src = getDefaultProductImage(item.nombre);
+                          }}
+                        />
                     </Link>
                     <div>
                       <Link to={`/landing/productos/${item.id}`} className="font-semibold text-[#1E1E1E] hover:text-[#FACC15] transition">
@@ -83,7 +99,18 @@ const Cart = () => {
             {cart.map(item => (
               <div key={item.id} className="flex gap-4 bg-gray-50 rounded-xl shadow p-4 items-center border border-[#FACC15]">
                 <Link to={`/landing/productos/${item.id}`} className="shrink-0">
-                  <img src={item.fotos && item.fotos.length > 0 ? item.fotos[0] : (item.foto || item.imagen)} alt={item.nombre} className="w-20 h-20 object-cover rounded-xl bg-white border-2 border-[#FACC15] shadow" />
+                  <img 
+                    src={
+                      (item.fotos && item.fotos.length > 0 && item.fotos[0])
+                        ? item.fotos[0]
+                        : (item.foto || item.imagen || getDefaultProductImage(item.nombre))
+                    }
+                    alt={item.nombre} 
+                    className="w-20 h-20 object-cover rounded-xl bg-white border-2 border-[#FACC15] shadow"
+                    onError={(e) => {
+                      e.target.src = getDefaultProductImage(item.nombre);
+                    }}
+                  />
                 </Link>
                 <div className="flex-1 flex flex-col gap-1">
                   <Link to={`/landing/productos/${item.id}`} className="font-semibold text-[#1E1E1E] hover:text-[#FACC15] transition text-base">

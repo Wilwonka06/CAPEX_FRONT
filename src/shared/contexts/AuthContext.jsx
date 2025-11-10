@@ -43,10 +43,10 @@ export const AuthProvider = ({ children }) => {
       : currentUser.rol?.nombre || '';
 
     // Si el usuario es Administrador, tiene todos los privilegios
-    const isAdmin = roleName.toLowerCase() === 'administrador';
+    const isAdmin = roleName.toLowerCase() === 'administrador' || roleName.toLowerCase() === 'admin';
 
     if (isAdmin) {
-      console.log('✅ Usuario es Administrador, tiene todos los privilegios');
+      console.log(`✅ Usuario es Administrador (${roleName}), tiene todos los privilegios para ${module} -> ${action}`);
       return true;
     }
 
@@ -93,8 +93,8 @@ export const AuthProvider = ({ children }) => {
     return hasPrivilege;
   };
 
-  // Función para obtener la ruta de redirección basada en el rol
-  const getRoleRedirect = (role) => {
+  // Función para obtener la ruta de redirección basada en el rol y permisos
+  const getRoleRedirect = (role, userData = null) => {
     const roleName = typeof role === 'string' 
       ? role 
       : (role?.nombre || '');
@@ -107,6 +107,36 @@ export const AuthProvider = ({ children }) => {
       normalizedRole 
     });
 
+    // Obtener datos del usuario si están disponibles
+    const user = userData || currentUser;
+    
+    // Verificar si el usuario tiene permisos administrativos
+    // Módulos administrativos: Dashboard, Gestión de Usuarios, Gestión de Compras, Gestión de Servicios
+    if (user && user.privileges) {
+      const administrativeModules = [
+        'Dashboard',
+        'Gestión de Usuarios',
+        'Gestión de Compras',
+        'Gestión de Servicios'
+      ];
+      
+      // Verificar si tiene acceso a algún módulo administrativo
+      const hasAdministrativeAccess = administrativeModules.some(module => {
+        const modulePrivileges = user.privileges[module];
+        return modulePrivileges && (
+          modulePrivileges.Visualizar === true || 
+          modulePrivileges['Visualizar'] === true ||
+          modulePrivileges.Read === true
+        );
+      });
+      
+      if (hasAdministrativeAccess) {
+        console.log('✅ Usuario tiene permisos administrativos, redirigiendo a /dashboard');
+        return '/dashboard';
+      }
+    }
+
+    // Fallback: redirección basada en rol
     const roleRedirects = {
       'administrador': '/dashboard',
       'empleado': '/dashboard/citas',
@@ -161,8 +191,8 @@ export const AuthProvider = ({ children }) => {
       // Emitir evento de cambio
       window.dispatchEvent(new Event('user-auth-changed'));
 
-      // Obtener ruta de redirección
-      const redirectPath = getRoleRedirect(userData.rol);
+      // Obtener ruta de redirección (pasar userData para verificar permisos)
+      const redirectPath = getRoleRedirect(userData.rol, userData);
       console.log('🔄 Redirigiendo a:', redirectPath);
 
       // Redirigir con un pequeño delay para mejor UX
@@ -203,7 +233,7 @@ export const AuthProvider = ({ children }) => {
       window.dispatchEvent(new Event('user-auth-changed'));
       
       // Redirigir al login
-      window.location.href = '/login';
+      window.location.href = '/iniciar-sesion';
     }
   };
 

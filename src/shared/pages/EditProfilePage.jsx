@@ -135,131 +135,218 @@ const EditProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center py-8 px-2">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col items-center justify-center py-8 px-2">
       {/* Botón de regresar */}
-      <div className="w-full max-w-7xl flex items-center mb-4">
+      <div className="w-full max-w-7xl flex items-center mb-6">
         <button
           type="button"
-          className="flex items-center gap-2 text-primary font-semibold hover:underline text-lg"
+          className="flex items-center gap-3 text-primary font-semibold hover:text-primary-dark transition-colors duration-200 text-lg group"
           onClick={() => navigate(-1)}
         >
-          <i className="bi bi-arrow-left text-3xl"></i>
-          Editar perfil
+          <div className="p-2 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors duration-200">
+            <i className="bi bi-arrow-left text-2xl"></i>
+          </div>
+          <span>Editar perfil</span>
         </button>
       </div>
-      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl p-4 md:p-10 flex flex-col md:flex-row gap-8 md:gap-12">
+      <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 md:p-12 flex flex-col md:flex-row gap-8 md:gap-12 relative overflow-hidden">
+        {/* Elementos decorativos de fondo */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/10 to-yellow-500/10 rounded-full -translate-y-16 translate-x-16"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-primary/5 to-primary-dark/5 rounded-full translate-y-12 -translate-x-12"></div>
         {/* Foto de perfil a la izquierda, centrada verticalmente */}
-        <div className="flex md:flex-col items-center md:justify-center md:h-full md:min-h-[32rem] md:w-1/3 w-full">
-          <div className="relative w-48 h-48 mb-4 flex-shrink-0">
+        <div className="flex md:flex-col items-center md:justify-center md:h-full md:min-h-[32rem] md:w-1/3 w-full relative z-10">
+          <div className="relative w-56 h-56 mb-6 flex-shrink-0 group">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
             <img
               src={form.foto || 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=256'}
               alt="Avatar"
-              className="w-48 h-48 rounded-full object-cover border-4 border-primary/20 shadow"
+              className="relative w-56 h-56 rounded-full object-cover border-4 border-white shadow-2xl ring-4 ring-yellow-400/20"
             />
             <button
               type="button"
-              className="absolute bottom-3 right-3 bg-primary text-white rounded-full p-4 shadow hover:bg-primary-dark transition"
+              className="absolute bottom-4 right-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-full p-4 shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300 group/btn"
               onClick={() => fileInputRef.current.click()}
               title="Cambiar foto"
             >
-              <i className="bi bi-camera text-xl"></i>
+              <i className="bi bi-camera text-xl group-hover/btn:scale-110 transition-transform duration-200"></i>
             </button>
             <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handlePhotoChange} />
+
+            {/* Indicador de estado online */}
+            <div className="absolute top-4 right-4 w-6 h-6 bg-green-500 rounded-full border-4 border-white shadow-lg">
+              <div className="w-full h-full bg-green-400 rounded-full animate-pulse"></div>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-text-main text-center md:text-left">Cambiar foto</h1>
+          <div className="text-center md:text-left">
+            <h1 className="text-3xl font-bold text-text-main mb-2 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+              Cambiar foto
+            </h1>
+            <p className="text-gray-500 text-sm">Haz clic en el ícono de cámara para actualizar tu imagen</p>
+          </div>
         </div>
         {/* Formulario en dos columnas */}
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-between">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-between relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-3 w-full">
             {/* Columna 1: Datos personales */}
             <div className="flex flex-col gap-6">
-              <div className="bg-gray-50 rounded-2xl p-6 shadow-sm">
-                <h2 className="font-semibold text-primary mb-4 text-xl">Datos personales</h2>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Nombre completo</label>
-                  <div className="relative">
-                    <i className="bi bi-person absolute left-3 top-3 text-gray-400 text-base"></i>
-                    <input name="nombre" value={form.nombre} onChange={handleChange} className="w-full border rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base" required />
+              <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
+                    <i className="bi bi-person-fill text-white text-xl"></i>
+                  </div>
+                  <h2 className="font-bold text-primary text-2xl bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">Datos personales</h2>
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Nombre completo</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200">
+                      <i className="bi bi-person-fill text-lg"></i>
+                    </div>
+                    <input
+                      name="nombre"
+                      value={form.nombre}
+                      onChange={handleChange}
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                      required
+                      placeholder="Ingresa tu nombre completo"
+                    />
                   </div>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Tipo de documento</label>
-                  <select name="tipo_documento" value={form.tipo_documento} onChange={(e) => setForm(prev => ({ ...prev, tipo_documento: e.target.value }))} className="w-full border rounded-lg px-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base">
-                    {tiposDocumento.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
-                  </select>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Tipo de documento</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200 z-10">
+                      <i className="bi bi-card-text text-lg"></i>
+                    </div>
+                    <select
+                      name="tipo_documento"
+                      value={form.tipo_documento}
+                      onChange={(e) => setForm(prev => ({ ...prev, tipo_documento: e.target.value }))}
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md appearance-none"
+                    >
+                      {tiposDocumento.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
+                    </select>
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <i className="bi bi-chevron-down text-lg"></i>
+                    </div>
+                  </div>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Documento</label>
-                  <div className="relative">
-                    <i className="bi bi-credit-card-2-front absolute left-3 top-3 text-gray-400 text-base"></i>
-                    <input name="documento" value={form.documento} onChange={handleChange} className="w-full border rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base" />
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Documento</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200">
+                      <i className="bi bi-credit-card-fill text-lg"></i>
+                    </div>
+                    <input
+                      name="documento"
+                      value={form.documento}
+                      onChange={handleChange}
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                      placeholder="Ingresa tu número de documento"
+                    />
                   </div>
                 </div>
               </div>
             </div>
             {/* Columna 2: Contacto y contraseña */}
             <div className="flex flex-col gap-6">
-              <div className="bg-gray-50 rounded-2xl p-6 shadow-sm">
-                <h2 className="font-semibold text-primary mb-4 text-xl">Información de contacto</h2>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Correo</label>
-                  <div className="relative">
-                    <i className="bi bi-envelope absolute left-3 top-3 text-gray-400 text-base"></i>
-                    <input name="correo" value={form.correo} onChange={handleChange} className="w-full border rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base" required />
+              <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg">
+                    <i className="bi bi-envelope-fill text-white text-xl"></i>
+                  </div>
+                  <h2 className="font-bold text-primary text-2xl bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">Información de contacto</h2>
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Correo electrónico</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors duration-200">
+                      <i className="bi bi-envelope-fill text-lg"></i>
+                    </div>
+                    <input
+                      name="correo"
+                      value={form.correo}
+                      onChange={handleChange}
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                      required
+                      placeholder="tu@email.com"
+                    />
                   </div>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Teléfono</label>
-                  <div className="relative">
-                    <i className="bi bi-telephone absolute left-3 top-3 text-gray-400 text-base"></i>
-                    <input name="telefono" value={form.telefono} onChange={handleChange} className="w-full border rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base" />
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Teléfono</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors duration-200">
+                      <i className="bi bi-telephone-fill text-lg"></i>
+                    </div>
+                    <input
+                      name="telefono"
+                      value={form.telefono}
+                      onChange={handleChange}
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                      placeholder="+57 300 123 4567"
+                    />
                   </div>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Dirección</label>
-                  <div className="relative">
-                    <i className="bi bi-geo-alt absolute left-3 top-3 text-gray-400 text-base"></i>
-                    <input name="direccion" value={form.direccion} onChange={handleChange} className="w-full border rounded-lg pl-10 pr-3 py-3 focus:ring-2 focus:ring-primary outline-none text-base" />
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Dirección</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-green-500 transition-colors duration-200">
+                      <i className="bi bi-geo-alt-fill text-lg"></i>
+                    </div>
+                    <input
+                      name="direccion"
+                      value={form.direccion}
+                      onChange={handleChange}
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                      placeholder="Dirección completa"
+                    />
                   </div>
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Contraseña (opcional)</label>
-                  <div className="relative">
-                    <i className="bi bi-lock absolute left-3 top-3 text-gray-400 text-base"></i>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Contraseña (opcional)</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200">
+                      <i className="bi bi-lock-fill text-lg"></i>
+                    </div>
                     <input
                       type={showPassword ? 'text' : 'password'}
                       name="password"
                       value={form.password}
                       onChange={handleChange}
-                      className="w-full border rounded-lg pl-10 pr-12 py-3 focus:ring-2 focus:ring-primary outline-none text-base"
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-12 py-4 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md"
                       autoComplete="new-password"
+                      placeholder="Nueva contraseña"
                     />
                     <button
                       type="button"
                       tabIndex={-1}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-primary"
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-purple-500 transition-colors duration-200"
                       onClick={() => setShowPassword(v => !v)}
                     >
                       <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'} text-xl`}></i>
                     </button>
                   </div>
                 </div>
-                <div className="mb-2">
-                  <label className="block text-sm font-medium mb-2">*Confirmar contraseña</label>
-                  <div className="relative">
-                    <i className="bi bi-lock-fill absolute left-3 top-3 text-gray-400 text-base"></i>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Confirmar contraseña</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-purple-500 transition-colors duration-200">
+                      <i className="bi bi-shield-lock-fill text-lg"></i>
+                    </div>
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       name="confirmPassword"
                       value={form.confirmPassword}
                       onChange={handleChange}
-                      className="w-full border rounded-lg pl-10 pr-12 py-3 focus:ring-2 focus:ring-primary outline-none text-base"
+                      className="w-full border-2 border-gray-200 rounded-xl pl-12 pr-12 py-4 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-base bg-white hover:border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md"
                       autoComplete="new-password"
+                      placeholder="Confirma tu nueva contraseña"
                     />
                     <button
                       type="button"
                       tabIndex={-1}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-primary"
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-purple-500 transition-colors duration-200"
                       onClick={() => setShowConfirmPassword(v => !v)}
                     >
                       <i className={`bi ${showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'} text-xl`}></i>
@@ -270,12 +357,31 @@ const EditProfilePage = () => {
             </div>
           </div>
           {/* Botón de guardar */}
-          <div className="flex flex-col md:flex-row justify-end items-center mt-8 gap-2 w-full">
+          <div className="flex flex-col md:flex-row justify-end items-center mt-12 gap-4 w-full">
             <div className="flex-1" />
             <div className="flex flex-col items-center md:items-end">
-              {error && <div className="text-red-500 text-xs text-center mb-1">{error}</div>}
-              {success && <div className="text-green-600 text-xs text-center mb-1">{success}</div>}
-              <button type="submit" className="px-8 py-3 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition font-bold text-lg mt-1 w-full max-w-xs">Guardar cambios</button>
+              {error && (
+                <div className="flex items-center gap-2 text-red-600 text-sm mb-3 bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                  <i className="bi bi-exclamation-triangle-fill"></i>
+                  <span>{error}</span>
+                </div>
+              )}
+              {success && (
+                <div className="flex items-center gap-2 text-green-600 text-sm mb-3 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                  <i className="bi bi-check-circle-fill"></i>
+                  <span>{success}</span>
+                </div>
+              )}
+              <button
+                type="submit"
+                className="group relative px-10 py-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 font-bold text-lg overflow-hidden"
+              >
+                <span className="relative z-10 flex items-center gap-3">
+                  <i className="bi bi-check-circle-fill text-xl group-hover:scale-110 transition-transform duration-200"></i>
+                  Guardar cambios
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 to-yellow-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
             </div>
           </div>
         </form>

@@ -4,13 +4,12 @@ import { useCart } from '../../components/CartContext';
 import ordersService from '../../pages/orders/API/OrdersService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import OrderProgressIndicator from './components/OrderProgressIndicator';
+import { formatNumber } from '../../../../shared/utils/formatters';
 
 const empresasEnvio = [
   { nombre: 'INTER rapidísimo', precio: { 'Bogotá': 13500, 'Medellín': 15000, 'default': 18000 } },
   { nombre: 'CO-ORDINADORA', precio: { 'Bogotá': 20500, 'Medellín': 22000, 'default': 25000 } },
 ];
-
-const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
 
 const Checkout = () => {
   const { cart, clearCart } = useCart();

@@ -122,27 +122,13 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
       return;
     }
     
-    // Confirmación SweetAlert
-    const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar el proveedor "${formData.nombre}"?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    });
-    
-    if (result.isConfirmed) {
-      const updatedSupplier = {
-        ...supplier,
-        ...formData,
-        telefono: '+' + numero,
-        tipo: formData.tipo.toUpperCase(),
-      };
-      if (onSave) onSave(updatedSupplier);
-    }
+    const updatedSupplier = {
+      ...supplier,
+      ...formData,
+      telefono: '+' + numero,
+      tipo: formData.tipo.toUpperCase(),
+    };
+    if (onSave) onSave(updatedSupplier);
   };
 
   const handleClose = () => {
@@ -165,7 +151,7 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   if (!isOpen || !supplier) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-primary m-0">Editar proveedor</h2>

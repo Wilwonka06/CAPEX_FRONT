@@ -28,7 +28,7 @@ export default function QuickCreateProductModal({ isOpen, onClose, onCreate }) {
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 relative animate-fade-in">
         <h2 className="text-lg font-bold mb-4 text-primary">Nuevo Producto</h2>
         <form onSubmit={handleSubmit} className="space-y-4">

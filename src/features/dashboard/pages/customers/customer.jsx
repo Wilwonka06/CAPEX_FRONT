@@ -14,8 +14,7 @@ import { normalizeText } from '../../../../shared/normalizers.js';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import CustomerTable from "./components/CustomerTable.jsx";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 
 // Datos iniciales vacíos - se cargarán desde el backend
 const initialCustomers = [];
@@ -66,9 +65,9 @@ const CustomersPage = () => {
   // Función para mostrar mensajes de feedback
   const showMessage = (text, type = 'success') => {
     if (type === 'success') {
-      toast.success(text, { position: 'top-right' });
+      toast.success(text);
     } else {
-      toast.error(text, { position: 'top-right' });
+      toast.error(text);
     }
   };
 
@@ -198,12 +197,11 @@ const CustomersPage = () => {
 
   return (
     <div className="min-h-screen p-6 font-inter">
-      <ToastContainer />
       {/* Mensaje de feedback */}
 
       {/* Modal CreateCustomer overlay */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <CreateCustomer
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
@@ -217,7 +215,7 @@ const CustomersPage = () => {
 
       {/* Modal EditCustomer overlay */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <EditCustomer
             isOpen={isEditModalOpen}
             onClose={() => setIsEditModalOpen(false)}
@@ -244,20 +242,14 @@ const CustomersPage = () => {
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              {isLoadingCustomers ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">Cargando clientes...</span>
-                </div>
-              ) : (
-                <CustomerTable
-                  customers={paginatedCustomers}
-                  onView={handleViewClick}
-                  onEdit={handleEditClick}
-                  onDelete={handleDeleteClick}
-                  onToggleStatus={handleToggleStatus}
-                />
-              )}
+              <CustomerTable
+                customers={paginatedCustomers}
+                onView={handleViewClick}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+                onToggleStatus={handleToggleStatus}
+                loading={isLoadingCustomers}
+              />
             </div>
 
             {/* Paginación */}

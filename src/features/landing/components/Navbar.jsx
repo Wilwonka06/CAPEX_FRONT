@@ -68,7 +68,7 @@ const Navbar = () => {
         localStorage.removeItem('currentUser');
         window.dispatchEvent(new Event('user-auth-changed'));
         setShowProfile(false);
-        navigate('/login');
+        navigate('/iniciar-sesion');
     };
 
     // Función para alternar el menú desplegable de productos (comentada por ahora)
@@ -160,7 +160,7 @@ const Navbar = () => {
                             </div>
                         ) : (
                             <Link
-                                to="/login"
+                                to="/iniciar-sesion"
                                 className="bg-[#FACC15] text-[#1E1E1E] px-6 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
                                 Iniciar Sesión
@@ -251,7 +251,7 @@ const Navbar = () => {
                                     </button>
                                 ) : (
                                     <Link
-                                        to="/login"
+                                        to="/iniciar-sesion"
                                         className="block w-full text-center bg-[#FACC15] text-[#1E1E1E] px-4 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300"
                                         onClick={() => setIsMobileMenuOpen(false)}
                                     >

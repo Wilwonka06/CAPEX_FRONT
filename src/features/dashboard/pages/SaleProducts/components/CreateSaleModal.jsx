@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import productsService from "../../products/API/productsService";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 const paymentMethods = ["Efectivo", "Transferencia bancaria"];
 
@@ -61,13 +62,11 @@ export default function CreateSaleModal({
     0
   );
 
-  const formatNumber = (num) => {
-    if (num === '' || num === undefined || num === null) return '';
-    const parts = num.toString().split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
+  // Usar cleanNumber del formatters (reemplaza puntos y otros caracteres)
+  const cleanNumber = (str) => {
+    if (!str) return '';
+    return str.toString().replace(/[^0-9]/g, '');
   };
-  const cleanNumber = (str) => str.replace(/,/g, '');
 
   const handleAddProduct = () => {
     let nuevosErrores = {};
@@ -171,7 +170,7 @@ export default function CreateSaleModal({
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-[#9C5B2B] m-0">
-            Registrar Nueva Venta
+            Crear Nueva Venta
           </h2>
           <button
             className="text-gray-400 hover:text-primary text-xl font-bold"
@@ -321,10 +320,10 @@ export default function CreateSaleModal({
                       value={productoSeleccionado}
                       onChange={(e) => setProductoSeleccionado(e.target.value)}
                     >
-                    <option value="">Seleccionar producto</option>
+                        <option value="">Seleccionar producto</option>
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.nombre} - Stock: {p.cantidad}
+                          {p.nombre} - Stock: {formatNumber(p.cantidad || 0)}
                         </option>
                       ))}
                   </select>
@@ -408,13 +407,13 @@ export default function CreateSaleModal({
                           <td className="py-2 px-3">{item.codigo}</td>
                           <td className="py-2 px-3">{item.nombre}</td>
                           <td className="py-2 px-3 text-right">
-                            {item.cantidad}
+                            {formatNumber(item.cantidad)}
                           </td>
                           <td className="py-2 px-3 text-right">
-                            ${item.precio.toLocaleString()}
+                            ${formatNumber(item.precio || 0)}
                           </td>
                           <td className="py-2 px-3 text-right">
-                            ${(item.precio * item.cantidad).toLocaleString()}
+                            ${formatNumber((item.precio || 0) * (item.cantidad || 0))}
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button

@@ -119,6 +119,16 @@ class RolesService {
     return updatedRole;
   }
 
+  // Obtener permisos disponibles
+  async getAvailablePermissions() {
+    return await this.apiService.getAvailablePermissions();
+  }
+
+  // Obtener privilegios disponibles
+  async getAvailablePrivileges() {
+    return await this.apiService.getAvailablePrivileges();
+  }
+
   // Limpiar caché
   clearCache() {
     this.cacheService.clear();

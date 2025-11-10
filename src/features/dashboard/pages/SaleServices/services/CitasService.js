@@ -1,26 +1,18 @@
 // Servicio para manejar citas en el módulo de Venta de Servicios
-import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api.js';
-
-const BASE_URL = API_CONFIG.BASE_URL;
+import { apiRequest } from '../../../../../shared/config/apiConfig';
 
 /**
  * Obtiene todas las citas en estado "En ejecución" para mostrar en venta de servicios
  */
 export const getCitasEnEjecucion = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/citas`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const citas = await response.json();
+    const citas = await apiRequest.get('/citas');
+    
+    // Manejar diferentes estructuras de respuesta
+    const citasArray = Array.isArray(citas) ? citas : (citas.data || citas.citas || []);
     
     // Filtrar solo las citas en estado "En ejecución"
-    const citasEnEjecucion = citas.filter(cita => 
+    const citasEnEjecucion = citasArray.filter(cita => 
       cita.estado && cita.estado.toLowerCase() === 'en ejecucion'
     );
 
@@ -37,17 +29,9 @@ export const getCitasEnEjecucion = async () => {
  */
 export const getCitaById = async (citaId) => {
   try {
-    const response = await fetch(`${BASE_URL}/citas/${citaId}`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const cita = await response.json();
-    return transformarCitaAVentaServicio(cita);
+    const cita = await apiRequest.get(`/citas/${citaId}`);
+    const citaData = cita.data || cita;
+    return transformarCitaAVentaServicio(citaData);
   } catch (error) {
     console.error('Error al obtener cita:', error);
     throw new Error('Error al cargar la cita');
@@ -59,19 +43,15 @@ export const getCitaById = async (citaId) => {
  */
 export const buscarCitas = async (termino) => {
   try {
-    const response = await fetch(`${BASE_URL}/citas/buscar?q=${encodeURIComponent(termino)}`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
+    const citas = await apiRequest.get('/citas/buscar', {
+      params: { q: termino }
     });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const citas = await response.json();
+    
+    // Manejar diferentes estructuras de respuesta
+    const citasArray = Array.isArray(citas) ? citas : (citas.data || citas.citas || []);
     
     // Filtrar solo las citas en estado "En ejecución"
-    const citasEnEjecucion = citas.filter(cita => 
+    const citasEnEjecucion = citasArray.filter(cita => 
       cita.estado && cita.estado.toLowerCase() === 'en ejecucion'
     );
 
@@ -87,16 +67,7 @@ export const buscarCitas = async (termino) => {
  */
 export const iniciarServicio = async (citaId) => {
   try {
-    const response = await fetch(`${BASE_URL}/citas/${citaId}/iniciar-servicio`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const resultado = await response.json();
+    const resultado = await apiRequest.post(`/citas/${citaId}/iniciar-servicio`);
     return resultado;
   } catch (error) {
     console.error('Error al iniciar servicio:', error);
@@ -109,17 +80,7 @@ export const iniciarServicio = async (citaId) => {
  */
 export const actualizarEstadoCita = async (citaId, nuevoEstado) => {
   try {
-    const response = await fetch(`${BASE_URL}/citas/${citaId}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ estado: nuevoEstado }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const resultado = await response.json();
+    const resultado = await apiRequest.put(`/citas/${citaId}`, { estado: nuevoEstado });
     return resultado;
   } catch (error) {
     console.error('Error al actualizar estado de cita:', error);

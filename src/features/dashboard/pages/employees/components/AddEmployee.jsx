@@ -1,6 +1,6 @@
 // AddEmployee.jsx - Corregido para guardar programaciones correctamente
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import AddScheduling from './AddScheduling';
 import { 
   validateEmployeeForm,

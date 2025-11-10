@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 
 function limpiarPrecio(valor) {
   return Number(String(valor).replace(/[^\d]/g, '')) || 0;
@@ -51,16 +50,29 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
     setLoadingCancel(true);
     setErrorCancel(null);
     console.log('Intentando cancelar cita...');
-    try {
+    
+    const cancelPromise = (async () => {
       await appointmentsService.cancel(cita.id_cita, 'Cancelada por el usuario');
       console.log('Cita cancelada en API');
       if (onCancel) await onCancel();
       onClose();
-      toast.info('Cita cancelada', { position: 'top-right' });
+      return true;
+    })();
+
+    toast.promise(cancelPromise, {
+      loading: 'Cancelando cita...',
+      success: 'Cita cancelada',
+      error: (err) => {
+        setErrorCancel('Error al cancelar la cita. Intenta de nuevo.');
+        console.error('Error al cancelar:', err);
+        return err.response?.data?.message || err.message || 'Error al cancelar la cita';
+      },
+    });
+
+    try {
+      await cancelPromise;
     } catch (err) {
-      setErrorCancel('Error al cancelar la cita. Intenta de nuevo.');
-      console.error('Error al cancelar:', err);
-      toast.error('Error al cancelar la cita', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoadingCancel(false);
     }
@@ -70,7 +82,7 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   const esCancelada = cita.estado === 'Cancelada por el usuario' || cita.estado === 'No asistio';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none font-inter">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm select-none font-inter">
       <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-xl relative animate-fade-in max-h-[90vh] flex flex-col mt-8`}>
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-5">
           <h2 className="text-2xl font-bold text-primary m-0">Detalles de la cita</h2>
@@ -142,7 +154,6 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
           </button>
         </div>
       </div>
-      <ToastContainer />
     </div>
   );
 };

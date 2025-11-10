@@ -18,7 +18,7 @@ const DeleteCustomer = ({ isOpen, onClose, onDelete, customer }) => {
   if (!isOpen || !customer) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl border-2 border-red-500 w-full max-w-md p-8 relative animate-fade-in">
         <button 
           className="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-xl font-bold" 

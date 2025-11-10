@@ -4,10 +4,16 @@ import ordersService from '../../pages/orders/API/OrdersService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 
-const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
+import { formatNumber } from '../../../../shared/utils/formatters';
 const formatDate = (dateStr) => {
   const date = new Date(dateStr);
   return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=128&bold=true`;
 };
 
 const ThankYou = () => {
@@ -289,11 +295,15 @@ const ThankYou = () => {
               <div key={idx} className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-white border-2 border-[#FACC15] flex items-center justify-center rounded-xl shadow overflow-hidden">
                   <img 
-                    src={prod.imagen} 
+                    src={
+                      (prod.fotos && prod.fotos.length > 0 && prod.fotos[0])
+                        ? prod.fotos[0]
+                        : (prod.imagen || prod.foto || getDefaultProductImage(prod.nombre))
+                    }
                     alt={prod.nombre} 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.src = '/placeholder.png';
+                      e.target.src = getDefaultProductImage(prod.nombre);
                     }}
                   />
                 </div>

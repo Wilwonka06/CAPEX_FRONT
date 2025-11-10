@@ -5,10 +5,10 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const { nombre, cantidad, total } = payload[0].payload;
     return (
-      <div className="bg-white p-3 rounded shadow border border-gray-200">
-        <div className="font-bold text-gray-800">{nombre}</div>
-        <div className="text-purple-700 font-semibold">Cantidad: {cantidad}</div>
-        <div className="text-gray-700">Total: ${total.toLocaleString('es-CO')}</div>
+      <div className="bg-accent-light p-3 rounded shadow border border-primary">
+        <div className="font-bold text-text-main">{nombre}</div>
+        <div className="text-primary font-semibold">Cantidad: {cantidad}</div>
+        <div className="text-text-main">Total: ${total.toLocaleString('es-CO')}</div>
       </div>
     );
   }
@@ -32,7 +32,7 @@ const TopProductsChart = ({ data }) => {
       <div className="flex justify-end mb-2">
         <button
           onClick={handleDownloadExcel}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow transition font-medium text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded shadow transition-all duration-300 hover:scale-105 font-medium text-sm"
           title="Descargar top productos del mes seleccionado"
         >
           <i className="bi bi-download"></i> Descargar informe
@@ -45,12 +45,12 @@ const TopProductsChart = ({ data }) => {
           margin={{ top: 10, right: 50, left: 250, bottom: 10 }}
           barCategoryGap={20}
         >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis type="number" tick={{ fill: '#333' }} domain={[0, 'dataMax']} />
-          <YAxis dataKey="nombre" type="category" tick={{ fill: '#333', fontWeight: 500 }} width={240} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#D2B48C" />
+          <XAxis type="number" tick={{ fill: '#1E1E1E' }} domain={[0, 'dataMax']} />
+          <YAxis dataKey="nombre" type="category" tick={{ fill: '#1E1E1E', fontWeight: 500 }} width={240} />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="cantidad" fill="#FACC15" radius={[0, 8, 8, 0]}>
-            <LabelList dataKey="cantidad" position="right" fill="#1E1E1E" fontWeight={700} />
+            <LabelList dataKey="cantidad" position="right" fill="#A0522D" fontWeight={700} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

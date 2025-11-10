@@ -12,7 +12,7 @@ import Landing from "../features/landing/landing";
 import CategoriasProductos from "../features/dashboard/pages/CatProducts/CatProducts";
 import CategoriasServicios from "../features/dashboard/pages/CatServices/CatServices";
 import Appointments from "../features/dashboard/pages/appointments/Appointments";
-import Clientes from "../features/dashboard/pages/customers/Customer";
+import Clientes from "../features/dashboard/pages/customers/customer";
 import Compras from "../features/dashboard/pages/purchases/Purchases";
 import Dashboard from "../features/dashboard/components/Dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
@@ -58,19 +58,19 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: "/login",
+    path: "/iniciar-sesion",
     element: <LoginPage />,
   },
   {
-    path: "/register",
+    path: "/registrarse",
     element: <RegisterPage />,
   },
   {
-    path: "/forgot-password",
+    path: "/olvide-contrasena",
     element: <ForgotPassword />,
   },
   {
-    path: "/reset-password",
+    path: "/restablecer-contrasena",
     element: <ResetPassword />,
   },
   {
@@ -143,13 +143,10 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
           // Dashboard principal
+          // Permitir acceso si tiene Dashboard o algún módulo administrativo
           {
             index: true,
-            element: (
-              <RequirePrivilege module="Dashboard" action="Visualizar">
-                <Dashboard />
-              </RequirePrivilege>
-            ),
+            element: <Dashboard />,
           },
           {
             path: "roles",
@@ -172,7 +169,7 @@ const router = createBrowserRouter([
           {
             path: "productos",
             element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <RequirePrivilege module="Productos" action="Visualizar">
                 <Productos />
               </RequirePrivilege>
             ),
@@ -180,7 +177,7 @@ const router = createBrowserRouter([
           {
             path: "compras",
             element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <RequirePrivilege module="Compras" action="Visualizar">
                 <Compras />
               </RequirePrivilege>
             ),
@@ -188,7 +185,7 @@ const router = createBrowserRouter([
           {
             path: "proveedores",
             element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <RequirePrivilege module="Proveedores" action="Visualizar">
                 <Proveedores />
               </RequirePrivilege>
             ),
@@ -196,7 +193,7 @@ const router = createBrowserRouter([
           {
             path: "categorias-productos",
             element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <RequirePrivilege module="Categorías de Productos" action="Visualizar">
                 <CategoriasProductos />
               </RequirePrivilege>
             ),
@@ -204,7 +201,7 @@ const router = createBrowserRouter([
           {
             path: "servicios",
             element: (
-              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+              <RequirePrivilege module="Servicios" action="Visualizar">
                 <Servicios />
               </RequirePrivilege>
             ),
@@ -212,7 +209,7 @@ const router = createBrowserRouter([
           {
             path: "empleados",
             element: (
-              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+              <RequirePrivilege module="Empleados" action="Visualizar">
                 <Empleados />
               </RequirePrivilege>
             ),
@@ -220,7 +217,7 @@ const router = createBrowserRouter([
           {
             path: "categorias-servicios",
             element: (
-              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+              <RequirePrivilege module="Categorías de Servicios" action="Visualizar">
                 <CategoriasServicios />
               </RequirePrivilege>
             ),
@@ -236,7 +233,7 @@ const router = createBrowserRouter([
           {
             path: "ventas-productos",
             element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
+              <RequirePrivilege module="Venta de Productos" action="Visualizar">
                 <VentasProductos />
               </RequirePrivilege>
             ),
@@ -244,7 +241,7 @@ const router = createBrowserRouter([
           {
             path: "pedidos",
             element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
+              <RequirePrivilege module="Pedidos" action="Visualizar">
                 <Pedidos />
               </RequirePrivilege>
             ),
@@ -252,7 +249,7 @@ const router = createBrowserRouter([
           {
             path: "citas",
             element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
+              <RequirePrivilege module="Citas" action="Visualizar">
                 <Appointments />
               </RequirePrivilege>
             ),
@@ -260,7 +257,7 @@ const router = createBrowserRouter([
           {
             path: "clientes",
             element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
+              <RequirePrivilege module="Clientes" action="Visualizar">
                 <Clientes />
               </RequirePrivilege>
             ),
@@ -268,7 +265,7 @@ const router = createBrowserRouter([
           {
             path: "programacion",
             element: (
-              <RequirePrivilege module="Dashboard" action="Visualizar">
+              <RequirePrivilege module="Programación" action="Visualizar">
                 <Scheduling />
               </RequirePrivilege>
             ),

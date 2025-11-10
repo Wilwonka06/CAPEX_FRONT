@@ -1,4 +1,4 @@
-import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api';
+import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/apiConfig';
 
 class BaseService {
   constructor(endpoint) {

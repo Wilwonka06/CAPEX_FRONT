@@ -11,8 +11,7 @@ import AddCatServices from "./components/AddCatServices";
 import EditCatServices from "./components/EditCatServices";
 import SearchProduct from '../../../../shared/Search';
 import Swal from "sweetalert2";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 
 const CatServices = () => {
@@ -257,7 +256,6 @@ const CatServices = () => {
         />
       )}
 
-      <ToastContainer position="top-right" />
     </div>
   );
 };

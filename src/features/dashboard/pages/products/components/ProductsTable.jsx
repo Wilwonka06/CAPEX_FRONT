@@ -5,8 +5,18 @@ import EditProduct from "./EditProduct";
 import { useState } from "react";
 import TruncatedText from "../../../../../shared/components/TruncatedText";
 import { formatNumber } from "../../../../../shared/utils/formatters";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 
-export default function ProductsTable({ products, onEdit, onDelete }) {
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=128&bold=true`;
+};
+
+export default function ProductsTable({ products, onEdit, onDelete, loading = false }) {
+  if (loading) {
+    return <TableSkeleton columns={6} rows={5} hasAvatar={false} hasActions={true} />;
+  }
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -22,12 +32,19 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
     setEditOpen(true);
   };
 
-  const handleSaveEdit = (updatedProduct) => {
+  const handleSaveEdit = async (id, productData) => {
     if (onEdit) {
-      onEdit(updatedProduct);
+      try {
+        await onEdit(id, productData);
+        // El modal se cierra automáticamente en EditProduct después de una actualización exitosa
+        // mediante handleClose() que llama a externalOnClose()
+      } catch (error) {
+        // El error ya se maneja en handleEditProduct y EditProduct
+        // El modal permanecerá abierto para mostrar el error
+        console.error('Error in handleSaveEdit:', error);
+        throw error; // Re-lanzar para que EditProduct lo maneje
+      }
     }
-    setEditOpen(false);
-    setSelectedProduct(null);
   };
 
   // Función para formatear precio usando el estándar del proyecto
@@ -54,7 +71,6 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Stock</th>
               <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Fecha registro</th>
               <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
             </tr>
           </thead>
@@ -68,12 +84,15 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                   <div className="flex items-center">
                     <img
                       src={
-                        product.fotos && product.fotos.length > 0
+                        (product.fotos && product.fotos.length > 0 && product.fotos[0])
                           ? product.fotos[0]
-                          : product.foto
+                          : (product.foto || getDefaultProductImage(product.nombre))
                       }
                       alt={product.nombre}
                       className="w-10 h-10 rounded-full object-cover "
+                      onError={(e) => {
+                        e.target.src = getDefaultProductImage(product.nombre);
+                      }}
                     />
                   </div>
                 </td>
@@ -101,14 +120,11 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                         : " text-red-800"
                     }`}
                   >
-                    {product.stock || product.cantidad || 0}
+                    {formatNumber(product.stock || product.cantidad || 0)}
                   </span>
                 </td>
                 <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
                   ${formatPrice(product.precio_venta || product.precio || 0)}
-                </td>
-                <td className="py-4 px-4 text-xs text-gray-600">
-                  {product.fecha_registro || product.fechaRegistro}
                 </td>
                 <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
@@ -161,7 +177,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
           setEditOpen(false);
           setSelectedProduct(null);
         }}
-        onSave={handleSaveEdit}
+        onUpdate={handleSaveEdit}
         products={products}
       />
 

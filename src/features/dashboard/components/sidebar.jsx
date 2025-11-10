@@ -2,22 +2,20 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import logo from '../../../shared/images/Logo.png';
 
 const Sidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [expandedGroups, setExpandedGroups] = useState({});
   const [loadingData] = useState(false);
   const location = useLocation();
+  const { hasPrivilege, currentUser } = useAuth();
 
-  // Función para verificar si el usuario tiene permisos para un módulo
+  // ✅ CORREGIDO: Usar el contexto de autenticación para verificar privilegios
+  // Esto asegura que los Administradores tengan acceso a todos los módulos
   const hasPermission = (module, action = 'Visualizar') => {
-    const user = JSON.parse(localStorage.getItem('currentUser'));
-    if (!user || !user.privileges) {
-      if (module === 'Dashboard') return true; 
-      return false;
-    }
-    return user.privileges[module] && user.privileges[module][action];
+    return hasPrivilege(module, action);
   };
 
   // ✅ CORREGIDO: Usuarios ahora está en Configuración
@@ -46,10 +44,10 @@ const Sidebar = () => {
         icon: 'bi-cart-check-fill',
         module: 'Gestión de Compras',
         items: [
-          { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/dashboard/categorias-productos', module: 'Gestión de Compras' },
-          { name: 'Productos', icon: 'bi-box-seam-fill', path: '/dashboard/productos', module: 'Gestión de Compras' },
-          { name: 'Proveedores', icon: 'bi-truck-front-fill', path: '/dashboard/proveedores', module: 'Gestión de Compras' },
-          { name: 'Compras', icon: 'bi-receipt-cutoff', path: '/dashboard/compras', module: 'Gestión de Compras' }
+          { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/dashboard/categorias-productos', module: 'Categorías de Productos' },
+          { name: 'Productos', icon: 'bi-box-seam-fill', path: '/dashboard/productos', module: 'Productos' },
+          { name: 'Proveedores', icon: 'bi-truck-front-fill', path: '/dashboard/proveedores', module: 'Proveedores' },
+          { name: 'Compras', icon: 'bi-receipt-cutoff', path: '/dashboard/compras', module: 'Compras' }
         ]
       },
       {
@@ -58,10 +56,10 @@ const Sidebar = () => {
         icon: 'bi-tools',
         module: 'Gestión de Servicios',
         items: [
-          { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/dashboard/categorias-servicios', module: 'Gestión de Servicios' },
-          { name: 'Servicios', icon: 'bi-scissors', path: '/dashboard/servicios', module: 'Gestión de Servicios' },
-          { name: 'Empleados', icon: 'bi-person-badge', path: '/dashboard/empleados', module: 'Gestión de Servicios' },
-          { name: 'Agendamiento General', icon: 'bi-calendar-week', path: '/dashboard/programacion', module: 'Gestión de Servicios' }
+          { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/dashboard/categorias-servicios', module: 'Categorías de Servicios' },
+          { name: 'Servicios', icon: 'bi-scissors', path: '/dashboard/servicios', module: 'Servicios' },
+          { name: 'Empleados', icon: 'bi-person-badge', path: '/dashboard/empleados', module: 'Empleados' },
+          { name: 'Programación de Empleados', icon: 'bi-calendar-week', path: '/dashboard/programacion', module: 'Programación' }
         ]
       },
       {
@@ -70,11 +68,11 @@ const Sidebar = () => {
         icon: 'bi-graph-up-arrow',
         module: 'Ventas',
         items: [
-          { name: 'Clientes', icon: 'bi-person-lines', path: '/dashboard/clientes', module: 'Ventas' },
-          { name: 'Agendamiento de Citas', icon: 'bi-calendar-event', path: '/dashboard/citas', module: 'Ventas' },
-          { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/dashboard/pedidos', module: 'Ventas' },
-          { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/dashboard/ventas-productos', module: 'Ventas' },
-          { name: 'Venta de Servicios', icon: 'bi-bag-check', path: '/dashboard/ventas-servicios', module: 'Ventas' }
+          { name: 'Clientes', icon: 'bi-person-lines', path: '/dashboard/clientes', module: 'Clientes' },
+          { name: 'Agendamiento de Citas', icon: 'bi-calendar-event', path: '/dashboard/citas', module: 'Citas' },
+          { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/dashboard/pedidos', module: 'Pedidos' },
+          { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/dashboard/ventas-productos', module: 'Venta de Productos' },
+          { name: 'Ventas', icon: 'bi-bag-check', path: '/dashboard/ventas-servicios', module: 'Ventas' }
         ]
       }
     ];
@@ -98,7 +96,8 @@ const Sidebar = () => {
     });
   };
 
-  const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, localStorage.getItem('currentUser')]);
+  // ✅ CORREGIDO: Actualizar cuando cambien los privilegios del usuario
+  const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, currentUser?.privileges, currentUser?.rol]);
 
   useEffect(() => {
     const expanded = {};
@@ -196,9 +195,10 @@ const Sidebar = () => {
                       : 'text-background/80 hover:bg-background/10 hover:text-background'
                   }`}
                   onClick={() => (isExpanded) && toggleGroup(group.id)}
+                  title={!(isExpanded) ? group.title : ''}
                 >
                   <div className="flex items-center">
-                    <i className={`${group.icon} text-xl`}></i>
+                    <i className={`${group.icon} text-sm`}></i>
                     {(isExpanded) && (
                       <span className="ml-3 text-sm font-medium whitespace-nowrap">
                         {group.title}
@@ -221,7 +221,7 @@ const Sidebar = () => {
                   }`}
                   title={!(isExpanded) ? group.name : ''}
                 >
-                  <i className={`${group.icon} text-lg`}></i>
+                  <i className={`${group.icon} text-sm`}></i>
                   {(isExpanded) && (
                     <span className="ml-3 text-sm whitespace-nowrap ">
                       {group.name}
@@ -247,7 +247,7 @@ const Sidebar = () => {
                         }`}
                         title={item.name}
                       >
-                        <i className={`${item.icon} text-lg`}></i>
+                        <i className={`${item.icon} text-sm`}></i>
                         <span className="ml-3 text-sm whitespace-nowrap">
                           {item.name}
                         </span>
@@ -256,6 +256,7 @@ const Sidebar = () => {
                   ))}
                 </div>
               )}
+
             </div>
           ))
         )}

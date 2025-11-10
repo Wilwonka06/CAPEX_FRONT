@@ -1,22 +1,66 @@
 // src/features/dashboard/pages/roles/services/DataMapper.js
 
 class DataMapper {
-  // ✅ CORREGIDO: IDs y nombres actualizados para coincidir con el backend
-  static BACKEND_MODULE_IDS = {
-    'Gestión de Compras': 1,
-    'Gestión de Servicios': 2,
-    'Ventas': 3,                    // ⚠️ CAMBIO: Era "Gestión de Ventas"
-    'Gestión de Usuarios': 4,
-    'Dashboard': 5
-  };
-
-  static BACKEND_MODULE_NAMES = {
-    1: 'Gestión de Compras',
-    2: 'Gestión de Servicios',
-    3: 'Ventas',                     // ⚠️ CAMBIO: Era "Gestión de Ventas"
-    4: 'Gestión de Usuarios',
-    5: 'Dashboard'
-  };
+  // ✅ ACTUALIZADO: Mapeo dinámico basado en permisos del backend
+  // Estos se actualizarán cuando se carguen los permisos desde el backend
+  static moduleMap = new Map(); // Mapa de nombre de permiso -> id_permiso
+  static privilegeMap = new Map(); // Mapa de nombre de privilegio -> id_privilegio
+  
+  // Método para inicializar los mapeos con datos del backend
+  static initializeMaps(permissions = [], privileges = []) {
+    // Limpiar mapeos existentes
+    this.moduleMap.clear();
+    this.privilegeMap.clear();
+    
+    // Crear mapeo de permisos
+    permissions.forEach(perm => {
+      if (perm.id_permiso && perm.nombre) {
+        this.moduleMap.set(perm.nombre, perm.id_permiso);
+      }
+    });
+    
+    // Crear mapeo de privilegios
+    privileges.forEach(priv => {
+      if (priv.id_privilegio && priv.nombre) {
+        this.privilegeMap.set(priv.nombre, priv.id_privilegio);
+      }
+    });
+    
+    console.log('✅ Mapeos inicializados:', {
+      modules: Array.from(this.moduleMap.entries()),
+      privileges: Array.from(this.privilegeMap.entries())
+    });
+  }
+  
+  // Obtener ID de permiso por nombre
+  static getPermissionId(moduleName) {
+    return this.moduleMap.get(moduleName);
+  }
+  
+  // Obtener ID de privilegio por nombre
+  static getPrivilegeId(privilegeName) {
+    return this.privilegeMap.get(privilegeName);
+  }
+  
+  // Obtener nombre de permiso por ID
+  static getPermissionName(moduleId) {
+    for (const [name, id] of this.moduleMap.entries()) {
+      if (id === moduleId) return name;
+    }
+    return null;
+  }
+  
+  // Obtener nombre de privilegio por ID
+  static getPrivilegeName(privilegeId) {
+    for (const [name, id] of this.privilegeMap.entries()) {
+      if (id === privilegeId) return name;
+    }
+    return null;
+  }
+  
+  // ✅ DEPRECATED: Mantener por compatibilidad, pero usar mapeos dinámicos
+  static BACKEND_MODULE_IDS = {};
+  static BACKEND_MODULE_NAMES = {};
 
   // ✅ CORREGIDO: Usar nombres en español
   static PRIVILEGE_IDS = {
@@ -33,25 +77,29 @@ class DataMapper {
     4: 'Eliminar'
   };
 
-  static mapPermissionsFromBackend(backendPermissions, separatePrivileges = []) {
+  static mapPermissionsFromBackend(backendPermissions, separatePrivileges = [], allAvailablePermissions = []) {
     const frontendPermissions = {};
     
-    console.log('📥 Mapeando permisos del backend:', { backendPermissions, separatePrivileges });
+    console.log('📥 Mapeando permisos del backend:', { backendPermissions, separatePrivileges, allAvailablePermissions });
     
-    if (!backendPermissions || !Array.isArray(backendPermissions) || backendPermissions.length === 0) {
-      console.warn('⚠️ No hay permisos para mapear');
-      return frontendPermissions;
+    // Si se proporcionan todos los permisos disponibles, inicializar todos con privilegios en false
+    if (allAvailablePermissions && allAvailablePermissions.length > 0) {
+      allAvailablePermissions.forEach(perm => {
+        if (perm.nombre) {
+          frontendPermissions[perm.nombre] = {
+            Crear: false,
+            Visualizar: false,
+            Editar: false,
+            Eliminar: false
+          };
+        }
+      });
     }
     
-    // Inicializar TODOS los módulos con privilegios en false
-    Object.values(this.BACKEND_MODULE_NAMES).forEach(moduleName => {
-      frontendPermissions[moduleName] = {
-        Crear: false,
-        Visualizar: false,
-        Editar: false,
-        Eliminar: false
-      };
-    });
+    if (!backendPermissions || !Array.isArray(backendPermissions) || backendPermissions.length === 0) {
+      console.warn('⚠️ No hay permisos asignados para mapear');
+      return frontendPermissions;
+    }
     
     // Caso 1: Permisos con privilegios anidados
     if (backendPermissions[0] && backendPermissions[0].privilegios) {
@@ -106,7 +154,7 @@ class DataMapper {
     return frontendPermissions;
   }
 
-  static mapRoleFromBackend(role) {
+  static mapRoleFromBackend(role, allAvailablePermissions = []) {
     if (!role) return null;
 
     const mappedRole = {
@@ -116,7 +164,7 @@ class DataMapper {
       descripcion: role.descripcion || '',
       description: role.descripcion || '',
       estado: role.estado === true || role.estado === 'activo' ? 'Activo' : 'Inactivo',
-      privileges: this.mapPermissionsFromBackend(role.permisos || [], role.privilegios || []),
+      privileges: this.mapPermissionsFromBackend(role.permisos || [], role.privilegios || [], allAvailablePermissions),
       permisos: role.permisos || [],
       privilegios: role.privilegios || []
     };
@@ -125,9 +173,9 @@ class DataMapper {
     return mappedRole;
   }
 
-  static mapRolesFromBackend(roles) {
+  static mapRolesFromBackend(roles, allAvailablePermissions = []) {
     if (!Array.isArray(roles)) return [];
-    return roles.map(role => this.mapRoleFromBackend(role));
+    return roles.map(role => this.mapRoleFromBackend(role, allAvailablePermissions));
   }
 
   static mapRoleToBackend(roleData) {
@@ -161,9 +209,10 @@ class DataMapper {
 
       console.log(`📋 Procesando módulo ${modulo}:`, permisos);
 
-      // ✅ Verificar que el módulo existe en el mapeo
-      if (!this.BACKEND_MODULE_IDS[modulo]) {
-        console.warn(`⚠️ Módulo "${modulo}" no encontrado en mapeo`);
+      // ✅ Obtener ID del módulo desde el mapeo dinámico
+      const moduleId = this.getPermissionId(modulo);
+      if (!moduleId) {
+        console.warn(`⚠️ Módulo "${modulo}" no encontrado en mapeo. Verifica que los permisos se hayan cargado correctamente.`);
         return;
       }
 
@@ -171,11 +220,16 @@ class DataMapper {
       if (permisos && typeof permisos === 'object') {
         Object.keys(permisos).forEach(accion => {
           // ✅ SOLO incluir privilegios que están ACTIVOS (true)
-          if (permisos[accion] === true && this.PRIVILEGE_IDS[accion]) {
-            privilegios.push({
-              id_privilegio: this.PRIVILEGE_IDS[accion],
-              nombre: accion
-            });
+          if (permisos[accion] === true) {
+            const privilegeId = this.getPrivilegeId(accion);
+            if (privilegeId) {
+              privilegios.push({
+                id_privilegio: privilegeId,
+                nombre: accion
+              });
+            } else {
+              console.warn(`⚠️ Privilegio "${accion}" no encontrado en mapeo`);
+            }
           }
         });
       }
@@ -183,7 +237,7 @@ class DataMapper {
       // ✅ SOLO agregar el módulo si tiene privilegios activos
       if (privilegios.length > 0) {
         backendFormat.push({
-          id_permiso: this.BACKEND_MODULE_IDS[modulo],
+          id_permiso: moduleId,
           nombre: modulo,
           privilegios: privilegios
         });
@@ -207,8 +261,12 @@ class DataMapper {
     let hasAnyPrivilege = false;
 
     Object.keys(privileges).forEach(modulo => {
-      if (!this.BACKEND_MODULE_IDS[modulo]) {
-        errors.push(`Módulo "${modulo}" no es válido`);
+      const moduleId = this.getPermissionId(modulo);
+      if (!moduleId) {
+        // Solo mostrar error si el mapeo está inicializado (tiene datos)
+        if (this.moduleMap.size > 0) {
+          errors.push(`Módulo "${modulo}" no es válido`);
+        }
         return;
       }
 

@@ -113,6 +113,15 @@ export function RolesProvider({ children }) {
     }
   };
 
+  const getAvailablePermissions = async () => {
+    try {
+      return await rolesService.getAvailablePermissions();
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   return (
     <RolesContext.Provider value={{
       roles,
@@ -123,6 +132,7 @@ export function RolesProvider({ children }) {
       deleteRole,
       changeRoleStatus,
       getAvailablePrivileges,
+      getAvailablePermissions,
       loadRoles,
       setRoles
     }}>

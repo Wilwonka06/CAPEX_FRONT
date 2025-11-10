@@ -1,118 +1,107 @@
-import { API_CONFIG, API_ENDPOINTS, getAuthHeaders } from '../../../../../shared/config/api.js';
-import * as ClientUserService from './ClientUserService.js';
+import customersService from '../API/customersService';
 
 /**
- * Servicio de Clientes - Basado en Usuarios con rol "Cliente"
+ * Servicio de Clientes - Wrapper para customersService
  * 
- * Este servicio obtiene usuarios con rol "Cliente" del backend y los presenta
- * como clientes en el módulo de gestión de clientes.
- * 
- * Requiere que el backend tenga implementados los endpoints de usuarios.
+ * Este servicio proporciona una interfaz simple para el módulo de clientes,
+ * usando el servicio estándar customersService que sigue la estructura
+ * de conexión de los demás módulos.
  */
-
-// Función auxiliar para manejar errores de la API
-const handleApiError = (error) => {
-  console.error('Error en CustomerService:', error);
-  
-  if (error.response) {
-    // El servidor respondió con un código de error
-    const status = error.response.status;
-    const data = error.response.data;
-    
-    switch (status) {
-      case 400:
-        return data.message || 'Datos inválidos';
-      case 401:
-        return 'No autorizado. Por favor, inicia sesión nuevamente';
-      case 403:
-        return 'No tienes permisos para realizar esta acción';
-      case 404:
-        return 'Cliente no encontrado';
-      case 409:
-        return data.message || 'El cliente ya existe';
-      case 500:
-        return 'Error interno del servidor';
-      default:
-        return data.message || 'Error del servidor';
-    }
-  } else if (error.request) {
-    // La petición se hizo pero no se recibió respuesta
-    return 'Error de conexión. Verifica tu conexión a internet';
-  } else {
-    // Algo más pasó
-    return error.message || 'Error inesperado';
-  }
-};
-
-// Función auxiliar para hacer peticiones HTTP
-const makeRequest = async (url, options = {}) => {
-  const config = {
-    method: 'GET',
-    headers: getAuthHeaders(),
-    ...options,
-  };
-
-  try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${url}`, config);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw {
-        response: {
-          status: response.status,
-          data: errorData
-        }
-      };
-    }
-    
-    return await response.json();
-  } catch (error) {
-    if (error.response) {
-      throw error;
-    }
-    throw {
-      request: true,
-      message: error.message
-    };
-  }
-};
 
 // Obtener todos los clientes
 export const getCustomers = async (page = 1, limit = 10, search = '') => {
-  return await ClientUserService.getCustomers(page, limit, search);
+  try {
+    const response = await customersService.getAll({ page, limit, search });
+    return {
+      data: response.data || [],
+      total: response.total || 0,
+      page: response.page || page,
+      limit: response.limit || limit,
+      totalPages: response.totalPages || 0,
+    };
+  } catch (error) {
+    console.error('Error in getCustomers:', error);
+    throw error;
+  }
 };
 
 // Obtener un cliente por ID
 export const getCustomerById = async (id) => {
-  return await ClientUserService.getCustomerById(id);
+  try {
+    const response = await customersService.getById(id);
+    return response.data || response;
+  } catch (error) {
+    console.error('Error in getCustomerById:', error);
+    throw error;
+  }
 };
 
 // Crear un nuevo cliente
 export const createCustomer = async (customerData) => {
-  return await ClientUserService.createCustomer(customerData);
+  try {
+    const response = await customersService.create(customerData);
+    return response.data || response;
+  } catch (error) {
+    console.error('Error in createCustomer:', error);
+    throw error;
+  }
 };
 
 // Actualizar un cliente existente
 export const updateCustomer = async (id, customerData) => {
-  return await ClientUserService.updateCustomer(id, customerData);
+  try {
+    const response = await customersService.update(id, customerData);
+    return response.data || response;
+  } catch (error) {
+    console.error('Error in updateCustomer:', error);
+    throw error;
+  }
 };
 
 // Eliminar un cliente
 export const deleteCustomer = async (id) => {
-  return await ClientUserService.deleteCustomer(id);
+  try {
+    const response = await customersService.delete(id);
+    return response;
+  } catch (error) {
+    console.error('Error in deleteCustomer:', error);
+    throw error;
+  }
 };
 
 // Cambiar estado de un cliente (activar/desactivar)
 export const toggleCustomerStatus = async (id) => {
-  return await ClientUserService.toggleCustomerStatus(id);
+  try {
+    // Primero obtener el cliente para saber su estado actual
+    const customer = await customersService.getById(id);
+    const currentStatus = customer.data?.status || customer.data?.estado || 'Activo';
+    const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
+    
+    // Cambiar estado (sin conceptoEstado por ahora, se puede mejorar después)
+    const response = await customersService.changeStatus(id, newStatus, newStatus === 'Inactivo' ? 'Cambio de estado' : null);
+    return response.data || response;
+  } catch (error) {
+    console.error('Error in toggleCustomerStatus:', error);
+    throw error;
+  }
 };
 
 // Validar si un documento ya existe
 export const validateDocumentExists = async (documentNumber, documentType, excludeId = null) => {
-  return await ClientUserService.validateDocumentExists(documentNumber, documentType, excludeId);
+  try {
+    return await customersService.validateDocument(documentNumber, documentType, excludeId);
+  } catch (error) {
+    console.error('Error in validateDocumentExists:', error);
+    throw error;
+  }
 };
 
 // Validar si un email ya existe
 export const validateEmailExists = async (email, excludeId = null) => {
-  return await ClientUserService.validateEmailExists(email, excludeId);
+  try {
+    return await customersService.validateEmail(email, excludeId);
+  } catch (error) {
+    console.error('Error in validateEmailExists:', error);
+    throw error;
+  }
 };

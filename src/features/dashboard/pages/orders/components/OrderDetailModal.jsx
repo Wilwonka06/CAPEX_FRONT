@@ -1,9 +1,10 @@
 import PropTypes from "prop-types";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function OrderDetailModal({ order, customer, isOpen, onClose }) {
   if (!isOpen || !order || !customer) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -46,7 +47,7 @@ export default function OrderDetailModal({ order, customer, isOpen, onClose }) {
                 </div>
                 <div className="flex justify-between px-4 py-2">
                   <span className="text-xs text-gray-500">Valor Total</span>
-                  <span className="font-semibold text-gray-800 text-sm">${order.valor.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.valor)}</span>
                 </div>
               </div>
             </div>
@@ -68,8 +69,8 @@ export default function OrderDetailModal({ order, customer, isOpen, onClose }) {
                     <tr key={idx}>
                       <td className="py-2 px-3">{prod.nombre}</td>
                       <td className="py-2 px-3 text-right">{prod.cantidad}</td>
-                      <td className="py-2 px-3 text-right">${prod.precio.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right">${(prod.precio * prod.cantidad).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio)}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio * prod.cantidad)}</td>
                     </tr>
                   ))}
                 </tbody>

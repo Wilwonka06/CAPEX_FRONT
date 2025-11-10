@@ -13,8 +13,9 @@ import {
   validateFileSize, 
   validateFileType 
 } from '../../../../../shared/utils/imagesUploadHelper';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import productsService from '../API/productsService';
+import { formatNumber, cleanNumber } from '../../../../../shared/utils/formatters';
 
 const MAX_IMAGES = 3;
 
@@ -38,6 +39,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
   ]);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cargar categorías al montar
   useEffect(() => {
@@ -96,6 +98,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     setEspecificaciones([{ concepto: "", valor: "", otroConcepto: "" }]);
     setError("");
     setFieldErrors({});
+    setIsSubmitting(false); // Resetear estado de envío
     if (externalOnClose) externalOnClose();
   };
 
@@ -238,6 +241,13 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevenir doble envío
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
     let errors = {};
 
     // Validaciones obligatorias
@@ -247,13 +257,13 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      setIsSubmitting(false);
       return;
     }
 
-    if (isDuplicateProductName(formData.nombre, products)) {
-      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
-      return;
-    }
+    // NO validar duplicados en el frontend antes de enviar
+    // El backend tiene la validación final y más precisa
+    // Esto evita problemas de sincronización con la lista
 
     setFieldErrors({});
 
@@ -291,37 +301,78 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
       console.log('CreateProduct: Sending product data:', newProduct);
       console.log('CreateProduct: Características a enviar:', newProduct.caracteristicas);
 
-      const result = await productsService.create(newProduct);
-
-      if (result.success) {
-        if (onCreate) {
-          onCreate(result.data);
+      // Pasar los datos al componente padre para que maneje la creación
+      // Esto evita crear el producto dos veces
+      if (onCreate) {
+        try {
+          // Crear el producto (esto recargará la lista automáticamente)
+          await onCreate(newProduct);
+          // Solo cerrar el modal si la creación fue exitosa
+          handleClose();
+        } catch (error) {
+          // Si hay error, mantener el modal abierto y mostrar el error
+          // El error ya se maneja en products.jsx con toast
+          console.error('Error creating product:', error);
+          const errorMessage = error.response?.data?.message || error.message || 'Error al crear el producto';
+          setError(errorMessage);
+          // No mostrar toast aquí porque ya se muestra en products.jsx
+          throw error; // Re-lanzar para que el catch externo no lo maneje también
         }
-        handleClose();
       } else {
-        throw new Error(result.message || 'Error al crear el producto');
+        // Si no hay onCreate, crear directamente (caso de uso independiente)
+        const result = await productsService.create(newProduct);
+        if (result.success) {
+          toast.success('Producto creado exitosamente');
+          handleClose();
+        } else {
+          const errorMsg = result.message || 'Error al crear el producto';
+          setError(errorMsg);
+          toast.error(errorMsg);
+        }
       }
     } catch (error) {
-      console.error('Error creating product:', error);
-      setError(error.message || 'Error al crear el producto');
+      // Solo manejar errores si no fueron manejados ya en el bloque if (onCreate)
+      if (onCreate && error.response) {
+        // El error ya fue manejado arriba, no hacer nada más
+        console.error('Error already handled:', error);
+      } else {
+        console.error('Error creating product:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Error al crear el producto';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleBlurNombre = (e) => {
+    // No validar duplicados en blur si ya se está enviando el formulario
+    if (isSubmitting) {
+      return;
+    }
+    
     const value = e.target.value;
-    if (isDuplicateProductName(value, products)) {
-      setFieldErrors({ nombre: "Ya existe un producto con ese nombre." });
+    // Solo validar si hay un valor, el modal está abierto y no estamos en proceso de envío
+    if (value && value.trim() && modalOpen && !isSubmitting) {
+      // Validación opcional en tiempo real (solo como advertencia visual)
+      // El backend tiene la validación final
+      if (isDuplicateProductName(value, products)) {
+        setFieldErrors(prev => ({
+          ...prev,
+          nombre: "Advertencia: Puede existir un producto con nombre similar"
+        }));
+      } else {
+        // Limpiar el error si no es duplicado
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.nombre;
+          return newErrors;
+        });
+      }
     }
   };
 
-  const formatNumber = (num) => {
-    if (num === '' || num === undefined || num === null) return '';
-    const parts = num.toString().split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
-  };
-
-  const cleanNumber = (str) => str.replace(/,/g, '');
 
   return (
     <>
@@ -570,9 +621,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
+                    disabled={isSubmitting}
+                    className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Guardar
+                    {isSubmitting ? 'Guardando...' : 'Guardar'}
                   </button>
                 </div>
               </form>

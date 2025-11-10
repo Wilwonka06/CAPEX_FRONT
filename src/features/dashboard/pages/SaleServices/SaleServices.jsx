@@ -8,10 +8,10 @@ import Paginator from "../../../../shared/Paginator";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
 import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./services/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
+import { formatNumber } from '../../../../shared/utils/formatters';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 
 const SaleServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,7 +42,7 @@ const SaleServices = () => {
       setServices(citas);
     } catch (error) {
       console.error('Error al cargar citas:', error);
-      toast.error('Error al cargar las citas en ejecución', { position: 'top-right' });
+      toast.error('Error al cargar las citas en ejecución');
       // En caso de error, mantener array vacío
       setServices([]);
     } finally {
@@ -146,10 +146,10 @@ const SaleServices = () => {
             ? { ...service, status: "Anulado" }
             : service
         ));
-        toast.success('Cita anulada exitosamente', { position: 'top-right' });
+        toast.success('Cita anulada exitosamente');
       } catch (error) {
         console.error('Error al anular cita:', error);
-        toast.error('Error al anular la cita', { position: 'top-right' });
+        toast.error('Error al anular la cita');
       } finally {
         setLoading(false);
       }
@@ -161,13 +161,24 @@ const SaleServices = () => {
   // Crear orden usando servicio
   const handleCreateOrder = async (orderData) => {
     setLoading(true);
-    try {
+    
+    const orderPromise = (async () => {
       const newOrder = await createServiceOrder(orderData, services);
       setServices(prev => [...prev, newOrder]);
       setIsCreateModalOpen(false);
-      toast.success('Orden de servicio creada exitosamente', { position: 'top-right' });
+      return newOrder;
+    })();
+
+    toast.promise(orderPromise, {
+      loading: 'Creando orden de servicio...',
+      success: 'Orden de servicio creada exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al crear la orden de servicio',
+    });
+
+    try {
+      await orderPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al crear la orden de servicio', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -176,7 +187,8 @@ const SaleServices = () => {
   // Editar orden usando servicio
   const handleEditOrder = async (formData) => {
     setLoading(true);
-    try {
+    
+    const orderPromise = (async () => {
       const updatedOrder = await editServiceOrder({
         id: selectedOrder.id,
         ...formData,
@@ -185,9 +197,19 @@ const SaleServices = () => {
       setServices(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
       setIsEditModalOpen(false);
       setSelectedOrder(null);
-      toast.success('Orden de servicio actualizada exitosamente', { position: 'top-right' });
+      return updatedOrder;
+    })();
+
+    toast.promise(orderPromise, {
+      loading: 'Actualizando orden de servicio...',
+      success: 'Orden de servicio actualizada exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al actualizar la orden de servicio',
+    });
+
+    try {
+      await orderPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al actualizar la orden de servicio', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -196,7 +218,8 @@ const SaleServices = () => {
   // Anular orden usando servicio
   const handleAnularOrder = async (orderId) => {
     setLoading(true);
-    try {
+    
+    const orderPromise = (async () => {
       await anularServiceOrder(orderId);
       // Actualizar el estado local
       setServices(prev => prev.map(service => 
@@ -206,9 +229,19 @@ const SaleServices = () => {
       ));
       setIsAnularModalOpen(false);
       setSelectedOrder(null);
-      toast.success('Orden de servicio anulada exitosamente', { position: 'top-right' });
+      return true;
+    })();
+
+    toast.promise(orderPromise, {
+      loading: 'Anulando orden de servicio...',
+      success: 'Orden de servicio anulada exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al anular la orden de servicio',
+    });
+
+    try {
+      await orderPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al anular la orden de servicio', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -227,7 +260,7 @@ const SaleServices = () => {
         setServices(resultados);
       } catch (error) {
         console.error('Error al buscar citas:', error);
-        toast.error('Error al buscar citas', { position: 'top-right' });
+        toast.error('Error al buscar citas');
       } finally {
         setLoading(false);
       }
@@ -329,7 +362,7 @@ const SaleServices = () => {
                       <td className="py-2 px-3">{(service.servicios || []).map(s => s.name).join(", ")}</td>
                       <td className="py-2 px-3">{service.date}</td>
                       <td className="py-2 px-3">{service.time}</td>
-                      <td className="py-2 px-3">${service.totalGeneral?.toLocaleString() || 0}</td>
+                      <td className="py-2 px-3">${formatNumber(service.totalGeneral || 0)}</td>
                       <td className="py-2 px-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           service.status === "Pagado" 
@@ -354,7 +387,7 @@ const SaleServices = () => {
                           </button>
                         )}
                         <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => {
-                          toast.info('Función de descarga en desarrollo', { position: 'top-right' });
+                          toast('Función de descarga en desarrollo');
                         }}>
                           <i className="bi bi-file-earmark-pdf"></i>
                         </button>
@@ -431,7 +464,6 @@ const SaleServices = () => {
           onAnularSuccess={handleAnularOrder}
         />
       )}
-      <ToastContainer />
     </div>
   );
 };

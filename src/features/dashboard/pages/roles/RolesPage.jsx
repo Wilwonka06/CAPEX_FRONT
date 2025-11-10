@@ -6,17 +6,40 @@ import CreateRoles from "./components/CreateRole";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ErrorState from "./components/ErrorState";
 import { useRoles } from "./hooks/useRoles";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
+import { useAuth } from '../../../../shared/contexts/AuthContext';
 
 const RolesPage = () => {
   const { roles, loading, error, addRole, editRole, deleteRole, changeRoleStatus, loadRoles } = useRoles();
+  const { hasPrivilege } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { setTitle } = useOutletContext();
+  
+  // Verificar permisos
+  const canView = hasPrivilege('Gestión de Usuarios', 'Visualizar');
+  const canCreate = hasPrivilege('Gestión de Usuarios', 'Crear');
+  const canEdit = hasPrivilege('Gestión de Usuarios', 'Editar');
+  const canDelete = hasPrivilege('Gestión de Usuarios', 'Eliminar');
+  
+  // Si no tiene permiso de visualización, mostrar mensaje
+  if (!canView) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Sin acceso</h2>
+          <p className="text-gray-600">
+            No tienes permisos para acceder a la gestión de roles.
+            Contacta a un administrador para obtener los permisos necesarios.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     setTitle('Gestión de Roles');
@@ -40,22 +63,40 @@ const RolesPage = () => {
   );
 
   const handleCreateRole = async (newRole, privileges) => {
-    try {
+    const rolePromise = (async () => {
       const roleWithPrivileges = { ...newRole, privileges };
       await addRole(roleWithPrivileges);
-      toast.success('Rol creado exitosamente', { position: 'top-right' });
+      return true;
+    })();
+
+    toast.promise(rolePromise, {
+      loading: 'Creando rol...',
+      success: 'Rol creado exitosamente',
+      error: (err) => err.message || 'Error al crear el rol',
+    });
+
+    try {
+      await rolePromise;
     } catch (error) {
-      toast.error(error.message || 'Error al crear el rol', { position: 'top-right' });
       throw error;
     }
   };
 
   const handleEditRole = async (updatedRole) => {
-    try {
+    const rolePromise = (async () => {
       await editRole(updatedRole);
-      toast.success('Rol actualizado exitosamente', { position: 'top-right' });
+      return true;
+    })();
+
+    toast.promise(rolePromise, {
+      loading: 'Actualizando rol...',
+      success: 'Rol actualizado exitosamente',
+      error: (err) => err.message || 'Error al actualizar el rol',
+    });
+
+    try {
+      await rolePromise;
     } catch (error) {
-      toast.error(error.message || 'Error al actualizar el rol', { position: 'top-right' });
       throw error;
     }
   };
@@ -74,21 +115,41 @@ const RolesPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
+      const rolePromise = (async () => {
         await deleteRole(roleId);
-        toast.success('Rol eliminado exitosamente', { position: 'top-right' });
+        return true;
+      })();
+
+      toast.promise(rolePromise, {
+        loading: 'Eliminando rol...',
+        success: 'Rol eliminado exitosamente',
+        error: (err) => err.message || 'Error al eliminar el rol',
+      });
+
+      try {
+        await rolePromise;
       } catch (error) {
-        toast.error(error.message || 'Error al eliminar el rol', { position: 'top-right' });
+        // Error ya manejado por toast.promise
       }
     }
   };
 
   const handleStatusChange = async (roleId, newStatus) => {
-    try {
+    const rolePromise = (async () => {
       await changeRoleStatus(roleId, newStatus);
-      toast.success(`Rol ${newStatus === 'Activo' ? 'activado' : 'desactivado'} exitosamente`, { position: 'top-right' });
+      return true;
+    })();
+
+    toast.promise(rolePromise, {
+      loading: 'Cambiando estado del rol...',
+      success: `Rol ${newStatus === 'Activo' ? 'activado' : 'desactivado'} exitosamente`,
+      error: (err) => err.message || 'Error al cambiar el estado del rol',
+    });
+
+    try {
+      await rolePromise;
     } catch (error) {
-      toast.error(error.message || 'Error al cambiar el estado del rol', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -112,7 +173,6 @@ const RolesPage = () => {
             </div>
           </div>
         </div>
-        <ToastContainer />
       </div>
     );
   }
@@ -123,7 +183,6 @@ const RolesPage = () => {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Gestión de Roles</h1>
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <SearchRole
@@ -132,27 +191,27 @@ const RolesPage = () => {
                     placeholder="Buscar roles por nombre, descripción o estado..."
                   />
                 </div>
-                <button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center text-xs whitespace-nowrap"
-                >
-                  <i className="bi bi-plus-circle mr-2"></i>
-                  Crear Rol
-                </button>
+                {canCreate && (
+                  <button
+                    onClick={() => setIsCreateOpen(true)}
+                    className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center text-xs whitespace-nowrap"
+                  >
+                    <i className="bi bi-plus-circle mr-2"></i>
+                    Crear Rol
+                  </button>
+                )}
               </div>
             </div>
 
-            {loading && roles.length === 0 ? (
-              <LoadingSpinner message="Cargando roles..." />
-            ) : (
+            <RolesTable 
+              roles={paginatedRoles}
+              onEdit={canEdit ? handleEditRole : null}
+              onDelete={canDelete ? handleDeleteRole : null}
+              onStatusChange={canEdit ? handleStatusChange : null}
+              loading={loading}
+            />
+            {!loading && (
               <>
-                <RolesTable 
-                  roles={paginatedRoles}
-                  onEdit={handleEditRole}
-                  onDelete={handleDeleteRole}
-                  onStatusChange={handleStatusChange}
-                  loading={loading}
-                />
                 {totalPages > 1 && (
                   <Paginator 
                     currentPage={currentPage} 
@@ -175,7 +234,6 @@ const RolesPage = () => {
           roles={roles}
         />
       </div>
-      <ToastContainer />
     </div>
   );
 };

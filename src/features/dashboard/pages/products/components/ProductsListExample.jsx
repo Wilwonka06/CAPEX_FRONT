@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import productsService from '../API/productsService';
 import categoriesService from '../../CatProducts/API/categoriesService';
+import { formatNumber } from '../../../../../shared/utils/formatters';
+
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=128&bold=true`;
+};
 
 /**
  * Componente de ejemplo que demuestra la integración con la API de productos
@@ -257,17 +264,18 @@ const ProductsListExample = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
-                        {product.imagen ? (
-                          <img
-                            className="h-10 w-10 rounded-full object-cover"
-                            src={product.imagen}
-                            alt={product.nombre}
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <i className="bi bi-box text-gray-500"></i>
-                          </div>
-                        )}
+                        <img
+                          className="h-10 w-10 rounded-full object-cover"
+                          src={
+                            (product.fotos && product.fotos.length > 0 && product.fotos[0])
+                              ? product.fotos[0]
+                              : (product.imagen || product.foto || getDefaultProductImage(product.nombre))
+                          }
+                          alt={product.nombre}
+                          onError={(e) => {
+                            e.target.src = getDefaultProductImage(product.nombre);
+                          }}
+                        />
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
@@ -283,7 +291,7 @@ const ProductsListExample = () => {
                     {product.categoria?.nombre || 'Sin categoría'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${product.precio?.toLocaleString() || '0'}
+                    ${formatNumber(product.precio || 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

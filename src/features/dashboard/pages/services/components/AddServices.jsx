@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import {
   validateServiceName,
   validateServiceDescription,
   validateServiceDuration,
   validateServicePrice,
 } from "../../../../../shared/validations";
+import { 
+  compressImageToBase64, 
+  validateFileSize, 
+  validateFileType 
+} from '../../../../../shared/utils/imagesUploadHelper';
 import PropTypes from "prop-types";
 
 const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
@@ -17,7 +22,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
     descripcion: "",
     duracion: "",
     precio: "",
-    foto: null,
+    foto: null, // Será base64 string o null
   });
 
   const [previews, setPreviews] = useState([]);
@@ -35,7 +40,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
     }
   }, [activeCategories, formData.id_categoria_servicio]);
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value, type, files } = e.target;
     if (name === "duracion" || name === "precio") {
       const numericValue = value.replace(/[^0-9]/g, "");
@@ -46,8 +51,30 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
     } else if (type === "file") {
       const file = files[0];
       if (file) {
-        setFormData((prev) => ({ ...prev, foto: file }));
-        setPreviews([URL.createObjectURL(file)]);
+        // Validar tipo de archivo
+        if (!validateFileType(file)) {
+          toast.error(`${file.name}: Tipo de archivo no válido`);
+          return;
+        }
+
+        // Validar tamaño (5MB máximo)
+        if (!validateFileSize(file, 5)) {
+          toast.error(`${file.name}: Máximo 5MB`);
+          return;
+        }
+
+        try {
+          // Convertir a base64 y comprimir
+          const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+          setFormData((prev) => ({ ...prev, foto: base64Image }));
+          
+          // Preview local
+          const preview = URL.createObjectURL(file);
+          setPreviews([preview]);
+        } catch (error) {
+          console.error('Error procesando imagen:', error);
+          toast.error('Error al procesar la imagen');
+        }
       }
     } else {
       setFormData((prev) => ({
@@ -108,6 +135,10 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
   };
 
   const removeImage = () => {
+    // Liberar URL del preview si existe
+    if (previews.length > 0 && previews[0] && previews[0].startsWith('blob:')) {
+      URL.revokeObjectURL(previews[0]);
+    }
     setFormData((prev) => ({ ...prev, foto: null }));
     setPreviews([]);
   };
@@ -150,7 +181,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
         descripcion: formData.descripcion.trim(),
         duracion: Number(formData.duracion),
         precio: Number(formData.precio),
-        foto: formData.foto && !(formData.foto instanceof File) ? String(formData.foto) : '',
+        foto: formData.foto || null, // Enviar base64 o null
         estado: 'Activo', // Agregar estado por defecto
       };
 
@@ -177,7 +208,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -203,6 +234,33 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
               <div
                 className="w-60 h-60 bg-gray-50 rounded-lg flex items-center justify-center mb-2 shadow-lg p-0 relative border-2 border-dashed border-gray-300 cursor-pointer hover:border-primary transition-colors"
                 onClick={() => document.getElementById("file-input-service").click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+                  if (files.length > 0) {
+                    const file = files[0];
+                    if (!validateFileType(file)) {
+                      toast.error(`${file.name}: Tipo de archivo no válido`);
+                      return;
+                    }
+                    if (!validateFileSize(file, 5)) {
+                      toast.error(`${file.name}: Máximo 5MB`);
+                      return;
+                    }
+                    try {
+                      const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+                      setFormData((prev) => ({ ...prev, foto: base64Image }));
+                      const preview = URL.createObjectURL(file);
+                      setPreviews([preview]);
+                    } catch (error) {
+                      console.error('Error procesando imagen:', error);
+                      toast.error('Error al procesar la imagen');
+                    }
+                  }
+                }}
               >
                 {previews.length > 0 ? (
                   <>

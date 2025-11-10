@@ -22,11 +22,11 @@ ChartJS.register(
 );
 
 const colores = [
-  "#7c3aed", // violeta
-  "#22d3ee", // cyan
-  "#a3e635", // verde
-  "#f472b6", // rosa
-  "#facc15", // amarillo
+  "#A0522D", // primary
+  "#FACC15", // accent
+  "#D2B48C", // accent-light
+  "#4B2A2A", // primary-dark
+  "#1E1E1E", // text-main
 ];
 
 const mesesES = [
@@ -69,6 +69,11 @@ const AnnualComparisonChart = ({ data }) => {
         callbacks: {
           label: (ctx) => `$${ctx.parsed.y.toLocaleString("es-CO")}`,
         },
+        backgroundColor: '#F7DAA2',
+        borderColor: '#A0522D',
+        borderWidth: 1,
+        titleColor: '#1E1E1E',
+        bodyColor: '#1E1E1E',
       },
     },
     scales: {
@@ -76,14 +81,18 @@ const AnnualComparisonChart = ({ data }) => {
         beginAtZero: true,
         ticks: {
           callback: (v) => `${(v / 1e6).toFixed(1)}M`,
-          color: "#333",
+          color: "#1E1E1E",
         },
-        grid: { color: "#eee" },
+        grid: { color: "#D2B48C" },
       },
       x: {
-        ticks: { color: "#333" },
-        grid: { color: "#eee" },
+        ticks: { color: "#1E1E1E" },
+        grid: { color: "#D2B48C" },
       },
+    },
+    animation: {
+      duration: 1500,
+      easing: 'easeInOutQuart',
     },
   };
 
@@ -109,7 +118,7 @@ const AnnualComparisonChart = ({ data }) => {
       <div className="flex justify-end mb-2">
         <button
           onClick={handleDownload}
-          className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded shadow transition font-medium text-xs"
+          className="flex items-center gap-2 px-3 py-1 bg-primary hover:bg-primary-dark text-white rounded shadow transition-all duration-300 hover:scale-105 font-medium text-xs"
           title="Descargar comparativa anual"
         >
           <i className="bi bi-download"></i> Descargar

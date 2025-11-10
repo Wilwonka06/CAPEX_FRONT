@@ -6,9 +6,11 @@ import TopServicesChart from "./TopServicesChart";
 import TopProductsChart from "./TopProductsChart";
 import { FaMoneyBillWave, FaBoxOpen, FaUserTie } from "react-icons/fa";
 import AnnualComparisonChart from "./AnnualComparisonChart";
+import AccessCards from "./AccessCards";
 import purchasesService from "../pages/purchases/API/purchasesService";
 import salesService from "../pages/SaleProducts/API/salesService";
 import ordersService from "../pages/orders/API/ordersService";
+import { useAuth } from "../../../shared/contexts/AuthContext";
 
 // Mock de ventas de productos (2023-2025)
 const mockSales = [
@@ -472,11 +474,11 @@ const mesesES = [
 ];
 
 const Dashboard = () => {
+  const { hasPrivilege, currentUser } = useAuth();
+  
   // Estados para datos reales
-  const [realPurchases, setRealPurchases] = useState([]);
   const [realSales, setRealSales] = useState([]);
   const [realOrders, setRealOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // Estados para datos calculados - Usar datos reales cuando estén disponibles
   const [sales] = useState(mockSales); // Mantener mock para gráficas por ahora
@@ -486,14 +488,6 @@ const Dashboard = () => {
   useEffect(() => {
     const loadRealData = async () => {
       try {
-        setLoading(true);
-
-        // Cargar compras reales
-        const purchasesResponse = await purchasesService.getAll({ limit: 50 });
-        if (purchasesResponse.success) {
-          setRealPurchases(purchasesResponse.data || []);
-        }
-
         // Cargar ventas reales
         const salesResponse = await salesService.getAll({ limit: 50 });
         if (salesResponse.success) {
@@ -507,13 +501,68 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error("Error loading real data for dashboard:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
     loadRealData();
   }, []);
+  
+  // Verificar si el usuario tiene acceso completo al dashboard
+  const hasFullDashboardAccess = hasPrivilege('Dashboard', 'Visualizar');
+  
+  // Verificar si el usuario tiene acceso a algún módulo administrativo
+  // Lista de módulos administrativos
+  const administrativeModules = [
+    'Dashboard',
+    'Gestión de Usuarios',
+    'Gestión de Compras',
+    'Gestión de Servicios',
+    'Clientes',
+    'Citas',
+    'Pedidos',
+    'Ventas',
+    'Venta de Productos',
+    'Productos',
+    'Compras',
+    'Proveedores',
+    'Categorías de Productos',
+    'Categorías de Servicios',
+    'Servicios',
+    'Empleados',
+    'Programación'
+  ];
+  
+  // Verificar si tiene acceso a algún módulo
+  const hasAnyModuleAccess = currentUser?.privileges && administrativeModules.some(module => {
+    const modulePrivileges = currentUser.privileges[module];
+    return modulePrivileges && (
+      modulePrivileges.Visualizar === true || 
+      modulePrivileges['Visualizar'] === true ||
+      modulePrivileges.Read === true
+    );
+  });
+  
+  // Si no tiene acceso completo al dashboard pero tiene acceso a algún módulo, mostrar AccessCards
+  // Si no tiene acceso a ningún módulo, redirigir
+  if (!hasFullDashboardAccess) {
+    if (hasAnyModuleAccess) {
+      return <AccessCards />;
+    } else {
+      // Si no tiene acceso a ningún módulo, mostrar mensaje de acceso denegado
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center p-8">
+            <div className="text-6xl mb-4">🔒</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Sin acceso</h2>
+            <p className="text-gray-600">
+              No tienes permisos para acceder a ningún módulo del sistema.
+              Contacta a un administrador para obtener los permisos necesarios.
+            </p>
+          </div>
+        </div>
+      );
+    }
+  }
 
   // Ventas de productos (solo completadas/no canceladas) - Usar datos reales cuando estén disponibles
   const ventasProductos =
@@ -794,100 +843,187 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="xl:col-span-1 bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-bold text-gray-800 mb-1">
-            Pedidos Recientes
-          </h3>
-          <p className="text-sm text-gray-600">Últimos 5 pedidos</p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Título del Dashboard */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            Dashboard
+          </h1>
+          <p className="text-gray-600">
+            Resumen general del sistema
+          </p>
         </div>
-        <div className="p-2 bg-blue-500/10 rounded-lg">
-          <i className="bi bi-receipt text-blue-500 text-xl"></i>
-        </div>
-      </div>
-      <div className="space-y-4">
-        {/* ✅ VALIDACIONES AGREGADAS */}
-        {realOrders && realOrders.length > 0 ? (
-          realOrders
-            .filter((order) => {
-              // ✅ Validar que el pedido tenga los campos necesarios
-              if (!order) return false;
-              const estado = order.estado || order.status || "";
-              return estado === "Pendiente" || estado === "En proceso";
-            })
-            .slice(0, 5)
-            .map((order, idx) => {
-              // ✅ Normalizar datos del pedido
-              const id = order.id_pedido || order.id || 0;
-              const fecha =
-                order.fecha_pedido ||
-                order.fecha ||
-                order.createdAt ||
-                "Sin fecha";
-              const total = parseFloat(order.total || order.valor || 0);
-              const estado = order.estado || order.status || "Pendiente";
 
-              return (
-                <div
-                  key={id || `order-${idx}`}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#FACC15] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <span className="text-xs font-bold text-[#1E1E1E]">
-                        {idx + 1}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800 group-hover:text-[#FACC15] transition-colors">
-                        {/* ✅ Validar que id sea un número antes de usar toString */}
-                        PED-{id > 0 ? id.toString().padStart(6, "0") : "000000"}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {/* ✅ Formatear fecha de forma segura */}
-                        {typeof fecha === "string"
-                          ? fecha.split("T")[0]
-                          : "Sin fecha"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-800">
-                      {/* ✅ Validar que total sea un número */}$
-                      {!isNaN(total) ? total.toLocaleString("es-CO") : "0"}
-                    </p>
-                    <span
-                      className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
-                        estado === "Completado" || estado === "Completada"
-                          ? "bg-green-100 text-green-800"
-                          : estado === "Pendiente"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : estado === "En proceso"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {estado}
-                    </span>
-                  </div>
+        {/* Cards de Estadísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {stats.map((stat, index) => (
+            <div
+              key={index}
+              className={`${stat.color} rounded-2xl shadow-lg p-6 text-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium opacity-90 mb-1">
+                    {stat.title}
+                  </p>
+                  <p className="text-2xl font-bold">{stat.value}</p>
                 </div>
-              );
-            })
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-2">📦</div>
-            <p className="text-sm text-gray-500">No hay pedidos pendientes</p>
+                <div className="bg-white/20 rounded-full p-3">
+                  {stat.icon}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Gráficas y Widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* Gráfica de Ventas Mensuales */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-800">
+                Ventas Diarias del Mes
+              </h3>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {monthOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <MonthlySalesChart data={dailyDataFiltered} />
           </div>
-        )}
-      </div>
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <button
-          className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-semibold py-2 px-4 rounded-lg transition-colors"
-          onClick={() => (window.location.href = "/dashboard/pedidos")}
-        >
-          Gestionar pedidos
-        </button>
+
+          {/* Widget de Pedidos Recientes */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-1">
+                  Pedidos Recientes
+                </h3>
+                <p className="text-sm text-gray-600">Últimos 5 pedidos</p>
+              </div>
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <i className="bi bi-receipt text-blue-500 text-xl"></i>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {realOrders && realOrders.length > 0 ? (
+                realOrders
+                  .filter((order) => {
+                    if (!order) return false;
+                    const estado = order.estado || order.status || "";
+                    return estado === "Pendiente" || estado === "En proceso";
+                  })
+                  .slice(0, 5)
+                  .map((order, idx) => {
+                    const id = order.id_pedido || order.id || 0;
+                    const fecha =
+                      order.fecha_pedido ||
+                      order.fecha ||
+                      order.createdAt ||
+                      "Sin fecha";
+                    const total = parseFloat(order.total || order.valor || 0);
+                    const estado = order.estado || order.status || "Pendiente";
+
+                    return (
+                      <div
+                        key={id || `order-${idx}`}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-[#FACC15] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <span className="text-xs font-bold text-[#1E1E1E]">
+                              {idx + 1}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800 group-hover:text-[#FACC15] transition-colors">
+                              PED-{id > 0 ? id.toString().padStart(6, "0") : "000000"}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {typeof fecha === "string"
+                                ? fecha.split("T")[0]
+                                : "Sin fecha"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-gray-800">
+                            ${!isNaN(total) ? total.toLocaleString("es-CO") : "0"}
+                          </p>
+                          <span
+                            className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
+                              estado === "Completado" || estado === "Completada"
+                                ? "bg-green-100 text-green-800"
+                                : estado === "Pendiente"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : estado === "En proceso"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {estado}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-2">📦</div>
+                  <p className="text-sm text-gray-500">No hay pedidos pendientes</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-semibold py-2 px-4 rounded-lg transition-colors"
+                onClick={() => (window.location.href = "/dashboard/pedidos")}
+              >
+                Gestionar pedidos
+              </button>
+            </div>
+          </div>
+
+          {/* Gráfica de Totales Mensuales */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              Totales por Mes (Últimos 6 meses)
+            </h3>
+            <MonthlyTotalsChart data={mesesData} />
+          </div>
+
+          {/* Top Servicios */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              Top 5 Servicios
+            </h3>
+            <TopServicesChart data={topServicios} />
+          </div>
+
+          {/* Top Productos */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              Top 5 Productos
+            </h3>
+            <TopProductsChart data={topProductos} />
+          </div>
+
+          {/* Gráfica Comparativa Anual */}
+          <div className="xl:col-span-3 bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              Comparativa Anual
+            </h3>
+            <AnnualComparisonChart data={annualData} />
+          </div>
+        </div>
       </div>
     </div>
   );

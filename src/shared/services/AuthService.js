@@ -1,27 +1,12 @@
 // Servicio de autenticación para conectar con el backend
-import { API_CONFIG } from '../config/api.js';
-
-const BASE_URL = API_CONFIG.BASE_URL;
+import { apiRequest } from '../config/apiConfig';
 
 /**
  * Registra un nuevo usuario
  */
 export const registerUser = async (userData) => {
   try {
-    const response = await fetch(`${BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Error ${response.status}: ${error}`);
-    }
-
-    const result = await response.json();
+    const result = await apiRequest.post('/auth/register', userData);
     return result;
   } catch (error) {
     console.error('Error al registrar usuario:', error);
@@ -34,26 +19,13 @@ export const registerUser = async (userData) => {
  */
 export const loginUser = async (credentials) => {
   try {
-    const response = await fetch(`${BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-      credentials: 'include', // Importante para incluir cookies
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Error ${response.status}: ${error}`);
-    }
-
-    const result = await response.json();
+    const result = await apiRequest.post('/auth/login', credentials);
 
     // El token ya está en cookies HttpOnly, no lo guardamos en localStorage
     // Solo guardamos la información del usuario si es necesario
-    if (result.user) {
-      localStorage.setItem('currentUser', JSON.stringify(result.user));
+    if (result.user || result.data) {
+      const userData = result.user || result.data;
+      localStorage.setItem('currentUser', JSON.stringify(userData));
     }
 
     return result;
@@ -68,19 +40,7 @@ export const loginUser = async (credentials) => {
  */
 export const verifyToken = async (token) => {
   try {
-    const response = await fetch(`${BASE_URL}/auth/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: Token inválido`);
-    }
-
-    const result = await response.json();
+    const result = await apiRequest.post('/auth/verify', { token });
     return result;
   } catch (error) {
     console.error('Error al verificar token:', error);
@@ -93,31 +53,23 @@ export const verifyToken = async (token) => {
  */
 export const getCurrentUser = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/auth/me`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Importante para incluir cookies HttpOnly
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // Token expirado o inválido - limpiar localStorage
-        localStorage.removeItem('currentUser');
-        throw new Error('Token expirado. Por favor, inicia sesión nuevamente.');
-      }
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const user = await response.json();
+    const response = await apiRequest.get('/auth/me');
+    
+    // Manejar diferentes estructuras de respuesta
+    const user = response.data || response;
 
     // Actualizar información del usuario en localStorage
-    localStorage.setItem('currentUser', JSON.stringify(user));
+    if (user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    }
 
     return user;
   } catch (error) {
     console.error('Error al obtener usuario actual:', error);
+    // Si es error 401, limpiar localStorage
+    if (error.response?.status === 401) {
+      localStorage.removeItem('currentUser');
+    }
     throw error;
   }
 };
@@ -127,24 +79,12 @@ export const getCurrentUser = async () => {
  */
 export const updateProfile = async (profileData) => {
   try {
-    const response = await fetch(`${BASE_URL}/auth/profile`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Importante para incluir cookies HttpOnly
-      body: JSON.stringify(profileData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+    const result = await apiRequest.put('/auth/profile', profileData);
 
     // Actualizar información del usuario en localStorage
-    if (result.user) {
-      localStorage.setItem('currentUser', JSON.stringify(result.user));
+    if (result.user || result.data) {
+      const userData = result.user || result.data;
+      localStorage.setItem('currentUser', JSON.stringify(userData));
     }
 
     return result;
@@ -160,13 +100,7 @@ export const updateProfile = async (profileData) => {
 export const logoutUser = async () => {
   try {
     // Cerrar sesión en el backend (limpia la cookie HttpOnly)
-    await fetch(`${BASE_URL}/auth/logout`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include', // Importante para incluir cookies
-    });
+    await apiRequest.post('/auth/logout');
 
     // Limpiar localStorage
     localStorage.removeItem('currentUser');

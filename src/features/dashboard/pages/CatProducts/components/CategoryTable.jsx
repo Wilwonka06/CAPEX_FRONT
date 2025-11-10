@@ -1,7 +1,12 @@
 import PropTypes from "prop-types";
 import TruncatedText from "../../../../../shared/components/TruncatedText";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 
-const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView }) => {
+const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView, loading = false }) => {
+  if (loading) {
+    return <TableSkeleton columns={4} rows={5} hasAvatar={false} hasActions={true} />;
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
       <table className="min-w-full">

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import {
   getServices,
   createService,
@@ -17,6 +16,7 @@ import SearchProduct from '../../../../shared/Search';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import PropTypes from "prop-types";
+import { formatNumber } from "../../../../shared/utils/formatters";
 
 const SERVICES_PER_PAGE = 5;
 
@@ -47,7 +47,7 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete, togg
                 {service.categoria?.nombre || service.categoria || 'Sin categoría'}
               </td>
               <td className="py-4 px-4 text-xs text-gray-600">{service.duracion} min</td>
-              <td className="py-4 px-4 text-xs text-gray-600">${service.precio?.toLocaleString()}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">${formatNumber(service.precio || 0)}</td>
               <td className="py-4 px-4 text-xs">
                 <div className="flex items-center gap-3">
                   <button
@@ -198,42 +198,67 @@ const Services = () => {
 
   // CRUD handlers
   const handleAddService = async (newServiceData) => {
-    try {
+    const servicePromise = (async () => {
       await createService(newServiceData);
       // SOLUCIÓN: Recargar todos los datos después de crear
       await loadData();
       setShowAddModal(false);
-      toast.success("Servicio agregado exitosamente");
+      return true;
+    })();
+
+    toast.promise(
+      servicePromise,
+      {
+        loading: 'Agregando servicio...',
+        success: 'Servicio agregado exitosamente',
+        error: (err) => {
+          console.error("Error agregando servicio:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al agregar servicio";
+        },
+      },
+      {
+        id: 'create-service',
+      }
+    );
+
+    try {
+      await servicePromise;
     } catch (error) {
-      console.error("Error agregando servicio:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al agregar servicio");
+      // Error ya manejado por toast.promise
     }
   };
 
   const handleEditService = async (editedServiceData) => {
-    const result = await Swal.fire({
-      title: "¿Confirmar edición?",
-      text: `¿Editar el servicio "${editedServiceData.nombre}"?`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Sí, editar",
-      cancelButtonText: "Cancelar",
-    });
-    
-    if (result.isConfirmed) {
-      try {
-        await updateService(editedServiceData.id, editedServiceData);
-        // SOLUCIÓN: Recargar todos los datos después de editar
-        await loadData();
-        setShowEditModal(false);
-        setSelectedService(null);
-        toast.success("Servicio actualizado exitosamente");
-      } catch (error) {
-        console.error("Error actualizando servicio:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al actualizar servicio");
+    const servicePromise = (async () => {
+      await updateService(editedServiceData.id, editedServiceData);
+      // SOLUCIÓN: Recargar todos los datos después de editar
+      await loadData();
+      setShowEditModal(false);
+      setSelectedService(null);
+      return true;
+    })();
+
+    toast.promise(
+      servicePromise,
+      {
+        loading: 'Actualizando servicio...',
+        success: 'Servicio actualizado exitosamente',
+        error: (err) => {
+          console.error("Error actualizando servicio:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al actualizar servicio";
+        },
+      },
+      {
+        id: `update-service-${editedServiceData.id}`,
       }
+    );
+
+    try {
+      await servicePromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -248,14 +273,32 @@ const Services = () => {
     });
     
     if (result.isConfirmed) {
-      try {
+      const servicePromise = (async () => {
         await deleteService(service.id);
         setServices(prev => prev.filter(s => s.id !== service.id));
-        toast.success("Servicio eliminado exitosamente");
+        return true;
+      })();
+
+      toast.promise(
+        servicePromise,
+        {
+          loading: 'Eliminando servicio...',
+          success: 'Servicio eliminado exitosamente',
+          error: (err) => {
+            console.error("Error eliminando servicio:", err);
+            const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+            return backendMsg || "Error al eliminar servicio";
+          },
+        },
+        {
+          id: `delete-service-${service.id}`,
+        }
+      );
+
+      try {
+        await servicePromise;
       } catch (error) {
-        console.error("Error eliminando servicio:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al eliminar servicio");
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -403,8 +446,6 @@ const Services = () => {
           service={selectedService}
         />
       )}
-
-      <ToastContainer position="top-right" />
     </div>
   );
 };

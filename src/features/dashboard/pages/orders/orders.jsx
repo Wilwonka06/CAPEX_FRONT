@@ -3,19 +3,21 @@ import { useState, useEffect } from "react";
 import OrderDetailModal from "./components/OrderDetailModal";
 import EditOrderModal from "./components/EditOrderModal";
 import Paginator from '../../../../shared/Paginator';
-import LoadingTable from '../../../../shared/components/LoadingTable';
+import TableSkeleton from '../../../../shared/components/TableSkeleton';
 import Search from '../../../../shared/Search';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import ordersService from './API/ordersService';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 // Estados posibles según el backend unificado
 const estados = ["Pendiente", "En proceso", "Enviado", "Entregado", "Cancelado"];
 
-function OrdersTable({ orders, onView, onEdit }) {
+function OrdersTable({ orders, onView, onEdit, loading = false }) {
+  if (loading) {
+    return <TableSkeleton columns={5} rows={5} hasAvatar={false} hasActions={true} />;
+  }
   
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -188,9 +190,7 @@ export default function OrdersPage() {
         const response = await ordersService.changeStatus(id, nuevoEstado);
         
         if (response.success) {
-          toast.success(`Estado del pedido cambiado a ${nuevoEstado}`, { 
-            position: 'top-right' 
-          });
+          toast.success(`Estado del pedido cambiado a ${nuevoEstado}`);
           
           // Actualizar estado local
           setOrders(prev => prev.map(o => 
@@ -203,9 +203,7 @@ export default function OrdersPage() {
         }
       } catch (error) {
         console.error('Error updating order status:', error);
-        toast.error(error.message || 'Error al actualizar el estado del pedido', { 
-          position: 'top-right' 
-        });
+        toast.error(error.message || 'Error al actualizar el estado del pedido');
       } finally {
         setLoading(false);
       }
@@ -227,9 +225,7 @@ export default function OrdersPage() {
               />
             </div>
 
-            {loading ? (
-              <LoadingTable message="Cargando pedidos..." />
-            ) : filteredOrders.length === 0 ? (
+            {filteredOrders.length === 0 && !loading ? (
               <div className="text-center py-12">
                 <i className="bi bi-inbox text-6xl text-gray-300"></i>
                 <p className="mt-4 text-gray-500">
@@ -244,6 +240,7 @@ export default function OrdersPage() {
                   orders={paginatedOrders}
                   onView={setDetailOrder}
                   onEdit={setEditOrder}
+                  loading={loading}
                 />
 
                 {totalPages > 1 && (
@@ -292,8 +289,6 @@ export default function OrdersPage() {
         onClose={() => setEditOrder(null)}
         onUpdateEstado={handleUpdateEstado}
       />
-      
-      <ToastContainer />
     </div>
   );
 }

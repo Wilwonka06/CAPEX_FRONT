@@ -24,7 +24,18 @@ const RoleRow = ({ role, onView, onEdit, onDelete, onStatusChange }) => {
       </td>
       
       <td className="py-4 px-4 text-xs">
-        <StatusToggle role={role} onStatusChange={onStatusChange} />
+        {onStatusChange && (
+          <StatusToggle role={role} onStatusChange={onStatusChange} />
+        )}
+        {!onStatusChange && (
+          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+            role.estado === 'Activo' || role.estado === 'activo'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {role.estado === 'Activo' || role.estado === 'activo' ? 'Activo' : 'Inactivo'}
+          </span>
+        )}
       </td>
       
       <td className="py-4 px-4 text-xs font-medium text-right">
@@ -48,10 +59,10 @@ RoleRow.propTypes = {
     descripcion: PropTypes.string,
     estado: PropTypes.string,
   }).isRequired,
-  onView: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onStatusChange: PropTypes.func.isRequired,
+  onView: PropTypes.func,
+  onEdit: PropTypes.func,
+  onDelete: PropTypes.func,
+  onStatusChange: PropTypes.func,
 };
 
 export default RoleRow;

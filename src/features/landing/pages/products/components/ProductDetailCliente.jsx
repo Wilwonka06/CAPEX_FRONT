@@ -7,6 +7,12 @@ import cartIcon from '../../../../../shared/images/cart.png';
 import { useCartToast } from '../../../components/CartToastContext';
 import { formatNumber } from '../../../../../shared/utils/formatters';
 
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=256&bold=true`;
+};
+
 const ProductDetailCliente = ({ product, recommended = [] }) => {
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -45,19 +51,26 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
             {/* Imagen principal */}
           <div className="md:w-1/2 w-full flex items-center justify-center aspect-[4/3] md:aspect-auto p-6">
               <img
-                src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
+                src={
+                  (product.fotos && product.fotos.length > 0 && product.fotos[0])
+                    ? product.fotos[0]
+                    : (product.foto || getDefaultProductImage(product.nombre))
+                }
                 alt={product.nombre}
               className="w-full h-full object-cover object-center"
               style={{ maxHeight: '50vh' }}
               loading="lazy"
+              onError={(e) => {
+                e.target.src = getDefaultProductImage(product.nombre);
+              }}
             />
           </div>
           {/* Info principal */}
           <div className="flex-1 flex flex-col gap-4 p-6">
             <h1 className="text-3xl font-bold text-[#1E1E1E] mb-2 font-montserrat">{product.nombre}</h1>
             <div className="flex items-center gap-4 mb-2">
-              <span className="text-2xl font-bold text-[#FACC15]">${formatNumber(product.precio?.toFixed(2))}</span>
-              <span className="text-xs text-gray-500">{product.cantidad} disponibles</span>
+              <span className="text-2xl font-bold text-[#FACC15]">${formatNumber(product.precio)}</span>
+              <span className="text-xs text-gray-500">{formatNumber(product.cantidad)} disponibles</span>
                 </div>
             {/* Selector de cantidad y botón agregar al carrito en la misma fila si NO es extensión */}
             {product.tipoProducto !== 'Extensiones' ? (
@@ -136,10 +149,17 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
                 >
                   <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
-                      src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : prod.foto}
+                      src={
+                        (prod.fotos && prod.fotos.length > 0 && prod.fotos[0])
+                          ? prod.fotos[0]
+                          : (prod.foto || getDefaultProductImage(prod.nombre))
+                      }
                       alt={prod.nombre}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
+                      onError={(e) => {
+                        e.target.src = getDefaultProductImage(prod.nombre);
+                      }}
                     />
                   </div>
                   <div className="p-4 flex flex-col gap-2 flex-1 justify-between">

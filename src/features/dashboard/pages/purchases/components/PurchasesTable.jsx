@@ -1,7 +1,11 @@
 import PropTypes from "prop-types";
 import { formatNumber } from "../../../../../shared/utils/formatters";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 
-export default function PurchasesTable({ purchases, onView, onAnnul, currentPage, totalPages, onPageChange }) {
+export default function PurchasesTable({ purchases, onView, onAnnul, currentPage, totalPages, onPageChange, loading = false }) {
+  if (loading) {
+    return <TableSkeleton columns={5} rows={5} hasAvatar={false} hasActions={true} />;
+  }
   // Función para formatear números usando el estándar del proyecto
   const formatPrice = (num) => {
     if (num === null || num === undefined) return '$0';
@@ -14,7 +18,6 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
         <thead className="bg-gray-50">
           <tr>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">ID</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha Registro</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha Compra</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Proveedor</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Total</th>
@@ -26,7 +29,6 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
           {purchases.length > 0 ? purchases.map((p) => (
             <tr key={p.id} className="hover:bg-gray-50 transition-colors duration-150">
               <td className="py-4 px-4 text-xs font-medium text-gray-900">{p.id || 'N/A'}</td>
-              <td className="py-4 px-4 text-xs text-gray-600">{p.fechaRegistro || 'N/A'}</td>
               <td className="py-4 px-4 text-xs text-gray-600">{p.fechaCompra || 'N/A'}</td>
               <td className="py-4 px-4 text-xs text-gray-600">{p.proveedor || 'N/A'}</td>
               <td className="py-4 px-4 text-xs text-gray-600 font-semibold">{formatPrice(p.total)}</td>

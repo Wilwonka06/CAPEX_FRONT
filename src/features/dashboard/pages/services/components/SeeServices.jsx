@@ -1,12 +1,8 @@
 import PropTypes from "prop-types";
+import { formatPrice } from "../../../../../shared/utils/formatters";
 
 const SeeServices = ({ onClose, service }) => {
   if (!service) return null;
-
-  const formatPrice = (price) => {
-    if (!price) return "$0";
-    return `$${Number(price).toLocaleString()}`;
-  };
 
   const formatDuration = (duration) => {
     if (!duration) return "0 min";
@@ -14,7 +10,7 @@ const SeeServices = ({ onClose, service }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api.js';
+import { apiRequest } from '../../../../../shared/config/apiConfig';
+import { formatNumber } from '../../../../../shared/utils/formatters';
 
 const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,13 +20,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
       setLoading(true);
       try {
         // Cargar servicios
-        const serviciosResponse = await fetch(`${API_CONFIG.BASE_URL}/servicios`, {
-          method: 'GET',
-          headers: getAuthHeaders(),
-        });
-
-        if (serviciosResponse.ok) {
-          const servicios = await serviciosResponse.json();
+        try {
+          const servicios = await apiRequest.get('/servicios');
           console.log('🔍 Servicios recibidos del backend:', servicios);
           
           // Manejar diferentes estructuras de respuesta
@@ -50,19 +46,14 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
           
           console.log('🔧 Servicios procesados:', serviciosArray);
           setAvailableServices(serviciosArray);
-        } else {
-          console.error('Error al cargar servicios:', serviciosResponse.status);
+        } catch (error) {
+          console.error('Error al cargar servicios:', error);
           setAvailableServices([]);
         }
 
         // Cargar empleados
-        const empleadosResponse = await fetch(`${API_CONFIG.BASE_URL}/empleados`, {
-          method: 'GET',
-          headers: getAuthHeaders(),
-        });
-
-        if (empleadosResponse.ok) {
-          const empleados = await empleadosResponse.json();
+        try {
+          const empleados = await apiRequest.get('/empleados');
           console.log('🔍 Empleados recibidos del backend:', empleados);
           
           // Manejar diferentes estructuras de respuesta
@@ -87,8 +78,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
           
           console.log('🔧 Empleados procesados:', empleadosArray);
           setAvailableEmployees(empleadosArray);
-        } else {
-          console.error('Error al cargar empleados:', empleadosResponse.status);
+        } catch (error) {
+          console.error('Error al cargar empleados:', error);
           setAvailableEmployees([]);
         }
       } catch (error) {
@@ -116,38 +107,23 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const buscarServicios = async (termino) => {
     if (!termino.trim()) {
       // Si no hay término, cargar todos los servicios
-      const response = await fetch(`${API_CONFIG.BASE_URL}/servicios`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      
-      if (response.ok) {
-        const servicios = await response.json();
-        setAvailableServices(Array.isArray(servicios) ? servicios : []);
+      try {
+        const servicios = await apiRequest.get('/servicios');
+        const serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || []);
+        setAvailableServices(serviciosArray);
+      } catch (error) {
+        console.error('Error al cargar servicios:', error);
+        setAvailableServices([]);
       }
       return;
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/servicios/search?q=${encodeURIComponent(termino)}`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
+      const servicios = await apiRequest.get('/servicios/search', {
+        params: { q: termino }
       });
-
-      if (response.ok) {
-        const servicios = await response.json();
-        setAvailableServices(Array.isArray(servicios) ? servicios : []);
-      } else {
-        console.error('Error al buscar servicios:', response.status);
-        // Fallback a filtrado local
-        const todosLosServicios = availableServices;
-        const filtrados = Array.isArray(todosLosServicios) 
-          ? todosLosServicios.filter(service =>
-              (service.nombre || service.name || '').toLowerCase().includes(termino.toLowerCase())
-            )
-          : [];
-        setAvailableServices(filtrados);
-      }
+      const serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || []);
+      setAvailableServices(serviciosArray);
     } catch (error) {
       console.error('Error al buscar servicios:', error);
       // Fallback a filtrado local
@@ -326,7 +302,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
       {/* Modal para cantidad, empleado y detalles del servicio */}
       {showQuantityModal && selectedServiceForQuantity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in flex flex-col border border-gray-200">
             {/* Header */}
             <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -424,7 +400,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-blue-600">
-                    ${((selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0) * quantity).toLocaleString()}
+                    ${formatNumber(((selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0) * quantity))}
                   </div>
                 </div>
               </div>
@@ -478,8 +454,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                     <td className="px-2 py-2 border-r">{service.category}</td>
                     <td className="px-2 py-2 border-r">{service.name}</td>
                     <td className="px-2 py-2 border-r">{service.employee?.name}</td>
-                    <td className="px-2 py-2 border-r text-center">{service.quantity}</td>
-                    <td className="px-2 py-2 border-r">${service.subtotal?.toLocaleString()}</td>
+                    <td className="px-2 py-2 border-r text-center">{formatNumber(service.quantity)}</td>
+                    <td className="px-2 py-2 border-r">${formatNumber(service.subtotal || 0)}</td>
                     <td className="px-2 py-2 border-r">{service.duration}</td>
                     <td className="px-2 py-2 text-center">
                       <button
@@ -501,7 +477,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         <div className="mt-2 text-sm bg-blue-50 p-2 rounded-md border border-blue-100">
           <span className="font-medium">TOTAL DE SERVICIOS: </span>
           <span className="font-bold text-blue-600">
-            ${totalServices.toLocaleString()}
+            ${formatNumber(totalServices)}
           </span>
         </div>
       </div>

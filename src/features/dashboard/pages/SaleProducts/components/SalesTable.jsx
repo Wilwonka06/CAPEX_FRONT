@@ -1,7 +1,12 @@
 import PropTypes from "prop-types";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 
-export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, currentPage, totalPages, onPageChange }) {
+export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, currentPage, totalPages, onPageChange, loading = false }) {
   const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+
+  if (loading) {
+    return <TableSkeleton columns={5} rows={5} hasAvatar={false} hasActions={true} />;
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">

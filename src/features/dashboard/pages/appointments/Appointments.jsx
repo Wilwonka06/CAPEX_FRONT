@@ -9,8 +9,7 @@ import esLocale from '@fullcalendar/core/locales/es';
 
 import AppointmentDetailModal from './components/AppointmentDetailModal';
 import AppointmentEditModal from './components/AppointmentEditModal';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Search from '../../../../shared/Search';
 
 // Colores personalizados para los estados
@@ -102,16 +101,16 @@ const Appointments = () => {
       console.error('Error details:', err.response?.data || err.message);
       // Mostrar datos de ejemplo para desarrollo
       setAppointments([]);
-      toast.error('Error al cargar citas. Verifica la conexión con el servidor.', { position: 'top-right' });
+      toast.error('Error al cargar citas. Verifica la conexión con el servidor.');
     }
   };
 
   // Refrescar citas tras crear/editar/cancelar
   const refreshAppointments = () => {
     loadAppointments().then(() => {
-      toast.success('Citas actualizadas', { position: 'top-right' });
+      toast.success('Citas actualizadas');
     }).catch(() => {
-      toast.error('Error al actualizar citas', { position: 'top-right' });
+      toast.error('Error al actualizar citas');
     });
   };
 
@@ -251,7 +250,6 @@ const Appointments = () => {
             onSave={refreshAppointments}
           />
         )}
-        <ToastContainer />
       </div>
     </div>
   );

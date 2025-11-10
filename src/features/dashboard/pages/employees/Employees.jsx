@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import { getEmployees, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } from "./api/employeesApi";
 import { getAllSchedulings, getSchedulingsByUser, createScheduling, updateScheduling, deleteScheduling, } from "./api/schedulingApi";
 import Paginator from "../../../../shared/Paginator";
@@ -210,7 +209,7 @@ const EmployeesPage = () => {
   };
 
   const handleAddEmployee = async (data) => {
-    try {
+    const employeePromise = (async () => {
       console.log("[DEBUG] Creando empleado con datos:", data);
       
       // PASO 1: Crear el empleado primero
@@ -265,44 +264,55 @@ const EmployeesPage = () => {
         if (schedulingPromises.length > 0) {
           console.log("[DEBUG] Total de programaciones a crear:", schedulingPromises.length);
           
-          try {
-            const createdSchedulings = await Promise.all(schedulingPromises);
-            console.log("[DEBUG] Programaciones creadas exitosamente:", createdSchedulings.length);
-            
-            // Actualizar lista de programaciones
-            setSchedulings(prev => [...prev, ...createdSchedulings]);
-            toast.success(`Empleado creado con ${createdSchedulings.length} programación(es)!`);
-          } catch (schedulingError) {
-            console.error("[DEBUG] Error creando programaciones:", schedulingError);
-            toast.warning('Empleado creado, pero hubo un error con algunas programaciones');
-          }
+          const createdSchedulings = await Promise.all(schedulingPromises);
+          console.log("[DEBUG] Programaciones creadas exitosamente:", createdSchedulings.length);
+          
+          // Actualizar lista de programaciones
+          setSchedulings(prev => [...prev, ...createdSchedulings]);
+          return { employee: createdEmployee, schedulingsCount: createdSchedulings.length };
         } else {
-          toast.success('Empleado creado exitosamente!');
+          return { employee: createdEmployee, schedulingsCount: 0 };
         }
       } else {
-        toast.success('Empleado agregado exitosamente!');
+        return { employee: createdEmployee, schedulingsCount: 0 };
       }
+    })();
 
-      // Limpiar y cerrar formulario
-      setShowForm(false);
-      setAddEmployeeSchedulings([]);
-      
+    toast.promise(employeePromise, {
+      loading: 'Creando empleado...',
+      success: (result) => {
+        // Limpiar y cerrar formulario
+        setShowForm(false);
+        setAddEmployeeSchedulings([]);
+        
+        if (result.schedulingsCount > 0) {
+          return `Empleado creado con ${result.schedulingsCount} programación(es)!`;
+        }
+        return 'Empleado creado exitosamente!';
+      },
+      error: (err) => {
+        console.error("[DEBUG] Error agregando empleado:", err);
+        console.error("[DEBUG] Error response:", err.response?.data);
+        
+        const isNetworkError = err.code === 'ERR_NETWORK' || 
+                              err.message?.includes('ERR_NAME_NOT_RESOLVED') || 
+                              !err.response;
+        
+        const errorMsg = isNetworkError
+          ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
+          : (err?.response?.data?.message || 
+             err?.response?.data?.msg || 
+             err?.response?.data?.error || 
+             "Error al agregar empleado");
+        
+        return errorMsg;
+      },
+    });
+
+    try {
+      await employeePromise;
     } catch (error) {
-      console.error("[DEBUG] Error agregando empleado:", error);
-      console.error("[DEBUG] Error response:", error.response?.data);
-      
-      const isNetworkError = error.code === 'ERR_NETWORK' || 
-                            error.message?.includes('ERR_NAME_NOT_RESOLVED') || 
-                            !error.response;
-      
-      const errorMsg = isNetworkError
-        ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
-        : (error?.response?.data?.message || 
-           error?.response?.data?.msg || 
-           error?.response?.data?.error || 
-           "Error al agregar empleado");
-      
-      toast.error(errorMsg);
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -313,17 +323,17 @@ const EmployeesPage = () => {
   };
 
   const handleEditSave = async (data) => {
-    try {
-      console.log("🔵 [DEBUG] handleEditSave INICIO");
-      console.log("🔵 [DEBUG] Data recibida:", data);
-      console.log("🔵 [DEBUG] Employee ID:", data.id);
-      
-      if (!data.id) {
-        console.error("❌ [DEBUG] ERROR: No ID in data");
-        toast.error("Error: ID de empleado no encontrado");
-        return;
-      }
+    console.log("🔵 [DEBUG] handleEditSave INICIO");
+    console.log("🔵 [DEBUG] Data recibida:", data);
+    console.log("🔵 [DEBUG] Employee ID:", data.id);
+    
+    if (!data.id) {
+      console.error("❌ [DEBUG] ERROR: No ID in data");
+      toast.error("Error: ID de empleado no encontrado");
+      return;
+    }
 
+    const employeePromise = (async () => {
       console.log("🔵 [DEBUG] Llamando a updateEmployee...");
       const updatedEmployee = await updateEmployee(data.id, data);
       console.log("✅ [DEBUG] Response de updateEmployee:", updatedEmployee);
@@ -336,13 +346,25 @@ const EmployeesPage = () => {
       
       setEditEmployee(null);
       
-      toast.success('Empleado actualizado exitosamente!');
+      return updatedEmployee;
+    })();
+
+    toast.promise(employeePromise, {
+      loading: 'Actualizando empleado...',
+      success: 'Empleado actualizado exitosamente!',
+      error: (err) => {
+        console.error("❌ [DEBUG] Error en handleEditSave:", err);
+        console.error("❌ [DEBUG] Error response:", err.response?.data);
+        console.error("❌ [DEBUG] Error status:", err.response?.status);
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+        return backendMsg || "Error al actualizar empleado";
+      },
+    });
+
+    try {
+      await employeePromise;
     } catch (error) {
-      console.error("❌ [DEBUG] Error en handleEditSave:", error);
-      console.error("❌ [DEBUG] Error response:", error.response?.data);
-      console.error("❌ [DEBUG] Error status:", error.response?.status);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al actualizar empleado");
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -381,7 +403,7 @@ const EmployeesPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
+      const employeePromise = (async () => {
         console.log("[DEBUG] Deleting employee with ID:", employee.id);
         await deleteEmployee(employee.id);
         
@@ -391,11 +413,23 @@ const EmployeesPage = () => {
           return updated;
         });
         
-        toast.success("Empleado eliminado exitosamente");
+        return true;
+      })();
+
+      toast.promise(employeePromise, {
+        loading: 'Eliminando empleado...',
+        success: 'Empleado eliminado exitosamente',
+        error: (err) => {
+          console.error("Error eliminando empleado:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al eliminar empleado";
+        },
+      });
+
+      try {
+        await employeePromise;
       } catch (error) {
-        console.error("Error eliminando empleado:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al eliminar empleado");
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -610,14 +644,6 @@ const EmployeesPage = () => {
           </div>
         </div>
       </div>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        closeOnClick
-        draggable
-        pauseOnHover
-        style={{ zIndex: 9999 }}
-      />
     </div>
   );
 };

@@ -3,7 +3,7 @@ import productsService from "../../products/API/productsService";
 import suppliersService from "../../suppliers/API/suppliersService";
 import CreateSupplier from "../../suppliers/components/CreateSupplier";
 import CreateProduct from "../../products/components/CreateProduct";
-import { formatNumber } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatPercentage } from "../../../../../shared/utils/formatters";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [productsList, setProductsList] = useState([]);
@@ -331,7 +331,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-[#9C5B2B] m-0">
-            Registrar Nueva Compra
+            Crear Nueva Compra
           </h2>
           <button
             className="text-gray-400 hover:text-primary text-xl font-bold"
@@ -401,7 +401,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     <button
                       type="button"
                       className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center"
-                      title="Registrar proveedor"
+                      title="Crear proveedor"
                       style={{ border: "none", background: "none" }}
                       onClick={() => setOpenSupplierModal(true)}
                     >
@@ -470,7 +470,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   <button
                     type="button"
                     className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Registrar producto"
+                    title="Crear producto"
                     style={{ border: "none", background: "none" }}
                     onClick={() => setOpenProductModal(true)}
                     disabled={!proveedorId}
@@ -578,7 +578,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                               }}
                             />
                           </td>
-                          <td className="py-2 px-3">{(item.iva || 0).toFixed(0)}%</td>
+                          <td className="py-2 px-3">{formatPercentage(item.iva || 0)}</td>
                           <td className="py-2 px-3">
                             ${formatPrice((item.costo || 0) * (item.cantidad || 0))}
                           </td>
@@ -620,7 +620,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right text-primary">
-                          Total a Pagar:
+                          Total:
                         </td>
                         <td className="py-2 px-3 font-bold text-primary" colSpan="2">
                           ${formatPrice(total || 0)}

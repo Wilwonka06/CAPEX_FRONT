@@ -1,17 +1,19 @@
-import DetailServices from './components/DetailServices';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { getAllServices } from './api/servicesApi';
+import DetailServices from "./components/DetailServices";
+import toast from "react-hot-toast";
+import { getAllServices } from "./api/servicesApi";
 import { useState, useEffect } from "react";
-import Paginator from '../../../../shared/Paginator';
-import Footer from '../../../../shared/components/Footer';
+import Paginator from "../../../../shared/Paginator";
+import Footer from "../../../../shared/components/Footer";
 
-const EMPLOYEES_KEY = 'capex_employees';
-const SERVICES_KEY = 'services';
+const EMPLOYEES_KEY = "capex_employees";
+const SERVICES_KEY = "services";
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 };
 
 const ServicesPage = () => {
@@ -32,17 +34,21 @@ const ServicesPage = () => {
       console.log("[ServicesPage] Cargando servicios...");
       const data = await getAllServices();
       console.log("[ServicesPage] Servicios cargados:", data);
-      
+
       // Filtrar solo servicios activos para la vista de cliente
-      const activeServices = data.filter(service => service.active === true || service.estado === 'Activo');
+      const activeServices = data.filter(
+        (service) => service.active === true || service.estado === "Activo"
+      );
       console.log("[ServicesPage] Servicios activos:", activeServices);
-      
+
       setServicios(activeServices);
     } catch (err) {
       console.error("[ServicesPage] Error cargando servicios:", err);
-      const errorMsg = err.code === 'ERR_NETWORK' || err.message?.includes('ERR_NAME_NOT_RESOLVED')
-        ? "No se puede conectar al servidor. Verifique la conexión a internet."
-        : "No se pudieron cargar los servicios.";
+      const errorMsg =
+        err.code === "ERR_NETWORK" ||
+        err.message?.includes("ERR_NAME_NOT_RESOLVED")
+          ? "No se puede conectar al servidor. Verifique la conexión a internet."
+          : "No se pudieron cargar los servicios.";
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -61,16 +67,26 @@ const ServicesPage = () => {
 
   const filteredServices = servicios.filter(
     (service) =>
-      (service.name && normalizeText(service.name).includes(normalizeText(searchTerm))) ||
-      (service.category && normalizeText(service.category).includes(normalizeText(searchTerm))) ||
-      (service.duration && normalizeText(service.duration).includes(normalizeText(searchTerm))) ||
-      (service.price && normalizeText(service.price.toString()).includes(normalizeText(searchTerm))) ||
-      (service.description && normalizeText(service.description).includes(normalizeText(searchTerm)))
+      (service.name &&
+        normalizeText(service.name).includes(normalizeText(searchTerm))) ||
+      (service.category &&
+        normalizeText(service.category).includes(normalizeText(searchTerm))) ||
+      (service.duration &&
+        normalizeText(service.duration).includes(normalizeText(searchTerm))) ||
+      (service.price &&
+        normalizeText(service.price.toString()).includes(
+          normalizeText(searchTerm)
+        )) ||
+      (service.description &&
+        normalizeText(service.description).includes(normalizeText(searchTerm)))
   );
 
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedServices = filteredServices.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   if (loading) {
     return (
@@ -91,10 +107,22 @@ const ServicesPage = () => {
         <div className="flex justify-center items-center min-h-[400px]">
           <div className="text-center">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-              <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg
+                className="mx-auto h-12 w-12 text-red-400 mb-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
-              <h3 className="text-lg font-medium text-red-800 mb-2">Error al cargar servicios</h3>
+              <h3 className="text-lg font-medium text-red-800 mb-2">
+                Error al cargar servicios
+              </h3>
               <p className="text-red-600 mb-4">{error}</p>
               <button
                 onClick={loadServices}
@@ -110,111 +138,119 @@ const ServicesPage = () => {
   }
 
   return (
-    <div className="container mx-auto mt-8 px-8 gap-8">
-      <div className="flex justify-between mb-4 items-center px-20">
-        <h1 className="text-4xl font-bold text-text-main ml-4">Servicios</h1>
-        <div className="relative w-full max-w-sm mr-4">
-          <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-          <input
-            type="text"
-            placeholder="Buscar servicios..."
-            value={searchTerm}
-            onChange={handleSearch}
-            className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-          />
-        </div>
-      </div>
-
-      {paginatedServices.length === 0 ? (
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="text-center">
-            <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-gray-600 text-lg">
-              {searchTerm ? 'No se encontraron servicios con ese criterio' : 'No hay servicios disponibles'}
-            </p>
+    <>
+      <div className="container mx-auto mt-8 px-8 gap-8">
+        <div className="flex justify-between mb-4 items-center px-20">
+          <h1 className="text-4xl font-bold text-text-main ml-4">Servicios</h1>
+          <div className="relative w-full max-w-sm mr-4">
+            <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
+            <input
+              type="text"
+              placeholder="Buscar servicios..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+            />
           </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 py-8 p-20">
-          {paginatedServices.map((servicio) => (
-            <div
-              key={servicio.id}
-              className="bg-white border border-background rounded-lg overflow-hidden shadow-md flex flex-col w-full h-[350px] gap-x-6 hover:shadow-lg transition"
-            >
-              <img
-                src={
-                  servicio.imagen
-                    ? servicio.imagen
-                    : 'https://via.placeholder.com/300x160?text=Sin+Imagen'
-                }
-                alt={servicio.name}
-                className="w-full h-[160px] object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://via.placeholder.com/300x160?text=Imagen+No+Disponible';
-                }}
-              />
 
-              <div className="p-4 flex flex-col flex-1 justify-between">
-                <div className="flex flex-col mb-2">
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-text-main font-medium text-base truncate">{servicio.name}</h2>
-                    <span className="text-text-main font-bold text-base whitespace-nowrap ml-2">
-                      {servicio.price}
+        {paginatedServices.length === 0 ? (
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="text-center">
+              <svg
+                className="mx-auto h-16 w-16 text-gray-400 mb-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-gray-600 text-lg">
+                {searchTerm
+                  ? "No se encontraron servicios con ese criterio"
+                  : "No hay servicios disponibles"}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 py-8 p-20">
+            {paginatedServices.map((servicio) => (
+              <div
+                key={servicio.id}
+                className="bg-white border border-background rounded-lg overflow-hidden shadow-md flex flex-col w-full h-[350px] gap-x-6 hover:shadow-lg transition"
+              >
+                <img
+                  src={
+                    servicio.imagen
+                      ? servicio.imagen
+                      : "https://via.placeholder.com/300x160?text=Sin+Imagen"
+                  }
+                  alt={servicio.name}
+                  className="w-full h-[160px] object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "https://via.placeholder.com/300x160?text=Imagen+No+Disponible";
+                  }}
+                />
+
+                <div className="p-4 flex flex-col flex-1 justify-between">
+                  <div className="flex flex-col mb-2">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-text-main font-medium text-base truncate">
+                        {servicio.name}
+                      </h2>
+                      <span className="text-text-main font-bold text-base whitespace-nowrap ml-2">
+                        {servicio.price}
+                      </span>
+                    </div>
+                    <span className="text-xs text-primary-dark font-semibold mt-1">
+                      {servicio.category || "General"}
                     </span>
                   </div>
-                  <span className="text-xs text-primary-dark font-semibold mt-1">
-                    {servicio.category || 'General'}
-                  </span>
+                  <button
+                    onClick={() => setSelectedService(servicio)}
+                    className="text-accent text-base hover:underline mb-2 text-left py-2"
+                  >
+                    Detalles
+                  </button>
+
+                  <button className="bg-primary-dark text-white w-full py-4 rounded text-lg hover:bg-primary transition mt-auto">
+                    Agendar
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedService(servicio)}
-                  className="text-accent text-base hover:underline mb-2 text-left py-2"
-                >
-                  Detalles
-                </button>
-
-                <button className="bg-primary-dark text-white w-full py-4 rounded text-lg hover:bg-primary transition mt-auto">
-                  Agendar
-                </button>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-4 mb-8">
-          <Paginator
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-4 mb-8">
+            <Paginator
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+
+        {selectedService && (
+          <DetailServices
+            service={selectedService}
+            onClose={() => setSelectedService(null)}
           />
-        </div>
-      )}
+        )}
 
-      {selectedService && (
-        <DetailServices 
-          service={selectedService} 
-          onClose={() => setSelectedService(null)} 
-        />
-      )}
+        {/* Footer */}
+        <Footer />
+      </div>
 
-      {/* Footer */}
-      <Footer />
-    </div>
-
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        closeOnClick
-        draggable
-        pauseOnHover
-        style={{ zIndex: 9999 }}
-      />
-    </div>
+    </>
   );
 };
 

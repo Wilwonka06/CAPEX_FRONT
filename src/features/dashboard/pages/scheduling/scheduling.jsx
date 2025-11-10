@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import GeneralCalendar from './components/GeneralCalendar';
 import { useOutletContext } from 'react-router-dom';
 import {
@@ -66,7 +65,7 @@ const Scheduling = () => {
   }, []);
 
   useEffect(() => {
-    setTitle('Agendamiento de Servicios');
+    setTitle('Programación de Empleados');
     return () => setTitle('');
   }, [setTitle]);
 
@@ -133,29 +132,29 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
   // Handler para agregar programación
   const handleAddEvent = async (prog) => {
-    try {
+    // Validar que los datos requeridos estén presentes
+    if (!prog.empleadoId || !prog.fechaInicio || !prog.horaInicio || !prog.horaFin) {
+      toast.error("Faltan datos obligatorios para crear la programación");
+      console.error("[DEBUG] Missing required fields:", {
+        empleadoId: prog.empleadoId,
+        fechaInicio: prog.fechaInicio,
+        horaInicio: prog.horaInicio,
+        horaFin: prog.horaFin
+      });
+      return;
+    }
+
+    // Calcular las fechas específicas basadas en días seleccionados
+    const fechasEspecificas = calculateSpecificDates(prog.fechaInicio, prog.fechaFin, prog.dias);
+    console.log("[DEBUG] Calculated specific dates:", fechasEspecificas.map(d => d.toISOString().split('T')[0]));
+
+    if (fechasEspecificas.length === 0) {
+      toast.error("No se encontraron fechas válidas para los días seleccionados");
+      return;
+    }
+
+    const schedulingPromise = (async () => {
       console.log("[DEBUG] handleAddEvent received prog:", JSON.stringify(prog, null, 2));
-
-      // Validar que los datos requeridos estén presentes
-      if (!prog.empleadoId || !prog.fechaInicio || !prog.horaInicio || !prog.horaFin) {
-        toast.error("Faltan datos obligatorios para crear la programación");
-        console.error("[DEBUG] Missing required fields:", {
-          empleadoId: prog.empleadoId,
-          fechaInicio: prog.fechaInicio,
-          horaInicio: prog.horaInicio,
-          horaFin: prog.horaFin
-        });
-        return;
-      }
-
-      // Calcular las fechas específicas basadas en días seleccionados
-      const fechasEspecificas = calculateSpecificDates(prog.fechaInicio, prog.fechaFin, prog.dias);
-      console.log("[DEBUG] Calculated specific dates:", fechasEspecificas.map(d => d.toISOString().split('T')[0]));
-
-      if (fechasEspecificas.length === 0) {
-        toast.error("No se encontraron fechas válidas para los días seleccionados");
-        return;
-      }
 
       const createdSchedulings = [];
 
@@ -181,22 +180,34 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
       // Agregar todas las programaciones creadas al estado
       setSchedulings(prev => [...prev, ...createdSchedulings]);
-      toast.success(`${createdSchedulings.length} programación(es) creada(s) exitosamente`);
+      return createdSchedulings;
+    })();
+
+    toast.promise(schedulingPromise, {
+      loading: 'Creando programación(es)...',
+      success: (schedulings) => `${schedulings.length} programación(es) creada(s) exitosamente`,
+      error: (err) => {
+        console.error("Error creando programación:", err);
+        console.error("Error details:", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          message: err?.message
+        });
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+        return backendMsg || "Error al crear programación";
+      },
+    });
+
+    try {
+      await schedulingPromise;
     } catch (error) {
-      console.error("Error creando programación:", error);
-      console.error("Error details:", {
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message
-      });
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al crear programación");
+      // Error ya manejado por toast.promise
     }
   };
 
   // Handler para actualizar programación
   const handleUpdateEvent = async (prog) => {
-    try {
+    const schedulingPromise = (async () => {
       console.log("[DEBUG] Actualizando programación:", prog);
 
       // Convertir el formato del frontend al formato de la API (solo los 4 campos del modelo)
@@ -213,11 +224,23 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
       setSchedulings(prev => prev.map(s =>
         s.id === updatedScheduling.id ? updatedScheduling : s
       ));
-      toast.success('Programación actualizada exitosamente');
+      return updatedScheduling;
+    })();
+
+    toast.promise(schedulingPromise, {
+      loading: 'Actualizando programación...',
+      success: 'Programación actualizada exitosamente',
+      error: (err) => {
+        console.error("Error actualizando programación:", err);
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+        return backendMsg || "Error al actualizar programación";
+      },
+    });
+
+    try {
+      await schedulingPromise;
     } catch (error) {
-      console.error("Error actualizando programación:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al actualizar programación");
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -284,14 +307,6 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
           </div>
         </div>
       </div>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        closeOnClick
-        draggable
-        pauseOnHover
-        style={{ zIndex: 9999 }}
-      />
     </div>
   );
 }

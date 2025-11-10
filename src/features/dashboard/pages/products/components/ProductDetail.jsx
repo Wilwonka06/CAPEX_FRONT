@@ -1,6 +1,12 @@
 import PropTypes from "prop-types";
 import { formatNumber } from "../../../../../shared/utils/formatters";
 
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=256&bold=true`;
+};
+
 const ProductDetail = ({ product, isOpen, onClose }) => {
   if (!isOpen || !product) return null;
 
@@ -13,7 +19,7 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
   const specs = product.caracteristicas || product.especificaciones || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -35,14 +41,15 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
               {/* Imagen principal */}
               <div className="w-60 h-60 bg-gray-50 rounded-lg flex items-center justify-center mb-4 shadow-lg p-0">
                 <img
-                  src={product.fotos && product.fotos.length > 0 
-                    ? product.fotos[0] 
-                    : product.foto || product.url_foto || '/placeholder-product.png'
+                  src={
+                    (product.fotos && product.fotos.length > 0 && product.fotos[0])
+                      ? product.fotos[0]
+                      : (product.foto || product.url_foto || getDefaultProductImage(product.nombre))
                   }
                   alt={product.nombre}
                   className="w-full h-full object-cover rounded-lg m-0"
                   onError={(e) => {
-                    e.target.src = '/placeholder-product.png';
+                    e.target.src = getDefaultProductImage(product.nombre);
                   }}
                 />
               </div>
@@ -53,11 +60,11 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
                   {product.fotos.slice(1).map((foto, index) => (
                     <div key={index} className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center shadow-md">
                       <img
-                        src={foto}
+                        src={foto || getDefaultProductImage(product.nombre)}
                         alt={`${product.nombre} - Imagen ${index + 2}`}
                         className="w-full h-full object-cover rounded-lg"
                         onError={(e) => {
-                          e.target.src = '/placeholder-product.png';
+                          e.target.src = getDefaultProductImage(product.nombre);
                         }}
                       />
                     </div>

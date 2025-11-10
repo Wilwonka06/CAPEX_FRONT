@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { useState, useEffect } from "react";
+import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function EditOrderModal({ order, customer, isOpen, onClose, estados, onUpdateEstado }) {
   const [estado, setEstado] = useState(order ? order.estado : "");
@@ -70,7 +71,7 @@ export default function EditOrderModal({ order, customer, isOpen, onClose, estad
                 </div>
                 <div className="flex justify-between px-4 py-2">
                   <span className="text-xs text-gray-500">Valor Total</span>
-                  <span className="font-semibold text-gray-800 text-sm">${order.valor.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.valor)}</span>
                 </div>
               </div>
             </div>
@@ -92,8 +93,8 @@ export default function EditOrderModal({ order, customer, isOpen, onClose, estad
                     <tr key={idx}>
                       <td className="py-2 px-3">{prod.nombre}</td>
                       <td className="py-2 px-3 text-right">{prod.cantidad}</td>
-                      <td className="py-2 px-3 text-right">${prod.precio.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right">${(prod.precio * prod.cantidad).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio)}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio * prod.cantidad)}</td>
                     </tr>
                   ))}
                 </tbody>

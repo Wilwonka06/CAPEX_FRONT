@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { formatNumber } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatPercentage } from "../../../../../shared/utils/formatters";
 
 const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
   if (!isOpen || !compra) return null;
@@ -30,7 +30,7 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -85,7 +85,7 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
                       <td className="py-2 px-3 text-sm">{item.producto?.nombre || item.nombre || item.descripcion || 'Producto sin nombre'}</td>
                       <td className="py-2 px-3 text-right">{item.cantidad || 1}</td>
                       <td className="py-2 px-3 text-right">${formatNumber(item.precio_unitario || item.costo || item.precioBase || 0)}</td>
-                      <td className="py-2 px-3 text-right">{(parseFloat(item.iva || 0) * 100).toFixed(0)}%</td>
+                      <td className="py-2 px-3 text-right">{formatPercentage(parseFloat(item.iva || 0) * 100)}</td>
                       <td className="py-2 px-3 text-right">${formatNumber((parseFloat(item.precio_unitario || item.costo || item.precioBase || 0) * (1 + parseFloat(item.iva || 0))))}</td>
                       <td className="py-2 px-3 text-right font-semibold">${formatNumber((parseFloat(item.precio_unitario || item.costo || item.precioBase || 0) * parseInt(item.cantidad || 1)))}</td>
                     </tr>
@@ -109,11 +109,11 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
                 <span className="font-semibold text-gray-800">${formatNumber(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">IVA ({subtotal > 0 ? ((totalIva/subtotal) * 100).toFixed(0) : 0}%):</span>
+                <span className="text-gray-600">IVA:</span>
                 <span className="font-semibold text-gray-800">${formatNumber(totalIva)}</span>
               </div>
               <div className="flex justify-between text-lg border-t border-gray-500 pt-4 mt-4">
-                <span className="font-bold text-primary">Total a Pagar:</span>
+                <span className="font-bold text-primary">Total:</span>
                 <span className="font-bold text-primary">${formatNumber(total)}</span>
               </div>
             </div>

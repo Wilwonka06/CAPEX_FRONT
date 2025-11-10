@@ -5,8 +5,12 @@ import SupplierDetail from "./SupplierDetail";
 /* import DeleteSupplier from "./DeleteSupplier"; */
 import ChangeSupplierStatus from "./ChangeSupplierStatus";
 import TruncatedText from "../../../../../shared/components/TruncatedText";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 
-export default function SuppliersTable({ suppliers, onEdit, onDelete, onStatusChange }) {
+export default function SuppliersTable({ suppliers, onEdit, onDelete, onStatusChange, loading = false }) {
+  if (loading) {
+    return <TableSkeleton columns={7} rows={5} hasAvatar={false} hasActions={true} />;
+  }
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);

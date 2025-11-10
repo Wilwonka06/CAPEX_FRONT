@@ -15,6 +15,7 @@ const APPOINTMENT_STATES = [
   { nombre: 'No asistio', descripcion: 'El cliente no se presentó a la cita.' },
 ];
 import Swal from 'sweetalert2';
+import toast from 'react-hot-toast';
 
 function limpiarPrecio(valor) {
   return Number(String(valor).replace(/[^\d]/g, '')) || 0;
@@ -545,7 +546,8 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }
 
     setLoading(true);
-    try {
+    
+    const appointmentPromise = (async () => {
       // Buscar o crear cliente
       console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.telefono);
       const clientId = await findOrCreateClient(formData.cliente, formData.telefono);
@@ -582,24 +584,35 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         // Para actualización, incluir id_cliente en la cita
         appointmentData.cita.id_cliente = cita.id_cliente;
         result = await appointmentsService.update(cita.id_cita, appointmentData);
-        Swal.fire('¡Cita editada!', 'La cita se editó correctamente.', 'success');
       } else {
         result = await appointmentsService.create(appointmentData);
-        Swal.fire('¡Cita registrada!', 'La cita se registró correctamente.', 'success');
       }
 
       onSave();
       onClose();
+      return result;
+    })();
+
+    toast.promise(appointmentPromise, {
+      loading: cita ? 'Actualizando cita...' : 'Creando cita...',
+      success: cita ? 'Cita editada correctamente' : 'Cita registrada correctamente',
+      error: (err) => {
+        console.error('Error saving appointment:', err);
+        return err.response?.data?.message || err.message || 'Ocurrió un error al guardar la cita.';
+      },
+    });
+
+    try {
+      await appointmentPromise;
     } catch (error) {
-      console.error('Error saving appointment:', error);
-      Swal.fire('Error', error.message || 'Ocurrió un error al guardar la cita.', 'error');
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 select-none font-inter">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm select-none font-inter">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col mt-8">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-5">
           <h2 className="text-2xl font-bold text-primary m-0">{cita ? 'Editar' : 'Crear'} Cita</h2>
