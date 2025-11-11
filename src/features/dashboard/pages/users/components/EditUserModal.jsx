@@ -54,38 +54,13 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const [error, setError] = useState({});
   const canModifyStatus = hasPrivilege('Gestión de Usuarios', 'Editar');
 
-  // Parsear teléfono guardado
+  // Parsear teléfono guardado - retornar solo números (sin el +)
   const parseTelefono = (telefono) => {
-    if (!telefono) return { countryCode: 'co', dialCode: '+57', number: '' };
-
-    // Primero intentar el formato con guion (legacy)
-    const matchWithDash = telefono.match(/^(\+\d+)-(\d{4,15})$/);
-    if (matchWithDash) {
-      return {
-        countryCode: 'co', // puedes mejorar esto si guardas el país
-        dialCode: matchWithDash[1],
-        number: matchWithDash[2]
-      };
-    }
-
-    // Si no tiene guion, intentar extraer código de país y número
-    // Ejemplo: "+57123456789" -> dialCode: "+57", number: "123456789"
-    const matchWithoutDash = telefono.match(/^(\+\d{1,3})(\d{4,15})$/);
-    if (matchWithoutDash) {
-      return {
-        countryCode: 'co', // puedes mejorar esto si guardas el país
-        dialCode: matchWithoutDash[1],
-        number: matchWithoutDash[2]
-      };
-    }
-
-    return { countryCode: 'co', dialCode: '+57', number: '' };
+    if (!telefono) return '';
+    // Remover el símbolo + si existe y retornar solo números
+    return telefono.replace(/[^0-9]/g, '');
   };
-  const [country, setCountry] = useState({
-    countryCode: parseTelefono(user.telefono).countryCode,
-    dialCode: parseTelefono(user.telefono).dialCode,
-  });
-  const [numero, setNumero] = useState(parseTelefono(user.telefono).number);
+  const [numero, setNumero] = useState(parseTelefono(user.telefono));
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -108,9 +83,9 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       case 'correo':
         return isValidEmail(value) ? '' : 'Correo inválido';
       case 'telefono':
-        // Validar el teléfono completo (código de país + número)
-        const telefonoCompleto = country.dialCode + numero;
-        return validateUserPhone(telefonoCompleto);
+        if (!numero) return 'El teléfono es requerido';
+        if (numero.length < 7 || numero.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
+        return '';
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
@@ -169,10 +144,18 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
     let valid = true;
     let newError = {};
     for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo','estado']) {
-      const err = validate(key, form[key]);
-      if (err) {
-        newError[key] = err;
-        valid = false;
+      if (key === 'telefono') {
+        const err = validate('telefono', numero);
+        if (err) {
+          newError.telefono = err;
+          valid = false;
+        }
+      } else {
+        const err = validate(key, form[key]);
+        if (err) {
+          newError[key] = err;
+          valid = false;
+        }
       }
     }
     // Validar conceptoEstado si es requerido
@@ -193,14 +176,13 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
-    const telefonoFinal = country.dialCode + numero;
     const updatedUser = {
       id_usuario: form.id_usuario || form.id,
       nombre: form.nombre,
       correo: form.correo,
       tipo_documento: form.tipoDocumento,
       documento: form.documento,
-      telefono: telefonoFinal,
+      telefono: '+' + numero,
       roleId: parseInt(form.roles[0]) || form.roleId,
       estado: form.estado,
       ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
@@ -269,73 +251,24 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <div className="flex gap-1 items-start">
                 <PhoneInput
-                    country={country.countryCode}
-                    value={country.dialCode}
-                    onChange={(value, data) => {
-                      setCountry({
-                      countryCode: data.countryCode,
-                        dialCode: '+' + data.dialCode
-                    });
+                  country={'co'}
+                  value={numero}
+                  onChange={(value) => {
+                    setNumero(value);
+                    const error = validate('telefono', value);
+                    setError(prev => ({ ...prev, telefono: error }));
                   }}
+                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${error.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  containerClass="w-full"
                   inputProps={{
-                      name: 'prefijo',
-                      readOnly: true,
-                      className: 'w-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 cursor-pointer',
-                      style: { backgroundColor: '#f9fafb' }
+                    name: 'telefono',
+                    required: true,
+                    placeholder: 'Ej: 3001234567',
                   }}
                   specialLabel=""
-                    containerClass="w-28"
-                  inputClass="w-full"
-                  buttonClass=""
-                  dropdownClass=""
-                  enableSearch
-                  disableCountryCode={false}
-                  disableDropdown={false}
-                  countryCodeEditable={false}
-                    disableSearchIcon={false}
-                    onlyCountries={['co','mx','cl','ar','pe','ve','ec','us','es']}
-                  />
-                  <input
-                    type="text"
-                    name="numero"
-                    value={numero}
-                    onChange={e => {
-                      // Solo permitir dígitos
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setNumero(val.slice(0, 15));
-                      // Validación en tiempo real del número
-                      let err = '';
-                      if (val && !/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else if (val && val.length >= 4) {
-                        // Validar teléfono completo si tenemos suficientes dígitos
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    onBlur={e => {
-                      const val = e.target.value;
-                      let err = '';
-                      if (!/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else {
-                        // Validar teléfono completo
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="Número sin prefijo"
-                    required
-                    autoComplete="off"
-                    maxLength={15}
-                  />
-                </div>
-                {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
+                />
+                {error.telefono && <span className="text-red-500 text-xs mt-1 block">{error.telefono}</span>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>

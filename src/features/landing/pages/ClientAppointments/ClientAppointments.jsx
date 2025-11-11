@@ -658,7 +658,13 @@ const ClientAppointments = () => {
                       {/* Profesional */}
                       <div className="mb-3">
                         <label className="text-sm font-medium">Profesional <span className="text-red-500">*</span></label>
-                        <select className="w-full border rounded px-2 py-1 mt-1" value={serv.profesional} onChange={e => updateService(idx, 'profesional', e.target.value)} required>
+                        <select className="w-full border rounded px-2 py-1 mt-1" value={serv.profesional} onChange={e => {
+                          const selectedProfessional = professionals.find(p => p.name === e.target.value);
+                          updateService(idx, 'profesional', e.target.value);
+                          if (selectedProfessional) {
+                            updateService(idx, 'id_empleado', selectedProfessional.id);
+                          }
+                        }} required>
                           <option value="">Seleccionar</option>
                           {professionals.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                         </select>
@@ -784,7 +790,17 @@ const ClientAppointments = () => {
                     </div>
                     <div className="mb-3">
                       <label className="text-sm font-medium">Profesional <span className="text-red-500">*</span></label>
-                      <select className="w-full border rounded px-2 py-1 mt-1" value={serv.profesional} onChange={e => setRescheduleData(prev => { const servicios = [...prev.servicios]; servicios[idx].profesional = e.target.value; return { ...prev, servicios }; })} required>
+                      <select className="w-full border rounded px-2 py-1 mt-1" value={serv.profesional} onChange={e => {
+                        const selectedProfessional = professionals.find(p => p.name === e.target.value);
+                        setRescheduleData(prev => { 
+                          const servicios = [...prev.servicios]; 
+                          servicios[idx].profesional = e.target.value;
+                          if (selectedProfessional) {
+                            servicios[idx].id_empleado = selectedProfessional.id;
+                          }
+                          return { ...prev, servicios }; 
+                        });
+                      }} required>
                         <option value="">Seleccionar</option>
                         {professionals.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                       </select>

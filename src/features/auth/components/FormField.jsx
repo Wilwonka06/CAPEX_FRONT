@@ -17,7 +17,7 @@ const FormField = ({
   className = '',
   options = []
 }) => {
-  const isPassword = type === 'password' || (showPassword !== null);
+  const isPassword = type === 'password' || onTogglePassword !== null;
   const isSelect = type === 'select';
 
   return (

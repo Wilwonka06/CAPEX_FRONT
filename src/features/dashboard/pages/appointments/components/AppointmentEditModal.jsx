@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
+import { getAllServices } from '@/features/landing/pages/ServicesPage/api/servicesApi';
+import { getEmployees } from '@/features/dashboard/pages/employees/api/employeesApi';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import '../../users/components/phoneinput-search.css';
 
 // Estados posibles de la cita
 const APPOINTMENT_STATES = [
@@ -31,11 +36,14 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
+  const [numero, setNumero] = useState('');
 
   // Formulario principal
   const [formData, setFormData] = useState({
     cliente: '',
     telefono: '',
+    correo: '',
+    documento: '',
     fecha: fecha || '',
     servicios: [],
     estado: 'Agendada',
@@ -46,27 +54,38 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // TODO: Implementar cuando estén disponibles los endpoints reales de servicios y empleados
-        // Por ahora mantenemos datos mock hasta que se implementen los endpoints
-        setServices([
-          { id: 1, name: 'Corte de cabello', duration: 30, price: 25000, description: 'Corte básico de cabello', active: true },
-          { id: 2, name: 'Manicura', duration: 45, price: 35000, description: 'Manicura completa', active: true },
-          { id: 3, name: 'Pedicura', duration: 60, price: 40000, description: 'Pedicura completa', active: true }
-        ]);
-        setProfessionals([
-          { id: 1, name: 'Ana Torres', active: true },
-          { id: 2, name: 'Carlos Mendoza', active: true },
-          { id: 3, name: 'Lucía Gómez', active: true }
-        ]);
+        // Cargar servicios desde el backend
+        const servicesData = await getAllServices();
+        // Filtrar solo servicios activos y normalizar al formato esperado
+        const normalizedServices = servicesData
+          .filter(s => s.active || s.estado === 'Activo')
+          .map(s => ({
+            id: s.id,
+            name: s.name,
+            duration: s.duration || 0,
+            price: s.price || 0,
+            description: s.description || s.descripcion || '',
+            active: s.active || s.estado === 'Activo'
+          }));
+        setServices(normalizedServices);
+
+        // Cargar empleados desde el backend
+        const employeesData = await getEmployees();
+        // Filtrar solo empleados activos y convertir a formato de profesionales
+        const normalizedProfessionals = employeesData
+          .filter(emp => emp.estado === 'Activo' || emp.estado === true)
+          .map(emp => ({
+            id: emp.id,
+            name: emp.nombre,
+            active: emp.estado === 'Activo' || emp.estado === true
+          }));
+        setProfessionals(normalizedProfessionals);
       } catch (error) {
         console.error('Error loading data:', error);
-        // En caso de error, usar datos mock como fallback
-        setServices([
-          { id: 1, name: 'Corte de cabello', duration: 30, price: 25000, description: 'Corte básico de cabello', active: true }
-        ]);
-        setProfessionals([
-          { id: 1, name: 'Ana Torres', active: true }
-        ]);
+        toast.error('Error al cargar servicios y profesionales');
+        // En caso de error, usar arrays vacíos
+        setServices([]);
+        setProfessionals([]);
       }
     };
     loadData();
@@ -76,23 +95,36 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   useEffect(() => {
     if (cita) {
       console.log('Loading appointment data for editing:', cita);
+      const telefono = cita.usuario?.telefono || cita.cliente?.telefono || '';
+      const telefonoLimpio = telefono.replace(/[^0-9]/g, '');
+      setNumero(telefonoLimpio);
       setFormData({
         cliente: cita.usuario?.nombre || cita.cliente?.nombre || '',
-        telefono: cita.usuario?.telefono || cita.cliente?.telefono || '',
+        telefono: telefono,
+        correo: cita.usuario?.correo || cita.cliente?.correo || '',
+        documento: cita.usuario?.documento || cita.cliente?.documento || '',
         fecha: cita.fecha_servicio || fecha || '',
         estado: cita.estado || 'Agendada',
-        servicios: (cita.servicios || []).map(s => ({
+        servicios: (cita.servicios || []).map(s => {
+          // Normalizar datos del backend
+          const nombreEmpleado = s.empleado?.nombre || s.nombre_empleado || '';
+          const horaInicio = s.hora_inicio ? (s.hora_inicio.includes(':') ? s.hora_inicio.substring(0, 5) : s.hora_inicio) : '08:00';
+          const duracion = s.duracion || s.servicio?.duracion || 30;
+          
+          return {
           id: s.id_detalle_servicio || Date.now() + Math.random(),
           servicioId: s.id_servicio || s.servicio?.id_servicio,
           nombre: s.servicio?.nombre || s.nombre_servicio || 'Servicio',
-          profesional: s.empleado?.nombre || s.nombre_empleado || '',
-          inicio: s.hora_inicio ? s.hora_inicio.substring(0, 5) : '08:00', // Solo HH:MM
-          fin: s.hora_finalizacion ? s.hora_finalizacion.substring(0, 5) : calcularHoraFin(s.hora_inicio?.substring(0, 5) || '08:00', s.duracion || 30),
-          duracion: s.duracion || s.servicio?.duracion || 30,
+            profesional: nombreEmpleado,
+            id_empleado: s.id_empleado || s.empleado?.id_usuario,
+            inicio: horaInicio,
+            fin: s.hora_finalizacion ? (s.hora_finalizacion.includes(':') ? s.hora_finalizacion.substring(0, 5) : s.hora_finalizacion) : calcularHoraFin(horaInicio, duracion),
+            duracion: duracion,
           precio: s.precio_unitario || s.precio || 0,
           cantidad: s.cantidad || 1,
           observaciones: s.observaciones || ''
-        })),
+          };
+        }),
         notas: cita.motivo || ''
       });
     }
@@ -182,7 +214,13 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         error = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
         break;
       case 'telefono':
-        error = validarTelefono(formData.telefono);
+        error = validarTelefono(numero);
+        break;
+      case 'correo':
+        error = validarCorreo(formData.correo);
+        break;
+      case 'documento':
+        error = validarDocumento(formData.documento);
         break;
       case 'fecha':
         error = validarFecha(formData.fecha);
@@ -250,9 +288,24 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
   // Validación de teléfono
   function validarTelefono(telefono) {
-    const soloNumeros = /^[0-9]{7,10}$/;
     if (!telefono) return 'El teléfono es requerido';
-    if (!soloNumeros.test(telefono)) return 'El teléfono debe tener solo números (7 a 10 dígitos)';
+    if (telefono.length < 7 || telefono.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
+    return '';
+  }
+
+  // Validación de correo
+  function validarCorreo(correo) {
+    if (!correo) return 'El correo electrónico es requerido';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(correo)) return 'El correo electrónico no es válido';
+    return '';
+  }
+
+  // Validación de documento
+  function validarDocumento(documento) {
+    if (!documento) return 'El número de documento es requerido';
+    const soloNumeros = /^[0-9]{8,15}$/;
+    if (!soloNumeros.test(documento)) return 'El documento debe tener entre 8 y 15 dígitos';
     return '';
   }
 
@@ -290,6 +343,8 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   }
 
   // Validación de choque con otras citas del mismo empleado en el mismo día
+  // Nota: Esta función está disponible pero deshabilitada temporalmente
+  // eslint-disable-next-line no-unused-vars
   async function hayChoqueConOtrasCitas(servicio, fecha, idCitaActual) {
     try {
       // Obtener citas del día desde la API
@@ -326,7 +381,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       }
     } catch (error) {
       console.error('Error checking appointment conflicts:', error);
-      console.error('Response structure:', response);
       // En caso de error, permitir continuar (mejor UX que bloquear)
     }
     return false;
@@ -431,33 +485,28 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   };
   const resumen = calcularResumen();
 
-  // Función para buscar o crear cliente
-  const findOrCreateClient = async (clientName, clientPhone) => {
+  // Función para buscar o crear cliente por documento
+  const findOrCreateClient = async (clientName, clientPhone, clientEmail, clientDocument) => {
     try {
-      console.log('Buscando cliente:', clientName, clientPhone);
+      console.log('Buscando cliente por documento:', clientDocument);
 
-      // Buscar usuario existente por nombre y teléfono
-      const searchPhoneDigits = clientPhone.trim().replace(/\D/g, ''); // Solo números para búsqueda
+      // Buscar usuario existente por documento
       const searchResponse = await usersService.getAll({
-        nombre: clientName.trim(),
-        telefono: searchPhoneDigits // Buscar sin + para compatibilidad
+        documento: clientDocument.trim()
       });
 
-      console.log('Respuesta de búsqueda:', searchResponse);
+      console.log('Respuesta de búsqueda por documento:', searchResponse);
 
       if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
-        // Encontrar usuario que coincida exactamente por nombre
-        // Ser más flexible con el teléfono (comparar dígitos)
-        const clientPhoneDigits = clientPhone.trim().replace(/\D/g, '');
+        // Encontrar usuario que coincida exactamente por documento
         const existingUser = searchResponse.data.find(user => {
-          const userNameMatch = user.nombre?.toLowerCase() === clientName.toLowerCase().trim();
-          const userPhoneDigits = user.telefono?.replace(/\D/g, '') || '';
-          const userPhoneMatch = userPhoneDigits === clientPhoneDigits;
-          return userNameMatch && userPhoneMatch;
+          const userDoc = user.documento?.toString().trim() || '';
+          const searchDoc = clientDocument.trim();
+          return userDoc === searchDoc;
         });
 
         if (existingUser) {
-          console.log('Cliente encontrado:', existingUser);
+          console.log('Cliente encontrado por documento:', existingUser);
           return existingUser.id_usuario || existingUser.id;
         }
       }
@@ -465,28 +514,49 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       // Si no se encontró, crear nuevo usuario/cliente
       console.log('Cliente no encontrado, creando nuevo usuario...');
 
+      // Generar contraseña temporal aleatoria
+      const generateTempPassword = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+        let password = '';
+        // Asegurar al menos una mayúscula, una minúscula, un número y un carácter especial
+        password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+        password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+        password += '0123456789'[Math.floor(Math.random() * 10)];
+        password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+        // Completar hasta 12 caracteres
+        for (let i = password.length; i < 12; i++) {
+          password += chars[Math.floor(Math.random() * chars.length)];
+        }
+        // Mezclar caracteres
+        return password.split('').sort(() => Math.random() - 0.5).join('');
+      };
+
       // Generar datos que cumplan con las validaciones del backend
       const cleanName = clientName.trim();
-      const cleanPhoneDigits = clientPhone.trim().replace(/\D/g, ''); // Solo números
-      const cleanPhone = cleanPhoneDigits.startsWith('+') ? cleanPhoneDigits : `+${cleanPhoneDigits}`; // Agregar + si no existe
-      const timestamp = Date.now();
+      const cleanPhone = '+' + clientPhone; // PhoneInput ya incluye el código de país
+      const cleanEmail = clientEmail.trim();
+      const cleanDocument = clientDocument.trim();
+      const tempPassword = generateTempPassword();
 
       const newUserData = {
         nombre: cleanName,
         telefono: cleanPhone, // Formato: +573001234567
-        correo: `${cleanName.toLowerCase().replace(/\s+/g, '.')}.${timestamp}@cliente.com`,
-        contrasena: 'Cliente123!', // Cumple: 8+ chars, mayúscula, minúscula, número
-        tipo_documento: 'Cedula de ciudadania', // Tipo válido
-        documento: `TEMP${timestamp}`, // Documento único temporal
-        roleId: 2, // Asumir rol de cliente
-        estado: 'Activo'
+        correo: cleanEmail,
+        contrasena: tempPassword, // Contraseña temporal generada
+        tipo_documento: 'Cedula de ciudadania', // Tipo válido por defecto
+        documento: cleanDocument,
+        roleId: 2, // Rol de cliente
+        estado: 'Activo',
+        sendEmail: true, // Indicar que se debe enviar correo
+        tempPassword: tempPassword // Pasar contraseña temporal para el correo
       };
 
-      console.log('Datos del nuevo usuario:', newUserData);
+      console.log('Datos del nuevo usuario:', { ...newUserData, contrasena: '***', tempPassword: '***' });
 
       const createResponse = await usersService.create(newUserData);
       if (createResponse.success && createResponse.data) {
         console.log('Nuevo cliente creado:', createResponse.data);
+        // Retornar ID del usuario creado
         return createResponse.data.id_usuario || createResponse.data.id;
       }
 
@@ -494,10 +564,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     } catch (error) {
       console.error('Error en findOrCreateClient:', error);
       console.error('Error details:', error.response?.data);
-
-      // Si falla la creación, usar cliente por defecto
-      console.warn('Usando cliente por defecto debido a error en creación');
-      return 1; // ID de cliente por defecto
+      throw error;
     }
   };
 
@@ -506,7 +573,9 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     e.preventDefault();
     let newErrors = {};
     newErrors.cliente = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
-    newErrors.telefono = validarTelefono(formData.telefono);
+    newErrors.telefono = validarTelefono(numero);
+    newErrors.correo = validarCorreo(formData.correo);
+    newErrors.documento = validarDocumento(formData.documento);
     newErrors.fecha = validarFecha(formData.fecha);
     if (formData.servicios.length === 0) {
       newErrors.servicios = 'Debe agregar al menos un servicio';
@@ -548,30 +617,57 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     setLoading(true);
     
     const appointmentPromise = (async () => {
-      // Buscar o crear cliente
-      console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.telefono);
-      const clientId = await findOrCreateClient(formData.cliente, formData.telefono);
+      // Buscar o crear cliente por documento
+      console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.documento);
+      const clientResult = await findOrCreateClient(
+        formData.cliente, 
+        numero, 
+        formData.correo, 
+        formData.documento
+      );
+      
+      // clientResult ahora siempre es un ID numérico
+      const clientId = clientResult;
+      
       console.log('Client ID obtenido:', clientId);
 
-      // Mapear nombre de profesional a ID (usando datos mock por ahora)
-      const mapProfesionalToId = (nombreProfesional) => {
-        if (!nombreProfesional) return 1; // Default if no professional selected
-        const profesional = professionals.find(p => p.name === nombreProfesional);
-        return profesional ? profesional.id : 1; // Default to 1 if not found
+      // Mapear profesional a ID usando los profesionales cargados del backend
+      const mapProfesionalToId = (servicio) => {
+        // Si ya tiene id_empleado, usarlo directamente
+        if (servicio.id_empleado) {
+          return servicio.id_empleado;
+        }
+        
+        // Si no, buscar por nombre
+        if (!servicio.profesional) {
+          throw new Error('Debe seleccionar un profesional para cada servicio');
+        }
+        
+        const profesional = professionals.find(p => p.name === servicio.profesional);
+        if (!profesional) {
+          throw new Error(`No se encontró el profesional "${servicio.profesional}". Por favor, verifica que esté registrado.`);
+        }
+        return profesional.id;
       };
+
+      // Calcular hora_entrada (primera hora de inicio de los servicios)
+      const horasInicio = formData.servicios.map(s => s.inicio).sort();
+      const primeraHora = horasInicio[0] || '08:00';
+      const horaEntrada = primeraHora.includes(':') && primeraHora.length === 5 ? primeraHora + ':00' : primeraHora;
 
       // Preparar datos para el backend según la estructura esperada
       const appointmentData = {
         cita: {
           id_cliente: clientId,
           fecha_servicio: formData.fecha,
+          hora_entrada: horaEntrada, // Agregar hora_entrada requerida
           estado: formData.estado,
           ...(formData.notas && { motivo: formData.notas.trim() })
         },
         servicios: formData.servicios.map(s => ({
           id_servicio: s.servicioId,
-          id_empleado: mapProfesionalToId(s.profesional),
-          hora_inicio: s.inicio + ':00',
+          id_empleado: mapProfesionalToId(s),
+          hora_inicio: s.inicio.includes(':') && s.inicio.length === 5 ? s.inicio + ':00' : s.inicio,
           cantidad: s.cantidad || 1,
           ...(s.observaciones && { observaciones: s.observaciones })
         }))
@@ -604,7 +700,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
     try {
       await appointmentPromise;
-    } catch (error) {
+    } catch {
       // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
@@ -613,7 +709,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm select-none font-inter">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col mt-8">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in h-[90vh] flex flex-col ">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-5">
           <h2 className="text-2xl font-bold text-primary m-0">{cita ? 'Editar' : 'Crear'} Cita</h2>
           <button className="text-gray-400 hover:text-primary text-2xl font-bold" onClick={onClose} aria-label="Cerrar">×</button>
@@ -668,7 +764,13 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                       <label className="block text-xs font-medium text-gray-700 mb-1">Profesional</label>
                       <select
                         value={service.profesional}
-                        onChange={e => updateService(idx, 'profesional', e.target.value)}
+                        onChange={e => {
+                          const selectedProfessional = professionals.find(p => p.name === e.target.value);
+                          updateService(idx, 'profesional', e.target.value);
+                          if (selectedProfessional) {
+                            updateService(idx, 'id_empleado', selectedProfessional.id);
+                          }
+                        }}
                         className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                       >
                         <option value="">Seleccionar profesional</option>
@@ -751,20 +853,55 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
-              <input
-                type="tel"
-                value={formData.telefono}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  handleFieldChange('telefono', val);
+              <PhoneInput
+                country={'co'}
+                value={numero}
+                onChange={(value) => {
+                  setNumero(value);
+                  handleFieldBlur('telefono');
                 }}
                 onFocus={() => clearError('telefono')}
                 onBlur={() => handleFieldBlur('telefono')}
-                maxLength={10}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.telefono && errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="Número de teléfono"
+                inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.telefono && errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                containerClass="w-full"
+                inputProps={{
+                  name: 'telefono',
+                  required: true,
+                  placeholder: 'Ej: 3001234567',
+                }}
+                specialLabel=""
               />
               {touchedFields.telefono && errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico <span className="text-red-500">*</span></label>
+              <input
+                type="email"
+                value={formData.correo}
+                onChange={e => handleFieldChange('correo', e.target.value)}
+                onFocus={() => clearError('correo')}
+                onBlur={() => handleFieldBlur('correo')}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.correo && errors.correo ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="correo@ejemplo.com"
+              />
+              {touchedFields.correo && errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Número de Documento <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.documento}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  handleFieldChange('documento', val);
+                }}
+                onFocus={() => clearError('documento')}
+                onBlur={() => handleFieldBlur('documento')}
+                maxLength={15}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.documento && errors.documento ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="Número de documento (8-15 dígitos)"
+              />
+              {touchedFields.documento && errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha <span className="text-red-500">*</span></label>

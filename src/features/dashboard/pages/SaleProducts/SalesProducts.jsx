@@ -23,8 +23,7 @@ const SalesProducts = () => {
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
-  // Estado para clientes (puedes reemplazar con API real más adelante)
-  const [customers, setCustomers] = useState([]);
+  // Los clientes ahora se buscan dinámicamente desde el backend
 
   // Estados UI
   const [searchTerm, setSearchTerm] = useState('');
@@ -380,7 +379,7 @@ const SalesProducts = () => {
                 <>
                   <SalesTable
                     sales={paginatedSales}
-                    customers={customers}
+                    customers={[]}
                     onView={handleViewSale}
                     onAnnul={handleDeleteSale}
                     onDownload={() => {
@@ -414,7 +413,6 @@ const SalesProducts = () => {
         <CreateSaleModal
           onClose={closeModals}
           onCreate={handleCreateSale}
-          customers={customers}
           products={products}
           isOpen={showCreateModal}
         />
@@ -423,7 +421,7 @@ const SalesProducts = () => {
       {showDetailModal && selectedSale && (
         <SaleDetailModal
           sale={selectedSale}
-          customer={customers.find(c => c.id === selectedSale.clienteId)}
+          customer={null}
           isOpen={showDetailModal}
           onClose={closeModals}
         />

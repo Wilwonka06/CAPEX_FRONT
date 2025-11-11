@@ -36,9 +36,16 @@ const ProfileMenu = ({ user, onClose, onLogout, showOrdersOption }) => {
   const hasAdministrativeAccess = (user) => {
     if (!user) return false;
     
-    // Roles administrativos
+    // Roles administrativos (excluyendo Cliente y Usuario)
     const adminRoles = ['administrador', 'admin', 'empleado', 'gerente', 'supervisor'];
+    const excludedRoles = ['cliente', 'usuario'];
     const userRoles = getUserRoles(user);
+    
+    // Si el usuario solo tiene rol de Cliente o Usuario, no tiene acceso administrativo
+    const onlyClientRole = userRoles.length > 0 && userRoles.every(role => 
+      excludedRoles.includes(role.toLowerCase())
+    );
+    if (onlyClientRole) return false;
     
     // Verificar si tiene algún rol administrativo
     const hasAdminRole = userRoles.some(role => 

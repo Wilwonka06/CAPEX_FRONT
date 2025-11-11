@@ -39,10 +39,16 @@ const SaleServices = () => {
     setInitialLoading(true);
     try {
       const citas = await getCitasEnEjecucion();
-      setServices(citas);
+      // Asegurar que citas sea un array
+      setServices(Array.isArray(citas) ? citas : []);
     } catch (error) {
       console.error('Error al cargar citas:', error);
-      toast.error('Error al cargar las citas en ejecución');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      toast.error('Error al cargar las citas en ejecución. Verifica la conexión con el servidor.');
       // En caso de error, mantener array vacío
       setServices([]);
     } finally {

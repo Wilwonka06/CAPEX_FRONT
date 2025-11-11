@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 
 /* const BASE_URL = import.meta.env.DEV
   ? 'http://localhost:3000/api' 
-  : 'https://capex-back.onrender.com/api';   */
+  : 'https://capex-back.onrender.com/api'; */
 
 const BASE_URL = 'https://capex-back.onrender.com/api';
 
@@ -32,9 +32,6 @@ const apiClient = axios.create({
 // Interceptor de request - cookies HttpOnly manejan la autenticación automáticamente
 apiClient.interceptors.request.use(
   (config) => {
-    // Las cookies HttpOnly se incluyen automáticamente con withCredentials: true
-    // Como respaldo, también agregamos el token del localStorage al header Authorization
-    // si existe (útil cuando las cookies no se envían correctamente por CORS o dominio)
     const token = localStorage.getItem('authToken');
     if (token && !config.headers['Authorization']) {
       config.headers['Authorization'] = `Bearer ${token}`;
@@ -83,7 +80,6 @@ apiClient.interceptors.response.use(
       data: error.response?.data,
     });
 
-    // Verificar si se debe omitir el manejo global de errores (cuando se usa toast.promise en componentes)
     const skipGlobalErrorHandling = error.config?.skipGlobalErrorHandling === true;
 
     // Si se omite el manejo global, solo rechazar la promesa sin mostrar toast
@@ -97,21 +93,12 @@ apiClient.interceptors.response.use(
 
       switch (status) {
         case 400:
-          // No mostrar toast automático para errores 400
-          // Los componentes manejan estos errores específicamente con toast.promise
-          // Solo loguear para debugging
           if (import.meta.env.DEV) {
             console.warn('Error 400:', data?.message || 'Solicitud incorrecta');
           }
-          // No mostrar toast para evitar duplicados con toast.promise en componentes
           break;
         case 401: {
-          // Limpiar datos de usuario del localStorage (las cookies HttpOnly se limpian automáticamente)
           localStorage.removeItem('currentUser');
-          
-          // Solo redirigir al login si:
-          // 1. No estamos en una ruta pública
-          // 2. No es una petición de verificación de autenticación (/auth/me)
           const currentPath = window.location.pathname;
           const isPublicRoute = ['/', '/login', '/register', '/forgot-password', '/reset-password'].includes(currentPath) || 
                                currentPath.startsWith('/landing');
@@ -128,33 +115,36 @@ apiClient.interceptors.response.use(
           }
           break;
         }
-        case 403:
+        case 403: {
           // Usar toastId basado en el mensaje para evitar duplicados
           const toastId403 = `error-403-${error.config?.url || 'default'}`;
           toast.error('No tienes permisos para realizar esta acción', { id: toastId403 });
           break;
-        case 404:
+        }
+        case 404: {
           // Usar toastId basado en el mensaje para evitar duplicados
           const toastId404 = `error-404-${error.config?.url || 'default'}`;
           toast.error(data?.message || 'Recurso no encontrado', { id: toastId404 });
           break;
+        }
         case 422:
           // Errores de validación - No mostrar toast automático
-          // Los componentes manejan estos errores específicamente con toast.promise
           if (import.meta.env.DEV) {
             console.warn('Error 422:', data?.message || 'Error de validación', data?.errors);
           }
           // No mostrar toast para evitar duplicados con toast.promise en componentes
           break;
-        case 500:
+        case 500: {
           // Usar toastId para evitar duplicados
           const toastId500 = `error-500-${error.config?.url || 'default'}`;
           toast.error('Error interno del servidor. Intenta nuevamente', { id: toastId500 });
           break;
-        default:
+        }
+        default: {
           // Usar toastId basado en el mensaje para evitar duplicados
           const toastIdDefault = `error-${status}-${error.config?.url || 'default'}`;
           toast.error(data?.message || 'Error inesperado', { id: toastIdDefault });
+        }
       }
     } else if (error.request) {
       // Error de red o timeout - Mensajes más específicos

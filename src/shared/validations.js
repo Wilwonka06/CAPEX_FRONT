@@ -528,6 +528,95 @@ export function isValidNIT(nit) {
   return nitRegex.test(nit);
 }
 
+// Valida formato de NIT colombiano (solo números, guiones o puntos, máximo 14 dígitos con dígito de verificación)
+export function isValidColombianNIT(nit) {
+  if (!nit || !nit.trim()) return false;
+  
+  // Remover puntos y guiones para validar
+  const cleanNit = nit.replace(/[.-]/g, '');
+  
+  // Debe tener entre 9 y 14 dígitos (mínimo 8 + 1 verificación, máximo 13 + 1 verificación)
+  if (cleanNit.length < 9 || cleanNit.length > 14) return false;
+  
+  // Solo debe contener números
+  if (!/^\d+$/.test(cleanNit)) return false;
+  
+  // El último carácter debe ser un dígito (dígito de verificación)
+  const lastChar = cleanNit[cleanNit.length - 1];
+  if (!/^\d$/.test(lastChar)) return false;
+  
+  return true;
+}
+
+// Valida número de documento para persona natural (8 a 15 dígitos)
+export function isValidDocumentNumber(documento) {
+  if (!documento || !documento.trim()) return false;
+  
+  // Solo números, sin espacios ni caracteres especiales
+  const cleanDoc = documento.replace(/\s/g, '');
+  
+  // Debe tener entre 8 y 15 dígitos
+  if (cleanDoc.length < 8 || cleanDoc.length > 15) return false;
+  
+  // Solo debe contener números
+  return /^\d+$/.test(cleanDoc);
+}
+
+// Formatea NIT mientras se escribe (XXX.XXX.XXX-Y)
+export function formatNIT(value) {
+  if (!value) return '';
+  
+  // Remover todo excepto números y guiones
+  let cleanValue = value.replace(/[^\d-]/g, '');
+  
+  // Si tiene guión, separar número base y dígito de verificación
+  const hasDash = cleanValue.includes('-');
+  let baseNumber = '';
+  let verificationDigit = '';
+  
+  if (hasDash) {
+    const parts = cleanValue.split('-');
+    baseNumber = parts[0].replace(/\D/g, '');
+    verificationDigit = parts[1] ? parts[1].replace(/\D/g, '').substring(0, 1) : '';
+  } else {
+    // Si no tiene guión, el último dígito es el de verificación (solo si hay más de 1 dígito)
+    const allDigits = cleanValue.replace(/\D/g, '');
+    if (allDigits.length > 1) {
+      baseNumber = allDigits.slice(0, -1);
+      verificationDigit = allDigits.slice(-1);
+    } else if (allDigits.length === 1) {
+      // Si solo hay un dígito, es parte del número base
+      baseNumber = allDigits;
+      verificationDigit = '';
+    }
+  }
+  
+  // Limitar base a 13 dígitos
+  if (baseNumber.length > 13) {
+    baseNumber = baseNumber.substring(0, 13);
+    // Si se cortó, el último dígito cortado podría ser el de verificación
+    if (verificationDigit === '' && value.replace(/\D/g, '').length > 14) {
+      verificationDigit = value.replace(/\D/g, '').substring(13, 14);
+    }
+  }
+  
+  // Formatear base con puntos cada 3 dígitos desde la derecha
+  let formatted = '';
+  if (baseNumber.length > 0) {
+    // Agregar puntos cada 3 dígitos desde la derecha
+    const reversed = baseNumber.split('').reverse().join('');
+    const chunks = reversed.match(/.{1,3}/g) || [];
+    formatted = chunks.join('.').split('').reverse().join('');
+  }
+  
+  // Agregar dígito de verificación con guión
+  if (verificationDigit) {
+    formatted = formatted ? `${formatted}-${verificationDigit}` : verificationDigit;
+  }
+  
+  return formatted;
+}
+
 // Valida formato de teléfono (código de país + números)
 export function isValidPhone(telefono) {
   // Nota: Esta validación es básica, ya que el campo de teléfono en los formularios de cliente
@@ -546,12 +635,6 @@ export function isValidDocumentType(tipo) {
 
   return ['Cedula de ciudadania', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte'].includes(tipo);
 
-}
-
-// Valida número de documento (solo números)
-export function isValidDocumentNumber(documento) {
-  const docRegex = /^\d{8,15}$/;
-  return docRegex.test(documento);
 }
 
 // Valida contraseña (mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número)

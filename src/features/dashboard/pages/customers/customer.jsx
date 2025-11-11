@@ -8,9 +8,7 @@ import { editCustomer } from "./services/EditCustomerService.js";
 import { deleteCustomer } from "./services/DeleteCustomerService.js";
 import { toggleCustomerStatus } from "./services/ToggleCustomerStatusService.js";
 import { getCustomers } from "./services/CustomerService.js";
-import SearchCustomer from "./components/SearchCustomer.jsx";
 import Paginator from "../../../../shared/Paginator.jsx";
-import { normalizeText } from '../../../../shared/normalizers.js';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import CustomerTable from "./components/CustomerTable.jsx";
@@ -71,8 +69,7 @@ const CustomersPage = () => {
     }
   };
 
-  // Los clientes ya vienen filtrados del backend, no necesitamos filtrar localmente
-  const filteredCustomers = customers;
+  // Los clientes ya vienen filtrados del backend
   
   // Cálculo de paginación basado en el total del backend
   const totalPages = Math.max(1, Math.ceil(totalCustomers / itemsPerPage));
@@ -196,49 +193,26 @@ const CustomersPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-6 font-inter">
-      {/* Mensaje de feedback */}
-
-      {/* Modal CreateCustomer overlay */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <CreateCustomer
-            isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
-            onCreate={handleCreateCustomer}
-            loading={loading}
-            setLoading={setLoading}
-            customers={customers}
-          />
-        </div>
-      )}
-
-      {/* Modal EditCustomer overlay */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <EditCustomer
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
-            customer={selectedCustomer}
-            onUpdate={handleEditCustomer}
-            loading={loading}
-            setLoading={setLoading}
-            customers={customers}
-          />
-        </div>
-      )}
-
+    <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchCustomer searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar cliente..." />
+              <div className="relative w-full max-w-xs flex-1">
+                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <input
+                  type="text"
+                  placeholder="Buscar cliente..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-gray-50 hover:bg-white transition-all duration-300 text-gray-700 placeholder-gray-400"
+                />
+              </div>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center text-xs"
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
               >
-                <i className="bi bi-plus-circle mr-2"></i>
-                Nuevo Cliente
+                <i className="bi bi-plus-circle mr-2"></i> Nuevo Cliente
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -265,12 +239,41 @@ const CustomersPage = () => {
 
             {/* Mostrar información de paginación */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-text-main">
+              <p className="text-sm text-gray-600">
                 Mostrando <span className="font-medium">{customers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a <span className="font-medium">{(currentPage - 1) * itemsPerPage + customers.length}</span> de <span className="font-medium">{totalCustomers}</span> cliente{totalCustomers !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
         </div>
+
+        {/* Modal CreateCustomer overlay */}
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <CreateCustomer
+              isOpen={isCreateModalOpen}
+              onClose={() => setIsCreateModalOpen(false)}
+              onCreate={handleCreateCustomer}
+              loading={loading}
+              setLoading={setLoading}
+              customers={customers}
+            />
+          </div>
+        )}
+
+        {/* Modal EditCustomer overlay */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <EditCustomer
+              isOpen={isEditModalOpen}
+              onClose={() => setIsEditModalOpen(false)}
+              customer={selectedCustomer}
+              onUpdate={handleEditCustomer}
+              loading={loading}
+              setLoading={setLoading}
+              customers={customers}
+            />
+          </div>
+        )}
 
         <ViewCustomer
           isOpen={isViewModalOpen}

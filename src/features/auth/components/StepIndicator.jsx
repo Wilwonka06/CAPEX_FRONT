@@ -36,9 +36,6 @@ const StepIndicator = ({ currentStep, totalSteps }) => {
           );
         })}
       </div>
-      <div className="ml-4 text-sm text-[#6d3b3b]/70 font-medium">
-        Paso {currentStep} de {totalSteps}
-      </div>
     </div>
   );
 };

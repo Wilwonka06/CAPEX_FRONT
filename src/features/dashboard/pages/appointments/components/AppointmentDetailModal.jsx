@@ -41,8 +41,15 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   // Usar horas del backend
   let horaInicio = cita.hora_entrada || '08:00:00', horaFin = cita.hora_salida || '09:00:00', duracionTotal = 0, valorTotal = 0;
   if (cita.servicios && cita.servicios.length > 0) {
-    duracionTotal = cita.servicios.reduce((acc, s) => acc + (parseInt(s.duracion) || 0), 0);
-    valorTotal = cita.servicios.reduce((acc, s) => acc + (limpiarPrecio(s.precio) * (parseInt(s.cantidad) || 1)), 0);
+    duracionTotal = cita.servicios.reduce((acc, s) => {
+      const duracion = s.duracion || s.servicio?.duracion || 0;
+      return acc + parseInt(duracion);
+    }, 0);
+    valorTotal = cita.servicios.reduce((acc, s) => {
+      const precio = s.precio_unitario || s.precio || 0;
+      const cantidad = parseInt(s.cantidad || 1);
+      return acc + (limpiarPrecio(precio) * cantidad);
+    }, 0);
   }
   
 
@@ -110,24 +117,34 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="font-semibold mb-2 text-text-main">Información del Cliente</div>
             <div className="flex gap-8 text-sm">
-              <div><span className="font-medium">Nombre:</span> {cita.cliente?.nombre || 'Cliente'}</div>
-              <div><span className="font-medium">Teléfono:</span> {cita.cliente?.telefono || 'Sin teléfono'}</div>
+              <div><span className="font-medium">Nombre:</span> {cita.usuario?.nombre || cita.cliente?.nombre || 'Cliente'}</div>
+              <div><span className="font-medium">Teléfono:</span> {cita.usuario?.telefono || cita.cliente?.telefono || 'Sin teléfono'}</div>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="font-semibold mb-2 text-text-main">Servicios</div>
-            {cita.servicios && cita.servicios.map((s, idx) => (
-              <div key={idx} className="border-b border-gray-200 py-2 flex flex-col md:flex-row md:items-center md:gap-8">
-                <div className="flex-1">
-                  <span className="font-semibold">{s.nombre_servicio}</span> <span className="text-xs text-gray-500">{s.duracion} min ${s.precio}</span>
-                  <div className="text-xs text-gray-500">Profesional: {s.nombre_empleado || 'Sin asignar'} | Cantidad: {s.cantidad || 1}</div>
+            {cita.servicios && cita.servicios.map((s, idx) => {
+              // Normalizar campos del backend
+              const nombreServicio = s.servicio?.nombre || s.nombre_servicio || 'Servicio';
+              const nombreEmpleado = s.empleado?.nombre || s.nombre_empleado || 'Sin asignar';
+              const duracion = s.duracion || s.servicio?.duracion || 0;
+              const precio = s.precio_unitario || s.precio || 0;
+              const horaInicio = s.hora_inicio || '';
+              const horaFinalizacion = s.hora_finalizacion || s.hora_fin || '';
+              
+              return (
+                <div key={idx} className="border-b border-gray-200 py-2 flex flex-col md:flex-row md:items-center md:gap-8">
+                  <div className="flex-1">
+                    <span className="font-semibold">{nombreServicio}</span> <span className="text-xs text-gray-500">{duracion} min ${precio}</span>
+                    <div className="text-xs text-gray-500">Profesional: {nombreEmpleado} | Cantidad: {s.cantidad || 1}</div>
+                  </div>
+                  <div className="flex gap-4 text-xs">
+                    <div>Hora inicio: <span className="font-semibold">{horaInicio}</span></div>
+                    <div>Hora finalización: <span className="font-semibold">{horaFinalizacion}</span></div>
+                  </div>
                 </div>
-                <div className="flex gap-4 text-xs">
-                  <div>Hora inicio: <span className="font-semibold">{s.hora_inicio}</span></div>
-                  <div>Hora finalización: <span className="font-semibold">{s.hora_fin}</span></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="font-semibold mb-2 text-text-main">Horario</div>

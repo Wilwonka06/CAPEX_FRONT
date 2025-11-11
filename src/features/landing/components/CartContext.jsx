@@ -35,7 +35,16 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = (id, cantidad) => {
-    setCart(prev => prev.map(p => p.id === id ? { ...p, cantidad: Math.max(1, cantidad) } : p));
+    setCart(prev => prev.map(p => {
+      if (p.id === id) {
+        // Obtener stock disponible del producto (puede ser stock, cantidad, o cantidad_disponible)
+        const stockDisponible = p.stock ?? p.cantidad ?? p.cantidad_disponible ?? 999;
+        // Validar que la cantidad no exceda el stock disponible
+        const nuevaCantidad = Math.max(1, Math.min(cantidad, stockDisponible));
+        return { ...p, cantidad: nuevaCantidad };
+      }
+      return p;
+    }));
   };
 
   const removeFromCart = (id) => {

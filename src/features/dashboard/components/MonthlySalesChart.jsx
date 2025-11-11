@@ -14,34 +14,47 @@ const MonthlySalesChart = ({ data }) => {
     XLSX.writeFile(wb, 'resumen_diario_mes.xlsx');
   };
   return (
-    <div className="w-full h-80">
-      <div className="flex justify-end mb-2">
+    <div className="w-full">
+      <div className="flex justify-end mb-4">
         <button
           onClick={handleDownload}
-          className="flex items-center gap-2 px-3 py-1 bg-primary hover:bg-primary-dark text-white rounded shadow transition-all duration-300 hover:scale-105 font-medium text-xs"
+          className="flex items-center gap-2 px-4 py-2 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-lg shadow-md transition-all duration-300 hover:scale-105 font-semibold text-sm"
           title="Descargar resumen diario del mes seleccionado"
         >
-          <i className="bi bi-download"></i> Descargar
+          <i className="bi bi-download text-sm"></i>
+          <span>Descargar</span>
         </button>
       </div>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#D2B48C" />
-          <XAxis dataKey="day" tick={{ fill: '#1E1E1E', fontWeight: 500 }} />
-          <YAxis tickFormatter={v => `$${v.toLocaleString('es-CO')}`} tick={{ fill: '#1E1E1E' }} />
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.3} />
+          <XAxis
+            dataKey="day"
+            tick={{ fill: '#6B7280', fontSize: 12, fontWeight: 500 }}
+            axisLine={{ stroke: '#D1D5DB' }}
+          />
+          <YAxis
+            tickFormatter={v => `$${v.toLocaleString('es-CO')}`}
+            tick={{ fill: '#6B7280', fontSize: 12 }}
+            axisLine={{ stroke: '#D1D5DB' }}
+          />
           <Tooltip
-            formatter={v => `$${v.toLocaleString('es-CO')}`}
+            formatter={(v, name) => [`$${v.toLocaleString('es-CO')}`, name]}
             labelFormatter={l => `Día ${l}`}
             contentStyle={{
-              backgroundColor: '#F7DAA2',
-              border: '1px solid #A0522D',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E5E7EB',
               borderRadius: '8px',
-              color: '#1E1E1E'
+              color: '#1E1E1E',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
             }}
           />
-          <Legend />
-          <Bar dataKey="productos" name="Productos" fill="#FACC15" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="servicios" name="Servicios" fill="#A0522D" radius={[4, 4, 0, 0]} />
+          <Legend
+            wrapperStyle={{ paddingTop: '20px' }}
+            iconType="rect"
+          />
+          <Bar dataKey="productos" name="Productos" fill="#FACC15" radius={[4, 4, 0, 0]} opacity={0.9} />
+          <Bar dataKey="servicios" name="Servicios" fill="#1E1E1E" radius={[4, 4, 0, 0]} opacity={0.8} />
         </BarChart>
       </ResponsiveContainer>
     </div>

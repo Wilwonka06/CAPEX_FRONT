@@ -47,13 +47,36 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   };
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
-    setPrivileges(prev => ({
-      ...prev,
-      [modulo]: {
-        ...prev[modulo],
-        [accion]: checked
+    setPrivileges(prev => {
+      const newPrivileges = {
+        ...prev,
+        [modulo]: {
+          ...prev[modulo],
+          [accion]: checked
+        }
+      };
+
+      // Si se selecciona cualquier privilegio que NO sea "Visualizar", 
+      // automáticamente activar "Visualizar" también
+      if (checked && accion !== 'Visualizar') {
+        newPrivileges[modulo] = {
+          ...newPrivileges[modulo],
+          'Visualizar': true
+        };
       }
-    }));
+
+      // Si se deselecciona "Visualizar", deseleccionar todos los demás privilegios
+      if (!checked && accion === 'Visualizar') {
+        newPrivileges[modulo] = {
+          'Visualizar': false,
+          'Crear': false,
+          'Editar': false,
+          'Eliminar': false
+        };
+      }
+
+      return newPrivileges;
+    });
   };
 
   const handleBlur = (e) => {

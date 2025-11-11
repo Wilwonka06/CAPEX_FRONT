@@ -82,34 +82,23 @@ class DataMapper {
     
     console.log('📥 Mapeando permisos del backend:', { backendPermissions, separatePrivileges, allAvailablePermissions });
     
-    // Si se proporcionan todos los permisos disponibles, inicializar todos con privilegios en false
-    if (allAvailablePermissions && allAvailablePermissions.length > 0) {
-      allAvailablePermissions.forEach(perm => {
-        if (perm.nombre) {
-          frontendPermissions[perm.nombre] = {
-            Crear: false,
-            Visualizar: false,
-            Editar: false,
-            Eliminar: false
-          };
-        }
-      });
-    }
+    // NO inicializar todos los módulos automáticamente
+    // Solo inicializar los módulos que realmente tienen privilegios asignados
     
     if (!backendPermissions || !Array.isArray(backendPermissions) || backendPermissions.length === 0) {
       console.warn('⚠️ No hay permisos asignados para mapear');
       return frontendPermissions;
     }
     
-    // Caso 1: Permisos con privilegios anidados
+    // Caso 1: Permisos con privilegios anidados (formato actual del backend)
     if (backendPermissions[0] && backendPermissions[0].privilegios) {
       console.log('📋 Formato con privilegios anidados');
       
       backendPermissions.forEach(permiso => {
         const moduleName = permiso.nombre;
         
+        // Inicializar el módulo solo si tiene privilegios
         if (!frontendPermissions[moduleName]) {
-          console.warn(`⚠️ Módulo desconocido: "${moduleName}"`);
           frontendPermissions[moduleName] = {
             Crear: false,
             Visualizar: false,
@@ -118,39 +107,24 @@ class DataMapper {
           };
         }
         
-        if (Array.isArray(permiso.privilegios)) {
+        // Marcar solo los privilegios que vienen del backend como true
+        if (Array.isArray(permiso.privilegios) && permiso.privilegios.length > 0) {
           permiso.privilegios.forEach(privilegio => {
-            frontendPermissions[moduleName][privilegio.nombre] = true;
+            if (privilegio.nombre) {
+              frontendPermissions[moduleName][privilegio.nombre] = true;
+            }
           });
         }
       });
     } 
-    // Caso 2: Permisos y privilegios separados
+    // Caso 2: Permisos y privilegios separados (DEPRECATED - Ya no se usa este formato)
     else if (Array.isArray(separatePrivileges) && separatePrivileges.length > 0) {
-      console.log('📋 Formato con privilegios separados');
-      
-      backendPermissions.forEach(permiso => {
-        const moduleName = permiso.nombre;
-        
-        if (!frontendPermissions[moduleName]) {
-          console.warn(`⚠️ Módulo desconocido: "${moduleName}"`);
-          frontendPermissions[moduleName] = {
-            Crear: false,
-            Visualizar: false,
-            Editar: false,
-            Eliminar: false
-          };
-        }
-        
-        separatePrivileges.forEach(privilegio => {
-          if (frontendPermissions[moduleName]) {
-            frontendPermissions[moduleName][privilegio.nombre] = true;
-          }
-        });
-      });
+      console.warn('⚠️ Formato con privilegios separados detectado (formato antiguo)');
+      // No hacer nada, este formato ya no se usa
     }
     
     console.log('✅ Permisos mapeados:', frontendPermissions);
+    console.log('✅ Solo se incluyen módulos con privilegios asignados');
     return frontendPermissions;
   }
 

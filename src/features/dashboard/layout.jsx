@@ -15,7 +15,7 @@ const Layout = () => {
         {/* Admin Navbar */}
         <AdminNavbar title={title} />
         {/* Content Area */}
-        <main className="flex-1 p-6 overflow-y-auto bg-gray-200">  
+        <main className="flex-1 p-6 overflow-y-auto bg-gray-100">  
           <Outlet context={{ setTitle }} />
         </main>
       </div>

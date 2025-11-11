@@ -5,6 +5,9 @@ import {
   isValidNIT,
   isValidPhone,
   isValidSupplierType,
+  isValidColombianNIT,
+  isValidDocumentNumber,
+  formatNIT,
 } from "../../../../../shared/validations";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -20,6 +23,7 @@ const CreateSupplier = ({
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     nit: "",
+    numeroDocumento: "",
     nombre: "",
     contacto: "",
     direccion: "",
@@ -41,6 +45,7 @@ const CreateSupplier = ({
     // Limpiar TODOS los estados
     setFormData({
       nit: "",
+      numeroDocumento: "",
       nombre: "",
       contacto: "",
       direccion: "",
@@ -58,10 +63,27 @@ const CreateSupplier = ({
     switch (name) {
       case "nit":
         if (!value.trim()) return "El NIT es requerido";
-        if (!isValidNIT(value))
-          return "El NIT debe comenzar con una letra seguida de números";
-        if (suppliers.some((s) => s.nit === value))
+        if (!isValidColombianNIT(value))
+          return "El NIT debe tener entre 9 y 14 dígitos con dígito de verificación (ej: 123456789-0)";
+        // Verificar duplicados usando el valor limpio (sin formato)
+        const cleanNit = value.replace(/[.-]/g, '');
+        if (suppliers.some((s) => {
+          const supplierNit = s.nit ? s.nit.replace(/[.-]/g, '') : '';
+          return supplierNit === cleanNit;
+        }))
           return "Ya existe un proveedor con ese NIT";
+        return "";
+      case "numeroDocumento":
+        if (!value.trim()) return "El número de documento es requerido";
+        if (!isValidDocumentNumber(value))
+          return "El número de documento debe tener entre 8 y 15 dígitos";
+        // Verificar duplicados
+        const cleanDoc = value.replace(/\s/g, '');
+        if (suppliers.some((s) => {
+          const supplierDoc = s.numeroDocumento ? s.numeroDocumento.replace(/\s/g, '') : '';
+          return supplierDoc === cleanDoc;
+        }))
+          return "Ya existe un proveedor con ese número de documento";
         return "";
       case "nombre":
         if (!value.trim()) return "El nombre es requerido";
@@ -96,9 +118,31 @@ const CreateSupplier = ({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    const error = validateField(name, value);
-    setErrors((prev) => ({ ...prev, [name]: error }));
+    
+    // Si cambia el tipo, limpiar el campo de identificación
+    if (name === "tipo") {
+      setFormData((prev) => ({ 
+        ...prev, 
+        [name]: value,
+        nit: "",
+        numeroDocumento: ""
+      }));
+      setErrors((prev) => ({ 
+        ...prev, 
+        nit: "",
+        numeroDocumento: ""
+      }));
+    } else if (name === "nit") {
+      // Formatear NIT mientras se escribe
+      const formatted = formatNIT(value);
+      setFormData((prev) => ({ ...prev, [name]: formatted }));
+      const error = validateField(name, formatted);
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      const error = validateField(name, value);
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
   };
 
   const handleBlur = (e) => {
@@ -121,10 +165,27 @@ const CreateSupplier = ({
     const newErrors = {};
     Object.keys(formData).forEach((key) => {
       if (key !== "telefono") {
+        // Solo validar el campo de identificación correspondiente al tipo
+        if (key === "nit" && formData.tipo !== "J") {
+          // No validar NIT si el tipo no es Jurídico
+          return;
+        }
+        if (key === "numeroDocumento" && formData.tipo !== "N") {
+          // No validar número de documento si el tipo no es Natural
+          return;
+        }
         newErrors[key] = validateField(key, formData[key]);
       }
     });
     newErrors.telefono = validateField("telefono", numero);
+    
+    // Validar que el campo de identificación correspondiente esté lleno
+    if (formData.tipo === "J" && !formData.nit.trim()) {
+      newErrors.nit = "El NIT es requerido";
+    }
+    if (formData.tipo === "N" && !formData.numeroDocumento.trim()) {
+      newErrors.numeroDocumento = "El número de documento es requerido";
+    }
 
     if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
@@ -132,8 +193,14 @@ const CreateSupplier = ({
     }
 
     // Crear el proveedor con el teléfono completo (PhoneInput ya incluye el +)
+    // Limpiar el formato del NIT antes de guardar (solo números y guión)
+    const cleanNit = formData.nit ? formData.nit.replace(/\./g, '') : '';
+    const cleanDocumento = formData.numeroDocumento ? formData.numeroDocumento.replace(/\s/g, '') : '';
+    
     const newSupplier = {
       ...formData,
+      nit: formData.tipo === "J" ? cleanNit : "",
+      numeroDocumento: formData.tipo === "N" ? cleanDocumento : "",
       telefono: "+" + numero, // PhoneInput retorna solo números, agregamos el +
       id: Date.now(),
       isActive: true,
@@ -176,10 +243,36 @@ const CreateSupplier = ({
                 onSubmit={handleSubmit}
                 className="space-y-4"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Campo Tipo - Primero */}
+                <div>
+                  <label className="block text-xs font-medium text-text-main mb-1">
+                    Tipo de Proveedor <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="tipo"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      errors.tipo ? "border-red-500" : "border-gray-300"
+                    }`}
+                    value={formData.tipo}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    required
+                  >
+                    <option value="">Seleccionar tipo</option>
+                    <option value="N">Natural (N)</option>
+                    <option value="J">Jurídico (J)</option>
+                  </select>
+                  {errors.tipo && (
+                    <p className="text-red-500 text-xs mt-1">{errors.tipo}</p>
+                  )}
+                </div>
+
+                {/* Campo condicional: NIT o Número de Documento */}
+                {formData.tipo === "J" && (
                   <div>
                     <label className="block text-xs font-medium text-text-main mb-1">
-                      NIT <span className="text-red-500">*</span>
+                      NIT (Número de Identificación Tributaria) – dígito de verificación incluido{" "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -190,36 +283,45 @@ const CreateSupplier = ({
                       value={formData.nit}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Ej: A123456789"
+                      placeholder="Ej: 123456789-0 o 800123456-5"
+                      maxLength={17}
                       required
                     />
                     {errors.nit && (
                       <p className="text-red-500 text-xs mt-1">{errors.nit}</p>
                     )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Formato: números con separadores opcionales (puntos) y dígito de verificación con guión
+                    </p>
                   </div>
+                )}
+
+                {formData.tipo === "N" && (
                   <div>
                     <label className="block text-xs font-medium text-text-main mb-1">
-                      Tipo <span className="text-red-500">*</span>
+                      Número de Documento <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      name="tipo"
+                    <input
+                      type="text"
+                      name="numeroDocumento"
                       className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
-                        errors.tipo ? "border-red-500" : "border-gray-300"
+                        errors.numeroDocumento ? "border-red-500" : "border-gray-300"
                       }`}
-                      value={formData.tipo}
+                      value={formData.numeroDocumento}
                       onChange={handleChange}
                       onBlur={handleBlur}
+                      placeholder="Ej: 1234567890"
+                      maxLength={15}
                       required
-                    >
-                      <option value="">Seleccionar tipo</option>
-                      <option value="N">Natural (N)</option>
-                      <option value="J">Jurídico (J)</option>
-                    </select>
-                    {errors.tipo && (
-                      <p className="text-red-500 text-xs mt-1">{errors.tipo}</p>
+                    />
+                    {errors.numeroDocumento && (
+                      <p className="text-red-500 text-xs mt-1">{errors.numeroDocumento}</p>
                     )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Debe tener entre 8 y 15 dígitos
+                    </p>
                   </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -297,7 +399,7 @@ const CreateSupplier = ({
                       country={"co"}
                       value={numero}
                       onChange={handlePhoneChange}
-                      inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      inputClass={`w-full py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
                         errors.telefono ? "border-red-500" : "border-gray-300"
                       }`}
                       containerClass="w-full"

@@ -83,7 +83,54 @@ const Cart = () => {
                   </td>
                   <td className="py-3 font-medium text-[#1E1E1E]">${formatNumber(item.precio)}</td>
                   <td className="py-3">
-                    <span className="w-8 text-center font-semibold">{formatNumber(item.cantidad)}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const nuevaCantidad = Math.max(1, item.cantidad - 1);
+                          updateQuantity(item.id, nuevaCantidad);
+                        }}
+                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition text-lg font-semibold"
+                        disabled={item.cantidad <= 1}
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max={item.stock ?? item.cantidad ?? 999}
+                        value={item.cantidad}
+                        onChange={(e) => {
+                          const nuevaCantidad = parseInt(e.target.value) || 1;
+                          const stockDisponible = item.stock ?? item.cantidad ?? 999;
+                          if (nuevaCantidad > stockDisponible) {
+                            alert(`No puedes agregar más de ${stockDisponible} unidades. Stock disponible: ${stockDisponible}`);
+                            updateQuantity(item.id, stockDisponible);
+                          } else {
+                            updateQuantity(item.id, nuevaCantidad);
+                          }
+                        }}
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm font-semibold"
+                      />
+                      <button
+                        onClick={() => {
+                          const stockDisponible = item.stock ?? item.cantidad ?? 999;
+                          if (item.cantidad >= stockDisponible) {
+                            alert(`No puedes agregar más de ${stockDisponible} unidades. Stock disponible: ${stockDisponible}`);
+                            return;
+                          }
+                          updateQuantity(item.id, item.cantidad + 1);
+                        }}
+                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition text-lg font-semibold"
+                        disabled={item.cantidad >= (item.stock ?? item.cantidad ?? 999)}
+                      >
+                        +
+                      </button>
+                    </div>
+                    {(item.stock ?? item.cantidad) && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Stock: {item.stock ?? item.cantidad}
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 font-semibold text-[#FACC15]">${formatNumber(item.precio * item.cantidad)}</td>
                   <td className="py-3">
@@ -118,8 +165,53 @@ const Cart = () => {
                   </Link>
                   {item.color && <div className="text-xs text-gray-500">{item.color}</div>}
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="w-8 text-center font-semibold">{formatNumber(item.cantidad)}</span>
+                    <button
+                      onClick={() => {
+                        const nuevaCantidad = Math.max(1, item.cantidad - 1);
+                        updateQuantity(item.id, nuevaCantidad);
+                      }}
+                      className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition text-lg font-semibold"
+                      disabled={item.cantidad <= 1}
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max={item.stock ?? item.cantidad ?? 999}
+                      value={item.cantidad}
+                      onChange={(e) => {
+                        const nuevaCantidad = parseInt(e.target.value) || 1;
+                        const stockDisponible = item.stock ?? item.cantidad ?? 999;
+                        if (nuevaCantidad > stockDisponible) {
+                          alert(`No puedes agregar más de ${stockDisponible} unidades. Stock disponible: ${stockDisponible}`);
+                          updateQuantity(item.id, stockDisponible);
+                        } else {
+                          updateQuantity(item.id, nuevaCantidad);
+                        }
+                      }}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm font-semibold"
+                    />
+                    <button
+                      onClick={() => {
+                        const stockDisponible = item.stock ?? item.cantidad ?? 999;
+                        if (item.cantidad >= stockDisponible) {
+                          alert(`No puedes agregar más de ${stockDisponible} unidades. Stock disponible: ${stockDisponible}`);
+                          return;
+                        }
+                        updateQuantity(item.id, item.cantidad + 1);
+                      }}
+                      className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition text-lg font-semibold"
+                      disabled={item.cantidad >= (item.stock ?? item.cantidad ?? 999)}
+                    >
+                      +
+                    </button>
                   </div>
+                  {(item.stock ?? item.cantidad) && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Stock: {item.stock ?? item.cantidad}
+                    </div>
+                  )}
                   <div className="text-[#FACC15] font-bold text-lg mt-2">${formatNumber(item.precio * item.cantidad)}</div>
                 </div>
                 <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-700 text-lg ml-2"><i className="bi bi-trash"></i></button>

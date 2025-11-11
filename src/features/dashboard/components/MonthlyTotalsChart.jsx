@@ -48,17 +48,12 @@ const MonthlyTotalsChart = ({ data }) => {
         callbacks: {
           label: (ctx) => `$${ctx.parsed.y.toLocaleString("es-CO")}`,
         },
-        backgroundColor: '#F7DAA2',
-        borderColor: '#A0522D',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E5E7EB',
         borderWidth: 1,
         titleColor: '#1E1E1E',
         bodyColor: '#1E1E1E',
-      },
-      datalabels: {
-        display: true,
-        color: "#1E1E1E",
-        font: { weight: "bold", size: 14 },
-        formatter: (v) => `$${v.toLocaleString("es-CO")}`,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       },
     },
     scales: {
@@ -66,19 +61,34 @@ const MonthlyTotalsChart = ({ data }) => {
         beginAtZero: true,
         ticks: {
           callback: (v) => `${(v / 1e6).toFixed(1)}M`,
-          color: "#1E1E1E",
+          color: "#6B7280",
+          font: { size: 12 }
         },
-        grid: { color: "#D2B48C" },
+        grid: { color: "#E5E7EB", opacity: 0.3 },
+        border: { color: '#D1D5DB' }
       },
       x: {
-        ticks: { color: "#1E1E1E" },
-        grid: { color: "#D2B48C" },
+        ticks: {
+          color: "#6B7280",
+          font: { size: 12, weight: 500 }
+        },
+        grid: { color: "#E5E7EB", opacity: 0.3 },
+        border: { color: '#D1D5DB' }
       },
     },
     animation: {
       duration: 1000,
       easing: 'easeInOutQuart',
     },
+    elements: {
+      point: {
+        radius: 4,
+        hoverRadius: 6,
+      },
+      line: {
+        borderWidth: 3,
+      }
+    }
   };
 
   const handleDownloadExcel = () => {
@@ -94,16 +104,19 @@ const MonthlyTotalsChart = ({ data }) => {
   };
 
   return (
-    <div className="w-full h-96 bg-white rounded-lg shadow p-4">
-      <div className="flex justify-end mb-2">
+    <div className="w-full">
+      <div className="flex justify-end mb-4">
         <button
           onClick={handleDownloadExcel}
-          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded shadow transition-all duration-300 hover:scale-105 font-medium text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-lg shadow-md transition-all duration-300 hover:scale-105 font-semibold text-sm"
         >
-          <i className="bi bi-download"></i> Descargar Excel
+          <i className="bi bi-download text-sm"></i>
+          <span>Descargar</span>
         </button>
       </div>
-      <Line data={chartData} options={options} />
+      <div className="h-80">
+        <Line data={chartData} options={options} />
+      </div>
     </div>
   );
 };

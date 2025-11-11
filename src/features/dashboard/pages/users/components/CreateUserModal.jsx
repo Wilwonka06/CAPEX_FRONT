@@ -75,10 +75,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState('');
   const [error, setError] = useState({});
-  const [country, setCountry] = useState({
-    countryCode: 'co',
-    dialCode: '+57',
-  });
   const [numero, setNumero] = useState('');
 
   useEffect(() => {
@@ -104,9 +100,9 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
         if (users.some(u => u.correo === value)) return 'Correo ya registrado';
         return '';
       case 'telefono':
-        // Validar el teléfono completo (código de país + número)
-        const telefonoCompleto = country.dialCode + numero;
-        return validateUserPhone(telefonoCompleto);
+        if (!numero) return 'El teléfono es requerido';
+        if (numero.length < 7 || numero.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
+        return '';
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
@@ -162,10 +158,18 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     let valid = true;
     let newError = {};
     for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo','password','confirmPassword','estado']) {
-      const err = validate(key, form[key]);
-      if (err) {
-        newError[key] = err;
-        valid = false;
+      if (key === 'telefono') {
+        const err = validate('telefono', numero);
+        if (err) {
+          newError.telefono = err;
+          valid = false;
+        }
+      } else {
+        const err = validate(key, form[key]);
+        if (err) {
+          newError[key] = err;
+          valid = false;
+        }
       }
     }
     if (!valid) {
@@ -178,14 +182,13 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
       foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
-    const telefonoFinal = country.dialCode + numero;
     const newUser = {
       nombre: form.nombre,
       correo: form.correo,
       contrasena: form.password,
       tipo_documento: form.tipoDocumento,
       documento: form.documento,
-      telefono: telefonoFinal,
+      telefono: '+' + numero,
       roleId: parseInt(form.roles[0]) || 1,
       estado: form.estado,
       ...(foto && { foto }),
@@ -253,73 +256,24 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <div className="flex gap-1 items-start">
-                  <PhoneInput
-                    country={country.countryCode}
-                    value={country.dialCode}
-                    onChange={(value, data) => {
-                      setCountry({
-                        countryCode: data.countryCode,
-                        dialCode: '+' + data.dialCode
-                      });
-                    }}
-                    inputProps={{
-                      name: 'prefijo',
-                      readOnly: true,
-                      className: 'w-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 cursor-pointer',
-                      style: { backgroundColor: '#f9fafb' }
-                    }}
-                    specialLabel=""
-                    containerClass="w-28"
-                    inputClass="w-full"
-                    buttonClass=""
-                    dropdownClass=""
-                    enableSearch
-                    disableCountryCode={false}
-                    disableDropdown={false}
-                    countryCodeEditable={false}
-                    disableSearchIcon={false}
-                    onlyCountries={['co','mx','cl','ar','pe','ve','ec','us','es']}
-                  />
-                  <input
-                    type="text"
-                    name="numero"
-                    value={numero}
-                    onChange={e => {
-                      // Solo permitir dígitos
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setNumero(val.slice(0, 15));
-                      // Validación en tiempo real del número
-                      let err = '';
-                      if (val && !/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else if (val && val.length >= 4) {
-                        // Validar teléfono completo si tenemos suficientes dígitos
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    onBlur={e => {
-                      const val = e.target.value;
-                      let err = '';
-                      if (!/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else {
-                        // Validar teléfono completo
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="Número sin prefijo"
-                    required
-                    autoComplete="off"
-                    maxLength={15}
-                  />
-                </div>
-                {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
+                <PhoneInput
+                  country={'co'}
+                  value={numero}
+                  onChange={(value) => {
+                    setNumero(value);
+                    const error = validate('telefono', value);
+                    setError(prev => ({ ...prev, telefono: error }));
+                  }}
+                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${error.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  containerClass="w-full"
+                  inputProps={{
+                    name: 'telefono',
+                    required: true,
+                    placeholder: 'Ej: 3001234567',
+                  }}
+                  specialLabel=""
+                />
+                {error.telefono && <span className="text-red-500 text-xs mt-1 block">{error.telefono}</span>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>

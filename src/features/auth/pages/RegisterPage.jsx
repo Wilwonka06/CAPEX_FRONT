@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isValidEmail, isValidPassword, isValidCustomerName, validatePasswordConfirmation, isValidPhone } from '../../../shared/validations';
+import { isValidEmail, isValidPassword, isValidCustomerName, validatePasswordConfirmation } from '../../../shared/validations';
 import toast from 'react-hot-toast';
 import StepIndicator from '../components/StepIndicator';
 import FormField from '../components/FormField';
 import authService from '../services/authServices';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import '../../dashboard/pages/users/components/phoneinput-search.css';
 
 const DOC_TYPES = ['Cedula de ciudadania', 'Pasaporte', 'Cedula de extranjeria'];
 
@@ -21,11 +24,10 @@ const RegisterPage = () => {
   });
   const [error, setError] = useState({});
   const [step, setStep] = useState(1);
-  const [completedFields, setCompletedFields] = useState(0);
-  const totalFields = 7; // nombre, tipoDocumento, documento, telefono, correo, password, confirmPassword
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [numero, setNumero] = useState('');
 
   const validate = (name, value) => {
     switch (name) {
@@ -35,7 +37,8 @@ const RegisterPage = () => {
         if (!isValidEmail(value)) return 'Correo inválido';
         return '';
       case 'telefono':
-        if (!isValidPhone(value)) return 'Teléfono inválido. Usa formato internacional, ej: +573001234567';
+        if (!numero) return 'El teléfono es requerido';
+        if (numero.length < 7 || numero.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
         return '';
       case 'documento':
         if (form.tipoDocumento === 'Pasaporte') {
@@ -65,14 +68,6 @@ const RegisterPage = () => {
     const err = validate(name, value);
     setError(prev => ({ ...prev, [name]: err }));
     setForm(prev => ({ ...prev, [name]: value }));
-
-    // Update completed fields count
-    const allFields = ['nombre', 'tipoDocumento', 'documento', 'telefono', 'correo', 'password', 'confirmPassword'];
-    const completed = allFields.filter(field => {
-      if (field === name) return !err && value.trim();
-      return !error[field] && form[field].trim();
-    }).length;
-    setCompletedFields(completed);
   };
 
   const handleBlur = (e) => {
@@ -86,10 +81,18 @@ const RegisterPage = () => {
     let valid = true;
     let newError = {};
     for (const key of fields) {
-      const err = validate(key, form[key]);
-      if (err) {
-        newError[key] = err;
-        valid = false;
+      if (key === 'telefono') {
+        const err = validate('telefono', numero);
+        if (err) {
+          newError.telefono = err;
+          valid = false;
+        }
+      } else {
+        const err = validate(key, form[key]);
+        if (err) {
+          newError[key] = err;
+          valid = false;
+        }
       }
     }
     setError(prev => ({ ...prev, ...newError }));
@@ -121,7 +124,7 @@ const RegisterPage = () => {
         contrasena: form.password,
         tipo_documento: form.tipoDocumento,
         documento: form.documento.trim(),
-        telefono: form.telefono.trim()
+        telefono: '+' + numero
       };
 
       const response = await authService.register(userData);
@@ -138,6 +141,7 @@ const RegisterPage = () => {
         password: '',
         confirmPassword: ''
       });
+      setNumero('');
       setStep(1);
 
       // Redirigir al login después de un breve delay
@@ -170,7 +174,7 @@ const RegisterPage = () => {
 
     try {
       await registerPromise;
-    } catch (error) {
+    } catch {
       // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
@@ -223,19 +227,6 @@ const RegisterPage = () => {
               {/* Header del formulario */}
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-[#6d3b3b] mb-2">Regístrate</h2>
-              </div>
-
-              {/* Barra de progreso */}
-              <div className="mb-6">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-[#ffb76b] to-[#ff7c7c] h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${(completedFields / totalFields) * 100}%` }}
-                  ></div>
-                </div>
-                <div className="text-center mt-2 text-sm text-[#6d3b3b]/70">
-                  Progreso: {Math.round((completedFields / totalFields) * 100)}% ({completedFields}/{totalFields} campos completados)
-                </div>
               </div>
 
                 {/* Formulario */}
@@ -303,18 +294,43 @@ const RegisterPage = () => {
                     )}
                     {step === 2 && (
                       <>
-                        <FormField
-                          label="Teléfono"
-                          name="telefono"
-                          value={form.telefono}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          error={error.telefono}
-                          icon="bi-telephone"
-                          placeholder="+573001234567"
-                          required
-                          disabled={loading}
-                        />
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-[#6d3b3b]">
+                            Teléfono <span className="text-red-500">*</span>
+                          </label>
+                          <PhoneInput
+                            country={'co'}
+                            value={numero}
+                            onChange={(value) => {
+                              setNumero(value);
+                              const err = validate('telefono', value);
+                              setError(prev => ({ ...prev, telefono: err }));
+                            }}
+                            onBlur={() => {
+                              const err = validate('telefono', numero);
+                              setError(prev => ({ ...prev, telefono: err }));
+                            }}
+                            inputClass={`w-full px-3 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#ffb76b] focus:ring-4 focus:ring-[#ffb76b]/10 transition-all duration-200 bg-white/50 backdrop-blur-sm ${
+                              error.telefono ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : ''
+                            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            containerClass="w-full"
+                            inputProps={{
+                              name: 'telefono',
+                              required: true,
+                              placeholder: 'Ej: 3001234567',
+                              disabled: loading
+                            }}
+                            specialLabel=""
+                          />
+                          {error.telefono && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 animate-shake">
+                              <div className="flex items-center gap-2">
+                                <i className="bi bi-exclamation-triangle text-red-500 text-sm"></i>
+                                <span className="text-red-700 text-sm">{error.telefono}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <FormField
                           label="Correo electrónico"
                           name="correo"

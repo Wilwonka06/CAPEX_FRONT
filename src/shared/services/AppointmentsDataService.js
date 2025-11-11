@@ -1,4 +1,6 @@
-const APPOINTMENTS_KEY = 'appointments';
+import apiRequest from '../config/apiConfig';
+import appointmentsService from '../../features/dashboard/pages/appointments/API/appointmentsService';
+import { getEmployees } from '../../features/dashboard/pages/employees/api/employeesApi';
 
 // Estados posibles de la cita
 export const APPOINTMENT_STATES = [
@@ -12,156 +14,253 @@ export const APPOINTMENT_STATES = [
   { nombre: 'No asistió', descripcion: 'El cliente no se presentó a la cita.', tipo: 'Automático' },
 ];
 
-// Datos de ejemplo para pruebas
-const initialAppointments = [
-  {
-    id: 1,
-    cliente: 'María González',
-    telefono: '3001234567',
-    fecha: '2024-01-15',
-    servicios: [
-      {
-        id: 1,
-        servicioId: 1,
-        nombre: 'Corte de cabello',
-        profesional: 'Ana Torres',
-        inicio: '10:00',
-        fin: '10:30',
-        duracion: 30,
-        precio: 25000,
-        cantidad: 1
-      }
-    ],
-    estado: 'Agendada',
-    notas: 'Corte de cabello para mujer',
-    reprogramaciones: 0
-  },
-  {
-    id: 2,
-    cliente: 'Carlos Rodríguez',
-    telefono: '3109876543',
-    fecha: '2024-01-16',
-    servicios: [
-      {
-        id: 2,
-        servicioId: 2,
-        nombre: 'Manicura Completa',
-        profesional: 'Lucía Gómez',
-        inicio: '14:00',
-        fin: '14:45',
-        duracion: 45,
-        precio: 35000,
-        cantidad: 1
-      }
-    ],
-    estado: 'Confirmada',
-    notas: 'Manicura con esmaltado rojo',
-    reprogramaciones: 0
+// Función para convertir datos del backend al formato esperado por el frontend
+const normalizeAppointmentFromBackend = (cita) => {
+  return {
+    id: cita.id_cita,
+    id_cita: cita.id_cita,
+    cliente: cita.usuario?.nombre || cita.cliente?.nombre || '',
+    telefono: cita.usuario?.telefono || cita.cliente?.telefono || '',
+    tipoDocumento: cita.usuario?.tipo_documento || cita.cliente?.tipo_documento || '',
+    documento: cita.usuario?.documento || cita.cliente?.documento || '',
+    fecha: cita.fecha_servicio,
+    fecha_servicio: cita.fecha_servicio,
+    hora_entrada: cita.hora_entrada,
+    hora_salida: cita.hora_salida,
+    estado: cita.estado,
+    motivo: cita.motivo || '',
+    notas: cita.motivo || '',
+    valor_total: cita.valor_total,
+    servicios: (cita.servicios || []).map(servicio => ({
+      id: servicio.id_detalle_servicio,
+      servicioId: servicio.id_servicio,
+      nombre: servicio.servicio?.nombre || servicio.nombre_servicio || '',
+      descripcion: servicio.servicio?.descripcion || '',
+      profesional: servicio.empleado?.nombre || servicio.empleado_nombre || '',
+      id_empleado: servicio.id_empleado,
+      inicio: servicio.hora_inicio || '',
+      fin: servicio.hora_finalizacion || servicio.hora_fin || '',
+      duracion: servicio.servicio?.duracion || servicio.duracion || 0,
+      precio: servicio.precio_unitario || servicio.precio || 0,
+      cantidad: servicio.cantidad || 1,
+      estado: servicio.estado || 'Agendada'
+    })),
+    reprogramaciones: cita.reprogramaciones || 0
+  };
+};
+
+// Función para convertir datos del frontend al formato esperado por el backend
+const normalizeAppointmentToBackend = async (appointment, currentUser) => {
+  // Buscar o crear el usuario/cliente
+  const id_cliente = currentUser?.id_usuario || currentUser?.id;
+  
+  if (!id_cliente) {
+    throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
   }
-];
 
-function saveAppointmentsToStorage(appointments) {
-  localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
-}
-
-function loadAppointmentsFromStorage() {
-  const data = localStorage.getItem(APPOINTMENTS_KEY);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return null;
-    }
+  // Calcular hora_entrada y hora_salida desde los servicios
+  const servicios = appointment.servicios || [];
+  if (servicios.length === 0) {
+    throw new Error('Debe incluir al menos un servicio');
   }
-  return null;
-}
 
-export const getAppointments = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let appointments = loadAppointmentsFromStorage();
-      if (!appointments) {
-        saveAppointmentsToStorage(initialAppointments);
-        appointments = initialAppointments;
-      }
-      resolve(appointments);
-    }, 200);
+  // Ordenar servicios por hora de inicio
+  const serviciosOrdenados = [...servicios].sort((a, b) => {
+    const horaA = a.inicio ? a.inicio.split(':').map(Number) : [0, 0];
+    const horaB = b.inicio ? b.inicio.split(':').map(Number) : [0, 0];
+    return (horaA[0] * 60 + horaA[1]) - (horaB[0] * 60 + horaB[1]);
   });
-};
 
-export const addAppointment = (appointment) => {
-  return new Promise((resolve, reject) => {
-    try {
-      // Validar estructura mínima
-      if (!appointment || !appointment.cliente || !appointment.telefono || !appointment.fecha || !Array.isArray(appointment.servicios) || appointment.servicios.length === 0) {
-        console.error('addAppointment: Datos incompletos', appointment);
-        return reject(new Error('Datos incompletos para la cita.'));
-      }
-      getAppointments().then((appointments) => {
-        const newAppointment = { ...appointment, id: Date.now(), reprogramaciones: 0 };
-        const updatedAppointments = [...appointments, newAppointment];
-        try {
-          saveAppointmentsToStorage(updatedAppointments);
-          console.log('addAppointment: Guardado exitoso', newAppointment);
-          resolve(newAppointment);
-        } catch (err) {
-          console.error('addAppointment: Error guardando en localStorage', err);
-          reject(new Error('Error guardando la cita en almacenamiento local.'));
+  const hora_entrada = serviciosOrdenados[0].inicio || '08:00:00';
+  const ultimoServicio = serviciosOrdenados[serviciosOrdenados.length - 1];
+  const hora_salida = ultimoServicio.fin || calcularHoraFin(ultimoServicio.inicio, ultimoServicio.duracion);
+
+  // Obtener IDs de empleados para todos los servicios
+  const serviciosConEmpleados = await Promise.all(
+    servicios.map(async (s) => {
+      let id_empleado = s.id_empleado;
+      
+      // Si no hay ID pero hay nombre de profesional, buscarlo
+      if (!id_empleado && s.profesional) {
+        id_empleado = await obtenerIdEmpleadoPorNombre(s.profesional);
+        if (!id_empleado) {
+          throw new Error(`No se encontró el empleado "${s.profesional}". Por favor, verifica que el profesional esté registrado.`);
         }
-      }).catch(err => {
-        console.error('addAppointment: Error obteniendo citas', err);
-        reject(new Error('Error obteniendo citas previas.'));
-      });
-    } catch (err) {
-      console.error('addAppointment: Error inesperado', err);
-      reject(new Error('Error inesperado al guardar la cita.'));
-    }
-  });
-};
-
-export const updateAppointment = (updatedAppointment) => {
-  return new Promise((resolve, reject) => {
-    try {
-      if (!updatedAppointment || !updatedAppointment.id) {
-        console.error('updateAppointment: Falta el ID de la cita', updatedAppointment);
-        return reject(new Error('Falta el ID de la cita a actualizar.'));
       }
-      getAppointments().then((appointments) => {
-        const updatedAppointments = appointments.map(a => {
-          if (a.id === updatedAppointment.id) {
-            if (updatedAppointment.estado === 'Reprogramada') {
-              const nuevasReprogramaciones = (a.reprogramaciones || 0) + 1;
-              return { ...updatedAppointment, reprogramaciones: nuevasReprogramaciones };
-            }
-            return { ...updatedAppointment, reprogramaciones: a.reprogramaciones || 0 };
-          }
-          return a;
-        });
-        try {
-          saveAppointmentsToStorage(updatedAppointments);
-          console.log('updateAppointment: Guardado exitoso', updatedAppointment);
-          resolve(updatedAppointment);
-        } catch (err) {
-          console.error('updateAppointment: Error guardando en localStorage', err);
-          reject(new Error('Error guardando la cita actualizada en almacenamiento local.'));
-        }
-      }).catch(err => {
-        console.error('updateAppointment: Error obteniendo citas', err);
-        reject(new Error('Error obteniendo citas previas.'));
-      });
-    } catch (err) {
-      console.error('updateAppointment: Error inesperado', err);
-      reject(new Error('Error inesperado al actualizar la cita.'));
-    }
-  });
+      
+      if (!id_empleado) {
+        throw new Error(`El servicio "${s.nombre}" no tiene un profesional asignado.`);
+      }
+      
+      return {
+        id_servicio: s.servicioId,
+        id_empleado: id_empleado,
+        hora_inicio: s.inicio || '08:00:00',
+        cantidad: s.cantidad || 1,
+        observaciones: s.observaciones || ''
+      };
+    })
+  );
+
+  return {
+    cita: {
+      id_cliente: id_cliente,
+      fecha_servicio: appointment.fecha,
+      estado: appointment.estado || 'Agendada',
+      motivo: appointment.notas || appointment.motivo || ''
+    },
+    servicios: serviciosConEmpleados
+  };
 };
 
-export const deleteAppointment = (appointmentId) => {
-  return new Promise((resolve) => {
-    getAppointments().then((appointments) => {
-      const updatedAppointments = appointments.filter(a => a.id !== appointmentId);
-      saveAppointmentsToStorage(updatedAppointments);
-      resolve(appointmentId);
-    });
+// Función auxiliar para calcular hora fin
+const calcularHoraFin = (inicio, duracion) => {
+  if (!inicio || !duracion) return '09:00:00';
+  const [h, m] = inicio.split(':').map(Number);
+  const totalMin = h * 60 + m + Number(duracion);
+  const newH = Math.floor(totalMin / 60);
+  const newM = totalMin % 60;
+  return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}:00`;
+};
+
+// Cache de empleados para evitar múltiples llamadas
+let empleadosCache = null;
+let empleadosCacheTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+// Función auxiliar para obtener empleados (con cache)
+const obtenerEmpleados = async () => {
+  const now = Date.now();
+  if (empleadosCache && (now - empleadosCacheTime) < CACHE_DURATION) {
+    return empleadosCache;
+  }
+  
+  try {
+    empleadosCache = await getEmployees();
+    empleadosCacheTime = now;
+    return empleadosCache;
+  } catch (error) {
+    console.error('Error obteniendo empleados:', error);
+    return empleadosCache || [];
+  }
+};
+
+// Función auxiliar para obtener ID de empleado por nombre
+const obtenerIdEmpleadoPorNombre = async (nombre) => {
+  if (!nombre || nombre.trim() === '') {
+    return null;
+  }
+  
+  const empleados = await obtenerEmpleados();
+  const empleado = empleados.find(emp => {
+    const nombreCompleto = emp.nombre || '';
+    return nombreCompleto.toLowerCase().trim() === nombre.toLowerCase().trim();
   });
+  
+  return empleado ? (empleado.id_empleado || empleado.id_usuario || empleado.id) : null;
+};
+
+export const getAppointments = async (filters = {}) => {
+  try {
+    // Si hay un usuario autenticado, filtrar por su ID
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (currentUser?.id_usuario || currentUser?.id) {
+      filters.id_cliente = currentUser.id_usuario || currentUser.id;
+    }
+
+    const response = await appointmentsService.getAll(filters);
+    
+    // Normalizar respuesta del backend
+    let appointments = [];
+    if (response.success && response.data) {
+      appointments = (response.data.citas || response.data || []).map(normalizeAppointmentFromBackend);
+    } else if (Array.isArray(response)) {
+      appointments = response.map(normalizeAppointmentFromBackend);
+    }
+
+    return appointments;
+  } catch (error) {
+    console.error('Error fetching appointments from API:', error);
+    // Retornar array vacío en caso de error
+    return [];
+  }
+};
+
+export const addAppointment = async (appointment) => {
+  try {
+    // Validar estructura mínima
+    if (!appointment || !appointment.cliente || !appointment.telefono || !appointment.fecha || !Array.isArray(appointment.servicios) || appointment.servicios.length === 0) {
+      console.error('addAppointment: Datos incompletos', appointment);
+      throw new Error('Datos incompletos para la cita.');
+    }
+
+    // Obtener usuario actual
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Convertir datos al formato del backend (ahora es async)
+    const appointmentData = await normalizeAppointmentToBackend(appointment, currentUser);
+
+    // Llamar al servicio del backend
+    const response = await appointmentsService.create(appointmentData);
+    
+    // Normalizar respuesta
+    if (response.success && response.data) {
+      return normalizeAppointmentFromBackend(response.data);
+    } else if (response.id_cita) {
+      return normalizeAppointmentFromBackend(response);
+    }
+    
+    throw new Error('Error al crear la cita en el servidor.');
+  } catch (error) {
+    console.error('Error creating appointment:', error);
+    throw error;
+  }
+};
+
+export const updateAppointment = async (updatedAppointment) => {
+  try {
+    if (!updatedAppointment || (!updatedAppointment.id && !updatedAppointment.id_cita)) {
+      console.error('updateAppointment: Falta el ID de la cita', updatedAppointment);
+      throw new Error('Falta el ID de la cita a actualizar.');
+    }
+
+    const appointmentId = updatedAppointment.id_cita || updatedAppointment.id;
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+
+    // Convertir datos al formato del backend (ahora es async)
+    const appointmentData = await normalizeAppointmentToBackend(updatedAppointment, currentUser);
+
+    // Llamar al servicio del backend
+    const response = await appointmentsService.update(appointmentId, appointmentData);
+    
+    // Normalizar respuesta
+    if (response.success && response.data) {
+      return normalizeAppointmentFromBackend(response.data);
+    } else if (response.id_cita) {
+      return normalizeAppointmentFromBackend(response);
+    }
+    
+    throw new Error('Error al actualizar la cita en el servidor.');
+  } catch (error) {
+    console.error('Error updating appointment:', error);
+    throw error;
+  }
+};
+
+export const deleteAppointment = async (appointmentId) => {
+  try {
+    if (!appointmentId) {
+      throw new Error('ID de la cita es requerido.');
+    }
+
+    // El backend no tiene un endpoint DELETE directo, usar cancelar
+    await appointmentsService.cancel(appointmentId);
+    return appointmentId;
+  } catch (error) {
+    console.error('Error deleting appointment:', error);
+    throw error;
+  }
 }; 

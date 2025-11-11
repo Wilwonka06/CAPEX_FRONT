@@ -21,18 +21,25 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastProduct, setToastProduct] = useState(null);
   const { showCartToast } = useCartToast();
+  const addingRecommendedRef = useRef(new Set()); // Para productos recomendados
 
   if (!product) return null;
 
   const handleAddToCart = () => {
+    // Prevenir múltiples clics
+    if (isAddingToCart) return;
+    
     setIsAddingToCart(true);
+    // Agregar al carrito inmediatamente
+    addToCart(product, product.tipoProducto === 'Extensiones' ? 1 : quantity);
+    setToastProduct(product);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+    
+    // Rehabilitar después de un breve delay para evitar spam
     setTimeout(() => {
-      addToCart(product, product.tipoProducto === 'Extensiones' ? 1 : quantity);
       setIsAddingToCart(false);
-      setToastProduct(product);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2500);
-    }, 400);
+    }, 1000);
   };
 
   return (
@@ -169,11 +176,21 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
                       <button
                         onClick={e => {
                           e.stopPropagation();
+                          // Prevenir múltiples clics
+                          if (addingRecommendedRef.current.has(prod.id)) {
+                            return;
+                          }
+                          addingRecommendedRef.current.add(prod.id);
                           addToCart(prod, 1);
                           showCartToast(prod);
+                          // Permitir agregar de nuevo después de 1 segundo
+                          setTimeout(() => {
+                            addingRecommendedRef.current.delete(prod.id);
+                          }, 1000);
                         }}
-                        className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center"
+                        className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Agregar al carrito"
+                        disabled={addingRecommendedRef.current.has(prod.id)}
                       >
                         <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
                       </button>
