@@ -1,72 +1,60 @@
-import PropTypes from 'prop-types';
+/**
+ * Componente de Skeleton completo para Tablas
+ * Incluye header y filas de skeleton
+ * Se usa cuando la tabla completa necesita mostrar skeleton (componentes de tabla internos)
+ */
 
-const TableSkeleton = ({ columns = 7, rows = 5, hasAvatar = false, hasActions = true }) => {
-  // Anchos predefinidos más realistas para las columnas
-  const widths = [80, 100, 90, 70, 85, 75, 95];
-  
-  const skeletonRows = Array.from({ length: rows }, (_, index) => (
-    <tr key={index}>
-      {hasAvatar && (
-        <td className="py-4 px-4">
-          <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse"></div>
-        </td>
-      )}
-      {Array.from({ length: columns }, (_, colIndex) => {
-        const width = widths[colIndex % widths.length] || 80;
-        return (
-          <td key={colIndex} className="py-4 px-4">
-            <div 
-              className="h-4 bg-gray-200 rounded animate-pulse" 
-              style={{ width: `${width}%`, maxWidth: '100%' }}
-            ></div>
-          </td>
-        );
-      })}
-      {hasActions && (
-        <td className="py-4 px-4">
-          <div className="flex justify-center space-x-2">
-            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-        </td>
-      )}
-    </tr>
-  ));
-
+const TableSkeleton = ({ columns = 5, rows = 5, hasAvatar = false, hasActions = true }) => {
   return (
-    <table className="min-w-full text-xs">
-      <thead className="bg-gray-50">
-        <tr>
-          {hasAvatar && (
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">
-              <div className="h-4 bg-gray-300 rounded w-16"></div>
-            </th>
-          )}
-          {Array.from({ length: columns }, (_, index) => (
-            <th key={index} className="py-2 px-3 text-left font-semibold text-gray-700">
-              <div className="h-4 bg-gray-300 rounded w-20"></div>
-            </th>
+    <div className="overflow-x-auto rounded-lg shadow animate-pulse">
+      <table className="min-w-full text-xs">
+        <thead className="bg-gray-50">
+          <tr>
+            {hasAvatar && (
+              <th className="py-2 px-3 text-left font-semibold text-gray-700">
+                <div className="h-4 bg-gray-300 rounded w-16"></div>
+              </th>
+            )}
+            {[...Array(columns)].map((_, i) => (
+              <th key={i} className="py-2 px-3 text-left font-semibold text-gray-700">
+                <div className="h-4 bg-gray-300 rounded w-20"></div>
+              </th>
+            ))}
+            {hasActions && (
+              <th className="py-2 px-3 text-center font-semibold text-gray-700">
+                <div className="h-4 bg-gray-300 rounded w-16 mx-auto"></div>
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {[...Array(rows)].map((_, rowIndex) => (
+            <tr key={rowIndex}>
+              {hasAvatar && (
+                <td className="py-3 px-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                </td>
+              )}
+              {[...Array(columns)].map((_, colIndex) => (
+                <td key={colIndex} className="py-3 px-3">
+                  <div className="h-4 bg-gray-200 rounded w-24"></div>
+                </td>
+              ))}
+              {hasActions && (
+                <td className="py-3 px-3 text-center">
+                  <div className="flex justify-center gap-2">
+                    <div className="h-6 w-6 bg-gray-200 rounded"></div>
+                    <div className="h-6 w-6 bg-gray-200 rounded"></div>
+                    <div className="h-6 w-6 bg-gray-200 rounded"></div>
+                  </div>
+                </td>
+              )}
+            </tr>
           ))}
-          {hasActions && (
-            <th className="py-2 px-3 text-center font-semibold text-gray-700">
-              <div className="h-4 bg-gray-300 rounded w-20 mx-auto"></div>
-            </th>
-          )}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-200 bg-white">
-        {skeletonRows}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   );
-};
-
-TableSkeleton.propTypes = {
-  columns: PropTypes.number,
-  rows: PropTypes.number,
-  hasAvatar: PropTypes.bool,
-  hasActions: PropTypes.bool,
 };
 
 export default TableSkeleton;

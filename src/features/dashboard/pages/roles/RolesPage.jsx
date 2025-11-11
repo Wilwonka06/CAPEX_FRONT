@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import RolesTable from "./components/RolesTable";
 import SearchRole from "./components/SearchRole";
-import Paginator from "./components/Paginator";
+import Paginator from "../../../../shared/Paginator";
 import CreateRoles from "./components/CreateRole";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ErrorState from "./components/ErrorState";
@@ -219,6 +219,7 @@ const RolesPage = () => {
                     onPageChange={handlePageChange}
                     itemsPerPage={itemsPerPage}
                     totalItems={filteredRoles.length}
+                    showInfo={true}
                   />
                 )}
               </>

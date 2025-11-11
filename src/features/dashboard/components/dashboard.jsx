@@ -7,6 +7,7 @@ import TopProductsChart from "./TopProductsChart";
 import { FaMoneyBillWave, FaBoxOpen, FaUserTie } from "react-icons/fa";
 import AnnualComparisonChart from "./AnnualComparisonChart";
 import AccessCards from "./AccessCards";
+import { ChartContentSkeleton, OrdersListSkeleton, TopListContentSkeleton } from "./DashboardSkeleton";
 import salesService from "../pages/SaleProducts/API/salesService";
 import ordersService from "../pages/orders/API/ordersService";
 import { useAuth } from "../../../shared/contexts/AuthContext";
@@ -570,17 +571,7 @@ const Dashboard = () => {
     }
   });
 
-  // Mostrar indicador de carga mientras se cargan los datos
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FACC15] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-lato">Cargando datos del dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Ya no retornamos skeleton completo, solo mostramos skeletons en áreas de contenido
 
   return (
     <div className="min-h-screen rounded-xl bg-gradient-to-br from-white via-gray-50 to-white p-6">
@@ -616,28 +607,46 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Cards de Estadísticas */}
+        {/* Cards de Estadísticas - Mostrar skeleton solo en valores si loading */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600 mb-1 font-lato">
-                    {stat.title}
-                  </p>
-                  <p className="text-2xl font-bold text-[#1E1E1E] font-montserrat">{stat.value}</p>
+          {loading ? (
+            // Mostrar skeletons en las cards mientras carga
+            [...Array(3)].map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-32 mb-3 animate-pulse"></div>
+                    <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+                  </div>
+                  <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
                 </div>
-                <div className="bg-[#FACC15]/10 rounded-xl p-3">
-                  <div className="text-[#FACC15]">
-                    {stat.icon}
+              </div>
+            ))
+          ) : (
+            stats.map((stat, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600 mb-1 font-lato">
+                      {stat.title}
+                    </p>
+                    <p className="text-2xl font-bold text-[#1E1E1E] font-montserrat">{stat.value}</p>
+                  </div>
+                  <div className="bg-[#FACC15]/10 rounded-xl p-3">
+                    <div className="text-[#FACC15]">
+                      {stat.icon}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Gráficas y Widgets */}
@@ -652,7 +661,11 @@ const Dashboard = () => {
                 </h3>
                 <p className="text-sm text-gray-600 font-lato">Análisis detallado de ventas por día</p>
               </div>
-              <MonthlySalesChart data={dailyDataFiltered} />
+              {loading ? (
+                <ChartContentSkeleton />
+              ) : (
+                <MonthlySalesChart data={dailyDataFiltered} />
+              )}
             </div>
 
             {/* Gráfica de Totales Mensuales */}
@@ -663,7 +676,11 @@ const Dashboard = () => {
                 </h3>
                 <p className="text-sm text-gray-600 font-lato">Últimos 6 meses de actividad</p>
               </div>
-              <MonthlyTotalsChart data={mesesData} />
+              {loading ? (
+                <ChartContentSkeleton />
+              ) : (
+                <MonthlyTotalsChart data={mesesData} />
+              )}
             </div>
           </div>
 
@@ -675,16 +692,20 @@ const Dashboard = () => {
               </h3>
               <p className="text-sm text-gray-600 font-lato">Más solicitados y vendidos este mes</p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Servicios</h4>
-                <TopServicesChart data={topServicios} />
+            {loading ? (
+              <TopListContentSkeleton />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Servicios</h4>
+                  <TopServicesChart data={topServicios} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Productos</h4>
+                  <TopProductsChart data={topProductos} />
+                </div>
               </div>
-              <div>
-                <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Productos</h4>
-                <TopProductsChart data={topProductos} />
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Tercera fila: Pedidos Recientes y Comparativa Anual */}
@@ -702,75 +723,79 @@ const Dashboard = () => {
                   <i className="bi bi-receipt text-[#FACC15] text-2xl"></i>
                 </div>
               </div>
-              <div className="space-y-4">
-                {realOrders && realOrders.length > 0 ? (
-                  realOrders
-                    .filter((order) => {
-                      if (!order) return false;
-                      const estado = order.estado || order.status || "";
-                      return estado === "Pendiente" || estado === "En proceso";
-                    })
-                    .slice(0, 5)
-                    .map((order, idx) => {
-                      const id = order.id_pedido || order.id || 0;
-                      const fecha =
-                        order.fecha_pedido ||
-                        order.fecha ||
-                        order.createdAt ||
-                        "Sin fecha";
-                      const total = parseFloat(order.total || order.valor || 0);
-                      const estado = order.estado || order.status || "Pendiente";
+              {loading ? (
+                <OrdersListSkeleton />
+              ) : (
+                <div className="space-y-4">
+                  {realOrders && realOrders.length > 0 ? (
+                    realOrders
+                      .filter((order) => {
+                        if (!order) return false;
+                        const estado = order.estado || order.status || "";
+                        return estado === "Pendiente" || estado === "En proceso";
+                      })
+                      .slice(0, 5)
+                      .map((order, idx) => {
+                        const id = order.id_pedido || order.id || 0;
+                        const fecha =
+                          order.fecha_pedido ||
+                          order.fecha ||
+                          order.createdAt ||
+                          "Sin fecha";
+                        const total = parseFloat(order.total || order.valor || 0);
+                        const estado = order.estado || order.status || "Pendiente";
 
-                      return (
-                        <div
-                          key={id || `order-${idx}`}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300 cursor-pointer group hover:shadow-md"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-[#FACC15] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                              <span className="text-sm font-bold text-[#1E1E1E]">
-                                {idx + 1}
+                        return (
+                          <div
+                            key={id || `order-${idx}`}
+                            className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300 cursor-pointer group hover:shadow-md"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-[#FACC15] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                                <span className="text-sm font-bold text-[#1E1E1E]">
+                                  {idx + 1}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800 group-hover:text-[#FACC15] transition-colors duration-300 font-montserrat">
+                                  PED-{id > 0 ? id.toString().padStart(6, "0") : "000000"}
+                                </p>
+                                <p className="text-xs text-gray-600 font-lato">
+                                  {typeof fecha === "string"
+                                    ? fecha.split("T")[0]
+                                    : "Sin fecha"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-gray-800 font-montserrat">
+                                ${!isNaN(total) ? total.toLocaleString("es-CO") : "0"}
+                              </p>
+                              <span
+                                className={`inline-block px-3 py-1 text-xs rounded-full font-semibold ${
+                                  estado === "Completado" || estado === "Completada"
+                                    ? "bg-gray-100 text-gray-700"
+                                    : estado === "Pendiente"
+                                    ? "bg-[#FACC15]/20 text-[#FACC15]"
+                                    : estado === "En proceso"
+                                    ? "bg-gray-200 text-gray-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {estado}
                               </span>
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-800 group-hover:text-[#FACC15] transition-colors duration-300 font-montserrat">
-                                PED-{id > 0 ? id.toString().padStart(6, "0") : "000000"}
-                              </p>
-                              <p className="text-xs text-gray-600 font-lato">
-                                {typeof fecha === "string"
-                                  ? fecha.split("T")[0]
-                                  : "Sin fecha"}
-                              </p>
-                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-gray-800 font-montserrat">
-                              ${!isNaN(total) ? total.toLocaleString("es-CO") : "0"}
-                            </p>
-                            <span
-                              className={`inline-block px-3 py-1 text-xs rounded-full font-semibold ${
-                                estado === "Completado" || estado === "Completada"
-                                  ? "bg-gray-100 text-gray-700"
-                                  : estado === "Pendiente"
-                                  ? "bg-[#FACC15]/20 text-[#FACC15]"
-                                  : estado === "En proceso"
-                                  ? "bg-gray-200 text-gray-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {estado}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="text-6xl mb-4">📦</div>
-                    <p className="text-gray-500 font-lato">No hay pedidos pendientes</p>
-                  </div>
-                )}
-              </div>
+                        );
+                      })
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">📦</div>
+                      <p className="text-gray-500 font-lato">No hay pedidos pendientes</p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <button
                   className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-lato"
@@ -790,7 +815,11 @@ const Dashboard = () => {
                 </h3>
                 <p className="text-sm text-gray-600 font-lato">Evolución de ventas por año</p>
               </div>
-              <AnnualComparisonChart data={annualData} />
+              {loading ? (
+                <ChartContentSkeleton />
+              ) : (
+                <AnnualComparisonChart data={annualData} />
+              )}
             </div>
           </div>
         </div>

@@ -7,7 +7,6 @@ export { default as PrivilegesTable } from './PrivilegesTable';
 
 // Componentes de UI
 export { default as SearchRole } from './SearchRole';
-export { default as Paginator } from './Paginator';
 export { default as StatusToggle } from './StatusToggle';
 export { default as ActionButtons } from './ActionButtons';
 export { default as RoleRow } from './RoleRow';

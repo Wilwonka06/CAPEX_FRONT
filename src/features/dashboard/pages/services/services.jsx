@@ -13,6 +13,7 @@ import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
+import TableContentSkeleton from "../../../../shared/components/TableContentSkeleton";
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import PropTypes from "prop-types";
@@ -338,17 +339,6 @@ const Services = () => {
     setSelectedService(null);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando servicios...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
@@ -386,8 +376,10 @@ const Services = () => {
               </button>
             </div>
 
-            {/* Tabla de servicios */}
-            {services.length === 0 ? (
+            {/* Tabla de servicios o skeleton */}
+            {loading ? (
+              <TableContentSkeleton columns={7} rows={5} showActions={true} />
+            ) : services.length === 0 ? (
               <p className="text-gray-600 text-center py-8">No hay servicios registrados.</p>
             ) : (
               <>

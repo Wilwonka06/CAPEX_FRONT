@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import GeneralCalendar from './components/GeneralCalendar';
+import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
 import { useOutletContext } from 'react-router-dom';
 import {
   getAllSchedulings,
@@ -250,17 +251,6 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
     setSchedulings(prev => prev.filter(s => s.id !== schedulingId));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando programaciones...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
@@ -294,16 +284,22 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
             </div>
           </div>
           <div className="w-full">
-            {console.log("[DEBUG] Passing to GeneralCalendar:")}
-            {console.log("  - filteredEmployees:", filteredEmployees)}
-            {console.log("  - schedulings:", schedulings)}
-            <GeneralCalendar
-              employees={filteredEmployees}
-              schedulings={schedulings}
-              onAddEvent={handleAddEvent}
-              onUpdateEvent={handleUpdateEvent}
-              onDeleteEvent={handleDeleteEvent}
-            />
+            {loading ? (
+              <CalendarContentSkeleton />
+            ) : (
+              <>
+                {console.log("[DEBUG] Passing to GeneralCalendar:")}
+                {console.log("  - filteredEmployees:", filteredEmployees)}
+                {console.log("  - schedulings:", schedulings)}
+                <GeneralCalendar
+                  employees={filteredEmployees}
+                  schedulings={schedulings}
+                  onAddEvent={handleAddEvent}
+                  onUpdateEvent={handleUpdateEvent}
+                  onDeleteEvent={handleDeleteEvent}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>

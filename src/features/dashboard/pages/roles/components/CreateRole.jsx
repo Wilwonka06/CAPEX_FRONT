@@ -47,34 +47,46 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   };
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
+    console.log(`🔄 handlePrivilegeChange: ${modulo} -> ${accion} = ${checked}`);
+    
     setPrivileges(prev => {
-      const newPrivileges = {
-        ...prev,
-        [modulo]: {
-          ...prev[modulo],
-          [accion]: checked
-        }
+      // Obtener el estado actual del módulo, o un objeto vacío si no existe
+      const currentModulePrivileges = prev[modulo] || {};
+      
+      // Crear el nuevo estado del módulo SOLO con los privilegios que se están modificando
+      const newModulePrivileges = {
+        ...currentModulePrivileges,
+        [accion]: checked
       };
 
       // Si se selecciona cualquier privilegio que NO sea "Visualizar", 
       // automáticamente activar "Visualizar" también
       if (checked && accion !== 'Visualizar') {
-        newPrivileges[modulo] = {
-          ...newPrivileges[modulo],
-          'Visualizar': true
-        };
+        newModulePrivileges['Visualizar'] = true;
+        console.log(`✅ Activando Visualizar automáticamente para ${modulo}`);
       }
 
       // Si se deselecciona "Visualizar", deseleccionar todos los demás privilegios
       if (!checked && accion === 'Visualizar') {
-        newPrivileges[modulo] = {
-          'Visualizar': false,
-          'Crear': false,
-          'Editar': false,
-          'Eliminar': false
-        };
+        // Limpiar todos los privilegios del módulo
+        Object.keys(newModulePrivileges).forEach(key => {
+          if (key !== accion) {
+            delete newModulePrivileges[key];
+          }
+        });
+        newModulePrivileges['Visualizar'] = false;
+        console.log(`🗑️ Deseleccionando todos los privilegios de ${modulo} porque se deseleccionó Visualizar`);
       }
 
+      // Crear el nuevo estado completo, asegurando que solo incluimos privilegios que están en true
+      // o que fueron explícitamente deseleccionados (false)
+      const newPrivileges = {
+        ...prev,
+        [modulo]: newModulePrivileges
+      };
+
+      console.log(`📊 Nuevo estado de privilegios para ${modulo}:`, newModulePrivileges);
+      
       return newPrivileges;
     });
   };
@@ -88,11 +100,34 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
     e.preventDefault();
     setShowErrors(true);
     setTouched({ nombre: true, descripcion: true, privilegios: true });
-    const validationErrors = validateRole(formData, privileges, roles).errors;
+    
+    // Limpiar privilegios: solo mantener los que están explícitamente en true
+    const cleanedPrivileges = {};
+    Object.keys(privileges).forEach(modulo => {
+      const modulePrivileges = privileges[modulo];
+      const cleanedModulePrivileges = {};
+      
+      Object.keys(modulePrivileges).forEach(accion => {
+        // Solo incluir privilegios que están explícitamente en true
+        if (modulePrivileges[accion] === true) {
+          cleanedModulePrivileges[accion] = true;
+        }
+      });
+      
+      // Solo agregar el módulo si tiene al menos un privilegio activo
+      if (Object.keys(cleanedModulePrivileges).length > 0) {
+        cleanedPrivileges[modulo] = cleanedModulePrivileges;
+      }
+    });
+
+    console.log('🔄 Privilegios antes de limpiar:', privileges);
+    console.log('🧹 Privilegios después de limpiar:', cleanedPrivileges);
+    
+    const validationErrors = validateRole(formData, cleanedPrivileges, roles).errors;
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length === 0 && onCreate) {
       try {
-        await onCreate(formData, privileges);
+        await onCreate(formData, cleanedPrivileges); // Usar privilegios limpiados
         // Cerrar el modal solo después de que la operación sea exitosa
         onClose();
       } catch (error) {
