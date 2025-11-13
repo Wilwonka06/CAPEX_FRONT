@@ -10,7 +10,9 @@ const Landing = () => {
         <div className="min-h-screen bg-background font-inter">
           {/* Navbar */}
           <Navbar />
-          <Outlet />
+          <main>
+            <Outlet />
+          </main>
         </div>
       </CartToastProvider>
     </CartProvider>

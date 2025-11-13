@@ -3,7 +3,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import AddScheduling from './AddScheduling';
-import { createScheduling } from '../api/schedulingApi';
+import { schedulingService } from '../API/employeesService';
 import toast from 'react-hot-toast';
 
 const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
@@ -125,7 +125,7 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
         };
 
         console.log("[Calendar] Creating scheduling for fecha:", fecha, schedulingData);
-        const created = await createScheduling(schedulingData);
+        const created = await schedulingService.create(schedulingData);
         createdSchedulings.push(created);
       }
 

@@ -1,6 +1,6 @@
 import { useState, createContext, useContext, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import rolesService from '../services';
+import { rolesService } from '../API/rolesService';
 
 const RolesContext = createContext();
 
@@ -20,7 +20,7 @@ export function RolesProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      const rolesData = await rolesService.getAllRoles();
+      const rolesData = await rolesService.getAll();
       setRoles(rolesData);
     } catch (err) {
       setError(err.message);
@@ -33,7 +33,7 @@ export function RolesProvider({ children }) {
   const addRole = async (roleData) => {
     setLoading(true);
     try {
-      const newRole = await rolesService.createRole(roleData);
+      const newRole = await rolesService.create(roleData);
       // Actualizar el estado local después de crear exitosamente
       setRoles(prevRoles => [...prevRoles, newRole]);
       return newRole;
@@ -49,7 +49,7 @@ export function RolesProvider({ children }) {
     setLoading(true);
     try {
       console.log('📤 Enviando rol a API:', updatedRole);
-      const editedRole = await rolesService.updateRole(updatedRole.id, updatedRole);
+      const editedRole = await rolesService.update(updatedRole.id, updatedRole);
       console.log('📥 Respuesta de API:', editedRole);
 
       // Actualizar el estado local después de editar exitosamente
@@ -75,7 +75,7 @@ export function RolesProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      await rolesService.deleteRole(id);
+      await rolesService.delete(id);
       setRoles(prev => prev.filter(r => r.id !== id));
     } catch (err) {
       setError(err.message);
@@ -88,7 +88,7 @@ export function RolesProvider({ children }) {
   const changeRoleStatus = async (id, status) => {
     setLoading(true);
     try {
-      const updatedRole = await rolesService.changeRoleStatus(id, status);
+      const updatedRole = await rolesService.changeStatus(id, status);
       // Actualizar el estado local después de cambiar estado exitosamente
       setRoles(prevRoles => 
         prevRoles.map(role => 

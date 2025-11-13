@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import EditScheduling from './EditScheduling';
+import RecurringSchedulingManager from './RecurringSchedulingManager';
+import NovedadManager from './NovedadManager';
 import {
   validateEmployeeEditForm,
   validateEmployeeName,
@@ -146,7 +148,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
 
   return (
     <div>
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         <button
           className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
             activeTab === 'empleado' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'
@@ -154,7 +156,25 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
           onClick={() => setActiveTab('empleado')}
           type="button"
         >
-          Editar Empleado
+          Datos del Empleado
+        </button>
+        <button
+          className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
+            activeTab === 'programacion-recurrente' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'
+          }`}
+          onClick={() => setActiveTab('programacion-recurrente')}
+          type="button"
+        >
+          Programaciones Recurrentes
+        </button>
+        <button
+          className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
+            activeTab === 'novedades' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'
+          }`}
+          onClick={() => setActiveTab('novedades')}
+          type="button"
+        >
+          Novedades
         </button>
         <button
           className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
@@ -163,7 +183,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
           onClick={() => setActiveTab('programacion')}
           type="button"
         >
-          Programación
+          Programación (Legacy)
         </button>
       </div>
 
@@ -322,6 +342,18 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
             </button>
           </div>
         </form>
+      )}
+
+      {activeTab === 'programacion-recurrente' && (
+        <div className="mt-4">
+          <RecurringSchedulingManager empleadoId={employee?.id} />
+        </div>
+      )}
+
+      {activeTab === 'novedades' && (
+        <div className="mt-4">
+          <NovedadManager empleadoId={employee?.id} />
+        </div>
       )}
 
       {activeTab === 'programacion' && (

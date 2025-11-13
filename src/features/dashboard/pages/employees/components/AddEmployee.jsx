@@ -306,6 +306,14 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
             </select>
           </div>
           
+          <div className="col-span-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <i className="bi bi-info-circle mr-2"></i>
+              <strong>Nota:</strong> La programación es opcional. Puedes crear el empleado ahora y 
+              asignarle programación más tarde desde la vista de edición.
+            </p>
+          </div>
+
           <div className="col-span-2 flex justify-end mt-6 gap-2">
             <button 
               type="button" 
@@ -314,13 +322,52 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
             >
               Cancelar
             </button>
+            
+            {/* Botón para guardar sin programación */}
+            <button 
+              type="button" 
+              onClick={() => {
+                const formErrors = validateEmployeeForm(form, employees);
+                setErrors(formErrors);
+                
+                if (Object.keys(formErrors).length === 0) {
+                  // Asegurar que el teléfono tenga el formato +XXXXXXXXXX
+                  let telefonoFormateado = form.telefono;
+                  if (telefonoFormateado && !telefonoFormateado.startsWith('+')) {
+                    telefonoFormateado = '+' + telefonoFormateado;
+                  }
+
+                  const newEmployee = {
+                    nombre: form.nombre,
+                    tipo_documento: form.tipoDocumento,
+                    documento: form.documento,
+                    telefono: telefonoFormateado,
+                    correo: form.correo,
+                    direccion: form.direccion,
+                    estado: form.estado,
+                    schedulings: [] // Sin programaciones
+                  };
+
+                  console.log("📤 [AddEmployee] Guardando empleado sin programación:", newEmployee);
+                  onSave(newEmployee);
+                  setForm(initialForm);
+                  setErrors({});
+                }
+              }} 
+              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded transition"
+              disabled={!isFormValid()}
+            >
+              Guardar sin Programación
+            </button>
+            
+            {/* Botón para continuar a programación (opcional) */}
             <button 
               type="button" 
               onClick={() => { if (validate()) setStep(2); }} 
               className="bg-primary-dark hover:bg-primary text-white px-6 py-2 rounded transition"
               disabled={!isFormValid()}
             >
-              Continuar
+              Agregar Programación (Opcional)
             </button>
           </div>
         </form>

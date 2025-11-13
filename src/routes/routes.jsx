@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import RequireAuth from "../features/auth/components/RequireAuth";
 import RequirePrivilege from "../features/auth/components/RequirePrivilege";
+import RequireAdminAccess from "../features/auth/components/RequireAdminAccess";
 import NotFound from "../shared/components/NotFound";
 
 // Layouts
@@ -140,7 +141,11 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/dashboard",
-        element: <Layout />,
+        element: (
+          <RequireAdminAccess>
+            <Layout />
+          </RequireAdminAccess>
+        ),
         children: [
           // Dashboard principal
           // Permitir acceso si tiene Dashboard o algún módulo administrativo

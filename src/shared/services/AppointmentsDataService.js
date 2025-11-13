@@ -1,6 +1,6 @@
 import apiRequest from '../config/apiConfig';
 import appointmentsService from '../../features/dashboard/pages/appointments/API/appointmentsService';
-import { getEmployees } from '../../features/dashboard/pages/employees/api/employeesApi';
+import { employeesService } from '../../features/dashboard/pages/employees/API/employeesService';
 
 // Estados posibles de la cita
 export const APPOINTMENT_STATES = [
@@ -136,7 +136,7 @@ const obtenerEmpleados = async () => {
   }
   
   try {
-    empleadosCache = await getEmployees();
+    empleadosCache = await employeesService.getAll();
     empleadosCacheTime = now;
     return empleadosCache;
   } catch (error) {

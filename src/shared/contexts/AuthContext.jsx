@@ -110,14 +110,33 @@ export const AuthProvider = ({ children }) => {
     // Obtener datos del usuario si están disponibles
     const user = userData || currentUser;
     
-    // Verificar si el usuario tiene permisos administrativos
-    // Módulos administrativos: Dashboard, Gestión de Usuarios, Gestión de Compras, Gestión de Servicios
+    // ⚠️ IMPORTANTE: Clientes y usuarios NUNCA deben acceder al dashboard
+    // Incluso si tienen algunos privilegios, deben ir al landing
+    if (normalizedRole === 'cliente' || normalizedRole === 'usuario') {
+      console.log('🚫 Cliente/Usuario detectado, redirigiendo a /landing (sin acceso administrativo)');
+      return '/landing';
+    }
+    
+    // Para otros roles, verificar si tienen permisos administrativos
     if (user && user.privileges) {
       const administrativeModules = [
         'Dashboard',
         'Gestión de Usuarios',
         'Gestión de Compras',
-        'Gestión de Servicios'
+        'Gestión de Servicios',
+        'Empleados',
+        'Programación',
+        'Productos',
+        'Compras',
+        'Proveedores',
+        'Categorías de Productos',
+        'Categorías de Servicios',
+        'Servicios',
+        'Ventas',
+        'Venta de Productos',
+        'Pedidos',
+        'Citas',
+        'Clientes'
       ];
       
       // Verificar si tiene acceso a algún módulo administrativo
@@ -178,11 +197,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Función de login
-  const login = async (userData) => {
+  const login = async (userData, previousPath = null) => {
     try {
       console.log('=== LOGIN INICIADO ===');
       console.log('📝 Datos del usuario recibidos:', userData);
       console.log('🔑 Privilegios del usuario:', userData.privileges);
+      console.log('📍 Página anterior:', previousPath);
 
       // Guardar usuario en localStorage
       localStorage.setItem('currentUser', JSON.stringify(userData));
@@ -191,8 +211,35 @@ export const AuthProvider = ({ children }) => {
       // Emitir evento de cambio
       window.dispatchEvent(new Event('user-auth-changed'));
 
-      // Obtener ruta de redirección (pasar userData para verificar permisos)
-      const redirectPath = getRoleRedirect(userData.rol, userData);
+      // Obtener nombre del rol
+      const roleName = typeof userData.rol === 'string'
+        ? userData.rol
+        : userData.rol?.nombre || '';
+      const normalizedRole = roleName.toLowerCase();
+
+      // Determinar ruta de redirección
+      let redirectPath;
+
+      // Si es cliente/usuario y hay una página anterior válida, redirigir ahí
+      if ((normalizedRole === 'cliente' || normalizedRole === 'usuario') && previousPath) {
+        // Verificar que la página anterior no sea el dashboard ni rutas administrativas
+        const isAdminRoute = previousPath.startsWith('/dashboard') || 
+                           previousPath.startsWith('/admin') ||
+                           previousPath === '/iniciar-sesion' ||
+                           previousPath === '/registrarse';
+        
+        if (!isAdminRoute) {
+          console.log('🔄 Cliente: Redirigiendo a página anterior:', previousPath);
+          redirectPath = previousPath;
+        } else {
+          // Si la página anterior es administrativa, redirigir al landing
+          redirectPath = getRoleRedirect(userData.rol, userData);
+        }
+      } else {
+        // Para otros roles o si no hay página anterior, usar la lógica normal
+        redirectPath = getRoleRedirect(userData.rol, userData);
+      }
+
       console.log('🔄 Redirigiendo a:', redirectPath);
 
       // Redirigir con un pequeño delay para mejor UX

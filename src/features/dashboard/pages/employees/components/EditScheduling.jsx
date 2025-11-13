@@ -7,7 +7,7 @@ import {
   validateSchedulingStartTime,
   validateSchedulingEndTime,
 } from '../../../../../shared/validations';
-import { getSchedulingsByUser, updateScheduling, deleteScheduling } from '../api/schedulingApi';
+import { schedulingService } from '../API/employeesService';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -46,7 +46,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
       setLoadError(null);
       console.log('[EditScheduling] 🔍 Cargando programaciones para empleadoId:', empleadoId);
       
-      const progs = await getSchedulingsByUser(empleadoId);
+      const progs = await schedulingService.getByUser(empleadoId);
       console.log('[EditScheduling] ✅ Programaciones cargadas:', progs);
       setProgramaciones(progs || []);
       setCurrentPage(1);
@@ -107,7 +107,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   const handleEliminarProgramacion = async (programacion) => {
     if (window.confirm(`¿Eliminar la programación del ${formatDate(programacion.fechaInicio || programacion.fecha)}?`)) {
       try {
-        await deleteScheduling(programacion.id);
+        await schedulingService.delete(programacion.id);
         toast.success('Programación eliminada correctamente');
         await cargarProgramaciones();
       } catch (error) {
@@ -184,7 +184,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
           hora_salida: prog.horaFin,
         };
 
-        await updateScheduling(editing.id, progToSave);
+        await schedulingService.update(editing.id, progToSave);
         
         toast.success('Programación actualizada correctamente');
         setMostrarFormulario(false);

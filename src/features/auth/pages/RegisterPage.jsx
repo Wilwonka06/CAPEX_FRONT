@@ -7,7 +7,7 @@ import FormField from '../components/FormField';
 import authService from '../services/authServices';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../dashboard/pages/users/components/phoneinput-search.css';
+import './register-phone-input.css';
 
 const DOC_TYPES = ['Cedula de ciudadania', 'Pasaporte', 'Cedula de extranjeria'];
 
@@ -183,7 +183,7 @@ const RegisterPage = () => {
 
   return (
     <>
-      <div className="min-h-screen flex font-inter relative overflow-hidden">
+      <div className="min-h-screen flex font-inter relative overflow-hidden register-page-container">
         {/* Fondo con gradiente animado */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#f8ede3] via-[#fff6ee] to-[#f8ede3] animate-gradient-x"></div>
 
@@ -298,32 +298,36 @@ const RegisterPage = () => {
                           <label className="block text-sm font-semibold text-[#6d3b3b]">
                             Teléfono <span className="text-red-500">*</span>
                           </label>
-                          <PhoneInput
-                            country={'co'}
-                            value={numero}
-                            onChange={(value) => {
-                              setNumero(value);
-                              const err = validate('telefono', value);
-                              setError(prev => ({ ...prev, telefono: err }));
-                            }}
-                            onBlur={() => {
-                              const err = validate('telefono', numero);
-                              setError(prev => ({ ...prev, telefono: err }));
-                            }}
-                            inputClass={`w-full px-3 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#ffb76b] focus:ring-4 focus:ring-[#ffb76b]/10 transition-all duration-200 bg-white/50 backdrop-blur-sm ${
-                              error.telefono ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : ''
-                            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            containerClass="w-full"
-                            inputProps={{
-                              name: 'telefono',
-                              required: true,
-                              placeholder: 'Ej: 3001234567',
-                              disabled: loading
-                            }}
-                            specialLabel=""
-                          />
+                          <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                            </div>
+                            <PhoneInput
+                              country={'co'}
+                              value={numero}
+                              onChange={(value) => {
+                                setNumero(value);
+                                const err = validate('telefono', value);
+                                setError(prev => ({ ...prev, telefono: err }));
+                              }}
+                              onBlur={() => {
+                                const err = validate('telefono', numero);
+                                setError(prev => ({ ...prev, telefono: err }));
+                              }}
+                              inputClass="w-full"
+                              containerClass={`w-full phone-input-register ${error.telefono ? 'error' : ''}`}
+                              inputProps={{
+                                name: 'telefono',
+                                required: true,
+                                placeholder: 'Ej: 3001234567',
+                                disabled: loading,
+                                'aria-invalid': error.telefono ? 'true' : 'false',
+                                'aria-describedby': error.telefono ? 'telefono-error' : undefined
+                              }}
+                              specialLabel=""
+                            />
+                          </div>
                           {error.telefono && (
-                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 animate-shake">
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 animate-shake" id="telefono-error">
                               <div className="flex items-center gap-2">
                                 <i className="bi bi-exclamation-triangle text-red-500 text-sm"></i>
                                 <span className="text-red-700 text-sm">{error.telefono}</span>

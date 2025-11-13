@@ -1,5 +1,5 @@
 import apiRequest from '../config/apiConfig';
-import { getEmployees } from '../../features/dashboard/pages/employees/api/employeesApi';
+import { employeesService } from '../../features/dashboard/pages/employees/API/employeesService';
 
 // Función para convertir empleados a formato de profesionales
 const convertEmployeesToProfessionals = (employees) => {
@@ -26,7 +26,7 @@ const convertEmployeesToProfessionals = (employees) => {
 export const getProfessionals = async () => {
   try {
     // Obtener empleados desde la API
-    const employees = await getEmployees();
+    const employees = await employeesService.getAll();
     
     // Convertir a formato de profesionales
     const professionals = convertEmployeesToProfessionals(employees);

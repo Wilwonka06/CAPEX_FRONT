@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { isValidEmail, isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
 import { useAuth } from '../../../shared/contexts/AuthContext';
@@ -7,6 +8,10 @@ import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const location = useLocation();
+  
+  // Obtener la página anterior desde location.state (si existe)
+  const previousPath = location.state?.from?.pathname || null;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -87,9 +92,10 @@ export default function LoginPage() {
         const userData = response.data.user;
 
         console.log('💾 Guardando datos del usuario:', userData);
+        console.log('📍 Página anterior guardada:', previousPath);
 
-        // Login exitoso - delegar al contexto
-        await login(userData);
+        // Login exitoso - delegar al contexto con la página anterior
+        await login(userData, previousPath);
 
         return userData;
       } else {

@@ -3,14 +3,8 @@ import toast from 'react-hot-toast';
 import GeneralCalendar from './components/GeneralCalendar';
 import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
 import { useOutletContext } from 'react-router-dom';
-import {
-  getAllSchedulings,
-  createScheduling,
-  updateScheduling,
-  deleteScheduling,
-  searchSchedulings,
-} from './services/schedulingApi';
-import { getEmployees } from '../employees/api/employeesApi';
+import { schedulingService } from './API/schedulingService';
+import { employeesService } from '../employees/API/employeesService';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -40,11 +34,11 @@ const Scheduling = () => {
     setError("");
     try {
       console.log("[DEBUG] Intentando cargar empleados...");
-      const employeesData = await getEmployees();
+      const employeesData = await employeesService.getAll();
       console.log("[DEBUG] Empleados cargados:", employeesData);
 
       console.log("[DEBUG] Intentando cargar programaciones...");
-      const schedulingsData = await getAllSchedulings();
+      const schedulingsData = await schedulingService.getAll();
       console.log("[DEBUG] Programaciones cargadas:", schedulingsData);
 
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
@@ -173,7 +167,7 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
         console.log("[DEBUG] API data to send for date", fechaStr, ":", JSON.stringify(apiData, null, 2));
 
-        const createdScheduling = await createScheduling(apiData);
+        const createdScheduling = await schedulingService.create(apiData);
         console.log("[DEBUG] Created scheduling response:", JSON.stringify(createdScheduling, null, 2));
 
         createdSchedulings.push(createdScheduling);
@@ -221,7 +215,7 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
       console.log("[DEBUG] API data to send:", JSON.stringify(apiData, null, 2));
 
-      const updatedScheduling = await updateScheduling(prog.id, apiData);
+      const updatedScheduling = await schedulingService.update(prog.id, apiData);
       setSchedulings(prev => prev.map(s =>
         s.id === updatedScheduling.id ? updatedScheduling : s
       ));
@@ -268,39 +262,38 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-end mb-8">
-            <div className="relative w-full max-w-xs pr-4">
-              <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-              <input
-                type="text"
-                placeholder="Buscar programación..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
+    <div className="min-h-screen bg-background p-6 font-inter">
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1 max-w-md">
+            <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
+            <input
+              type="text"
+              placeholder="Buscar empleado por nombre o documento..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="border border-gray-300 pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 w-full shadow-sm"
+            />
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 overflow-x-auto">
+          {loading ? (
+            <CalendarContentSkeleton />
+          ) : (
+            <>
+              {console.log("[DEBUG] Passing to GeneralCalendar:")}
+              {console.log("  - filteredEmployees:", filteredEmployees)}
+              {console.log("  - schedulings:", schedulings)}
+              <GeneralCalendar
+                employees={filteredEmployees}
+                schedulings={schedulings}
+                onAddEvent={handleAddEvent}
+                onUpdateEvent={handleUpdateEvent}
+                onDeleteEvent={handleDeleteEvent}
               />
-            </div>
-          </div>
-          <div className="w-full">
-            {loading ? (
-              <CalendarContentSkeleton />
-            ) : (
-              <>
-                {console.log("[DEBUG] Passing to GeneralCalendar:")}
-                {console.log("  - filteredEmployees:", filteredEmployees)}
-                {console.log("  - schedulings:", schedulings)}
-                <GeneralCalendar
-                  employees={filteredEmployees}
-                  schedulings={schedulings}
-                  onAddEvent={handleAddEvent}
-                  onUpdateEvent={handleUpdateEvent}
-                  onDeleteEvent={handleDeleteEvent}
-                />
-              </>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -41,4 +41,3 @@ const CalendarContentSkeleton = () => {
 };
 
 export default CalendarContentSkeleton;
-

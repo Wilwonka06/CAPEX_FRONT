@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
 import { getAllServices } from '@/features/landing/pages/ServicesPage/api/servicesApi';
-import { getEmployees } from '@/features/dashboard/pages/employees/api/employeesApi';
+import { employeesService } from '@/features/dashboard/pages/employees/API/employeesService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
@@ -70,7 +70,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         setServices(normalizedServices);
 
         // Cargar empleados desde el backend
-        const employeesData = await getEmployees();
+        const employeesData = await employeesService.getAll();
         // Filtrar solo empleados activos y convertir a formato de profesionales
         const normalizedProfessionals = employeesData
           .filter(emp => emp.estado === 'Activo' || emp.estado === true)

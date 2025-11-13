@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSchedulingsByUser } from '../api/schedulingApi';
+import { schedulingService } from '../API/employeesService';
 
 const SeeScheduling = ({ empleadoId, onClose }) => {
   const [programaciones, setProgramaciones] = useState([]);
@@ -22,7 +22,7 @@ const SeeScheduling = ({ empleadoId, onClose }) => {
       setLoadError(null);
       console.log('[SeeScheduling] 🔍 Cargando programaciones para empleadoId:', empleadoId);
       
-      const progs = await getSchedulingsByUser(empleadoId);
+      const progs = await schedulingService.getByUser(empleadoId);
       console.log('[SeeScheduling] ✅ Programaciones cargadas:', progs);
       setProgramaciones(progs || []);
       setCurrentPage(1);

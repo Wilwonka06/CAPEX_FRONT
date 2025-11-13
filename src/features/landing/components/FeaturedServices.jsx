@@ -103,7 +103,7 @@ const FeaturedServices = () => (
       <div className="flex justify-center mt-16">
         <Link to="/landing/servicios">
           <button className="group relative px-10 py-4 bg-transparent border-2 border-[#FACC15] text-[#FACC15] font-bold rounded-full shadow-lg hover:shadow-[#FACC15]/50 transition-all duration-300 transform hover:scale-105 font-poppins overflow-hidden">
-            <span className="relative z-10">Ver todos los servicios</span>
+            <span className="relative">Ver todos los servicios</span>
             <div className="absolute inset-0 bg-[#FACC15] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <div className="absolute inset-0 bg-[#FACC15] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
               <span className="text-[#1E1E1E] font-bold">Explorar Servicios</span>

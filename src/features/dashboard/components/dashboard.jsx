@@ -801,8 +801,7 @@ const Dashboard = () => {
                   className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-lato"
                   onClick={() => (window.location.href = "/dashboard/pedidos")}
                 >
-                  <i className="bi bi-download text-lg"></i>
-                  Descargar Reporte
+                  Ir al módulo
                 </button>
               </div>
             </div>

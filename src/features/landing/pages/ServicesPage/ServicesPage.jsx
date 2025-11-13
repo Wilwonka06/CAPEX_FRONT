@@ -169,9 +169,8 @@ const ServicesPage = () => {
           </div>
         </div>
 
-          {/* Barra de búsqueda mejorada */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-12 relative overflow-hidden">
-            {/* Elementos decorativos sutiles */}
+          {/* /* Barra de búsqueda mejorada */}
+          {/* <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-12 relative overflow-hidden">
             <div className="absolute top-4 right-4 w-16 h-16 bg-[#FACC15]/5 rounded-full blur-xl"></div>
             <div className="absolute bottom-4 left-4 w-12 h-12 bg-[#FACC15]/10 rounded-full blur-lg"></div>
 
@@ -195,15 +194,7 @@ const ServicesPage = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Contador de resultados */}
-          <div className="mb-6 p-10">
-            <p className="text-gray-600">
-              Mostrando <span className="font-semibold text-[#FACC15]">{filteredServices.length}</span> de{' '}
-              <span className="font-semibold">{servicios.length}</span> servicios
-            </p>
-          </div>
+          </div> */}
 
           {/* Lista de servicios */}
           {filteredServices.length === 0 ? (
@@ -224,7 +215,7 @@ const ServicesPage = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-16">
             {filteredServices.slice(0, 20).map((servicio, idx) => (
               <div
                 key={servicio.id}

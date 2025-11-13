@@ -6,9 +6,12 @@ import interactionPlugin from '@fullcalendar/interaction';
 import SeeScheduling from '../../scheduling/components/SeeScheduling';
 import AddScheduling from './AddScheduling';
 import EditScheduling from './EditScheduling';
+import SchedulingDetailView from './SchedulingDetailView';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
-import { deleteScheduling, updateScheduling, createScheduling } from '../services/schedulingApi.js';
+import { schedulingService } from '../API/schedulingService';
+import esLocale from '@fullcalendar/core/locales/es';
+import '../../../../../shared/styles/calendar.css';
 
 const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdateEvent, onDeleteEvent }) => {
   console.log("[GeneralCalendar] RENDER:");
@@ -63,15 +66,38 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
         empleadoNombre: employee?.nombre
       });
 
+      // Colores para programaciones - usando colores del sidebar
+      // Variaciones sutiles de grises y azules para diferenciar empleados
+      const colors = [
+        { bg: '#3b82f6', border: '#2563eb' }, // Azul
+        { bg: '#8b5cf6', border: '#7c3aed' }, // Morado
+        { bg: '#10b981', border: '#059669' }, // Verde
+        { bg: '#f59e0b', border: '#d97706' }, // Naranja
+        { bg: '#ef4444', border: '#dc2626' }, // Rojo
+        { bg: '#06b6d4', border: '#0891b2' }, // Cyan
+        { bg: '#6366f1', border: '#4f46e5' }, // Índigo
+        { bg: '#ec4899', border: '#db2777' }, // Rosa
+      ];
+      
+      // Seleccionar color basado en el ID del empleado para consistencia
+      const colorIndex = empleadoId ? (empleadoId % colors.length) : 0;
+      const selectedColor = colors[colorIndex];
+      
+      // Formatear horas
+      const horaEntradaFormato = horaEntrada ? horaEntrada.substring(0, 5) : '00:00';
+      const horaSalidaFormato = horaSalida ? horaSalida.substring(0, 5) : '00:00';
+      
       return {
         id: String(scheduling.id),
         title: employee 
-          ? `${employee.nombre}: ${horaEntrada}-${horaSalida}` 
-          : `Programación: ${horaEntrada}-${horaSalida}`,
+          ? `${employee.nombre} (${horaEntradaFormato} - ${horaSalidaFormato})` 
+          : `Programación: ${horaEntradaFormato} - ${horaSalidaFormato}`,
         start: fecha,
         allDay: true,
-        backgroundColor: '#3788d8',
-        borderColor: '#2c6bb3',
+        backgroundColor: selectedColor.bg,
+        borderColor: selectedColor.border,
+        textColor: '#ffffff',
+        classNames: ['custom-event', 'scheduling-event'],
         extendedProps: {
           schedulingId: scheduling.id,
           empleadoId: empleadoId,
@@ -132,7 +158,7 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
     if (!result.isConfirmed) return;
 
     const deletePromise = (async () => {
-      await deleteScheduling(schedulingId);
+      await schedulingService.delete(schedulingId);
       if (onDeleteEvent) {
         onDeleteEvent(schedulingId);
       }
@@ -221,7 +247,7 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
   };
 
   return (
-    <div className="w-full p-4">
+    <div className="w-full">
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -230,7 +256,7 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
           center: 'title',
           right: 'dayGridMonth,timeGridWeek,timeGridDay',
         }}
-        locale="es"
+        locale={esLocale}
         selectable={true}
         editable={false}
         events={calendarEvents}
@@ -241,8 +267,23 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
           today: 'Hoy',
           month: 'Mes',
           week: 'Semana',
-          day: 'Día'
+          day: 'Día',
+          prev: '←',
+          next: '→',
         }}
+        dayHeaderFormat={{ weekday: 'short' }}
+        titleFormat={{ year: 'numeric', month: 'long' }}
+        contentHeight="auto"
+        handleWindowResize={true}
+        dayMaxEventRows={3}
+        moreLinkClick="popover"
+        eventDisplay="block"
+        eventTextColor="#ffffff"
+        eventBorderColor="transparent"
+        eventClassNames="shadow-md hover:shadow-lg"
+        dayCellClassNames="hover:bg-gray-50 transition-colors"
+        slotLabelClassNames="text-gray-600 font-medium"
+        allDayText="Todo el día"
       />
 
       {modalType === 'edit' && !editFormOpen && (
@@ -255,47 +296,7 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
           canEdit={true}
           canDelete={true}
         >
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded px-3 py-2"
-                value={titleInput}
-                readOnly
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Empleado</label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded px-3 py-2"
-                value={selectedEvent?.extendedProps?.empleadoNombre || 'Sin nombre'}
-                readOnly
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hora entrada</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  value={selectedEvent?.extendedProps?.hora_entrada || ''}
-                  readOnly
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hora salida</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  value={selectedEvent?.extendedProps?.hora_salida || ''}
-                  readOnly
-                />
-              </div>
-            </div>
-          </div>
-        </SeeScheduling>
+                    <SchedulingDetailView selectedEvent={selectedEvent} />`n        </SeeScheduling>
       )}
 
       {editFormOpen && (
@@ -341,3 +342,4 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
 };
 
 export default GeneralCalendar;
+
