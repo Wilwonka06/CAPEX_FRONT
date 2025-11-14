@@ -32,6 +32,8 @@ export default function CreateSaleModal({
     id: null,
     documentType: "",
     documentNumber: "",
+    nombre: "",
+    // Mantener firstName y lastName para retrocompatibilidad
     firstName: "",
     lastName: "",
     email: "",
@@ -63,6 +65,7 @@ export default function CreateSaleModal({
           id: null,
           documentType: "",
           documentNumber: clienteDoc,
+          nombre: "",
           firstName: "",
           lastName: "",
           email: "",
@@ -90,13 +93,14 @@ export default function CreateSaleModal({
           });
 
           if (usuarioEncontrado) {
-            const nombres = (usuarioEncontrado.nombre || '').split(' ');
             setCliente({
               id: usuarioEncontrado.id_usuario || usuarioEncontrado.id,
               documentType: usuarioEncontrado.tipo_documento || 'Cedula de ciudadania',
               documentNumber: usuarioEncontrado.documento || '',
-              firstName: nombres[0] || '',
-              lastName: nombres.slice(1).join(' ') || '',
+              nombre: usuarioEncontrado.nombre || '',
+              // Mantener firstName y lastName para retrocompatibilidad
+              firstName: usuarioEncontrado.nombre ? usuarioEncontrado.nombre.split(' ')[0] : '',
+              lastName: usuarioEncontrado.nombre ? usuarioEncontrado.nombre.split(' ').slice(1).join(' ') : '',
               email: usuarioEncontrado.correo || '',
               phone: usuarioEncontrado.telefono || '',
             });
@@ -145,6 +149,7 @@ export default function CreateSaleModal({
           id: null,
           documentType: "",
           documentNumber: clienteDoc,
+          nombre: "",
           firstName: "",
           lastName: "",
           email: "",
@@ -467,7 +472,7 @@ export default function CreateSaleModal({
                       <input
                         type="text"
                         className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
-                        value={`${cliente.firstName} ${cliente.lastName}`.trim()}
+                        value={cliente.nombre || `${cliente.firstName} ${cliente.lastName}`.trim() || ''}
                         readOnly
                       />
                     ) : (

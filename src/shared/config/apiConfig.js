@@ -1,11 +1,11 @@
 import axios from 'axios';
-import toast from 'react-hot-toast';
+import { showError } from '../utils/toastUtils';
 
-/* const BASE_URL = import.meta.env.DEV
+const BASE_URL = import.meta.env.DEV
   ? 'http://localhost:3000/api' 
-  : 'https://capex-back.onrender.com/api'; */
+  : 'https://capex-back.onrender.com/api';
 
-const BASE_URL = 'https://capex-back.onrender.com/api';
+/* const BASE_URL = 'https://capex-back.onrender.com/api'; */
 
 // Log de configuración en desarrollo
 if (import.meta.env.DEV) {
@@ -100,31 +100,32 @@ apiClient.interceptors.response.use(
         case 401: {
           localStorage.removeItem('currentUser');
           const currentPath = window.location.pathname;
-          const isPublicRoute = ['/', '/login', '/register', '/forgot-password', '/reset-password'].includes(currentPath) || 
+          const isPublicRoute = ['/', '/login', '/iniciar-sesion', '/registrarse', '/register', '/forgot-password', '/reset-password'].includes(currentPath) || 
                                currentPath.startsWith('/landing');
           const isAuthCheck = error.config?.url?.includes('/auth/me');
+          const isLoginRoute = error.config?.url?.includes('/auth/login');
           
-          // Solo mostrar toast y redirigir si no es una ruta pública y no es verificación de auth
-          if (!isPublicRoute && !isAuthCheck) {
-            // Usar toastId para evitar duplicados
-            const toastId = 'auth-error-401';
-            toast.error('No autorizado. Por favor, inicia sesión nuevamente', { id: toastId });
+          // Solo mostrar toast y redirigir si no es una ruta pública, no es verificación de auth, y no es un error de login
+          // Si es un error de login, el componente LoginPage ya maneja el error, no necesitamos redirigir
+          if (!isPublicRoute && !isAuthCheck && !isLoginRoute) {
+            // Usar showError que previene duplicados automáticamente
+            showError('No autorizado. Por favor, inicia sesión nuevamente', 'auth-error-401');
             setTimeout(() => {
-              window.location.href = '/login';
+              window.location.href = '/iniciar-sesion';
             }, 2000);
           }
           break;
         }
         case 403: {
-          // Usar toastId basado en el mensaje para evitar duplicados
+          // Usar showError que previene duplicados automáticamente
           const toastId403 = `error-403-${error.config?.url || 'default'}`;
-          toast.error('No tienes permisos para realizar esta acción', { id: toastId403 });
+          showError('No tienes permisos para realizar esta acción', toastId403);
           break;
         }
         case 404: {
-          // Usar toastId basado en el mensaje para evitar duplicados
+          // Usar showError que previene duplicados automáticamente
           const toastId404 = `error-404-${error.config?.url || 'default'}`;
-          toast.error(data?.message || 'Recurso no encontrado', { id: toastId404 });
+          showError(data?.message || 'Recurso no encontrado', toastId404);
           break;
         }
         case 422:
@@ -135,15 +136,15 @@ apiClient.interceptors.response.use(
           // No mostrar toast para evitar duplicados con toast.promise en componentes
           break;
         case 500: {
-          // Usar toastId para evitar duplicados
+          // Usar showError que previene duplicados automáticamente
           const toastId500 = `error-500-${error.config?.url || 'default'}`;
-          toast.error('Error interno del servidor. Intenta nuevamente', { id: toastId500 });
+          showError('Error interno del servidor. Intenta nuevamente', toastId500);
           break;
         }
         default: {
-          // Usar toastId basado en el mensaje para evitar duplicados
+          // Usar showError que previene duplicados automáticamente
           const toastIdDefault = `error-${status}-${error.config?.url || 'default'}`;
-          toast.error(data?.message || 'Error inesperado', { id: toastIdDefault });
+          showError(data?.message || 'Error inesperado', toastIdDefault);
         }
       }
     } else if (error.request) {
@@ -159,15 +160,15 @@ apiClient.interceptors.response.use(
         request: error.request,
       });
 
-      // Usar toastId basado en el tipo de error para evitar duplicados
+      // Usar showError que previene duplicados automáticamente
       if (error.code === 'ECONNABORTED') {
-        toast.error('La petición tardó demasiado. El servidor puede estar ocupado o "dormido". Intenta nuevamente.', { 
+        showError('La petición tardó demasiado. El servidor puede estar ocupado o "dormido". Intenta nuevamente.', { 
           id: 'error-timeout',
           duration: 5000 
         });
       } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         const baseUrl = error.config?.baseURL || BASE_URL;
-        toast.error(`Error de conexión con ${baseUrl}. Verifica tu conexión a internet o que el servidor esté disponible.`, { 
+        showError(`Error de conexión con ${baseUrl}. Verifica tu conexión a internet o que el servidor esté disponible.`, { 
           id: 'error-network',
           duration: 5000 
         });
@@ -180,12 +181,12 @@ apiClient.interceptors.response.use(
           });
         }
       } else {
-        toast.error(`Error de conexión: ${error.message || 'Error desconocido'}`, { 
+        showError(`Error de conexión: ${error.message || 'Error desconocido'}`, { 
           id: 'error-connection' 
         });
       }
     } else {
-      toast.error('Error inesperado', { id: 'error-unexpected' });
+      showError('Error inesperado', { id: 'error-unexpected' });
       console.error('Error inesperado:', error);
     }
 

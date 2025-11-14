@@ -99,10 +99,6 @@ const router = createBrowserRouter([
         element: <Cart />,
       },
       {
-        path: "citas",
-        element: <ClientAppointments />,
-      },
-      {
         path: "pedidos",
         element: <Orders />,
       },
@@ -119,10 +115,6 @@ const router = createBrowserRouter([
         element: <ServicesPage />,
       },
       {
-        path: "citas-cliente",
-        element: <ClientAppointments />,
-      },
-      {
         path: "catalogo",
         element: <Catalogo />,
       },
@@ -133,6 +125,15 @@ const router = createBrowserRouter([
       {
         path: "gracias",
         element: <ThankYou />,
+      },
+      // Rutas de citas - acceso público pero con mensaje si no está autenticado
+      {
+        path: "citas",
+        element: <ClientAppointments />,
+      },
+      {
+        path: "citas-cliente",
+        element: <ClientAppointments />,
       },
     ],
   },

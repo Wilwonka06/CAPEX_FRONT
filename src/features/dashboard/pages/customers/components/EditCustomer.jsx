@@ -10,8 +10,7 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
   const [formData, setFormData] = useState({
     documentType: "",
     documentNumber: "",
-    firstName: "",
-    lastName: "",
+    nombre: "",
     email: "",
     phone: "",
   })
@@ -21,12 +20,11 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
   useEffect(() => {
     if (isOpen && customer) {
       setFormData({
-        documentType: customer.documentType || "",
-        documentNumber: customer.documentNumber || "",
-        firstName: customer.firstName || "",
-        lastName: customer.lastName || "",
-        email: customer.email || "",
-        phone: customer.phone || "",
+        documentType: customer.documentType || customer.tipoDocumento || "",
+        documentNumber: customer.documentNumber || customer.documento || "",
+        nombre: customer.nombre || customer.firstName || "",
+        email: customer.email || customer.correo || "",
+        phone: customer.phone || customer.telefono || "",
       })
       setErrors({})
       setTouched({})
@@ -34,8 +32,7 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
       setFormData({
         documentType: "",
         documentNumber: "",
-        firstName: "",
-        lastName: "",
+        nombre: "",
         email: "",
         phone: "",
       })
@@ -45,13 +42,34 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
   }, [isOpen, customer])
 
   useEffect(() => {
-    setErrors(validateCustomer(formData, customers, customer?.id, true));
-  }, [formData, customers, customer]);
+    // Solo validar si el campo ha sido tocado
+    const validation = validateCustomer(formData, customers, customer?.id, true);
+    const newErrors = {};
+    Object.keys(validation.errors).forEach(key => {
+      if (touched[key]) {
+        newErrors[key] = validation.errors[key];
+      }
+    });
+    setErrors(newErrors);
+  }, [formData, customers, customer, touched]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     setTouched((prev) => ({ ...prev, [name]: true }))
+    // Limpiar error si el campo tiene valor válido
+    if (errors[name]) {
+      // Validar inmediatamente si el campo es válido
+      const tempFormData = { ...formData, [name]: value };
+      const validation = validateCustomer(tempFormData, customers, customer?.id, true);
+      if (!validation.errors[name]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
+    }
   }
 
   const handleBlur = (e) => {
@@ -144,39 +162,23 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
               </div>
             </div>
 
-            {/* Nombres */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Nombre <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+            {/* Nombre completo */}
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">
+                Nombre Completo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               />
-                {touched.firstName && errors.firstName && (
-                  <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Apellido <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                />
-                {touched.lastName && errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
+              {touched.nombre && errors.nombre && (
+                <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>
+              )}
             </div>
-          </div>
 
             {/* Email y Teléfono */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

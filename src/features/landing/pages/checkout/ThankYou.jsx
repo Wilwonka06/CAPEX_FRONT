@@ -23,7 +23,8 @@ const ThankYou = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
+  const user = currentUser;
 
   useEffect(() => {
     const loadOrderData = async () => {
@@ -71,30 +72,30 @@ const ThankYou = () => {
 
         // ✅ Formatear el pedido para mostrar
         const formattedOrder = {
-          id: orderData.id_pedido,
-          numeroOrden: `PED-${orderData.id_pedido.toString().padStart(6, '0')}`,
-          fecha: orderData.fecha,
+          id: orderData.id_pedido || orderData.id,
+          numeroOrden: `PED-${String(orderData.id_pedido || orderData.id || 0).padStart(6, '0')}`,
+          fecha: orderData.fecha || orderData.fecha_creacion,
           estado: orderData.estado || 'Pendiente',
           valor: parseFloat(orderData.total || 0),
-          subtotal: parseFloat(orderData.total || 0),
-          productos: (orderData.detalles || []).map(det => ({
-            id: det.id_producto,
-            nombre: det.producto?.nombre || 'Producto',
-            imagen: det.producto?.url_foto || '/placeholder.png',
-            cantidad: det.cantidad,
-            precio: parseFloat(det.precio_unitario || 0)
+          subtotal: parseFloat(orderData.subtotal || orderData.total || 0),
+          costoEnvio: parseFloat(orderData.costo_envio || 0),
+          productos: (orderData.detalles || orderData.productos || []).map(det => ({
+            id: det.id_producto || det.id,
+            nombre: det.producto?.nombre || det.nombre || 'Producto',
+            imagen: det.producto?.url_foto || det.imagen || det.foto || getDefaultProductImage(det.producto?.nombre || det.nombre),
+            cantidad: parseInt(det.cantidad || 1),
+            precio: parseFloat(det.precio_unitario || det.precio || 0)
           })),
-          direccion: user.direccion || 'No especificada',
-          ciudad: 'N/A',
-          pais: 'Colombia'
+          direccion: orderData.direccion_entrega || user.direccion || 'No especificada',
+          ciudad: orderData.ciudad || 'N/A',
+          pais: orderData.pais || 'Colombia'
         };
 
         setOrder(formattedOrder);
         
         // Datos del cliente
         setCustomer({
-          firstName: user.nombre || 'Cliente',
-          lastName: user.apellido || '',
+          nombre: user.nombre || 'Cliente',
           documentType: user.tipo_documento || 'CC',
           documentNumber: user.documento || 'N/A',
           email: user.correo || 'N/A',
@@ -155,7 +156,7 @@ const ThankYou = () => {
     doc.setFontSize(10);
     doc.setTextColor(0);
     if (customer) {
-      doc.text(`Nombre: ${customer.firstName} ${customer.lastName}`, 20, 70);
+      doc.text(`Nombre: ${customer.nombre}`, 20, 70);
       doc.text(`Documento: ${customer.documentType} ${customer.documentNumber}`, 20, 77);
       doc.text(`Email: ${customer.email}`, 20, 84);
       doc.text(`Teléfono: ${customer.phone}`, 20, 91);

@@ -2,10 +2,12 @@
 import { useState, useEffect } from "react";
 import MonthlySalesChart from "./MonthlySalesChart";
 import MonthlyTotalsChart from "./MonthlyTotalsChart";
+import WeeklySalesChart from "./WeeklySalesChart";
 import TopServicesChart from "./TopServicesChart";
 import TopProductsChart from "./TopProductsChart";
 import { FaMoneyBillWave, FaBoxOpen, FaUserTie } from "react-icons/fa";
 import AnnualComparisonChart from "./AnnualComparisonChart";
+import ReportsPanel from "./ReportsPanel";
 import AccessCards from "./AccessCards";
 import { ChartContentSkeleton, OrdersListSkeleton, TopListContentSkeleton } from "./DashboardSkeleton";
 import salesService from "../pages/SaleProducts/API/salesService";
@@ -109,6 +111,22 @@ const transformServiceDetailToOrder = (grupo) => {
     totalServices: totalServices,
     fecha_programada: fecha
   };
+};
+
+const getStartOfWeek = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = (d.getDay() + 6) % 7; // 0 = lunes
+  d.setDate(d.getDate() - day);
+  return d;
+};
+
+const formatWeekRange = (start, end) => {
+  const fmt = (dt) =>
+    `${String(dt.getDate()).padStart(2, "0")}/${String(
+      dt.getMonth() + 1
+    ).padStart(2, "0")}`;
+  return `${fmt(start)} - ${fmt(end)}`;
 };
 
 const Dashboard = () => {
@@ -460,6 +478,80 @@ const Dashboard = () => {
     topProductos.push({ nombre: "", cantidad: 0, total: 0 });
   }
 
+  // Calcular ventas semanales (últimas 8 semanas)
+  const currentWeekStart = getStartOfWeek(new Date());
+  const weekKeys = [];
+  const weeksMap = {};
+  for (let i = 7; i >= 0; i--) {
+    const start = new Date(currentWeekStart);
+    start.setDate(start.getDate() - i * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    const key = start.toISOString();
+    weekKeys.push(key);
+    weeksMap[key] = {
+      start,
+      end,
+      label: `Semana ${formatWeekRange(start, end)}`,
+      productos: 0,
+      servicios: 0,
+    };
+  }
+
+  const addAmountToWeek = (amount, type, dateValue) => {
+    if (!dateValue) return;
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return;
+    for (const key of weekKeys) {
+      const info = weeksMap[key];
+      if (date >= info.start && date <= info.end) {
+        if (type === "productos") {
+          info.productos += amount;
+        } else {
+          info.servicios += amount;
+        }
+        return;
+      }
+    }
+  };
+
+  sales.forEach((sale) => {
+    if (sale.estado === "Cancelada" || sale.estado === "Anulada") return;
+    const amount = sale.valor || sale.total || 0;
+    const fecha = sale.fecha || sale.createdAt || sale.date || null;
+    addAmountToWeek(amount, "productos", fecha);
+  });
+
+  services.forEach((order) => {
+    if (order.status === "Anulado" || order.status === "Cancelada") return;
+    const amount = order.totalServices || 0;
+    let fecha = null;
+    if (order.date) {
+      const parts = order.date.split("/");
+      if (parts.length === 3) {
+        fecha = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      }
+    }
+    if (!fecha && order.fecha_programada) {
+      fecha = new Date(order.fecha_programada);
+    }
+    addAmountToWeek(amount, "servicios", fecha);
+  });
+
+  const weeklyData = weekKeys.map((key) => {
+    const info = weeksMap[key];
+    const productos = info.productos || 0;
+    const servicios = info.servicios || 0;
+    return {
+      label: info.label,
+      productos,
+      servicios,
+      total: productos + servicios,
+    };
+  });
+
   // Calcular totales de ventas por mes (últimos 6 meses)
   const hoy = new Date();
   const mesesData = [];
@@ -604,8 +696,8 @@ const Dashboard = () => {
                 </select>
               </div>
             </div>
-          </div>
         </div>
+      </div>
 
         {/* Cards de Estadísticas - Mostrar skeleton solo en valores si loading */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -649,6 +741,14 @@ const Dashboard = () => {
           )}
         </div>
 
+        <ReportsPanel
+          weeklyData={weeklyData}
+          topServicios={topServicios}
+          topProductos={topProductos}
+          mesesData={mesesData}
+          annualData={annualData}
+        />
+
         {/* Gráficas y Widgets */}
         <div className="space-y-8">
           {/* Primera fila: Ventas Diarias y Totales Mensuales */}
@@ -684,7 +784,24 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Segunda fila: Top Servicios y Productos */}
+          {/* Segunda fila: Ventas Semanales */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">
+                Ventas Semanales (últimas 8 semanas)
+              </h3>
+              <p className="text-sm text-gray-600 font-lato">
+                Comparativo de productos y servicios por semana
+              </p>
+            </div>
+            {loading ? (
+              <ChartContentSkeleton />
+            ) : (
+              <WeeklySalesChart data={weeklyData} />
+            )}
+          </div>
+
+          {/* Tercera fila: Top Servicios y Productos */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
             <div className="mb-6">
               <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">

@@ -6,11 +6,8 @@ const convertEmployeesToProfessionals = (employees) => {
   return employees
     .filter(emp => emp.estado === 'Activo' || emp.estado === true) // Solo empleados activos
     .map(emp => {
-      // Construir nombre completo
-      const nombreCompleto = emp.nombre || 
-                            (emp.primer_nombre && emp.apellido 
-                              ? `${emp.primer_nombre} ${emp.apellido}`.trim()
-                              : emp.primer_nombre || emp.name || "");
+      // Usar solo el campo nombre (nombre completo)
+      const nombreCompleto = emp.nombre || emp.name || "";
       
       return {
         id: emp.id_empleado ?? emp.id_usuario ?? emp.id,
@@ -25,15 +22,26 @@ const convertEmployeesToProfessionals = (employees) => {
 
 export const getProfessionals = async () => {
   try {
+    console.log('🔄 Obteniendo profesionales desde la API...');
+    
     // Obtener empleados desde la API
     const employees = await employeesService.getAll();
     
+    console.log('👥 Empleados obtenidos:', employees?.length || 0, employees);
+    
     // Convertir a formato de profesionales
-    const professionals = convertEmployeesToProfessionals(employees);
+    const professionals = convertEmployeesToProfessionals(employees || []);
+    
+    console.log('✅ Profesionales convertidos:', professionals.length, professionals);
     
     return professionals;
   } catch (error) {
-    console.error('Error fetching professionals from API:', error);
+    console.error('❌ Error fetching professionals from API:', error);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
     // Retornar array vacío en caso de error
     return [];
   }

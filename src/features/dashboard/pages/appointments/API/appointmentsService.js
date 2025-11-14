@@ -80,13 +80,26 @@ export const appointmentsService = {
       console.log('Validating appointment data:', appointmentData);
 
       // Validaciones básicas
-      if (!appointmentData.cita || !appointmentData.cita.id_cliente) {
-        console.error('Validation failed: cita or id_cliente missing', {
+      // Permitir creación con id_cliente (usuario autenticado) o con cliente (usuario no autenticado)
+      const hasIdCliente = appointmentData.cita?.id_cliente;
+      const hasClienteData = appointmentData.cliente && 
+                            appointmentData.cliente.nombre && 
+                            appointmentData.cliente.correo && 
+                            appointmentData.cliente.telefono;
+      
+      if (!appointmentData.cita) {
+        console.error('Validation failed: cita missing', appointmentData);
+        throw new Error('Los datos de la cita son requeridos');
+      }
+      
+      if (!hasIdCliente && !hasClienteData) {
+        console.error('Validation failed: id_cliente or cliente data missing', {
           hasCita: !!appointmentData.cita,
           cita: appointmentData.cita,
-          id_cliente: appointmentData.cita?.id_cliente
+          id_cliente: appointmentData.cita?.id_cliente,
+          cliente: appointmentData.cliente
         });
-        throw new Error('El ID del cliente es requerido');
+        throw new Error('El ID del cliente o los datos del cliente son requeridos');
       }
       if (!appointmentData.cita.fecha_servicio) {
         throw new Error('La fecha del servicio es requerida');

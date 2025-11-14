@@ -111,18 +111,31 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
       setProg((prev) => ({ ...prev, dias: newDias }));
       
       const diasErrors = validateSchedulingDays(newDias);
-      setErrors(prev => ({
-        ...prev,
-        dias: diasErrors.dias || null
-      }));
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        if (diasErrors.dias) {
+          newErrors.dias = diasErrors.dias;
+        } else {
+          delete newErrors.dias;
+        }
+        return newErrors;
+      });
     } else {
       setProg((prev) => ({ ...prev, [name]: value }));
       
       const fieldErrors = validateField(name, value);
-      setErrors(prev => ({
-        ...prev,
-        ...fieldErrors
-      }));
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        // Agregar nuevos errores o limpiar si el campo es válido
+        Object.keys(fieldErrors).forEach(key => {
+          if (fieldErrors[key]) {
+            newErrors[key] = fieldErrors[key];
+          } else {
+            delete newErrors[key];
+          }
+        });
+        return newErrors;
+      });
     }
   };
 
@@ -134,10 +147,18 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
     setSelectedEmployee(value);
     
     const empleadoErrors = validateField('empleado', value);
-    setErrors(prev => ({
-      ...prev,
-      ...empleadoErrors
-    }));
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      // Agregar nuevos errores o limpiar si el campo es válido
+      Object.keys(empleadoErrors).forEach(key => {
+        if (empleadoErrors[key]) {
+          newErrors[key] = empleadoErrors[key];
+        } else {
+          delete newErrors[key];
+        }
+      });
+      return newErrors;
+    });
   };
 
   const handleAddEvent = (e) => {
@@ -223,7 +244,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
                 <option value="">Selecciona un empleado</option>
                 {employees.map(emp => (
                   <option key={emp.id} value={String(emp.id)}>
-                    {emp.nombre} {emp.apellido || ''}
+                    {emp.nombre}
                   </option>
                 ))}
               </select>

@@ -51,12 +51,18 @@ const normalizeAppointmentFromBackend = (cita) => {
 
 // Función para convertir datos del frontend al formato esperado por el backend
 const normalizeAppointmentToBackend = async (appointment, currentUser) => {
-  // Buscar o crear el usuario/cliente
+  // Si hay usuario autenticado, usar su ID
   const id_cliente = currentUser?.id_usuario || currentUser?.id;
   
-  if (!id_cliente) {
-    throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
-  }
+  // Si no hay usuario autenticado, el backend creará el usuario automáticamente
+  // Necesitamos enviar los datos del cliente
+  const clienteData = !id_cliente ? {
+    nombre: appointment.cliente,
+    correo: appointment.correo,
+    telefono: appointment.telefono,
+    tipoDocumento: appointment.tipoDocumento || 'CC',
+    documento: appointment.documento || ''
+  } : null;
 
   // Calcular hora_entrada y hora_salida desde los servicios
   const servicios = appointment.servicios || [];
@@ -102,15 +108,30 @@ const normalizeAppointmentToBackend = async (appointment, currentUser) => {
     })
   );
 
-  return {
-    cita: {
-      id_cliente: id_cliente,
-      fecha_servicio: appointment.fecha,
-      estado: appointment.estado || 'Agendada',
-      motivo: appointment.notas || appointment.motivo || ''
-    },
+  // Si hay usuario autenticado, usar su ID
+  // Si no, enviar datos del cliente para que el backend lo cree
+  const citaData = {
+    fecha_servicio: appointment.fecha,
+    estado: appointment.estado || 'Agendada',
+    motivo: appointment.notas || appointment.motivo || '',
+    hora_entrada: hora_entrada
+  };
+  
+  if (id_cliente) {
+    citaData.id_cliente = id_cliente;
+  }
+  
+  const result = {
+    cita: citaData,
     servicios: serviciosConEmpleados
   };
+  
+  // Si no hay usuario autenticado, agregar datos del cliente
+  if (clienteData) {
+    result.cliente = clienteData;
+  }
+  
+  return result;
 };
 
 // Función auxiliar para calcular hora fin
@@ -194,10 +215,10 @@ export const addAppointment = async (appointment) => {
       throw new Error('Datos incompletos para la cita.');
     }
 
-    // Obtener usuario actual
+    // Validar que tenga correo si no está autenticado (necesario para crear usuario)
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (!currentUser) {
-      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    if (!currentUser && !appointment.correo) {
+      throw new Error('Debes proporcionar un correo electrónico para crear la cita.');
     }
 
     // Convertir datos al formato del backend (ahora es async)

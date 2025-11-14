@@ -43,7 +43,7 @@ const DashboardProfileMenu = ({ user, onClose, onLogout }) => {
             )}
           </div>
           <div className="text-center">
-            <div className="text-lg font-bold text-gray-800">{user?.nombre} {user?.apellido}</div>
+            <div className="text-lg font-bold text-gray-800">{user?.nombre}</div>
             <div className="text-sm text-gray-500">{user?.correo}</div>
           </div>
         </div>

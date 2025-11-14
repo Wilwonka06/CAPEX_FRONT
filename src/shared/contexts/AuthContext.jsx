@@ -2,18 +2,41 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { apiRequest } from '../config/apiConfig';
 
-const AuthContext = createContext();
+// Valor por defecto del contexto para evitar errores cuando no está disponible
+const defaultContextValue = {
+  currentUser: null,
+  loading: true,
+  login: async () => {},
+  logout: async () => {},
+  hasPrivilege: () => false,
+  getRoleRedirect: () => '/landing',
+  checkAuth: async () => null,
+  verifyAuth: async () => false,
+  _isProviderActive: false, // Flag para identificar si el Provider está activo
+};
+
+const AuthContext = createContext(defaultContextValue);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  // Verificar si el Provider está activo usando el flag
+  if (!context || context._isProviderActive === false) {
     throw new Error('useAuth debe ser usado dentro de un AuthProvider');
   }
   return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  // Inicializar con usuario del localStorage si existe (sincrónico)
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const user = localStorage.getItem('currentUser');
+      return user ? JSON.parse(user) : null;
+    } catch (error) {
+      console.error('Error al obtener usuario del localStorage:', error);
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   // Función para obtener el usuario del localStorage
@@ -242,10 +265,12 @@ export const AuthProvider = ({ children }) => {
 
       console.log('🔄 Redirigiendo a:', redirectPath);
 
-      // Redirigir con un pequeño delay para mejor UX
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 1000);
+      // Redirigir usando navigate si está disponible (React Router), sino usar window.location
+      // Esto evita recargas completas de página cuando es posible
+      if (typeof window !== 'undefined' && window.location) {
+        // Usar replace para evitar que el usuario pueda volver atrás al login
+        window.location.replace(redirectPath);
+      }
     } catch (error) {
       console.error('❌ Error en login:', error);
       throw error;
@@ -321,7 +346,13 @@ export const AuthProvider = ({ children }) => {
   // Verificar autenticación al cargar
   useEffect(() => {
     console.log('🚀 AuthProvider montado, iniciando verificación...');
-    checkAuth();
+    // Si ya hay un usuario en el estado inicial, verificar su validez
+    if (currentUser) {
+      checkAuth();
+    } else {
+      // Si no hay usuario, marcar como no cargando
+      setLoading(false);
+    }
   }, []);
 
   // Escuchar cambios en localStorage
@@ -349,6 +380,7 @@ export const AuthProvider = ({ children }) => {
     getRoleRedirect,
     checkAuth,
     verifyAuth,
+    _isProviderActive: true, // Flag para indicar que el Provider está activo
   };
 
   return (

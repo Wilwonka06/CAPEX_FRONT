@@ -12,11 +12,30 @@ const getStoredCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(getStoredCart);
+  const [cart, setCart] = useState([]);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Inicializar carrito desde localStorage
+  useEffect(() => {
+    try {
+      const storedCart = getStoredCart();
+      setCart(storedCart);
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
+      setCart([]);
+    } finally {
+      // Pequeño delay para mostrar el loading si es necesario
+      setTimeout(() => {
+        setIsInitializing(false);
+      }, 100);
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
+    if (!isInitializing) {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    }
+  }, [cart, isInitializing]);
 
   const addToCart = (product, cantidad = 1) => {
     setCart(prev => {
@@ -54,7 +73,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => setCart([]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, updateQuantity, removeFromCart, clearCart }}>
+    <CartContext.Provider value={{ cart, addToCart, updateQuantity, removeFromCart, clearCart, isInitializing }}>
       {children}
     </CartContext.Provider>
   );

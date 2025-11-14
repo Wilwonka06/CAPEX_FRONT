@@ -159,12 +159,20 @@ const Navbar = () => {
                                 )}
                             </div>
                         ) : (
-                            <Link
-                                to="/iniciar-sesion"
-                                className="bg-[#FACC15] text-[#1E1E1E] px-6 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                            >
-                                Iniciar Sesión
-                            </Link>
+                            <div className="flex items-center space-x-3">
+                                <Link
+                                    to="/iniciar-sesion"
+                                    className="text-gray-700 hover:text-[#FACC15] px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:bg-gray-50"
+                                >
+                                    Iniciar Sesión
+                                </Link>
+                                <Link
+                                    to="/registrarse"
+                                    className="bg-[#FACC15] text-[#1E1E1E] px-6 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                >
+                                    Registrarse
+                                </Link>
+                            </div>
                         )}
                     </div>
 
@@ -250,13 +258,22 @@ const Navbar = () => {
                                         <span className="text-gray-700 font-medium">{currentUser.nombre}</span>
                                     </button>
                                 ) : (
-                                    <Link
-                                        to="/iniciar-sesion"
-                                        className="block w-full text-center bg-[#FACC15] text-[#1E1E1E] px-4 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300"
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                    >
-                                        Iniciar Sesión
-                                    </Link>
+                                    <div className="flex flex-col space-y-2">
+                                        <Link
+                                            to="/iniciar-sesion"
+                                            className="block w-full text-center text-gray-700 hover:text-[#FACC15] px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-all duration-300"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                        >
+                                            Iniciar Sesión
+                                        </Link>
+                                        <Link
+                                            to="/registrarse"
+                                            className="block w-full text-center bg-[#FACC15] text-[#1E1E1E] px-4 py-2 rounded-full font-semibold hover:bg-yellow-400 transition-all duration-300"
+                                            onClick={() => setIsMobileMenuOpen(false)}
+                                        >
+                                            Registrarse
+                                        </Link>
+                                    </div>
                                 )}
                             </div>
                         </div>

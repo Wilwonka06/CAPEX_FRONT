@@ -9,7 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import * as XLSX from "xlsx";
+ 
 
 ChartJS.register(
   CategoryScale,
@@ -96,34 +96,11 @@ const AnnualComparisonChart = ({ data }) => {
     },
   };
 
-  const handleDownload = () => {
-    // Construir tabla: columnas = meses, filas = años
-    const rows = Object.keys(data)
-      .sort()
-      .map((year) => {
-        const row = { Año: year };
-        mesesES.forEach((mes, idx) => {
-          row[mes] = data[year][idx] || 0;
-        });
-        return row;
-      });
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "ComparativaAnual");
-    XLSX.writeFile(wb, "comparativa_anual.xlsx");
-  };
+  
 
   return (
     <div className="w-full h-[500px] bg-white rounded-lg shadow p-4 mt-8">
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-2 px-3 py-1 bg-primary hover:bg-primary-dark text-white rounded shadow transition-all duration-300 hover:scale-105 font-medium text-xs"
-          title="Descargar comparativa anual"
-        >
-          <i className="bi bi-download"></i> Descargar
-        </button>
-      </div>
+      
       <h3 className="text-lg font-semibold text-gray-800 mb-4">
         Comparativa Anual de Ventas
       </h3>

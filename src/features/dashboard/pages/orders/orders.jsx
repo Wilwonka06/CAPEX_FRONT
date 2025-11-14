@@ -120,6 +120,10 @@ export default function OrdersPage() {
           clienteNombre: pedido.usuario?.nombre || `Usuario ${pedido.id_usuario || 'N/A'}`,
           valor: parseFloat(pedido.total || 0),
           estado: pedido.estado || 'Pendiente',
+          // ✅ Incluir datos completos del usuario para el modal
+          usuario: pedido.usuario || null,
+          direccion_entrega: pedido.direccion_entrega || null,
+          ciudad: pedido.ciudad || null,
           productos: (pedido.detalles || []).map(det => ({
             codigo: `P${(det.id_producto || 0).toString().padStart(3, '0')}`,
             nombre: det.producto?.nombre || 'N/A',
@@ -260,13 +264,14 @@ export default function OrdersPage() {
       <OrderDetailModal
         order={detailOrder}
         customer={detailOrder ? {
-          firstName: detailOrder.clienteNombre || 'Cliente',
+          nombre: detailOrder.usuario?.nombre || detailOrder.clienteNombre || 'Cliente',
+          firstName: detailOrder.usuario?.nombre || detailOrder.clienteNombre || 'Cliente',
           lastName: '',
-          documentType: 'CC',
-          documentNumber: `DOC-${detailOrder.clienteId}`,
-          email: 'cliente@example.com',
-          phone: '300123456',
-          address: 'Dirección del cliente'
+          documentType: detailOrder.usuario?.tipo_documento || 'CC',
+          documentNumber: detailOrder.usuario?.documento || `DOC-${detailOrder.clienteId || 'N/A'}`,
+          email: detailOrder.usuario?.correo || 'N/A',
+          phone: detailOrder.usuario?.telefono || 'N/A',
+          address: detailOrder.direccion_entrega || detailOrder.usuario?.direccion || 'No especificada'
         } : null}
         isOpen={!!detailOrder}
         onClose={() => setDetailOrder(null)}
@@ -276,13 +281,14 @@ export default function OrdersPage() {
       <EditOrderModal
         order={editOrder}
         customer={editOrder ? {
-          firstName: editOrder.clienteNombre || 'Cliente',
+          nombre: editOrder.usuario?.nombre || editOrder.clienteNombre || 'Cliente',
+          firstName: editOrder.usuario?.nombre || editOrder.clienteNombre || 'Cliente',
           lastName: '',
-          documentType: 'CC',
-          documentNumber: `DOC-${editOrder.clienteId}`,
-          email: 'cliente@example.com',
-          phone: '300123456',
-          address: 'Dirección del cliente'
+          documentType: editOrder.usuario?.tipo_documento || 'CC',
+          documentNumber: editOrder.usuario?.documento || `DOC-${editOrder.clienteId || 'N/A'}`,
+          email: editOrder.usuario?.correo || 'N/A',
+          phone: editOrder.usuario?.telefono || 'N/A',
+          address: editOrder.direccion_entrega || editOrder.usuario?.direccion || 'No especificada'
         } : null}
         isOpen={!!editOrder}
         estados={estados}

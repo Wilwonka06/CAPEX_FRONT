@@ -31,11 +31,11 @@ const ViewCustomer = ({ isOpen, onClose, customer }) => {
               <div className="w-36 h-36 bg-gray-50 border-2 border-gray-200 rounded-lg flex items-center justify-center mb-4 shadow-sm overflow-hidden">
                 <img
                   src={DEFAULT_AVATAR}
-                  alt={customer.firstName}
+                  alt={customer.nombre || customer.firstName || 'Cliente'}
                   className="w-full h-full object-cover rounded-lg"
                 />
               </div>
-              <div className="text-lg font-bold text-gray-800 text-center mb-2">{customer.firstName} {customer.lastName}</div>
+              <div className="text-lg font-bold text-gray-800 text-center mb-2">{customer.nombre || (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName || 'Cliente')}</div>
               <div className="text-sm text-gray-500 text-center">{customer.email}</div>
               <div className="mt-2">
                 <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full shadow-sm transition-all duration-200
@@ -110,6 +110,8 @@ ViewCustomer.propTypes = {
   customer: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     status: PropTypes.string,
+    nombre: PropTypes.string,
+    // Mantener firstName y lastName para retrocompatibilidad
     firstName: PropTypes.string,
     lastName: PropTypes.string,
     documentType: PropTypes.string,

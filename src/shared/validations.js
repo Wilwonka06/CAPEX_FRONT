@@ -820,22 +820,14 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
     errors.documentType = 'El tipo de documento es requerido.';
   }
   // Nombres
-  if (!customerData.firstName || customerData.firstName.trim().length < 2) {
-    errors.firstName = 'El nombre es requerido y debe tener al menos 2 caracteres.';
+  // Validar nombre completo (en lugar de firstName y lastName)
+  if (!customerData.nombre || customerData.nombre.trim().length < 2) {
+    errors.nombre = 'El nombre completo es requerido y debe tener al menos 2 caracteres.';
   } else {
-    if (!isValidAlphaOnly(customerData.firstName)) {
-      errors.firstName = 'Solo se permiten letras y espacios.';
-    } else if (!startsWithAlpha(customerData.firstName)) {
-      errors.firstName = 'Debe comenzar con una letra.';
-    }
-  }
-  if (!customerData.lastName || customerData.lastName.trim().length < 2) {
-    errors.lastName = 'El apellido es requerido y debe tener al menos 2 caracteres.';
-  } else {
-    if (!isValidAlphaOnly(customerData.lastName)) {
-      errors.lastName = 'Solo se permiten letras y espacios.';
-    } else if (!startsWithAlpha(customerData.lastName)) {
-      errors.lastName = 'Debe comenzar con una letra.';
+    if (!isValidAlphaOnly(customerData.nombre)) {
+      errors.nombre = 'Solo se permiten letras y espacios.';
+    } else if (!startsWithAlpha(customerData.nombre)) {
+      errors.nombre = 'Debe comenzar con una letra.';
     }
   }
   // Número de Documento

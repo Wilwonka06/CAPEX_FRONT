@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useCart } from '../../../components/CartContext';
 import { useNavigate } from 'react-router-dom';
 import CartToast from '../../../components/CartToast';

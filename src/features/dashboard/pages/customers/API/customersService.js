@@ -50,6 +50,8 @@ const mapUserToCustomer = (user) => {
     id: user.id_usuario || user.id,
     documentType: user.tipo_documento || 'CC',
     documentNumber: user.documento || '',
+    nombre: user.nombre || '',
+    // Mantener firstName y lastName para retrocompatibilidad (se derivan de nombre)
     firstName: user.nombre ? user.nombre.split(' ')[0] : '',
     lastName: user.nombre ? user.nombre.split(' ').slice(1).join(' ') : '',
     email: user.correo || '',

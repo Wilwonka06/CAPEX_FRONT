@@ -40,6 +40,12 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
     }
   }, [activeCategories, formData.id_categoria_servicio]);
 
+  // Convertir servicios existentes para validación
+  const existingServices = services.map((s) => ({ 
+    id: s.id, 
+    name: s.nombre ?? s.name 
+  }));
+
   const handleChange = async (e) => {
     const { name, value, type, files } = e.target;
     if (name === "duracion" || name === "precio") {
@@ -48,6 +54,30 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
         ...prev,
         [name]: numericValue,
       }));
+      // Validar y limpiar errores para campos numéricos
+      if (name === "duracion") {
+        const duracionErrors = validateServiceDuration(numericValue);
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          if (duracionErrors.duracion) {
+            newErrors.duracion = duracionErrors.duracion;
+          } else {
+            delete newErrors.duracion;
+          }
+          return newErrors;
+        });
+      } else if (name === "precio") {
+        const precioErrors = validateServicePrice(numericValue);
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          if (precioErrors.precio) {
+            newErrors.precio = precioErrors.precio;
+          } else {
+            delete newErrors.precio;
+          }
+          return newErrors;
+        });
+      }
     } else if (type === "file") {
       const file = files[0];
       if (file) {
@@ -81,21 +111,41 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
         ...prev,
         [name]: value,
       }));
-    }
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-    if (name === "nombre") {
-      setNameError("");
-      setIsNameValid(true);
+      // Validar y limpiar errores para otros campos
+      if (name === "nombre") {
+        const nombreErrors = validateServiceName(value, existingServices);
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          if (nombreErrors.nombre) {
+            newErrors.nombre = nombreErrors.nombre;
+          } else {
+            delete newErrors.nombre;
+          }
+          return newErrors;
+        });
+        setNameError("");
+        setIsNameValid(true);
+      } else if (name === "descripcion") {
+        const descripcionErrors = validateServiceDescription(value);
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          if (descripcionErrors.descripcion) {
+            newErrors.descripcion = descripcionErrors.descripcion;
+          } else {
+            delete newErrors.descripcion;
+          }
+          return newErrors;
+        });
+      } else if (errors[name]) {
+        // Limpiar error genérico si existe
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     }
   };
-
-  // Convertir servicios existentes para validación
-  const existingServices = services.map((s) => ({ 
-    id: s.id, 
-    name: s.nombre ?? s.name 
-  }));
 
   const handleNameBlur = () => {
     if (!formData.nombre.trim()) {
@@ -129,9 +179,16 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
       default:
         break;
     }
-    if (error) {
-      setErrors((prev) => ({ ...prev, [name]: error }));
-    }
+    // Agregar error si existe, o limpiar si no hay error
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      if (error) {
+        newErrors[name] = error;
+      } else {
+        delete newErrors[name];
+      }
+      return newErrors;
+    });
   };
 
   const removeImage = () => {

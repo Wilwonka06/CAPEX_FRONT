@@ -8,6 +8,7 @@ import { useCartToast } from '../../components/CartToastContext';
 import { useCart } from '../../components/CartContext';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import Footer from '../../../../shared/components/Footer';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // Imagen por defecto para productos sin imagen (similar a usuarios)
 const getDefaultProductImage = (productName = "Product") => {
@@ -228,18 +229,7 @@ const Catalogo = () => {
 
   // Estados de carga mejorados
   if (productsLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
-        <div className="text-center bg-white p-12 rounded-3xl shadow-xl border border-gray-100">
-          <div className="relative mb-8">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#FACC15]/20 border-t-[#FACC15] mx-auto"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#FACC15]/40 animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-          </div>
-          <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">Cargando productos...</h3>
-          <p className="text-gray-600 font-lato">Estamos preparando lo mejor para ti</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando productos..." subMessage="Estamos preparando lo mejor para ti" />;
   }
 
   if (productsError) {

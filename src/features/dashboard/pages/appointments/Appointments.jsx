@@ -191,18 +191,7 @@ const Appointments = () => {
           </div>
         </div>
         
-        {/* Indicador de datos de ejemplo */}
-        {appointments.length > 0 && appointments[0]?.id_cita === 1 && (
-          <div className="mb-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
-              <i className="bi bi-exclamation-triangle text-yellow-600 text-lg"></i>
-              <div className="text-sm">
-                <span className="font-semibold text-yellow-800">Modo de desarrollo:</span>
-                <span className="text-yellow-700 ml-1">Mostrando datos de ejemplo debido a un error en el servidor.</span>
-              </div>
-            </div>
-          </div>
-        )}
+        
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <Search
             searchTerm={searchTerm}

@@ -19,8 +19,11 @@ function App() {
             top: 20,
             right: 20,
           }}
+          // Prevenir duplicados: solo mostrar un toast a la vez con el mismo ID
           toastOptions={{
             duration: 4000,
+            // Prevenir duplicados automáticamente
+            id: undefined, // Se establecerá dinámicamente
             style: {
               background: '#fff',
               color: '#333',

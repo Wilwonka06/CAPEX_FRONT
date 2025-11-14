@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useCart } from '../../components/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatNumber } from '../../../../shared/utils/formatters';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 // Imagen por defecto para productos sin imagen (similar a usuarios)
 const getDefaultProductImage = (productName = "Product") => {
@@ -10,8 +11,13 @@ const getDefaultProductImage = (productName = "Product") => {
 };
 
 const Cart = () => {
-  const { cart, updateQuantity, removeFromCart } = useCart();
+  const { cart, updateQuantity, removeFromCart, isInitializing } = useCart();
   const navigate = useNavigate();
+
+  // Mostrar loading mientras se inicializa el carrito
+  if (isInitializing) {
+    return <LoadingSpinner message="Cargando carrito..." subMessage="Estamos preparando tus productos" />;
+  }
 
   // Calcular totales
   const subtotal = useMemo(() => cart.reduce((acc, p) => acc + p.precio * p.cantidad, 0), [cart]);
