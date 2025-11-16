@@ -46,11 +46,31 @@ const CustomersPage = () => {
     setIsLoadingCustomers(true);
     try {
       const response = await getCustomers(page, itemsPerPage, search);
-      setCustomers(response.data || response.customers || []);
-      setTotalCustomers(response.total || response.count || 0);
+      
+      // Validar que la respuesta tenga el formato esperado
+      if (!response) {
+        throw new Error('La respuesta del servidor está vacía');
+      }
+      
+      const customersData = response.data || response.customers || [];
+      const total = response.total || response.count || 0;
+      
+      if (!Array.isArray(customersData)) {
+        console.error('Error: La respuesta no contiene un array de clientes', response);
+        throw new Error('Formato de respuesta inválido: se esperaba un array de clientes');
+      }
+      
+      setCustomers(customersData);
+      setTotalCustomers(total);
     } catch (error) {
       console.error('Error al cargar clientes:', error);
-      showMessage('Error al cargar los clientes', 'error');
+      const errorMessage = error.message || 'Error al cargar los clientes';
+      console.error('Detalles del error:', {
+        message: errorMessage,
+        stack: error.stack,
+        error: error
+      });
+      showMessage(errorMessage, 'error');
       setCustomers([]);
       setTotalCustomers(0);
     } finally {

@@ -70,7 +70,7 @@ const Sidebar = () => {
         icon: 'bi-graph-up-arrow',
         module: 'Ventas',
         items: [
-          { name: 'Clientes', icon: 'bi-person-lines', path: '/dashboard/clientes', module: 'Ventas' },
+          { name: 'Clientes', icon: 'bi-people', path: '/dashboard/clientes', module: 'Ventas' },
           { name: 'Agendamiento de Citas', icon: 'bi-calendar-event', path: '/dashboard/citas', module: 'Ventas' },
           { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/dashboard/pedidos', module: 'Ventas' },
           { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/dashboard/ventas-productos', module: 'Ventas' },
