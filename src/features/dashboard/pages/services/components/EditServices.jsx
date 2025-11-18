@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { formatNumberInput, parseFormattedNumber } from '../../../../../shared/utils/formatters';
 import PropTypes from "prop-types";
 import toast from "react-hot-toast";
 import {
@@ -76,7 +77,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
   const handleChange = async (e) => {
     const { name, value, type, files } = e.target;
     if (name === 'duracion' || name === 'precio') {
-      const numericValue = value.replace(/[^0-9]/g, '');
+      const numericValue = formatNumberInput(value);
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
     } else if (type === "file") {
       const file = files[0];
@@ -241,8 +242,8 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
         nombre: formData.nombre.trim(),
         id_categoria_servicio: Number(formData.id_categoria_servicio),
         descripcion: formData.descripcion.trim(),
-        duracion: Number(formData.duracion),
-        precio: Number(formData.precio),
+        duracion: parseFormattedNumber(formData.duracion),
+        precio: parseFormattedNumber(formData.precio),
         foto: fotoToSend, // Enviar base64 o URL de Cloudinary
       };
 
@@ -253,21 +254,12 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">Editar Servicio</h2>
-          <button
-            className="text-gray-400 hover:text-primary text-xl font-bold"
-            onClick={onClose}
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-pencil-square text-lg"></i></div><h2 className="text-xl font-bold m-0">Editar Servicio</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="edit-service-form" onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
             {/* Columna Izquierda: Imagen y nombre */}
             <div className="flex flex-col items-center md:w-1/2 w-full gap-4">
@@ -411,28 +403,9 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
             </div>
           </form>
         </div>
-        
-        {/* Footer fijo */}
-        <div className="rounded-b-lg flex justify-end px-8 py-4">
-          <button
-            type="button"
-            className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
-            onClick={onClose}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            form="edit-service-form"
-            disabled={!isNameValid}
-            className={`px-4 py-2 rounded-md font-semibold transition ml-2 text-sm ${
-              isNameValid 
-                ? 'bg-text-main text-white hover:bg-primary-dark' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Guardar
-          </button>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="edit-service-form" disabled={!isNameValid} className={`px-4 py-2 rounded-lg ml-2 text-xs font-semibold flex items-center gap-2 ${isNameValid ? 'bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 hover:from-yellow-400 hover:to-yellow-500' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}><i className="bi bi-check-circle"></i>Guardar</button>
         </div>
       </div>
     </div>

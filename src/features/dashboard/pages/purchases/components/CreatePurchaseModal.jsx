@@ -129,7 +129,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
     // Calcular subtotal (sin IVA)
     const newSubtotal = itemsCompra.reduce(
-      (acc, item) => acc + (parseFloat(item.costo) || 0) * (parseInt(item.cantidad) || 0),
+      (acc, item) => acc + (parseFormattedNumber(item.costo) || 0) * (parseInt(item.cantidad) || 0),
       0
     );
 
@@ -580,7 +580,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           </td>
                           <td className="py-2 px-3">{formatPercentage(item.iva || 0)}</td>
                           <td className="py-2 px-3">
-                            ${formatPrice((item.costo || 0) * (item.cantidad || 0))}
+                        ${formatPrice((parseFormattedNumber(item.costo) || 0) * (item.cantidad || 0))}
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button

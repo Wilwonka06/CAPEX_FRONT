@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { showError } from '../utils/toastUtils';
 
-const BASE_URL = import.meta.env.DEV
-  ? 'http://localhost:3000/api' 
-  : 'https://capex-back.onrender.com/api';
+/* const BASE_URL = import.meta.env.DEV */
+/*   ? 'http://localhost:3000/api'  */
+/*   : 'https://capex-back.onrender.com/api'; */
 
-/* const BASE_URL = 'https://capex-back.onrender.com/api'; */
+const BASE_URL = 'https://capex-back.onrender.com/api';
+
 
 // Log de configuración en desarrollo
 if (import.meta.env.DEV) {
@@ -21,7 +22,7 @@ if (import.meta.env.DEV) {
 // Crear instancia de axios con configuración base
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000, // 30 segundos de timeout
+  timeout: 90000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -32,10 +33,7 @@ const apiClient = axios.create({
 // Interceptor de request - cookies HttpOnly manejan la autenticación automáticamente
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token && !config.headers['Authorization']) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
+    // Evitar interferencias del localStorage: usar cookies HttpOnly
 
     // Log de requests en desarrollo
     if (import.meta.env.DEV) {
@@ -44,7 +42,6 @@ apiClient.interceptors.request.use(
         baseURL: config.baseURL,
         url: config.url,
         withCredentials: config.withCredentials,
-        hasToken: !!token,
         headers: config.headers,
       });
     }
@@ -166,6 +163,12 @@ apiClient.interceptors.response.use(
           id: 'error-timeout',
           duration: 5000 
         });
+        // Reintento automático simple para cold start
+        const originalRequest = error.config;
+        if (!originalRequest._retry) {
+          originalRequest._retry = true;
+          return apiClient.request(originalRequest);
+        }
       } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         const baseUrl = error.config?.baseURL || BASE_URL;
         showError(`Error de conexión con ${baseUrl}. Verifica tu conexión a internet o que el servidor esté disponible.`, { 

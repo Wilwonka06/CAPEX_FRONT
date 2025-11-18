@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import ordersService from '../../pages/orders/API/OrdersService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
-import { jsPDF } from 'jspdf';
+import { generateProductInvoicePDF } from '../../../../shared/utils/invoicePdf';
 
 import { formatNumber } from '../../../../shared/utils/formatters';
 const formatDate = (dateStr) => {
@@ -129,77 +129,24 @@ const ThankYou = () => {
   // Generar PDF
   const handleDownloadPDF = () => {
     if (!order) return;
-
-    const doc = new jsPDF();
-    
-    // Encabezado
-    doc.setFontSize(20);
-    doc.setTextColor(40);
-    doc.text('RECIBO DE COMPRA', 105, 20, { align: 'center' });
-    
-    // Línea separadora
-    doc.setDrawColor(250, 204, 21);
-    doc.setLineWidth(1);
-    doc.line(20, 25, 190, 25);
-    
-    // Información del pedido
-    doc.setFontSize(12);
-    doc.setTextColor(0);
-    doc.text(`Pedido: ${order.numeroOrden}`, 20, 35);
-    doc.text(`Estado: ${order.estado}`, 20, 42);
-    doc.text(`Fecha: ${formatDate(order.fecha)}`, 20, 49);
-    
-    // Información del cliente
-    doc.setFontSize(14);
-    doc.setTextColor(40);
-    doc.text('Información del Cliente', 20, 62);
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    if (customer) {
-      doc.text(`Nombre: ${customer.nombre}`, 20, 70);
-      doc.text(`Documento: ${customer.documentType} ${customer.documentNumber}`, 20, 77);
-      doc.text(`Email: ${customer.email}`, 20, 84);
-      doc.text(`Teléfono: ${customer.phone}`, 20, 91);
-      doc.text(`Dirección: ${customer.address}`, 20, 98);
-    }
-    
-    // Productos
-    doc.setFontSize(14);
-    doc.setTextColor(40);
-    doc.text('Productos', 20, 113);
-    
-    let yPos = 123;
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    
-    order.productos.forEach((prod, idx) => {
-      const subtotal = prod.precio * prod.cantidad;
-      doc.text(`${idx + 1}. ${prod.nombre}`, 20, yPos);
-      doc.text(`x${prod.cantidad}`, 130, yPos);
-      doc.text(`$${formatNumber(prod.precio)}`, 150, yPos);
-      doc.text(`$${formatNumber(subtotal)}`, 170, yPos, { align: 'right' });
-      yPos += 7;
-    });
-    
-    // Total
-    yPos += 5;
-    doc.setDrawColor(200);
-    doc.line(20, yPos, 190, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(14);
-    doc.setTextColor(40);
-    doc.text('TOTAL:', 130, yPos);
-    doc.setFontSize(16);
-    doc.setTextColor(250, 204, 21);
-    doc.text(`$${formatNumber(order.valor)}`, 190, yPos, { align: 'right' });
-    
-    // Pie de página
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text('Gracias por su compra', 105, 280, { align: 'center' });
-    
-    doc.save(`recibo_pedido_${order.numeroOrden}.pdf`);
+    generateProductInvoicePDF({
+      sale: {
+        numeroVenta: order.numeroOrden,
+        fecha: order.fecha,
+        productos: order.productos,
+        valor: order.valor,
+        metodoPago: 'Online',
+        estado: order.estado
+      },
+      customer: {
+        nombre: customer?.nombre,
+        documentNumber: customer?.documentNumber,
+        email: customer?.email,
+        phone: customer?.phone
+      },
+      theme: { primary: '#9C5B2B', accent: '#FACC15' },
+      fileName: `pedido_${order.numeroOrden}.pdf`
+    })
   };
 
   // Estados de carga y error

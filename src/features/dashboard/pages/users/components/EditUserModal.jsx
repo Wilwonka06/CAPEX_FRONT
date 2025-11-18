@@ -1,14 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { isValidEmail, isValidPhone, isValidNumber, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
+import { isValidEmail, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
 import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import Swal from 'sweetalert2';
 import { useAuth } from '../../../../../shared/contexts/AuthContext';
+ 
 
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
-const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
+const DOC_TYPES = ['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'];
+const DOC_TYPE_LABELS = {
+  RC: 'Registro civil',
+  TI: 'Tarjeta de identidad',
+  CC: 'Cedula de ciudadania',
+  TE: 'Tarjeta de extranjeria',
+  CE: 'Cedula de extranjeria',
+  NIT: 'Número de identificación tributaria',
+  PP: 'Pasaporte',
+  PEP: 'Permiso especial de permanencia',
+  DIE: 'Documento de identificación extranjero',
+  NUIP: 'NUIP',
+  FOREIGN_NIT: 'NIT de otro país'
+};
 const CONCEPTOS_ESTADO = ['vacaciones', 'enfermo', 'licencia', 'suspensión', 'renuncia', 'Otro'];
 
 function fileToBase64(file) {
@@ -54,11 +67,9 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const [error, setError] = useState({});
   const canModifyStatus = hasPrivilege('Gestión de Usuarios', 'Editar');
 
-  // Parsear teléfono guardado - retornar solo números (sin el +)
+  // Parsear teléfono guardado
   const parseTelefono = (telefono) => {
-    if (!telefono) return '';
-    // Remover el símbolo + si existe y retornar solo números
-    return telefono.replace(/[^0-9]/g, '');
+    return telefono || '';
   };
   const [numero, setNumero] = useState(parseTelefono(user.telefono));
 
@@ -83,9 +94,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       case 'correo':
         return isValidEmail(value) ? '' : 'Correo inválido';
       case 'telefono':
-        if (!numero) return 'El teléfono es requerido';
-        if (numero.length < 7 || numero.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
-        return '';
+        return validateUserPhone(value);
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
@@ -182,7 +191,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       correo: form.correo,
       tipo_documento: form.tipoDocumento,
       documento: form.documento,
-      telefono: '+' + numero,
+      telefono: numero,
       roleId: parseInt(form.roles[0]) || form.roleId,
       estado: form.estado,
       ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
@@ -200,13 +209,16 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Editar usuario</h2>
-          <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose} aria-label="Cerrar">×</button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-pencil-square text-lg"></i></div>
+            <h2 className="text-xl font-bold m-0">Editar usuario</h2>
+          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <div className="overflow-y-auto p-8 flex-1">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
+          <form onSubmit={handleSubmit} id="edit-user-form" className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-text-main mb-1">Foto de perfil</label>
               <div className="space-y-3">
@@ -235,7 +247,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 <label className="block text-xs font-medium text-text-main mb-1">Tipo de documento <span className="text-red-500">*</span></label>
                 <select name="tipoDocumento" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} required>
                   <option value="">Seleccionar</option>
-                  {DOC_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                  {DOC_TYPES.map(type => <option key={type} value={type}>{`${type} - ${DOC_TYPE_LABELS[type]}`}</option>)}
                 </select>
                 {error.tipoDocumento && <span className="text-red-500 text-xs">{error.tipoDocumento}</span>}
               </div>
@@ -356,11 +368,12 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 </>
               )}
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>
-              <button type="submit" className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition">Guardar</button>
-            </div>
+            
           </form>
+        </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.keys(errors).length > 0}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
         </div>
       </div>
     </div>
@@ -374,4 +387,4 @@ EditUserModal.propTypes = {
   users: PropTypes.array.isRequired,
 };
 
-export default EditUserModal; 
+export default EditUserModal;

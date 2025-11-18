@@ -9,7 +9,7 @@ import './phoneinput-search.css';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=128';
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
-const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
+const DOC_TYPES = ['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'];
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -64,9 +64,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     telefono: '',
     roles: [],
     correo: '',
-    password: '',
-    confirmPassword: '',
-    estado: '',
     avatar: '',
     avatarCompressed: '',
   });
@@ -109,10 +106,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
         if (!value.trim()) return 'Campo obligatorio';
         if (form.documento && users.some(u => u.tipoDocumento === value && u.documento === form.documento)) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
-      case 'password':
-        return value ? (isValidPassword(value) ? '' : 'Contraseña débil') : 'Campo obligatorio';
-      case 'confirmPassword':
-        return value === form.password ? '' : 'No coincide';
       case 'roles':
         return value.length > 0 ? '' : 'Selecciona al menos un rol';
       default:
@@ -157,7 +150,7 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     // Validar todos los campos obligatorios
     let valid = true;
     let newError = {};
-    for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo','password','confirmPassword','estado']) {
+    for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo']) {
       if (key === 'telefono') {
         const err = validate('telefono', numero);
         if (err) {
@@ -185,12 +178,10 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     const newUser = {
       nombre: form.nombre,
       correo: form.correo,
-      contrasena: form.password,
       tipo_documento: form.tipoDocumento,
       documento: form.documento,
       telefono: '+' + numero,
       roleId: parseInt(form.roles[0]) || 1,
-      estado: form.estado,
       ...(foto && { foto }),
       ...(form.direccion && { direccion: form.direccion }),
     };
@@ -303,30 +294,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 <input type="email" name="correo" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.correo} onChange={handleChange} onBlur={handleBlur} required />
                 {error.correo && <span className="text-red-500 text-xs">{error.correo}</span>}
               </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Contraseña <span className="text-red-500">*</span></label>
-                <input type={showPassword ? 'text' : 'password'} name="password" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.password} onChange={handleChange} onBlur={handleBlur} required />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
-                </div>
-                {error.password && <span className="text-red-500 text-xs">{error.password}</span>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Confirmar contraseña <span className="text-red-500">*</span></label>
-                <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} required />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
-                </div>
-                {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Estado <span className="text-red-500">*</span></label>
-                <select name="estado" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.estado} onChange={handleChange} onBlur={handleBlur} required>
-                  <option value="">Seleccionar</option>
-                  {ESTADOS.map(est => <option key={est} value={est}>{est}</option>)}
-                </select>
-                {error.estado && <span className="text-red-500 text-xs">{error.estado}</span>}
-              </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>
@@ -345,4 +312,4 @@ CreateUserModal.propTypes = {
   users: PropTypes.array.isRequired,
 };
 
-export default CreateUserModal; 
+export default CreateUserModal;

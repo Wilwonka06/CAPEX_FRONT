@@ -26,7 +26,6 @@ import Servicios from "../features/dashboard/pages/Services/Services";
 import Users from "../features/dashboard/pages/users/Users";
 import VentasProductos from "../features/dashboard/pages/SaleProducts/SalesProducts";
 import Scheduling from "../features/dashboard/pages/scheduling/scheduling";
-import { RolesProvider } from "../features/dashboard/pages/roles/hooks/useRoles";
 
 // Pages Landing
 import Cart from "../features/landing/pages/cart/Cart";
@@ -158,9 +157,7 @@ const router = createBrowserRouter([
             path: "roles",
             element: (
               <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
-                <RolesProvider>
-                  <RolesPage />
-                </RolesProvider>
+                <RolesPage />
               </RequirePrivilege>
             ),
           },

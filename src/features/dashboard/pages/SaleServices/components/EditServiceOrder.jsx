@@ -3,9 +3,10 @@ import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder } from "../../../../../shared/validations";
-import { formatNumber } from "../../../../../shared/utils/formatters";
+import { editServiceOrder } from "../API/ServiceOrderService";
+import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
 
-const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services }) => {
+const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   const [formData, setFormData] = useState({
     clientName: "",
     dineroProporcionado: "",
@@ -17,6 +18,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showErrors, setShowErrors] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
@@ -72,7 +74,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
     }
   }, [isOpen]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
     setTouched({
@@ -86,22 +88,29 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
 
     const orderData = {
       ...formData,
+      id: order.id,
       servicios: selectedServices,
       productos: selectedProducts,
       totalServices,
       totalProducts,
-      totalGeneral
+      totalGeneral,
+      dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
     };
 
-    onEdit(orderData);
+    try {
+      setLoading(true);
+      const updatedOrder = await editServiceOrder(orderData, services);
+      if (onEdited) onEdited(updatedOrder);
+      if (onClose) onClose();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const newVal = name === 'dineroProporcionado' ? formatNumberInput(value) : value;
+    setFormData(prev => ({ ...prev, [name]: newVal }));
     // Solo marcar como tocado, no validar en tiempo real
     setTouched(prev => ({ ...prev, [name]: true }));
   }, []);

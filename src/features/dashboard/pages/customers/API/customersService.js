@@ -48,7 +48,7 @@ const getCustomerRoleId = async () => {
 const mapUserToCustomer = (user) => {
   return {
     id: user.id_usuario || user.id,
-    documentType: user.tipo_documento || 'CC',
+    documentType: user.tipo_documento || 'Cedula de ciudadania',
     documentNumber: user.documento || '',
     nombre: user.nombre || '',
     // Mantener firstName y lastName para retrocompatibilidad (se derivan de nombre)
@@ -66,7 +66,7 @@ const mapUserToCustomer = (user) => {
     direccion: user.direccion || null,
     // Mantener compatibilidad con formato original
     nombre: user.nombre || '',
-    tipo_documento: user.tipo_documento || 'CC',
+    tipo_documento: user.tipo_documento || 'Cedula de ciudadania',
     documento: user.documento || '',
     correo: user.correo || '',
     telefono: user.telefono || '',
@@ -443,4 +443,3 @@ export const customersService = {
 };
 
 export default customersService;
-

@@ -107,7 +107,7 @@ const EmployeesPage = () => {
 
   const filteredEmployees = employees.filter(emp =>
     normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
-    normalizeText(emp.documento).includes(normalizeText(searchTerm)) ||
+    normalizeText(emp.documento || emp.numero_documento || emp.num_documento || '').includes(normalizeText(searchTerm)) ||
     (emp.telefono && normalizeText(emp.telefono).includes(normalizeText(searchTerm))) ||
     (emp.correo && normalizeText(emp.correo).includes(normalizeText(searchTerm))) ||
     (emp.direccion && normalizeText(emp.direccion).includes(normalizeText(searchTerm))) ||
@@ -433,27 +433,8 @@ const EmployeesPage = () => {
   return (
     <div className="min-h-screen bg-background p-6 font-inter">
       <div className="w-full">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {(showForm || editEmployee || seeEmployee) && (
-            <div className="lg:w-2/3">
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 mb-4">
-                <Calendar
-                  empleado={
-                    showForm
-                      ? { schedulings: addEmployeeSchedulings }
-                      : editEmployee
-                        ? { ...editEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(editEmployee.id)) }
-                        : seeEmployee
-                          ? { ...seeEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(seeEmployee.id)) }
-                          : null
-                  }
-                  schedulings={schedulings}
-                  onUpdateSchedulings={setSchedulings}
-                />
-              </div>
-            </div>
-          )}
-          <div className={(showForm || editEmployee || seeEmployee) ? "lg:w-1/3 lg:ml-auto" : "w-full"}>
+        <div className="flex flex-col gap-6">
+          <div className="w-full">
             {!showForm && !editEmployee && !seeEmployee && (
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <Search
@@ -466,7 +447,7 @@ const EmployeesPage = () => {
                   onClick={() => setShowForm(true)}
                 >
                   <i className="bi bi-plus-lg text-lg"></i>
-                  Agregar Empleado
+                  Crear Empleado
                 </button>
               </div>
             )}
@@ -507,6 +488,36 @@ const EmployeesPage = () => {
             {seeEmployee && (
               <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
                 <SeeEmployee employee={seeEmployee} onClose={handleSeeClose} />
+              </div>
+            )}
+
+            {/* Calendar section - below the forms */}
+            {(showForm || editEmployee || seeEmployee) && (
+              <div className="w-full">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-[#FACC15] rounded-full flex items-center justify-center">
+                      <i className="bi bi-calendar-event text-xl text-gray-800"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">Calendario de Programaciones</h3>
+                      <p className="text-sm text-gray-600">Visualiza y gestiona las programaciones del empleado</p>
+                    </div>
+                  </div>
+                  <Calendar
+                    empleado={
+                      showForm
+                        ? { schedulings: addEmployeeSchedulings }
+                        : editEmployee
+                          ? { ...editEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(editEmployee.id)) }
+                          : seeEmployee
+                            ? { ...seeEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(seeEmployee.id)) }
+                            : null
+                    }
+                    schedulings={schedulings}
+                    onUpdateSchedulings={setSchedulings}
+                  />
+                </div>
               </div>
             )}
 
@@ -556,7 +567,7 @@ const EmployeesPage = () => {
                           {paginatedEmployees.map((emp) => (
                             <tr key={emp.id || `employee-${Math.random()}`} className="hover:bg-gray-50 transition-colors duration-150">
                               <td className="py-4 px-4 text-xs font-medium text-gray-900">{emp.nombre}</td>
-                              <td className="py-4 px-4 text-xs font-medium text-gray-900">{emp.documento}</td>
+                              <td className="py-4 px-4 text-xs font-medium text-gray-900">{emp.documento || emp.numero_documento || emp.num_documento || ''}</td>
                               <td className="py-4 px-4 text-xs text-gray-600">{emp.telefono}</td>
                               <td className="py-4 px-4 text-xs text-gray-600">{emp.correo}</td>
                               <td className="py-4 px-4 text-xs">

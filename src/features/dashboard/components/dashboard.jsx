@@ -139,8 +139,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // ===== CARGAR DATOS REALES =====
-  useEffect(() => {
-    const loadRealData = async () => {
+  const loadRealData = async () => {
       setLoading(true);
       try {
         // Cargar ventas de productos reales (con límite alto para obtener todas)
@@ -201,9 +200,17 @@ const Dashboard = () => {
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     loadRealData();
+    const handler = () => loadRealData();
+    window.addEventListener('sales-updated', handler);
+    window.addEventListener('services-updated', handler);
+    return () => {
+      window.removeEventListener('sales-updated', handler);
+      window.removeEventListener('services-updated', handler);
+    };
   }, []);
 
   // Selector de mes (actual y tres meses atrás) - Debe estar antes de cualquier return condicional

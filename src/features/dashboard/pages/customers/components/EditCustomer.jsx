@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import customersService from "../API/customersService"
 import { validateCustomer } from "../../../../../shared/validations"
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
 
-export default function EditCustomer({ isOpen, onClose, onUpdate, loading = false, setLoading, customer, customers = [] }) {
+export default function EditCustomer({ isOpen, onClose, onSuccess, customer, customers = [] }) {
   const [formData, setFormData] = useState({
     documentType: "",
     documentNumber: "",
@@ -16,6 +17,7 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
   })
   const [touched, setTouched] = useState({})
   const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen && customer) {
@@ -93,7 +95,9 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
     if (validation.isValid) {
       try {
         setLoading(true);
-        await onUpdate(formData);
+        await customersService.update(customer.id, formData);
+        if (onSuccess) onSuccess();
+        if (onClose) onClose();
       } finally {
         setLoading(false);
       }
@@ -104,23 +108,20 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-            <div>
-            <h2 className="text-xl font-bold text-accent m-0">Editar Cliente</h2>
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-person-lines-fill text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Editar Cliente</h2>
           </div>
-          <button
-            className="text-gray-400 hover:text-black text-xl font-bold"
-            onClick={handleClose}
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
-          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200" onClick={handleClose} aria-label="Cerrar">×</button>
+        </div>
 
         {/* Contenido */}
-        <div className="p-8 bg-white overflow-y-auto flex-1">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="edit-customer-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Documento */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -216,32 +217,10 @@ export default function EditCustomer({ isOpen, onClose, onUpdate, loading = fals
           </div>
 
         {/* Footer */}
-        <div className="bg-white rounded-b-lg flex justify-end px-8 py-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleClose}
-            className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-black text-sm hover:bg-gray-200 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="edit-customer-form"
-              className="px-4 py-2 rounded-md font-semibold transition ml-2 text-sm bg-black text-white hover:bg-gray-800 flex items-center"
-            >
-              {loading ? (
-                <>
-                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
-                Actualizando...
-                </>
-              ) : (
-                <>
-                <i className="bi bi-save mr-2"></i>
-                Actualizar Cliente
-                </>
-              )}
-            </button>
-          </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="edit-customer-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2">{loading ? (<><i className="bi bi-arrow-clockwise animate-spin"></i>Actualizando...</>) : (<><i className="bi bi-save"></i>Actualizar</>)}</button>
+        </div>
       </div>
     </div>
   )

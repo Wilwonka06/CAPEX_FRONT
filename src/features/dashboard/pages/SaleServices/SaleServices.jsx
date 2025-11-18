@@ -5,8 +5,8 @@ import EditServiceOrder from "./components/EditServiceOrder";
 import AnularServiceOrder from "./components/AnularServiceOrder";
 import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
-import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
-import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./services/CitasService";
+import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./API/ServiceOrderService";
+import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./API/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import Swal from 'sweetalert2';
@@ -332,7 +332,6 @@ const SaleServices = () => {
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">ID</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Cliente</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Servicios</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
@@ -363,7 +362,6 @@ const SaleServices = () => {
                     </tr>
                   ) : paginatedServices.length > 0 ? paginatedServices.map((service) => (
                     <tr key={service.id} className="hover:bg-gray-50">
-                      <td className="py-2 px-3">{service.id}</td>
                       <td className="py-2 px-3">{service.clientName}</td>
                       <td className="py-2 px-3">{(service.servicios || []).map(s => s.name).join(", ")}</td>
                       <td className="py-2 px-3">{service.date}</td>
@@ -440,8 +438,10 @@ const SaleServices = () => {
         <CreateServiceOrder
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          onCreate={handleCreateOrder}
-          loading={loading}
+          onCreated={(newOrder) => {
+            setServices(prev => [...prev, newOrder]);
+            toast.success('Orden de servicio creada exitosamente');
+          }}
           services={services}
         />
       )}
@@ -450,8 +450,11 @@ const SaleServices = () => {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           order={selectedOrder}
-          onEdit={handleEditOrder}
-          loading={loading}
+          onEdited={(updatedOrder) => {
+            setServices(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
+            setSelectedOrder(null);
+            toast.success('Orden de servicio actualizada exitosamente');
+          }}
           services={services}
         />
       )}

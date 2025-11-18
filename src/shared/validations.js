@@ -632,9 +632,38 @@ export function isValidSupplierType(tipo) {
 
 // Valida tipo de documento
 export function isValidDocumentType(tipo) {
+  const valid = ['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT','Registro civil','Tarjeta de identidad','Cedula de ciudadania','Tarjeta de extranjeria','Cedula de extranjeria','Pasaporte','Permiso especial de permanencia','Documento de identificación extranjero','NUIP','NIT de otro país'];
+  return valid.includes(tipo);
+}
 
-  return ['Cedula de ciudadania', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte'].includes(tipo);
-
+export function isValidDocumentByType(tipo, numero) {
+  const num = (numero || '').toString().trim();
+  const onlyDigits = /^\d+$/;
+  const onlyAlphaNum = /^[A-Za-z0-9]+$/;
+  switch (tipo) {
+    case 'RC':
+    case 'TI':
+    case 'NUIP':
+    case 'CC':
+      return onlyDigits.test(num) && num.length >= 6 && num.length <= 10;
+    case 'TE':
+    case 'CE':
+      return onlyDigits.test(num) && num.length <= 20 && num.length >= 6;
+    case 'NIT': {
+      // permitir con dígito de verificación: 800000000-9
+      const clean = num.replace(/[.-]/g, '');
+      return onlyDigits.test(clean) && clean.length >= 9 && clean.length <= 14;
+    }
+    case 'PP':
+      return onlyAlphaNum.test(num) && num.length >= 9 && num.length <= 12;
+    case 'PEP':
+    case 'DIE':
+    case 'FOREIGN_NIT':
+      return num.length >= 6; // variable según país
+    default:
+      // Si llega descripción en vez de código, aplicar reglas generales de 6-15 dígitos
+      return onlyDigits.test(num) && num.length >= 6 && num.length <= 15;
+  }
 }
 
 // Valida contraseña (mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número)
@@ -915,24 +944,9 @@ export function isValidName(name) {
 // Valida documento según tipo
 export function validateUserDocument(tipo, documento) {
   if (!documento) return 'El documento es obligatorio';
-  if (tipo === 'Pasaporte') {
-    if (!/^[A-Z]{3}\d{6}$/.test(documento)) {
-      return 'Pasaporte: 3 letras mayúsculas seguidas de 6 dígitos (ej: ABC123456)';
-    }
-  } else if (tipo === 'Cedula de ciudadania' || tipo === 'Tarjeta de identidad') {
-    if (!/^\d{7,15}$/.test(documento)) {
-      return 'Debe tener solo números (7 a 15 dígitos)';
-    }
-  } else if (tipo === 'Cedula de extranjeria') {
-    if (!/^\d{7,15}$/.test(documento)) {
-      return 'Debe tener solo números (7 a 15 dígitos)';
-    }
-  } else if (tipo === 'NIT') {
-    if (!/^[A-Za-z]\d+$/.test(documento)) {
-      return 'NIT: Una letra seguida de números (ej: A123456789)';
-    }
-  } else {
-    return 'Selecciona un tipo de documento válido';
+  const ok = isValidDocumentByType(tipo, documento);
+  if (!ok) {
+    return 'Número de documento inválido para el tipo seleccionado';
   }
   return '';
 }

@@ -1,8 +1,8 @@
 // Servicio para órdenes de servicio con conexión al backend
-import apiRequest from '../../../../../shared/config/apiConfig';
-import { validateServiceOrder } from '../../../../../shared/validations';
+ import apiRequest from '../../../../../shared/config/apiConfig';
+ import { validateServiceOrder } from '../../../../../shared/validations';
 
-const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
+ const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
 
 /**
  * Convierte datos del frontend al formato del backend
@@ -212,4 +212,4 @@ export const anularServiceOrder = async (orderId) => {
     console.error('Error anulando service order:', error);
     throw error;
   }
-}; 
+};

@@ -111,28 +111,7 @@ export default function OrdersPage() {
       });
 
       if (response.success) {
-        // Transformar datos del backend al formato frontend
-        const transformedOrders = (response.data || []).map(pedido => ({
-          id: pedido.id_pedido,
-          numeroOrden: `PED-${(pedido.id_pedido || 0).toString().padStart(6, '0')}`,
-          fecha: pedido.fecha || new Date().toISOString().split('T')[0],
-          clienteId: pedido.id_usuario,
-          clienteNombre: pedido.usuario?.nombre || `Usuario ${pedido.id_usuario || 'N/A'}`,
-          valor: parseFloat(pedido.total || 0),
-          estado: pedido.estado || 'Pendiente',
-          // ✅ Incluir datos completos del usuario para el modal
-          usuario: pedido.usuario || null,
-          direccion_entrega: pedido.direccion_entrega || null,
-          ciudad: pedido.ciudad || null,
-          productos: (pedido.detalles || []).map(det => ({
-            codigo: `P${(det.id_producto || 0).toString().padStart(3, '0')}`,
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad || 0,
-            precio: parseFloat(det.precio_unitario || 0)
-          }))
-        }));
-
-        setOrders(transformedOrders);
+        setOrders(response.data || []);
       } else {
         throw new Error(response.message || 'Error al cargar pedidos');
       }

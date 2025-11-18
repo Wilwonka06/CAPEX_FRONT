@@ -3,8 +3,7 @@ import { apiRequest } from '../../../../../shared/config/apiConfig';
 import { formatNumber } from '../../../../../shared/utils/formatters';
 
 const ServiceSelector = ({ selectedServices, onServicesChange }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedServiceForQuantity, setSelectedServiceForQuantity] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -103,37 +102,15 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     };
   }, [searchTimeout]);
 
-  // Función para buscar servicios usando el endpoint de búsqueda
-  const buscarServicios = async (termino) => {
-    if (!termino.trim()) {
-      // Si no hay término, cargar todos los servicios
-      try {
-        const servicios = await apiRequest.get('/servicios');
-        const serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || []);
-        setAvailableServices(serviciosArray);
-      } catch (error) {
-        console.error('Error al cargar servicios:', error);
-        setAvailableServices([]);
-      }
-      return;
-    }
-
+  // Cargar todos los servicios (select simple)
+  const cargarServicios = async () => {
     try {
-      const servicios = await apiRequest.get('/servicios/search', {
-        params: { q: termino }
-      });
+      const servicios = await apiRequest.get('/servicios');
       const serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || []);
       setAvailableServices(serviciosArray);
     } catch (error) {
-      console.error('Error al buscar servicios:', error);
-      // Fallback a filtrado local
-      const todosLosServicios = availableServices;
-      const filtrados = Array.isArray(todosLosServicios) 
-        ? todosLosServicios.filter(service =>
-            (service.nombre || service.name || '').toLowerCase().includes(termino.toLowerCase())
-          )
-        : [];
-      setAvailableServices(filtrados);
+      console.error('Error al cargar servicios:', error);
+      setAvailableServices([]);
     }
   };
 
@@ -169,8 +146,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
       setSelectedEmployeeForService("");
       setShowQuantityModal(true);
     }
-    setSearchTerm("");
-    setIsOpen(false);
+    setSelectedServiceId("");
   };
 
   const confirmServiceSelection = () => {
@@ -213,35 +189,13 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const totalServices = selectedServices.reduce((total, service) => total + service.subtotal, 0);
 
   // Funciones simples para evitar problemas de hooks
-  const handleSearchChange = (e) => {
-    const termino = e.target.value;
-    setSearchTerm(termino);
-    setIsOpen(true);
-    
-    // Limpiar timeout anterior
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
+  const handleSelectChange = (e) => {
+    const val = e.target.value;
+    setSelectedServiceId(val);
+    const servicio = filteredServices.find(s => String(s.id) === String(val));
+    if (servicio) {
+      handleServiceSelect(servicio);
     }
-    
-    // Crear nuevo timeout para debounce
-    const newTimeout = setTimeout(async () => {
-      if (termino.trim()) {
-        setLoading(true);
-        await buscarServicios(termino);
-        setLoading(false);
-      } else {
-        // Si no hay término, cargar todos los servicios
-        setLoading(true);
-        await buscarServicios('');
-        setLoading(false);
-      }
-    }, 300); // 300ms de debounce
-    
-    setSearchTimeout(newTimeout);
-  };
-
-  const handleSearchFocus = () => {
-    setIsOpen(true);
   };
 
   const handleQuantityChange = (e) => {
@@ -254,51 +208,24 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
   return (
     <div className="relative">
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            onFocus={handleSearchFocus}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-            placeholder="Buscar servicios..."
-          />
-          <i className="bi bi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+        <div>
+          <label className="block text-xs font-medium text-black mb-1">Servicio</label>
+          <select
+            value={selectedServiceId}
+            onChange={handleSelectChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            onFocus={cargarServicios}
+          >
+            <option value="">Seleccionar servicio</option>
+            {filteredServices.map(service => (
+              <option key={service.id} value={service.id}>
+                {service.nombre} - ${service.precio}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-
-      {/* Dropdown de servicios */}
-      {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
-          {loading ? (
-            <div className="px-3 py-2 text-gray-500 text-sm flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-              Cargando servicios...
-            </div>
-          ) : (
-            <>
-          {filteredServices.map(service => (
-            <div
-              key={service.id}
-              onClick={() => handleServiceSelect(service)}
-              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
-            >
-              <div className="flex justify-between">
-                    <span>{service.nombre || service.name}</span>
-                    <span className="text-gray-600">${service.precio || service.price || 0}</span>
-              </div>
-            </div>
-          ))}
-              {filteredServices.length === 0 && !loading && (
-            <div className="px-3 py-2 text-gray-500 text-sm">
-              No se encontraron servicios
-            </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
 
       {/* Modal para cantidad, empleado y detalles del servicio */}
       {showQuantityModal && selectedServiceForQuantity && (
@@ -328,12 +255,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                   </div>
                 </div>
                 
-                <div>
-                  <label className="block text-xs font-medium text-black mb-1">Categoría</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    {selectedServiceForQuantity.categoria || selectedServiceForQuantity.category || 'Sin categoría'}
-                  </div>
-                </div>
+                
                 
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Duración</label>
@@ -432,7 +354,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
           <table className="w-full text-xs">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Categoría Servicio</th>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Servicio</th>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Empleado</th>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
@@ -451,7 +372,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               ) : (
                 selectedServices.map((service) => (
                   <tr key={service.uniqueId} className="border-t hover:bg-gray-50">
-                    <td className="px-2 py-2 border-r">{service.category}</td>
                     <td className="px-2 py-2 border-r">{service.name}</td>
                     <td className="px-2 py-2 border-r">{service.employee?.name}</td>
                     <td className="px-2 py-2 border-r text-center">{formatNumber(service.quantity)}</td>

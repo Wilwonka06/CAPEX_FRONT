@@ -83,7 +83,7 @@ const ReportsPanel = ({ weeklyData = [], topServicios = [], topProductos = [], m
           onClick={exportTendenciaYoY}
           className="flex items-center justify-center gap-2 px-4 py-3 bg-[#A0522D] hover:bg-[#4B2A2A] text-white rounded-xl shadow-md transition-all duration-300 hover:scale-105 font-semibold text-sm"
         >
-          <i className="bi bi-download" /> Tendencia mensual + YoY
+          <i className="bi bi-download" /> Tendencia mensual
         </button>
       </div>
     </div>

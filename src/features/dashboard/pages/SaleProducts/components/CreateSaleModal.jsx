@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import productsService from "../../products/API/productsService";
 import usersService from "../../users/API/usersService";
-import { formatNumber } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatNumberInput, parseFormattedNumber } from "../../../../../shared/utils/formatters";
 import toast from "react-hot-toast";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -173,7 +173,7 @@ export default function CreateSaleModal({
 
   // Calcular total
   const total = itemsVenta.reduce(
-    (acc, item) => acc + item.precio * item.cantidad,
+    (acc, item) => acc + (parseFormattedNumber(item.precio) || 0) * (item.cantidad || 0),
     0
   );
 
@@ -220,7 +220,7 @@ export default function CreateSaleModal({
 
     setItemsVenta((prev) => [
       ...prev,
-      { ...producto, cantidad: Number(cantidad) },
+      { ...producto, cantidad: Number(cantidad), precio: formatNumberInput(String(producto.precio || producto.precio_venta || 0)) },
     ]);
     setProductoSeleccionado("");
     setCantidad(1);
@@ -297,7 +297,7 @@ export default function CreateSaleModal({
           telefono: '+' + numero,
           correo: clienteNuevo.correo.trim(),
           contrasena: tempPassword,
-          tipo_documento: 'Cedula de ciudadania',
+          tipo_documento: 'CC',
           documento: clienteNuevo.documento.trim(),
           roleId: 2, // Rol de cliente
           estado: 'Activo',
@@ -328,7 +328,7 @@ export default function CreateSaleModal({
         productos: itemsVenta.map(item => ({
           id: item.id,
           cantidad: item.cantidad,
-          precio: item.precio
+          precio: parseFormattedNumber(item.precio)
         })),
         metodoPago,
       };
@@ -347,21 +347,12 @@ export default function CreateSaleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">
-            Crear Nueva Venta
-          </h2>
-          <button
-            className="text-gray-400 hover:text-primary text-xl font-bold"
-            onClick={onClose}
-          >
-            ×
-          </button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-bag-plus text-lg"></i></div><h2 className="text-xl font-bold m-0">Crear Nueva Venta</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1 space-y-8">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="sale-form" onSubmit={handleSubmit} className="space-y-8">
             {/* Sección de Venta */}
             <div>
@@ -718,22 +709,10 @@ export default function CreateSaleModal({
               </div>
             </div>
           </form>
-          <div className=" flex justify-end px-8 py-4">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-md border text-sm"
-              onClick={onClose}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="sale-form"
-              className="px-4 py-2 rounded-md bg-text-main text-white font-semibold text-sm ml-2"
-            >
-              Guardar Venta
-            </button>
         </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="sale-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar Venta</button>
         </div>
       </div>
     </div>
@@ -745,4 +724,4 @@ CreateSaleModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onCreate: PropTypes.func.isRequired,
   products: PropTypes.array.isRequired,
-}; 
+};

@@ -9,6 +9,7 @@ import { formatNumber } from '../../../../shared/utils/formatters';
 import CreateSaleModal from './components/CreateSaleModal';
 import SaleDetailModal from './components/SaleDetailModal';
 import SalesTable from './components/SalesTable';
+import { generateProductInvoicePDF } from '../../../../shared/utils/invoicePdf';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
@@ -57,24 +58,7 @@ const SalesProducts = () => {
       });
 
       if (response.success) {
-        // Transformar datos del backend al formato frontend
-        const transformedSales = (response.data || []).map(venta => ({
-          id: venta.id_venta_producto,
-          numeroVenta: `VEN-${venta.id_venta_producto.toString().padStart(6, '0')}`,
-          fecha: venta.fecha,
-          clienteId: venta.id_usuario,
-          valor: parseFloat(venta.total || 0),
-          estado: venta.estado,
-          metodoPago: 'No especificado', // Agregar al backend si es necesario
-          productos: (venta.detalles || []).map(det => ({
-            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad,
-            precio: parseFloat(det.precio_unitario || 0)
-          }))
-        }));
-
-        setSales(transformedSales);
+        setSales(response.data || []);
       } else {
         throw new Error(response.message || 'Error al cargar ventas');
       }
@@ -160,6 +144,7 @@ const SalesProducts = () => {
       if (response.success) {
         setShowCreateModal(false);
         await loadSales(); // Recargar lista
+        try { window.dispatchEvent(new Event('sales-updated')); } catch {}
         return response.data;
       } else {
         throw new Error(response.message || 'Error al crear la venta');
@@ -382,8 +367,33 @@ const SalesProducts = () => {
                     customers={[]}
                     onView={handleViewSale}
                     onAnnul={handleDeleteSale}
-                    onDownload={() => {
-                      toast('Función de descarga en desarrollo');
+                    onDownload={async (sale) => {
+                      try {
+                        const res = await salesService.getById(sale.id);
+                        if (!res.success || !res.data) throw new Error(res.message || 'No se pudo obtener la venta');
+                        const venta = res.data;
+                        await generateProductInvoicePDF({
+                          sale: venta,
+                          customer: {
+                            nombre: venta.customer?.nombre || 'Cliente',
+                            documentNumber: venta.customer?.documentNumber || '',
+                            email: venta.customer?.email || '',
+                            phone: venta.customer?.phone || ''
+                          },
+                          company: {
+                            name: 'CAPEX',
+                            email: 'info@capex.local',
+                            phone: '+57',
+                            address: 'Colombia'
+                          },
+                          theme: { primary: '#9C5B2B', accent: '#FACC15' },
+                          fileName: `factura_${venta.numeroVenta}.pdf`
+                        })
+                        toast.success('Factura PDF descargada')
+                      } catch (e) {
+                        console.error('Error al descargar factura:', e);
+                        toast.error(e.message || 'Error al descargar factura');
+                      }
                     }}
                     currentPage={currentPage}
                     totalPages={totalPages}

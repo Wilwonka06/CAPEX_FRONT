@@ -167,7 +167,7 @@ const CatServices = () => {
                 onClick={() => setShowAdd(true)}
               >
                 <i className="bi bi-plus-circle mr-2"></i>
-                Nueva Categoría
+                crear Categoría
               </button>
             </div>
 
@@ -182,7 +182,6 @@ const CatServices = () => {
                   <table className="min-w-full">
                     <thead>
                       <tr className="bg-gray-50 hover:bg-gray-100">
-                        <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">ID</th>
                         <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
                         <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Descripción</th>
                         <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
@@ -195,7 +194,6 @@ const CatServices = () => {
                         const isToggling = togglingId === cat.id_categoria_servicio;
                         return (
                           <tr key={cat.id_categoria_servicio} className="hover:bg-gray-50 transition-colors duration-150">
-                            <td className="py-4 px-4 text-xs font-medium text-gray-900">{cat.id_categoria_servicio}</td>
                             <td className="py-4 px-4 text-xs font-medium text-gray-900">{cat.nombre}</td>
                             <td className="py-4 px-4 text-xs text-gray-600 max-w-[300px] truncate">{cat.descripcion || "—"}</td>
                             <td className="py-4 px-4 text-xs">

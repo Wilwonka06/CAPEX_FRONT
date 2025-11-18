@@ -38,20 +38,20 @@ const ActionButtons = ({ role, onView, onEdit, onDelete }) => {
   return (
     <div className="flex justify-end space-x-2">
       <button
-        className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors"
+        className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors"
         onClick={handleView}
         title="Ver detalles"
       >
-        <i className="bi bi-eye text-primary text-lg"></i>
+        <i className="bi bi-eye text-primary text-[18px]"></i>
       </button>
       
       {onEdit && (
         <button
-          className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-amber-300 rounded-md flex items-center justify-center transition-colors"
+          className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors"
           onClick={handleEdit}
           title="Editar"
         >
-          <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
+          <i className="bi bi-pencil-square text-amber-500 text-[18px]"></i>
         </button>
       )}
       
@@ -60,13 +60,13 @@ const ActionButtons = ({ role, onView, onEdit, onDelete }) => {
           className={`h-8 w-8 p-0 rounded-md flex items-center justify-center transition-colors ${
             isSystemRole 
               ? 'bg-gray-100 cursor-not-allowed opacity-50' 
-              : 'hover:bg-red-50 hover:border-red-300'
+              : 'hover:bg-red-50'
           }`}
           onClick={handleDelete}
           title={isSystemRole ? `No se puede eliminar el rol "${roleName}" (rol del sistema)` : "Eliminar"}
           disabled={isSystemRole}
         >
-          <i className={`bi bi-trash text-lg ${
+          <i className={`bi bi-trash text-[18px] ${
             isSystemRole ? 'text-gray-400' : 'text-red-500'
           }`}></i>
         </button>

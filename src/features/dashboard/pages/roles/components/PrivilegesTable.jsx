@@ -1,6 +1,6 @@
 // ✅ ACTUALIZADO: Permisos y privilegios se obtienen dinámicamente del backend
 import { useState, useEffect } from 'react';
-import { useRoles } from '../hooks/useRoles';
+import TableSkeleton from '../../../../../shared/components/TableSkeleton';
 
 /**
  * Componente para gestionar privilegios de roles
@@ -115,11 +115,8 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-500">Cargando permisos...</p>
-        </div>
+      <div className="py-4">
+        <TableSkeleton columns={5} rows={4} hasActions={false} hasAvatar={false} />
       </div>
     );
   }
@@ -135,11 +132,11 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
   return (
     <div className="overflow-x-auto w-full">
       {!disabled && (
-        <div className="flex justify-end gap-2 mb-2">
+        <div className="sticky top-0 z-20 bg-gray-50 py-2 px-2 flex justify-between items-center">
           <button
             type="button"
             onClick={handleDeselectAll}
-            className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition flex items-center gap-2"
+            className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition flex items-center gap-2 text-xs"
           >
             <i className="bi bi-x-circle mr-1"></i>
             Deseleccionar todos
@@ -147,21 +144,21 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
           <button
             type="button"
             onClick={handleSelectAll}
-            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center gap-2"
+            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold hover:bg-primary-dark transition flex items-center gap-2 text-xs"
           >
             <i className="bi bi-check2-all mr-1"></i>
             Seleccionar todos
           </button>
         </div>
       )}
-      <table className="min-w-full rounded-lg border border-gray-200 shadow-sm text-sm">
+      <table className="min-w-full rounded-lg border border-gray-200 shadow-sm text-xs">
         <thead>
           <tr className="bg-gray-50 hover:bg-gray-100">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+            <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
               Acción / Módulo
             </th>
             {modules.map((mod) => (
-              <th key={mod} className="py-3 px-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
+              <th key={mod} className="py-2 px-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                 {mod}
               </th>
             ))}
@@ -170,14 +167,14 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
         <tbody>
           {actions.map((action, rowIdx) => (
             <tr key={action} className={rowIdx % 2 === 1 ? "bg-gray-50" : ""}>
-              <td className="py-3 px-4 font-medium text-gray-900 whitespace-nowrap">
+              <td className="py-2 px-3 font-medium text-gray-900 whitespace-nowrap">
                 {action}
               </td>
               {modules.map((mod) => {
                 const isChecked = !!(value[mod] && value[mod][action]);
                 
                 return (
-                  <td key={mod} className="py-3 px-4 text-center">
+                  <td key={mod} className="py-2 px-3 text-center">
                     <input
                       type="checkbox"
                       checked={isChecked}

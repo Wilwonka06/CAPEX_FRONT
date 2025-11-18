@@ -27,7 +27,6 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete, togg
     <table className="min-w-full">
       <thead>
         <tr className="bg-gray-50 hover:bg-gray-100">
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">ID</th>
           <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
           <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
           <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Duración</th>
@@ -42,7 +41,6 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete, togg
           const isToggling = togglingId === service.id;
           return (
             <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-4 px-4 text-xs font-medium text-gray-900">{service.id}</td>
               <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.nombre}</td>
               <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">
                 {service.categoria?.nombre || service.categoria || 'Sin categoría'}
@@ -372,7 +370,7 @@ const Services = () => {
                 onClick={() => setShowAddModal(true)}
               >
                 <i className="bi bi-plus-circle mr-2"></i>
-                Nuevo Servicio
+                Crear Servicio
               </button>
             </div>
 

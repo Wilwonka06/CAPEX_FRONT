@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import EditScheduling from './EditScheduling';
 import RecurringSchedulingManager from './RecurringSchedulingManager';
@@ -147,217 +147,304 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
   };
 
   return (
-    <div>
-      <div className="flex gap-2 mb-4 flex-wrap">
+    <div className="bg-gray-50 rounded-xl p-6">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-8">
+        <div className="bg-gradient-to-r from-[#FACC15] to-[#F59E0B] rounded-2xl h-16 w-16 flex items-center justify-center shadow-lg">
+          <i className="bi bi-pencil-square text-3xl text-white" />
+        </div>
+        <div>
+          <h2 className="text-3xl font-bold text-gray-800 font-nunito">Editar Empleado</h2>
+          <p className="text-gray-600 font-lato">Modifica la información del empleado</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 bg-white rounded-xl p-2 shadow-sm border border-gray-200 overflow-x-auto">
         <button
-          className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
-            activeTab === 'empleado' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'
+          className={`flex-1 min-w-[160px] text-sm font-semibold px-4 py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
+            activeTab === 'empleado'
+              ? 'bg-[#FACC15] text-gray-800 shadow-md'
+              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
           }`}
           onClick={() => setActiveTab('empleado')}
           type="button"
         >
-          Datos del Empleado
+          <i className="bi bi-person mr-2"></i>
+          Datos Personales
         </button>
         <button
-          className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
-            activeTab === 'programacion-recurrente' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'
+          className={`flex-1 min-w-[180px] text-sm font-semibold px-4 py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
+            activeTab === 'programacion-recurrente'
+              ? 'bg-[#FACC15] text-gray-800 shadow-md'
+              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
           }`}
           onClick={() => setActiveTab('programacion-recurrente')}
           type="button"
         >
-          Programaciones Recurrentes
+          <i className="bi bi-calendar-week mr-2"></i>
+          Programaciones
         </button>
         <button
-          className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
-            activeTab === 'novedades' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'
+          className={`flex-1 min-w-[140px] text-sm font-semibold px-4 py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
+            activeTab === 'novedades'
+              ? 'bg-[#FACC15] text-gray-800 shadow-md'
+              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
           }`}
           onClick={() => setActiveTab('novedades')}
           type="button"
         >
+          <i className="bi bi-exclamation-triangle mr-2"></i>
           Novedades
         </button>
         <button
-          className={`text-lg font-semibold px-3 py-1 rounded-t transition-colors ${
-            activeTab === 'programacion' ? 'bg-primary text-white' : 'bg-gray-100 text-text-main'
+          className={`flex-1 min-w-[160px] text-sm font-semibold px-4 py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
+            activeTab === 'programacion'
+              ? 'bg-[#FACC15] text-gray-800 shadow-md'
+              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
           }`}
           onClick={() => setActiveTab('programacion')}
           type="button"
         >
-          Programación (Legacy)
+          <i className="bi bi-calendar-event mr-2"></i>
+          Programación Legacy
         </button>
       </div>
 
       {activeTab === 'empleado' && (
-        <form className="px-2 pb-2" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-            <div>
-              <label htmlFor="nombre" className="block text-sm font-medium text-text-main mb-1">
-                Nombre
-              </label>
-              <input
-                type="text"
-                name="nombre"
-                id="nombre"
-                value={form.nombre}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full bg-background border rounded-md px-3 py-2 text-text-main font-medium focus:outline-none ${
-                  errors.nombre ? 'border-red-500' : 'border-accent-light'
-                }`}
-                required
-              />
-              {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="tipoDocumento" className="block text-sm font-medium text-text-main mb-1">
-                Tipo de Documento
-              </label>
-              <select
-                name="tipoDocumento"
-                id="tipoDocumento"
-                value={form.tipoDocumento}
-                onChange={handleChange}
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-                required
-              >
-                {tiposDocumento.map((tipo) => (
-                  <option key={tipo.value} value={tipo.value}>
-                    {tipo.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="documento" className="block text-sm font-medium text-text-main mb-1">
-                Documento
-              </label>
-              <input
-                type="text"
-                name="documento"
-                id="documento"
-                value={form.documento}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Solo números"
-                maxLength={15}
-                className={`w-full bg-background border rounded-md px-3 py-2 text-text-main font-medium focus:outline-none ${
-                  errors.documento ? 'border-red-500' : 'border-accent-light'
-                }`}
-                required
-              />
-              {errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="telefono" className="block text-sm font-medium text-text-main mb-1">
-                Teléfono
-              </label>
-              <input
-                type="text"
-                name="telefono"
-                id="telefono"
-                value={form.telefono}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="Solo números"
-                maxLength={15}
-                className={`w-full bg-background border rounded-md px-3 py-2 text-text-main font-medium focus:outline-none ${
-                  errors.telefono ? 'border-red-500' : 'border-accent-light'
-                }`}
-                required
-              />
-              {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="correo" className="block text-sm font-medium text-text-main mb-1">
-                Correo
-              </label>
-              <input
-                type="email"
-                name="correo"
-                id="correo"
-                value={form.correo}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full bg-background border rounded-md px-3 py-2 text-text-main font-medium focus:outline-none ${
-                  errors.correo ? 'border-red-500' : 'border-accent-light'
-                }`}
-                required
-              />
-              {errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="direccion" className="block text-sm font-medium text-text-main mb-1">
-                Dirección
-              </label>
-              <input
-                type="text"
-                name="direccion"
-                id="direccion"
-                value={form.direccion}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full bg-background border rounded-md px-3 py-2 text-text-main font-medium focus:outline-none ${
-                  errors.direccion ? 'border-red-500' : 'border-accent-light'
-                }`}
-                required
-              />
-              {errors.direccion && <p className="text-red-500 text-xs mt-1">{errors.direccion}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="estado" className="block text-sm font-medium text-text-main mb-1">
-                Estado
-              </label>
-              <select
-                name="estado"
-                id="estado"
-                value={form.estado}
-                onChange={handleChange}
-                className="w-full bg-background border border-accent-light rounded-md px-3 py-2 text-text-main font-medium focus:outline-none"
-              >
-                <option value="Activo">Activo</option>
-                <option value="Inactivo">Inactivo</option>
-              </select>
-            </div>
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
+              <i className="bi bi-person text-[#FACC15]"></i>
+              Información Personal
+            </h3>
+            <p className="text-gray-600 font-lato">Modifica los datos básicos del empleado</p>
           </div>
 
-          <div className="flex justify-end space-x-4 mt-8">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="bg-gray-100 text-gray-600 px-6 py-2 rounded font-semibold hover:bg-gray-200 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="bg-primary-dark text-white px-6 py-2 rounded font-semibold hover:bg-primary transition"
-            >
-              Guardar
-            </button>
-          </div>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label htmlFor="nombre" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                  <i className="bi bi-person text-[#FACC15]"></i>
+                  Nombre Completo *
+                </label>
+                <input
+                  type="text"
+                  name="nombre"
+                  id="nombre"
+                  value={form.nombre}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ingresa el nombre completo"
+                  className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
+                    errors.nombre ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  required
+                />
+                {errors.nombre && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.nombre}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="tipoDocumento" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                  <i className="bi bi-card-text text-[#FACC15]"></i>
+                  Tipo de Documento *
+                </label>
+                <select
+                  name="tipoDocumento"
+                  id="tipoDocumento"
+                  value={form.tipoDocumento}
+                  onChange={handleChange}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] transition-all appearance-none bg-white font-lato"
+                  required
+                >
+                  {tiposDocumento.map((tipo) => (
+                    <option key={tipo.value} value={tipo.value}>
+                      {tipo.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="documento" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                  <i className="bi bi-hash text-[#FACC15]"></i>
+                  Número de Documento *
+                </label>
+                <input
+                  type="text"
+                  name="documento"
+                  id="documento"
+                  value={form.documento}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ingresa el número de documento"
+                  maxLength={15}
+                  className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato font-mono ${
+                    errors.documento ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  required
+                />
+                {errors.documento && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.documento}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="telefono" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                  <i className="bi bi-telephone text-[#FACC15]"></i>
+                  Teléfono *
+                </label>
+                <input
+                  type="text"
+                  name="telefono"
+                  id="telefono"
+                  value={form.telefono}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ingresa el número de teléfono"
+                  maxLength={15}
+                  className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato font-mono ${
+                    errors.telefono ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  required
+                />
+                {errors.telefono && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.telefono}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="correo" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                  <i className="bi bi-envelope text-[#FACC15]"></i>
+                  Correo Electrónico *
+                </label>
+                <input
+                  type="email"
+                  name="correo"
+                  id="correo"
+                  value={form.correo}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="correo@ejemplo.com"
+                  className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
+                    errors.correo ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  required
+                />
+                {errors.correo && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.correo}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="direccion" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                  <i className="bi bi-geo-alt text-[#FACC15]"></i>
+                  Dirección *
+                </label>
+                <input
+                  type="text"
+                  name="direccion"
+                  id="direccion"
+                  value={form.direccion}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Ingresa la dirección completa"
+                  className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
+                    errors.direccion ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  required
+                />
+                {errors.direccion && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.direccion}</p>}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label htmlFor="estado" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                  <i className="bi bi-toggle-on text-[#FACC15]"></i>
+                  Estado del Empleado
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="estado"
+                      value="Activo"
+                      checked={form.estado === 'Activo'}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-[#FACC15] focus:ring-[#FACC15] border-gray-300"
+                    />
+                    <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      Activo
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="estado"
+                      value="Inactivo"
+                      checked={form.estado === 'Inactivo'}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-[#FACC15] focus:ring-[#FACC15] border-gray-300"
+                    />
+                    <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      Inactivo
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-semibold font-lato flex items-center gap-2"
+              >
+                <i className="bi bi-x-lg"></i>
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 font-semibold font-lato flex items-center gap-2 shadow-lg hover:shadow-xl"
+              >
+                <i className="bi bi-check-circle"></i>
+                Guardar Cambios
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {activeTab === 'programacion-recurrente' && (
-        <div className="mt-4">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
+              <i className="bi bi-calendar-week text-[#FACC15]"></i>
+              Programaciones Recurrentes
+            </h3>
+            <p className="text-gray-600 font-lato">Gestiona las programaciones semanales del empleado</p>
+          </div>
           <RecurringSchedulingManager empleadoId={employee?.id} />
         </div>
       )}
 
       {activeTab === 'novedades' && (
-        <div className="mt-4">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
+              <i className="bi bi-exclamation-triangle text-[#FACC15]"></i>
+              Novedades y Excepciones
+            </h3>
+            <p className="text-gray-600 font-lato">Registra cambios temporales en la programación</p>
+          </div>
           <NovedadManager empleadoId={employee?.id} />
         </div>
       )}
 
       {activeTab === 'programacion' && (
-        <div className="mt-4">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
+              <i className="bi bi-calendar-event text-[#FACC15]"></i>
+              Programación Legacy
+            </h3>
+            <p className="text-gray-600 font-lato">Sistema de programación anterior</p>
+          </div>
           <EditScheduling
             empleadoId={employee?.id}
             onClose={onCancel}

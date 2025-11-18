@@ -3,16 +3,12 @@ import CreateCustomer from "./components/CreateCustomer.jsx";
 import EditCustomer from "./components/EditCustomer.jsx";
 import ViewCustomer from "./components/ViewCustomer.jsx";
 import DeleteCustomer from "./components/DeleteCustomer.jsx";
-import { createCustomer } from "./services/CreateCustomerService.js";
-import { editCustomer } from "./services/EditCustomerService.js";
-import { deleteCustomer } from "./services/DeleteCustomerService.js";
-import { toggleCustomerStatus } from "./services/ToggleCustomerStatusService.js";
-import { getCustomers } from "./services/CustomerService.js";
+import customersService from "./API/customersService.js";
 import Paginator from "../../../../shared/Paginator.jsx";
-import Swal from 'sweetalert2';
-import { useOutletContext } from 'react-router-dom';
+import Swal from "sweetalert2";
+import { useOutletContext } from "react-router-dom";
 import CustomerTable from "./components/CustomerTable.jsx";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 
 // Datos iniciales vacíos - se cargarán desde el backend
 const initialCustomers = [];
@@ -34,20 +30,20 @@ const CustomersPage = () => {
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
 
   useEffect(() => {
-    setTitle('Gestión de Clientes');
-    return () => setTitle('');
+    setTitle("Gestión de Clientes");
+    return () => setTitle("");
   }, [setTitle]);
 
   // Función para cargar clientes desde el backend
-  const loadCustomers = async (page = 1, search = '') => {
+  const loadCustomers = async (page = 1, search = "") => {
     setIsLoadingCustomers(true);
     try {
-      const response = await getCustomers(page, itemsPerPage, search);
-      setCustomers(response.data || response.customers || []);
-      setTotalCustomers(response.total || response.count || 0);
+      const response = await customersService.getAll({ page, limit: itemsPerPage, search });
+      setCustomers(response.data || []);
+      setTotalCustomers(response.total || response.pagination?.total || 0);
     } catch (error) {
-      console.error('Error al cargar clientes:', error);
-      showMessage('Error al cargar los clientes', 'error');
+      console.error("Error al cargar clientes:", error);
+      showMessage("Error al cargar los clientes", "error");
       setCustomers([]);
       setTotalCustomers(0);
     } finally {
@@ -61,8 +57,8 @@ const CustomersPage = () => {
   }, [currentPage, searchTerm]);
 
   // Función para mostrar mensajes de feedback
-  const showMessage = (text, type = 'success') => {
-    if (type === 'success') {
+  const showMessage = (text, type = "success") => {
+    if (type === "success") {
       toast.success(text);
     } else {
       toast.error(text);
@@ -70,10 +66,10 @@ const CustomersPage = () => {
   };
 
   // Los clientes ya vienen filtrados del backend
-  
+
   // Cálculo de paginación basado en el total del backend
   const totalPages = Math.max(1, Math.ceil(totalCustomers / itemsPerPage));
-  
+
   // Los clientes ya vienen paginados del backend
   const paginatedCustomers = customers;
 
@@ -90,8 +86,8 @@ const CustomersPage = () => {
 
   // handleEditClick ahora abre el modal directamente
   const handleEditClick = (customer) => {
-        setSelectedCustomer(customer);
-        setIsEditModalOpen(true);
+    setSelectedCustomer(customer);
+    setIsEditModalOpen(true);
   };
 
   const handleViewClick = (customer) => {
@@ -102,12 +98,12 @@ const CustomersPage = () => {
   // handleDeleteClick ahora solo usa SweetAlert2
   const handleDeleteClick = (customer) => {
     Swal.fire({
-      title: '¿Eliminar cliente?',
-      text: 'Esta acción eliminará el cliente permanentemente.',
-      icon: 'warning',
+      title: "¿Eliminar cliente?",
+      text: "Esta acción eliminará el cliente permanentemente.",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
     }).then((result) => {
       if (result.isConfirmed) {
         // Ejecutar eliminación directamente
@@ -118,26 +114,32 @@ const CustomersPage = () => {
 
   const handleDeleteCustomer = async (customerId) => {
     try {
-      await deleteCustomer(customerId);
+      await customersService.delete(customerId);
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
       setIsDeleteModalOpen(false);
       setSelectedCustomer(null);
-      showMessage('Cliente eliminado exitosamente', 'success');
+      showMessage("Cliente eliminado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al eliminar el cliente', 'error');
+      showMessage(error.message || "Error al eliminar el cliente", "error");
     }
   };
 
   // handleToggleStatus ahora usa el servicio real
   const handleToggleStatus = async (customerId) => {
     try {
-      await toggleCustomerStatus(customerId);
+      // Por defecto, alternar entre 'Activo' e 'Inactivo'
+      const current = customers.find(c => c.id === customerId)?.status || 'Activo';
+      const next = current === 'Activo' ? 'Inactivo' : 'Activo';
+      await customersService.changeStatus(customerId, next);
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
-      showMessage('Estado del cliente actualizado exitosamente', 'success');
+      showMessage("Estado del cliente actualizado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al cambiar el estado del cliente', 'error');
+      showMessage(
+        error.message || "Error al cambiar el estado del cliente",
+        "error"
+      );
     }
   };
 
@@ -145,13 +147,13 @@ const CustomersPage = () => {
   const handleCreateCustomer = async (formData) => {
     setLoading(true);
     try {
-      await createCustomer(formData, customers);
+      await customersService.create(formData);
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
       setIsCreateModalOpen(false);
-      showMessage('Cliente creado exitosamente', 'success');
+      showMessage("Cliente creado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al crear el cliente', 'error');
+      showMessage(error.message || "Error al crear el cliente", "error");
     } finally {
       setLoading(false);
     }
@@ -160,28 +162,24 @@ const CustomersPage = () => {
   // Editar cliente usando servicio, con confirmación al guardar
   const handleEditCustomer = async (formData) => {
     const result = await Swal.fire({
-      title: '¿Guardar cambios?',
-      text: '¿Deseas guardar los cambios realizados a este cliente?',
-      icon: 'question',
+      title: "¿Guardar cambios?",
+      text: "¿Deseas guardar los cambios realizados a este cliente?",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Sí, guardar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonText: "Sí, guardar",
+      cancelButtonText: "Cancelar",
     });
     if (!result.isConfirmed) return;
     setLoading(true);
     try {
-      await editCustomer({
-        id: selectedCustomer.id,
-        ...formData,
-        status: selectedCustomer.status
-      }, customers);
+      await customersService.update(selectedCustomer.id, { ...formData, status: selectedCustomer.status });
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
       setIsEditModalOpen(false);
       setSelectedCustomer(null);
-      showMessage('Cliente actualizado exitosamente', 'success');
+      showMessage("Cliente actualizado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al actualizar el cliente', 'error');
+      showMessage(error.message || "Error al actualizar el cliente", "error");
     } finally {
       setLoading(false);
     }
@@ -212,7 +210,7 @@ const CustomersPage = () => {
                 onClick={() => setIsCreateModalOpen(true)}
                 className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
               >
-                <i className="bi bi-plus-circle mr-2"></i> Nuevo Cliente
+                <i className="bi bi-plus-circle mr-2"></i> Crear Cliente
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -228,21 +226,14 @@ const CustomersPage = () => {
 
             {/* Paginación */}
             {totalPages > 1 && (
-            <div className="mt-6">
-              <Paginator
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
+              <div className="mt-6">
+                <Paginator
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
             )}
-
-            {/* Mostrar información de paginación */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Mostrando <span className="font-medium">{customers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a <span className="font-medium">{(currentPage - 1) * itemsPerPage + customers.length}</span> de <span className="font-medium">{totalCustomers}</span> cliente{totalCustomers !== 1 ? 's' : ''}
-              </p>
-            </div>
           </div>
         </div>
 
@@ -252,9 +243,10 @@ const CustomersPage = () => {
             <CreateCustomer
               isOpen={isCreateModalOpen}
               onClose={() => setIsCreateModalOpen(false)}
-              onCreate={handleCreateCustomer}
-              loading={loading}
-              setLoading={setLoading}
+              onSuccess={() => {
+                loadCustomers(currentPage, searchTerm);
+                showMessage("Cliente creado exitosamente", "success");
+              }}
               customers={customers}
             />
           </div>
@@ -267,9 +259,11 @@ const CustomersPage = () => {
               isOpen={isEditModalOpen}
               onClose={() => setIsEditModalOpen(false)}
               customer={selectedCustomer}
-              onUpdate={handleEditCustomer}
-              loading={loading}
-              setLoading={setLoading}
+              onSuccess={() => {
+                loadCustomers(currentPage, searchTerm);
+                setSelectedCustomer(null);
+                showMessage("Cliente actualizado exitosamente", "success");
+              }}
               customers={customers}
             />
           </div>

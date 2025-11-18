@@ -7,12 +7,23 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView, l
     return <TableSkeleton columns={4} rows={5} hasAvatar={false} hasActions={true} />;
   }
 
+  if (!loading && (!categories || categories.length === 0)) {
+    return (
+      <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+        <div className="py-12 text-center">
+          <i className="bi bi-tags text-6xl text-gray-300"></i>
+          <p className="mt-4 text-gray-500 text-sm">No hay categorías registradas.</p>
+          <p className="text-xs text-gray-400 mt-1">Las categorías aparecerán aquí cuando se registren.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
-      <table className="min-w-full">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+      <table className="min-w-full text-xs">
         <thead>
           <tr className="bg-gray-50 hover:bg-gray-100">
-            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">ID</th>
             <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
             <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Descripción</th>
             <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
@@ -22,7 +33,6 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView, l
         <tbody className="divide-y divide-gray-200">
           {categories.map((category) => (
             <tr key={category.id_categoria_producto} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-4 px-4 text-xs font-medium text-gray-900">{category.id_categoria_producto}</td>
               <td className="py-4 px-4 text-xs font-medium text-gray-900">
                 <TruncatedText
                   text={category.nombre}
@@ -59,30 +69,30 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView, l
                   </span>
                 </div>
               </td>
-              <td className="py-4 px-4 text-sm font-medium text-right">
+              <td className="py-4 px-4 text-xs font-medium text-right">
                 <div className="flex justify-end space-x-2">
                   <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
+                    className="h-8 w-8 p-0 rounded-md hover:bg-gray-100 flex items-center justify-center"
                     onClick={() => onView(category)}
                     title="Ver detalles"
                   >
-                    <i className="bi bi-eye text-primary text-lg"></i>
+                    <i className="bi bi-eye text-primary text-[18px]"></i>
                   </button>
                   {category.nombre !== 'Extensión natural' && (
                     <>
                       <button
-                        className="h-8 w-8 p-0 flex items-center justify-center"
+                        className="h-8 w-8 p-0 rounded-md hover:bg-gray-100 flex items-center justify-center"
                         onClick={() => onEdit(category)}
                         title="Editar"
                       >
-                        <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
+                        <i className="bi bi-pencil-square text-amber-500 text-[18px]"></i>
                       </button>
                       <button
-                        className="h-8 w-8 p-0 flex items-center justify-center"
+                        className="h-8 w-8 p-0 rounded-md hover:bg-red-50 flex items-center justify-center"
                         onClick={() => onDelete(category.id_categoria_producto)}
                         title="Eliminar"
                       >
-                        <i className="bi bi-trash text-red-500 text-lg"></i>
+                        <i className="bi bi-trash text-red-500 text-[18px]"></i>
                       </button>
                     </>
                   )}

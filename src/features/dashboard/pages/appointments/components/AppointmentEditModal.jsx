@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+ 
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
+import { isValidDocumentByType } from '@/shared/validations';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
 import { getAllServices } from '@/features/landing/pages/ServicesPage/api/servicesApi';
 import { employeesService } from '@/features/dashboard/pages/employees/API/employeesService';
@@ -44,6 +46,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     telefono: '',
     correo: '',
     documento: '',
+    tipoDocumento: 'CC',
     fecha: fecha || '',
     servicios: [],
     estado: 'Agendada',
@@ -242,6 +245,32 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     }));
   };
 
+  // Busca cliente por documento y autocompleta
+  const lookupClientByDocument = async (doc) => {
+    try {
+      if (!doc || doc.length < 6) return;
+      const res = await usersService.getAll({ documento: doc });
+      const list = (res && res.data) ? res.data : [];
+      const match = list.find(u => (u.documento || '').toString().trim() === doc);
+      if (match) {
+        setFormData(prev => ({
+          ...prev,
+          cliente: match.nombre || prev.cliente,
+          correo: match.correo || prev.correo,
+          documento: match.documento || prev.documento,
+          tipoDocumento: match.tipo_documento || prev.tipoDocumento,
+        }));
+        const phone = (match.telefono || '').replace(/[^0-9]/g, '');
+        if (phone) setNumero(phone);
+        toast.success('Cliente encontrado');
+      } else {
+        toast('Registre los datos del nuevo cliente');
+      }
+    } catch (e) {
+      console.error('Lookup error:', e);
+    }
+  };
+
   // Validación en tiempo real para campos individuales
   const handleFieldChange = (field, value) => {
     // Actualizar el valor del campo
@@ -249,6 +278,11 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
     // Limpiar error si existe
     clearError(field);
+
+    // Autocompletar al salir del documento
+    if (field === 'documento' && value && value.length >= 6) {
+      lookupClientByDocument(value);
+    }
 
     // Validar en tiempo real solo si el campo ya fue tocado
     if (touchedFields[field]) {
@@ -289,7 +323,8 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   // Validación de teléfono
   function validarTelefono(telefono) {
     if (!telefono) return 'El teléfono es requerido';
-    if (telefono.length < 7 || telefono.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
+    const digitsOnly = /^[0-9]{7,15}$/;
+    if (!digitsOnly.test(String(telefono))) return 'El teléfono debe tener entre 7 y 15 dígitos';
     return '';
   }
 
@@ -304,8 +339,8 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   // Validación de documento
   function validarDocumento(documento) {
     if (!documento) return 'El número de documento es requerido';
-    const soloNumeros = /^[0-9]{8,15}$/;
-    if (!soloNumeros.test(documento)) return 'El documento debe tener entre 8 y 15 dígitos';
+    const ok = isValidDocumentByType(formData.tipoDocumento, documento);
+    if (!ok) return 'Número de documento inválido para el tipo seleccionado';
     return '';
   }
 
@@ -444,6 +479,10 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   function getHorasDisponibles(idx, profesional, duracion) {
     if (!profesional) return [];
     const horas = [];
+    const hoyISO = new Date().toISOString().slice(0,10);
+    const esHoy = formData.fecha === hoyISO;
+    const ahora = new Date();
+    const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
     for (let h = 6; h <= 20; h++) {
       for (let m = 0; m < 60; m += 15) {
         const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
@@ -451,6 +490,9 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         let disponible = true;
         const inicioA = h * 60 + m;
         const finA = inicioA + Number(duracion);
+        if (esHoy && inicioA <= ahoraMin) {
+          disponible = false;
+        }
         for (let i = 0; i < formData.servicios.length; i++) {
           if (i === idx) continue;
           const s = formData.servicios[i];
@@ -491,9 +533,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       console.log('Buscando cliente por documento:', clientDocument);
 
       // Buscar usuario existente por documento
-      const searchResponse = await usersService.getAll({
-        documento: clientDocument.trim()
-      });
+      const searchResponse = await usersService.getAll({ documento: clientDocument.trim() });
 
       console.log('Respuesta de búsqueda por documento:', searchResponse);
 
@@ -533,7 +573,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
       // Generar datos que cumplan con las validaciones del backend
       const cleanName = clientName.trim();
-      const cleanPhone = '+' + clientPhone; // PhoneInput ya incluye el código de país
+      const cleanPhone = '+' + String(clientPhone).replace(/[^0-9]/g, '');
       const cleanEmail = clientEmail.trim();
       const cleanDocument = clientDocument.trim();
       const tempPassword = generateTempPassword();
@@ -543,7 +583,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         telefono: cleanPhone, // Formato: +573001234567
         correo: cleanEmail,
         contrasena: tempPassword, // Contraseña temporal generada
-        tipo_documento: 'Cedula de ciudadania', // Tipo válido por defecto
+        tipo_documento: formData.tipoDocumento || 'CC',
         documento: cleanDocument,
         roleId: 2, // Rol de cliente
         estado: 'Activo',
@@ -602,6 +642,26 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       }
     }
     */
+
+    // Validación de hora contra el tiempo actual si es el mismo día
+    try {
+      const hoyISO = new Date().toISOString().slice(0,10);
+      if (formData.fecha === hoyISO && formData.servicios.length > 0) {
+        const ahora = new Date();
+        const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
+        const earliest = Math.min(...formData.servicios.map(s => {
+          const [hh, mm] = (s.inicio || '00:00').split(':').map(Number);
+          return hh*60+mm;
+        }));
+        if (earliest <= ahoraMin) {
+          const msg = `La hora debe ser posterior a ${ahora.toTimeString().slice(0,5)}`;
+          newErrors.servicios = msg;
+          toast.error(msg);
+        } else if (earliest - ahoraMin <= 30) {
+          toast('Atención: la hora seleccionada es muy próxima.');
+        }
+      }
+    } catch {}
 
     setErrors(newErrors);
     
@@ -684,6 +744,16 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         result = await appointmentsService.create(appointmentData);
       }
 
+      // Validación de conflictos en tiempo real posterior (informativa)
+      try {
+        const res = await appointmentsService.getAll({ fecha_servicio: formData.fecha });
+        const citas = (res && res.data && res.data.citas) ? res.data.citas : [];
+        const conflicto = citas.some(c => (c.servicios||[]).some(s => appointmentData.servicios.some(ns => ns.id_empleado === (s.id_empleado||s.empleado?.id_usuario) && ns.hora_inicio === (s.hora_inicio||''))));
+        if (conflicto) {
+          toast('Se detectó una posible coincidencia de horario. El backend confirmará disponibilidad.');
+        }
+      } catch {}
+
       onSave();
       onClose();
       return result;
@@ -709,12 +779,12 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm select-none font-inter">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in h-[90vh] flex flex-col ">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-5">
-          <h2 className="text-2xl font-bold text-primary m-0">{cita ? 'Editar' : 'Crear'} Cita</h2>
-          <button className="text-gray-400 hover:text-primary text-2xl font-bold" onClick={onClose} aria-label="Cerrar">×</button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className={`bi ${cita ? 'bi-pencil-square' : 'bi-plus-circle'} text-lg`}></i></div><h2 className="text-xl font-bold m-0">{cita ? 'Editar' : 'Crear'} Cita</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items.center justify.center text-lg font-bold transition-all duration-200" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-8 flex-1 space-y-4">
+        <form onSubmit={handleSubmit} id="appointment-form" className="space-y-4">
           {/* Buscador de servicios */}
           <div className="mb-4">
             <label className="block text-xs font-medium text-text-main mb-1">Buscar Servicio <span className="text-red-500">*</span></label>
@@ -839,6 +909,41 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
           {/* Datos del cliente y resumen */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento <span className="text-red-500">*</span></label>
+              <select
+                value={formData.tipoDocumento}
+                onChange={e => handleFieldChange('tipoDocumento', e.target.value)}
+                onFocus={() => clearError('tipoDocumento')}
+                onBlur={() => handleFieldBlur('tipoDocumento')}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.tipoDocumento && errors.tipoDocumento ? 'border-red-500' : 'border-gray-300'}`}
+              >
+                <option value="">Seleccionar</option>
+                {['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'].map(type => (
+                  <option key={type} value={type}>{`${type} - ${{
+                    RC:'Registro civil',TI:'Tarjeta de identidad',CC:'Cedula de ciudadania',TE:'Tarjeta de extranjeria',CE:'Cedula de extranjeria',NIT:'Número de identificación tributaria',PP:'Pasaporte',PEP:'Permiso especial de permanencia',DIE:'Documento de identificación extranjero',NUIP:'NUIP',FOREIGN_NIT:'NIT de otro país'
+                  }[type]}`}</option>
+                ))}
+              </select>
+              {touchedFields.tipoDocumento && errors.tipoDocumento && <p className="text-red-500 text-xs mt-1">{errors.tipoDocumento}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Número de Documento <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={formData.documento}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  handleFieldChange('documento', val);
+                }}
+                onFocus={() => clearError('documento')}
+                onBlur={() => handleFieldBlur('documento')}
+                maxLength={15}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.documento && errors.documento ? 'border-red-500' : 'border-gray-300'}`}
+                placeholder="Número de documento (6-15 dígitos)"
+              />
+              {touchedFields.documento && errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del cliente <span className="text-red-500">*</span></label>
               <input
                 type="text"
@@ -886,23 +991,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               />
               {touchedFields.correo && errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Número de Documento <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                value={formData.documento}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  handleFieldChange('documento', val);
-                }}
-                onFocus={() => clearError('documento')}
-                onBlur={() => handleFieldBlur('documento')}
-                maxLength={15}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.documento && errors.documento ? 'border-red-500' : 'border-gray-300'}`}
-                placeholder="Número de documento (8-15 dígitos)"
-              />
-              {touchedFields.documento && errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
-            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha <span className="text-red-500">*</span></label>
               <input
@@ -955,11 +1044,11 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition">{loading ? 'Guardando...' : (cita ? 'Guardar cambios' : 'Crear cita')}</button>
-          </div>
         </form>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="appointment-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2">{loading ? 'Guardando...' : (cita ? 'Guardar cambios' : 'Crear cita')}</button>
+        </div>
       </div>
     </div>
   );
@@ -972,4 +1061,4 @@ AppointmentEditModal.propTypes = {
   onSave: PropTypes.func.isRequired,
 };
 
-export default AppointmentEditModal; 
+export default AppointmentEditModal;

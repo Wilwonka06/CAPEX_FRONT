@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { anularServiceOrder } from '../services/ServiceOrderService';
+import { useState } from 'react';
+import { anularServiceOrder } from '../API/ServiceOrderService';
 import Swal from 'sweetalert2';
 import { formatNumber } from '../../../../../shared/utils/formatters';
 
@@ -94,4 +94,4 @@ const AnularServiceOrder = ({ isOpen, onClose, order, onAnularSuccess }) => {
   );
 };
 
-export default AnularServiceOrder; 
+export default AnularServiceOrder;

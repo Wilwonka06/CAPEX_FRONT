@@ -5,14 +5,16 @@ import Paginator from "../../../../shared/Paginator";
 import CreateRoles from "./components/CreateRole";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ErrorState from "./components/ErrorState";
-import { useRoles } from "./hooks/useRoles";
+import { rolesService } from "./API/rolesService";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 
 const RolesPage = () => {
-  const { roles, loading, error, addRole, editRole, deleteRole, changeRoleStatus, loadRoles } = useRoles();
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const { hasPrivilege } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,6 +48,23 @@ const RolesPage = () => {
     return () => setTitle('');
   }, [setTitle]);
 
+  const loadRoles = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rolesData = await rolesService.getAll();
+      setRoles(Array.isArray(rolesData) ? rolesData : []);
+    } catch (err) {
+      setError(err.message || 'Error al cargar roles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRoles();
+  }, []);
+
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
@@ -53,6 +72,61 @@ const RolesPage = () => {
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
+  };
+
+  const addRole = async (roleData) => {
+    setLoading(true);
+    try {
+      const newRole = await rolesService.create(roleData);
+      setRoles(prev => [...prev, newRole]);
+      return newRole;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const editRole = async (updatedRole) => {
+    setLoading(true);
+    try {
+      const editedRole = await rolesService.update(updatedRole.id, updatedRole);
+      setRoles(prev => prev.map(r => (r.id === updatedRole.id ? editedRole : r)));
+      return editedRole;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteRole = async (id) => {
+    setLoading(true);
+    try {
+      await rolesService.delete(id);
+      setRoles(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeRoleStatus = async (roleId, newStatus) => {
+    setLoading(true);
+    try {
+      const updated = await rolesService.changeStatus(roleId, newStatus);
+      setRoles(prev => prev.map(r => (r.id === roleId ? { ...r, estado: newStatus } : r)));
+      return updated;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredRoles = roles.filter(

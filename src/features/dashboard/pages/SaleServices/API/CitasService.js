@@ -1,7 +1,7 @@
 // Servicio para manejar citas en el módulo de Venta de Servicios
-import apiRequest from '../../../../../shared/config/apiConfig';
+ import apiRequest from '../../../../../shared/config/apiConfig';
 
-const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
+ const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
 
 /**
  * Obtiene todas las órdenes de servicio en estado "En proceso" para mostrar en venta de servicios

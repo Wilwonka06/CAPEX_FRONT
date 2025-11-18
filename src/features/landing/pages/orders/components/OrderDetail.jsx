@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import OrderStatusBadge from './OrderStatusBadge';
 import OrderProductItem from './OrderProductItem';
 import { formatNumber } from '@/shared/utils/formatters';
+import { generateProductInvoicePDF } from '@/shared/utils/invoicePdf';
 
 const OrderDetail = ({ order }) => {
   if (!order) {
@@ -79,7 +80,19 @@ const OrderDetail = ({ order }) => {
             <OrderStatusBadge status={estado} />
             <button
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-300 font-poppins text-sm flex items-center gap-2"
-              onClick={() => alert('Función de descarga de factura próximamente')}
+              onClick={() => generateProductInvoicePDF({
+                sale: {
+                  numeroVenta: numero,
+                  fecha,
+                  productos,
+                  valor: total,
+                  metodoPago: medioPago,
+                  estado
+                },
+                customer: {},
+                theme: { primary: '#9C5B2B', accent: '#FACC15' },
+                fileName: `factura_${numero}.pdf`
+              })}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

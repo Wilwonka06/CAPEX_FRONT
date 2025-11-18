@@ -202,8 +202,8 @@ const Appointments = () => {
             className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
             onClick={() => setShowCreateModal(true)}
           >
-            <i className="bi bi-calendar-plus text-lg"></i>
-            Nueva cita
+            <i className="bi bi-calendar-plus text-sm"></i>
+            Crear cita
           </button>
         </div>
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 overflow-x-auto">

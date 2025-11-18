@@ -7,7 +7,7 @@ import ActionButtons from './ActionButtons';
 const RoleRow = ({ role, onView, onEdit, onDelete, onStatusChange }) => {
   return (
     <tr className="hover:bg-gray-50 transition-colors duration-150">
-      <td className="py-4 px-4 text-xs font-medium text-gray-900">
+      <td className="py-3 px-3 text-xs font-medium text-gray-900">
         <TruncatedText
           text={role.name ?? role.nombre ?? ''}
           maxLength={25}
@@ -15,7 +15,7 @@ const RoleRow = ({ role, onView, onEdit, onDelete, onStatusChange }) => {
         />
       </td>
       
-      <td className="py-4 px-4 text-xs text-gray-600">
+      <td className="py-3 px-3 text-xs text-gray-600">
         <TruncatedText
           text={role.description ?? role.descripcion ?? ''}
           maxLength={40}
@@ -23,7 +23,7 @@ const RoleRow = ({ role, onView, onEdit, onDelete, onStatusChange }) => {
         />
       </td>
       
-      <td className="py-4 px-4 text-xs">
+      <td className="py-3 px-3 text-xs">
         {onStatusChange && (
           <StatusToggle role={role} onStatusChange={onStatusChange} />
         )}
@@ -38,7 +38,7 @@ const RoleRow = ({ role, onView, onEdit, onDelete, onStatusChange }) => {
         )}
       </td>
       
-      <td className="py-4 px-4 text-xs font-medium text-right">
+      <td className="py-3 px-3 text-xs font-medium text-right">
         <ActionButtons 
           role={role} 
           onView={onView} 
