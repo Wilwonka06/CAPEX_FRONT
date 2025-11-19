@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import productsService from '../../../dashboard/pages/products/API/productsService';
 import categoriesService from '../../../dashboard/pages/CatProducts/API/categoriesService';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,13 @@ import { useCartToast } from '../../components/CartToastContext';
 import { useCart } from '../../components/CartContext';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import Footer from '../../../../shared/components/Footer';
+import LoadingSpinner from '../../components/LoadingSpinner';
+
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=256&bold=true`;
+};
 
 const Catalogo = () => {
   // Estados para productos
@@ -22,6 +29,7 @@ const Catalogo = () => {
   const navigate = useNavigate();
   const { showCartToast } = useCartToast();
   const { addToCart } = useCart();
+  const addingToCartRef = useRef(new Set()); // Rastrear productos que se están agregando
 
   // Cargar productos al montar
   useEffect(() => {
@@ -221,18 +229,7 @@ const Catalogo = () => {
 
   // Estados de carga mejorados
   if (productsLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white flex items-center justify-center">
-        <div className="text-center bg-white p-12 rounded-3xl shadow-xl border border-gray-100">
-          <div className="relative mb-8">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-[#FACC15]/20 border-t-[#FACC15] mx-auto"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#FACC15]/40 animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-          </div>
-          <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">Cargando productos...</h3>
-          <p className="text-gray-600 font-lato">Estamos preparando lo mejor para ti</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando productos..." subMessage="Estamos preparando lo mejor para ti" />;
   }
 
   if (productsError) {
@@ -522,10 +519,17 @@ const Catalogo = () => {
                     {/* Imagen con overlay */}
                     <div className="relative w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                       <img
-                        src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : (prod.foto || prod.imagen)}
+                        src={
+                          (prod.fotos && prod.fotos.length > 0 && prod.fotos[0])
+                            ? prod.fotos[0]
+                            : (prod.foto || prod.imagen || getDefaultProductImage(prod.nombre))
+                        }
                         alt={prod.nombre}
                         className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
                         loading="lazy"
+                        onError={(e) => {
+                          e.target.src = getDefaultProductImage(prod.nombre);
+                        }}
                       />
                       {/* Overlay al hover */}
                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -534,11 +538,21 @@ const Catalogo = () => {
                       <button
                         onClick={e => {
                           e.stopPropagation();
+                          // Prevenir múltiples clics
+                          if (addingToCartRef.current.has(prod.id)) {
+                            return;
+                          }
+                          addingToCartRef.current.add(prod.id);
                           addToCart(prod, 1);
                           showCartToast(prod);
+                          // Permitir agregar de nuevo después de 1 segundo
+                          setTimeout(() => {
+                            addingToCartRef.current.delete(prod.id);
+                          }, 1000);
                         }}
-                        className="absolute bottom-4 right-4 bg-[#FACC15] text-[#1E1E1E] rounded-full p-3 shadow-lg hover:bg-yellow-400 transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
+                        className="absolute bottom-4 right-4 bg-[#FACC15] text-[#1E1E1E] rounded-full p-3 shadow-lg hover:bg-yellow-400 transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Agregar al carrito"
+                        disabled={addingToCartRef.current.has(prod.id)}
                       >
                         <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
                       </button>

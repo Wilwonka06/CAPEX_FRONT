@@ -18,7 +18,7 @@ const ChangeStatus = ({ category, isOpen, onClose, onStatusChange }) => {
   if (!isOpen || !category) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in">
         <div className="p-6">
           <h2 className="text-xl font-bold text-primary mb-4">Cambiar Estado</h2>

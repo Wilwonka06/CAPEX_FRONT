@@ -1,25 +1,25 @@
 import PropTypes from "prop-types";
+import { formatNumber } from "../../../../../shared/utils/formatters";
+ 
 
 export default function OrderDetailModal({ order, customer, isOpen, onClose }) {
   if (!isOpen || !order || !customer) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Detalle del Pedido</h2>
-          <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose}>×</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-bag text-lg"></i></div><h2 className="text-xl font-bold m-0">Detalle del Pedido</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        {/* Contenido */}
-        <div className="overflow-y-auto p-8 flex-1">
-          <div className="text-lg font-bold text-gray-800 text-center mb-2">Detalle de Pedido</div>
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
+        <div className="text-lg font-bold text-gray-800 text-center mb-2">Detalle de Pedido</div>
           <div className="flex flex-col md:flex-row gap-8 mb-8">
             {/* Información de Cliente */}
             <div className="flex-1">
               <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Información de Cliente</span>
               <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[80px]">
                 <div className="space-y-2">
-                  <div className="flex items-center"><i className="bi bi-person text-primary mr-2"></i><span className="font-medium">Nombre:</span><span className="ml-2">{customer.firstName} {customer.lastName}</span></div>
+                  <div className="flex items-center"><i className="bi bi-person text-primary mr-2"></i><span className="font-medium">Nombre:</span><span className="ml-2">{customer.nombre || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'N/A'}</span></div>
                   <div className="flex items-center"><i className="bi bi-card-text text-primary mr-2"></i><span className="font-medium">Tipo Doc:</span><span className="ml-2">{customer.documentType}</span></div>
                   <div className="flex items-center"><i className="bi bi-hash text-primary mr-2"></i><span className="font-medium">Documento:</span><span className="ml-2">{customer.documentNumber}</span></div>
                   <div className="flex items-center"><i className="bi bi-envelope text-primary mr-2"></i><span className="font-medium">Correo:</span><span className="ml-2">{customer.email}</span></div>
@@ -46,7 +46,7 @@ export default function OrderDetailModal({ order, customer, isOpen, onClose }) {
                 </div>
                 <div className="flex justify-between px-4 py-2">
                   <span className="text-xs text-gray-500">Valor Total</span>
-                  <span className="font-semibold text-gray-800 text-sm">${order.valor.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.valor)}</span>
                 </div>
               </div>
             </div>
@@ -68,8 +68,8 @@ export default function OrderDetailModal({ order, customer, isOpen, onClose }) {
                     <tr key={idx}>
                       <td className="py-2 px-3">{prod.nombre}</td>
                       <td className="py-2 px-3 text-right">{prod.cantidad}</td>
-                      <td className="py-2 px-3 text-right">${prod.precio.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right">${(prod.precio * prod.cantidad).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio)}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio * prod.cantidad)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -77,12 +77,7 @@ export default function OrderDetailModal({ order, customer, isOpen, onClose }) {
             </div>
           </div>
         </div>
-        {/* Footer */}
-        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
-          <button className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200"><button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition" onClick={onClose}><i className="bi bi-check-circle"></i>Cerrar</button></div>
       </div>
     </div>
   );
@@ -93,4 +88,4 @@ OrderDetailModal.propTypes = {
   customer: PropTypes.object,
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-}; 
+};

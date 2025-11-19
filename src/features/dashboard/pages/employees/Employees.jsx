@@ -1,27 +1,23 @@
 import { useState, useEffect } from "react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { getEmployees, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } from "./api/employeesApi";
-import { getAllSchedulings, getSchedulingsByUser, createScheduling, updateScheduling, deleteScheduling, } from "./api/schedulingApi";
+import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
+import { employeesService, schedulingService } from "./API/employeesService";
 import Paginator from "../../../../shared/Paginator";
 import LoadingTable from "../../../../shared/components/LoadingTable";
+import Search from "../../../../shared/Search";
 import Calendar from "../../../dashboard/pages/employees/components/Calendar";
 import AddEmployee from "../../../dashboard/pages/employees/components/AddEmployee";
 import EditEmployee from "../../../dashboard/pages/employees/components/EditEmployee";
 import SeeEmployee from "../../../dashboard/pages/employees/components/SeeEmployee";
-import AddScheduling from "./components/AddScheduling";
 import EditScheduling from "./components/EditScheduling";
 import { useOutletContext } from 'react-router-dom';
-import Swal from 'sweetalert2';
-
-const normalizeText = (text) =>
-  text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+import { normalizeText } from '../../../../shared/validations';
 
 const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
   const [employees, setEmployees] = useState([]);
   const [schedulings, setSchedulings] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,12 +74,12 @@ const EmployeesPage = () => {
     setError("");
     try {
       console.log("[DEBUG] Intentando cargar empleados...");
-      const employeesData = await getEmployees();
+      const employeesData = await employeesService.getAll();
       console.log("[DEBUG] Empleados cargados:", employeesData);
       console.log("[DEBUG] Primer empleado:", employeesData[0]);
 
       console.log("[DEBUG] Intentando cargar programaciones...");
-      const schedulingsData = await getAllSchedulings();
+      const schedulingsData = await schedulingService.getAll();
       console.log("[DEBUG] Programaciones cargadas:", schedulingsData);
 
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
@@ -111,7 +107,7 @@ const EmployeesPage = () => {
 
   const filteredEmployees = employees.filter(emp =>
     normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
-    normalizeText(emp.documento).includes(normalizeText(searchTerm)) ||
+    normalizeText(emp.documento || emp.numero_documento || emp.num_documento || '').includes(normalizeText(searchTerm)) ||
     (emp.telefono && normalizeText(emp.telefono).includes(normalizeText(searchTerm))) ||
     (emp.correo && normalizeText(emp.correo).includes(normalizeText(searchTerm))) ||
     (emp.direccion && normalizeText(emp.direccion).includes(normalizeText(searchTerm))) ||
@@ -125,10 +121,6 @@ const EmployeesPage = () => {
   const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePageChange = (page) => setCurrentPage(page);
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1);
-  };
 
   const handleToggleStatus = async (employeeId) => {
     console.log("[DEBUG] handleToggleStatus called with ID:", employeeId);
@@ -159,7 +151,7 @@ const EmployeesPage = () => {
     ));
 
     try {
-      const updated = await toggleEmployeeStatus(employeeId, nextEstado);
+      const updated = await employeesService.toggleStatus(employeeId, nextEstado);
       if (updated && updated.id) {
         setEmployees(prevList => prevList.map(e => 
           String(e.id) === String(updated.id) ? updated : e
@@ -184,7 +176,7 @@ const EmployeesPage = () => {
           hora_salida: prog.horaFin || editingScheduling.hora_salida,
         };
 
-        const updatedScheduling = await updateScheduling(editingScheduling.id, apiData);
+        const updatedScheduling = await schedulingService.update(editingScheduling.id, apiData);
         setSchedulings(prev => prev.map(s => s.id === updatedScheduling.id ? updatedScheduling : s));
         setEditingScheduling(null);
         toast.success('Programación actualizada exitosamente');
@@ -210,11 +202,11 @@ const EmployeesPage = () => {
   };
 
   const handleAddEmployee = async (data) => {
-    try {
+    const employeePromise = (async () => {
       console.log("[DEBUG] Creando empleado con datos:", data);
       
       // PASO 1: Crear el empleado primero
-      const createdEmployee = await createEmployee(data);
+      const createdEmployee = await employeesService.create(data);
       console.log("[DEBUG] Empleado creado:", createdEmployee);
       
       // Actualizar lista de empleados inmediatamente
@@ -257,7 +249,7 @@ const EmployeesPage = () => {
             };
             
             console.log("[DEBUG] Creando programación para fecha:", fechaFormateada);
-            schedulingPromises.push(createScheduling(schedulingData));
+            schedulingPromises.push(schedulingService.create(schedulingData));
           }
         }
 
@@ -265,44 +257,55 @@ const EmployeesPage = () => {
         if (schedulingPromises.length > 0) {
           console.log("[DEBUG] Total de programaciones a crear:", schedulingPromises.length);
           
-          try {
-            const createdSchedulings = await Promise.all(schedulingPromises);
-            console.log("[DEBUG] Programaciones creadas exitosamente:", createdSchedulings.length);
-            
-            // Actualizar lista de programaciones
-            setSchedulings(prev => [...prev, ...createdSchedulings]);
-            toast.success(`Empleado creado con ${createdSchedulings.length} programación(es)!`);
-          } catch (schedulingError) {
-            console.error("[DEBUG] Error creando programaciones:", schedulingError);
-            toast.warning('Empleado creado, pero hubo un error con algunas programaciones');
-          }
+          const createdSchedulings = await Promise.all(schedulingPromises);
+          console.log("[DEBUG] Programaciones creadas exitosamente:", createdSchedulings.length);
+          
+          // Actualizar lista de programaciones
+          setSchedulings(prev => [...prev, ...createdSchedulings]);
+          return { employee: createdEmployee, schedulingsCount: createdSchedulings.length };
         } else {
-          toast.success('Empleado creado exitosamente!');
+          return { employee: createdEmployee, schedulingsCount: 0 };
         }
       } else {
-        toast.success('Empleado agregado exitosamente!');
+        return { employee: createdEmployee, schedulingsCount: 0 };
       }
+    })();
 
-      // Limpiar y cerrar formulario
-      setShowForm(false);
-      setAddEmployeeSchedulings([]);
-      
-    } catch (error) {
-      console.error("[DEBUG] Error agregando empleado:", error);
-      console.error("[DEBUG] Error response:", error.response?.data);
-      
-      const isNetworkError = error.code === 'ERR_NETWORK' || 
-                            error.message?.includes('ERR_NAME_NOT_RESOLVED') || 
-                            !error.response;
-      
-      const errorMsg = isNetworkError
-        ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
-        : (error?.response?.data?.message || 
-           error?.response?.data?.msg || 
-           error?.response?.data?.error || 
-           "Error al agregar empleado");
-      
-      toast.error(errorMsg);
+    toast.promise(employeePromise, {
+      loading: 'Creando empleado...',
+      success: (result) => {
+        // Limpiar y cerrar formulario
+        setShowForm(false);
+        setAddEmployeeSchedulings([]);
+        
+        if (result.schedulingsCount > 0) {
+          return `Empleado creado con ${result.schedulingsCount} programación(es)!`;
+        }
+        return 'Empleado creado exitosamente. Puedes agregar programación desde la vista de edición.';
+      },
+      error: (err) => {
+        console.error("[DEBUG] Error agregando empleado:", err);
+        console.error("[DEBUG] Error response:", err.response?.data);
+        
+        const isNetworkError = err.code === 'ERR_NETWORK' || 
+                              err.message?.includes('ERR_NAME_NOT_RESOLVED') || 
+                              !err.response;
+        
+        const errorMsg = isNetworkError
+          ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
+          : (err?.response?.data?.message || 
+             err?.response?.data?.msg || 
+             err?.response?.data?.error || 
+             "Error al agregar empleado");
+        
+        return errorMsg;
+      },
+    });
+
+    try {
+      await employeePromise;
+    } catch {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -313,19 +316,19 @@ const EmployeesPage = () => {
   };
 
   const handleEditSave = async (data) => {
-    try {
-      console.log("🔵 [DEBUG] handleEditSave INICIO");
-      console.log("🔵 [DEBUG] Data recibida:", data);
-      console.log("🔵 [DEBUG] Employee ID:", data.id);
-      
-      if (!data.id) {
-        console.error("❌ [DEBUG] ERROR: No ID in data");
-        toast.error("Error: ID de empleado no encontrado");
-        return;
-      }
+    console.log("🔵 [DEBUG] handleEditSave INICIO");
+    console.log("🔵 [DEBUG] Data recibida:", data);
+    console.log("🔵 [DEBUG] Employee ID:", data.id);
+    
+    if (!data.id) {
+      console.error("❌ [DEBUG] ERROR: No ID in data");
+      toast.error("Error: ID de empleado no encontrado");
+      return;
+    }
 
+    const employeePromise = (async () => {
       console.log("🔵 [DEBUG] Llamando a updateEmployee...");
-      const updatedEmployee = await updateEmployee(data.id, data);
+      const updatedEmployee = await employeesService.update(data.id, data);
       console.log("✅ [DEBUG] Response de updateEmployee:", updatedEmployee);
       
       console.log("🔵 [DEBUG] Llamando a loadData para recargar lista...");
@@ -336,13 +339,25 @@ const EmployeesPage = () => {
       
       setEditEmployee(null);
       
-      toast.success('Empleado actualizado exitosamente!');
-    } catch (error) {
-      console.error("❌ [DEBUG] Error en handleEditSave:", error);
-      console.error("❌ [DEBUG] Error response:", error.response?.data);
-      console.error("❌ [DEBUG] Error status:", error.response?.status);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al actualizar empleado");
+      return updatedEmployee;
+    })();
+
+    toast.promise(employeePromise, {
+      loading: 'Actualizando empleado...',
+      success: 'Empleado actualizado exitosamente!',
+      error: (err) => {
+        console.error("❌ [DEBUG] Error en handleEditSave:", err);
+        console.error("❌ [DEBUG] Error response:", err.response?.data);
+        console.error("❌ [DEBUG] Error status:", err.response?.status);
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+        return backendMsg || "Error al actualizar empleado";
+      },
+    });
+
+    try {
+      await employeePromise;
+    } catch {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -381,9 +396,9 @@ const EmployeesPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
+      const employeePromise = (async () => {
         console.log("[DEBUG] Deleting employee with ID:", employee.id);
-        await deleteEmployee(employee.id);
+        await employeesService.delete(employee.id);
         
         setEmployees(prev => {
           const updated = prev.filter(e => String(e.id) !== String(employee.id));
@@ -391,11 +406,23 @@ const EmployeesPage = () => {
           return updated;
         });
         
-        toast.success("Empleado eliminado exitosamente");
-      } catch (error) {
-        console.error("Error eliminando empleado:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al eliminar empleado");
+        return true;
+      })();
+
+      toast.promise(employeePromise, {
+        loading: 'Eliminando empleado...',
+        success: 'Empleado eliminado exitosamente',
+        error: (err) => {
+          console.error("Error eliminando empleado:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al eliminar empleado";
+        },
+      });
+
+      try {
+        await employeePromise;
+      } catch {
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -404,53 +431,29 @@ const EmployeesPage = () => {
   const hasError = error && !isInitialLoading;
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {(showForm || editEmployee || seeEmployee) && (
-            <div className="lg:w-2/3">
-              <div className="bg-white rounded-lg shadow-md mb-4">
-                <Calendar
-                  empleado={
-                    showForm
-                      ? { schedulings: addEmployeeSchedulings }
-                      : editEmployee
-                        ? { ...editEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(editEmployee.id)) }
-                        : seeEmployee
-                          ? { ...seeEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(seeEmployee.id)) }
-                          : null
-                  }
-                  schedulings={schedulings}
-                  onUpdateSchedulings={setSchedulings}
-                />
-              </div>
-            </div>
-          )}
-          <div className={(showForm || editEmployee || seeEmployee) ? "lg:w-1/3 lg:ml-auto" : "w-full"}>
+    <div className="min-h-screen bg-background p-6 font-inter">
+      <div className="w-full">
+        <div className="flex flex-col gap-6">
+          <div className="w-full">
             {!showForm && !editEmployee && !seeEmployee && (
-              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-                <div className="relative w-full max-w-xs flex-1">
-                  <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-                  <input
-                    type="text"
-                    placeholder="Buscar empleado..."
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-                  />
-                </div>
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <Search
+                  searchTerm={searchTerm}
+                  handleSearch={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar empleados por nombre, documento, teléfono o correo..."
+                />
                 <button
-                  className="bg-text-main hover:bg-primary-dark text-white px-5 py-2 rounded-md font-semibold flex items-center gap-2 transition-colors shadow-sm"
+                  className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
                   onClick={() => setShowForm(true)}
                 >
                   <i className="bi bi-plus-lg text-lg"></i>
-                  Agregar
+                  Crear Empleado
                 </button>
               </div>
             )}
 
             {showForm && (
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
                 <AddEmployee
                   onCancel={handleCancel}
                   onSave={handleAddEmployee}
@@ -471,7 +474,7 @@ const EmployeesPage = () => {
             )}
 
             {editEmployee && (
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-text-main mb-4">Editar Empleado</h2>
                 <EditEmployee
                   employee={editEmployee}
@@ -483,15 +486,44 @@ const EmployeesPage = () => {
             )}
 
             {seeEmployee && (
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
                 <SeeEmployee employee={seeEmployee} onClose={handleSeeClose} />
               </div>
             )}
 
+            {/* Calendar section - below the forms */}
+            {(showForm || editEmployee || seeEmployee) && (
+              <div className="w-full">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-[#FACC15] rounded-full flex items-center justify-center">
+                      <i className="bi bi-calendar-event text-xl text-gray-800"></i>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">Calendario de Programaciones</h3>
+                      <p className="text-sm text-gray-600">Visualiza y gestiona las programaciones del empleado</p>
+                    </div>
+                  </div>
+                  <Calendar
+                    empleado={
+                      showForm
+                        ? { schedulings: addEmployeeSchedulings }
+                        : editEmployee
+                          ? { ...editEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(editEmployee.id)) }
+                          : seeEmployee
+                            ? { ...seeEmployee, schedulings: schedulings.filter(s => String(s.id_usuario) === String(seeEmployee.id)) }
+                            : null
+                    }
+                    schedulings={schedulings}
+                    onUpdateSchedulings={setSchedulings}
+                  />
+                </div>
+              </div>
+            )}
+
             {!showForm && !editEmployee && !seeEmployee && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-lg font-semibold text-text-main mb-4">Lista de Empleados</h2>
-                <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+                <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
                   {isInitialLoading ? (
                     <LoadingTable message="Cargando empleados..." />
                   ) : hasError ? (
@@ -521,28 +553,28 @@ const EmployeesPage = () => {
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-text-main/80 uppercase">
-                          <tr>
-                            <th className="py-3 px-4 font-semibold">Nombre</th>
-                            <th className="py-3 px-4 font-semibold">Documento</th>
-                            <th className="py-3 px-4 font-semibold">Teléfono</th>
-                            <th className="py-3 px-4 font-semibold">Correo</th>
-                            <th className="py-3 px-4 font-semibold">Estado</th>
-                            <th className="py-3 px-4 font-semibold text-right">Acciones</th>
+                        <thead>
+                          <tr className="bg-gray-50 hover:bg-gray-100">
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Documento</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Teléfono</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Correo</th>
+                            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+                            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white text-text-main">
+                        <tbody className="divide-y divide-gray-200">
                           {paginatedEmployees.map((emp) => (
-                            <tr key={emp.id || `employee-${Math.random()}`} className="border-b border-gray-200 hover:bg-gray-50">
-                              <td className="py-3 px-4 font-medium">{emp.nombre}</td>
-                              <td className="py-3 px-4">{emp.documento}</td>
-                              <td className="py-3 px-4">{emp.telefono}</td>
-                              <td className="py-3 px-4">{emp.correo}</td>
-                              <td className="py-3 px-4">
+                            <tr key={emp.id || `employee-${Math.random()}`} className="hover:bg-gray-50 transition-colors duration-150">
+                              <td className="py-4 px-4 text-xs font-medium text-gray-900">{emp.nombre}</td>
+                              <td className="py-4 px-4 text-xs font-medium text-gray-900">{emp.documento || emp.numero_documento || emp.num_documento || ''}</td>
+                              <td className="py-4 px-4 text-xs text-gray-600">{emp.telefono}</td>
+                              <td className="py-4 px-4 text-xs text-gray-600">{emp.correo}</td>
+                              <td className="py-4 px-4 text-xs">
                                 <div className="flex items-center space-x-3">
                                   <button
                                     onClick={() => handleToggleStatus(emp.id)}
-                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
+                                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none  ${
                                       emp.estado === 'Activo' ? 'bg-text-main' : 'bg-gray-300'
                                     }`}
                                   >
@@ -552,37 +584,36 @@ const EmployeesPage = () => {
                                       }`}
                                     />
                                   </button>
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      emp.estado === 'Activo' ? 'text-green-800' : 'text-red-700'
-                                    }`}
-                                  >
-                                    {emp.estado}
+                                  <span className={`text-xs font-semibold rounded-full px-2 py-1
+                                    ${emp.estado === 'Activo' ? 'bg-green-100 text-green-800' : ''}
+                                    ${emp.estado === 'Inactivo' ? 'bg-red-100 text-red-800' : ''}
+                                  `}>
+                                    {emp.estado === 'Activo' ? "Activo" : "Inactivo"}
                                   </span>
                                 </div>
                               </td>
                               <td className="py-4 px-4 text-sm font-medium text-right">
-                                <div className="flex gap-2 justify-end items-center">
+                                <div className="flex justify-end space-x-2">
                                   <button
-                                    className="bg-transparent p-0 m-0 border-none focus:outline-none"
-                                    title="Visualizar"
+                                    className="h-8 w-8 p-0 flex items-center justify-center"
                                     onClick={() => handleSeeClick(emp)}
+                                    title="Ver detalles"
                                   >
-                                    <i className="bi bi-eye text-xl" style={{ color: '#b8864b' }}></i>
+                                    <i className="bi bi-eye text-primary text-lg"></i>
                                   </button>
                                   <button
-                                    className="bg-transparent p-0 m-0 border-none focus:outline-none"
-                                    title="Editar"
+                                    className="h-8 w-8 p-0 flex items-center justify-center"
                                     onClick={() => handleEditClick(emp)}
+                                    title="Editar"
                                   >
-                                    <i className="bi bi-pencil-square text-xl" style={{ color: '#ffc107' }}></i>
+                                    <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
                                   </button>
                                   <button
-                                    className="bg-transparent p-0 m-0 border-none focus:outline-none"
-                                    title="Eliminar"
+                                    className="h-8 w-8 p-0 flex items-center justify-center"
                                     onClick={() => handleDeleteEmployee(emp)}
+                                    title="Eliminar"
                                   >
-                                    <i className="bi bi-trash text-xl" style={{ color: '#dc3545' }}></i>
+                                    <i className="bi bi-trash text-red-500 text-lg"></i>
                                   </button>
                                 </div>
                               </td>
@@ -600,24 +631,11 @@ const EmployeesPage = () => {
                     onPageChange={handlePageChange}
                   />
                 )}
-                <div className="text-center mt-4">
-                  <p className="text-sm text-text-main/70">
-                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, filteredEmployees.length)} de {filteredEmployees.length} empleados
-                  </p>
-                </div>
               </div>
             )}
           </div>
         </div>
       </div>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        closeOnClick
-        draggable
-        pauseOnHover
-        style={{ zIndex: 9999 }}
-      />
     </div>
   );
 };

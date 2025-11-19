@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api.js';
+import { apiRequest } from '../../../../../shared/config/apiConfig';
 
 const EmployeeSelector = ({ selectedEmployee, onEmployeeChange }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -12,20 +12,15 @@ const EmployeeSelector = ({ selectedEmployee, onEmployeeChange }) => {
     const cargarEmpleados = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${API_CONFIG.BASE_URL}/empleados`, {
-          method: 'GET',
-          headers: getAuthHeaders(),
-        });
-
-        if (response.ok) {
-          const empleados = await response.json();
-          // Asegurar que sea un array
-          setAvailableEmployees(Array.isArray(empleados) ? empleados : []);
-        } else {
-          console.error('Error al cargar empleados:', response.status);
-          // Fallback a array vacío en caso de error
-          setAvailableEmployees([]);
+        const empleados = await apiRequest.get('/empleados');
+        // Manejar diferentes estructuras de respuesta
+        let empleadosArray = [];
+        if (Array.isArray(empleados)) {
+          empleadosArray = empleados;
+        } else if (empleados && typeof empleados === 'object') {
+          empleadosArray = empleados.data || empleados.empleados || empleados.results || [];
         }
+        setAvailableEmployees(empleadosArray);
       } catch (error) {
         console.error('Error al cargar empleados:', error);
         setAvailableEmployees([]);

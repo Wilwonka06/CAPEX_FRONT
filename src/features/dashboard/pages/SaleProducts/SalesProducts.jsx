@@ -9,8 +9,8 @@ import { formatNumber } from '../../../../shared/utils/formatters';
 import CreateSaleModal from './components/CreateSaleModal';
 import SaleDetailModal from './components/SaleDetailModal';
 import SalesTable from './components/SalesTable';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { generateProductInvoicePDF } from '../../../../shared/utils/invoicePdf';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -24,8 +24,7 @@ const SalesProducts = () => {
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
-  // Estado para clientes (puedes reemplazar con API real más adelante)
-  const [customers, setCustomers] = useState([]);
+  // Los clientes ahora se buscan dinámicamente desde el backend
 
   // Estados UI
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,24 +58,7 @@ const SalesProducts = () => {
       });
 
       if (response.success) {
-        // Transformar datos del backend al formato frontend
-        const transformedSales = (response.data || []).map(venta => ({
-          id: venta.id_venta_producto,
-          numeroVenta: `VEN-${venta.id_venta_producto.toString().padStart(6, '0')}`,
-          fecha: venta.fecha,
-          clienteId: venta.id_usuario,
-          valor: parseFloat(venta.total || 0),
-          estado: venta.estado,
-          metodoPago: 'No especificado', // Agregar al backend si es necesario
-          productos: (venta.detalles || []).map(det => ({
-            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad,
-            precio: parseFloat(det.precio_unitario || 0)
-          }))
-        }));
-
-        setSales(transformedSales);
+        setSales(response.data || []);
       } else {
         throw new Error(response.message || 'Error al cargar ventas');
       }
@@ -143,9 +125,9 @@ const SalesProducts = () => {
   };
 
   const handleCreateSale = async (saleData) => {
-    try {
-      setLoading(true);
+    setLoading(true);
 
+    const salePromise = (async () => {
       // Transformar datos frontend al formato backend
       const backendData = {
         fecha: saleData.fecha,
@@ -161,14 +143,27 @@ const SalesProducts = () => {
 
       if (response.success) {
         setShowCreateModal(false);
-        toast.success('Venta registrada exitosamente', { position: 'top-right' });
         await loadSales(); // Recargar lista
+        try { window.dispatchEvent(new Event('sales-updated')); } catch {}
+        return response.data;
       } else {
         throw new Error(response.message || 'Error al crear la venta');
       }
+    })();
+
+    toast.promise(salePromise, {
+      loading: 'Registrando venta...',
+      success: 'Venta registrada exitosamente',
+      error: (err) => {
+        console.error('Error creating sale:', err);
+        return err.response?.data?.message || err.message || 'Error al crear la venta';
+      },
+    });
+
+    try {
+      await salePromise;
     } catch (error) {
-      console.error('Error creating sale:', error);
-      toast.error(error.message || 'Error al registrar la venta', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -194,20 +189,32 @@ const SalesProducts = () => {
     });
 
     if (result.isConfirmed) {
-      try {
-        setLoading(true);
-        
+      setLoading(true);
+      
+      const salePromise = (async () => {
         const response = await salesService.changeStatus(saleId, 'Cancelado');
         
         if (response.success) {
-          toast.success('Venta cancelada exitosamente', { position: 'top-right' });
           await loadSales(); // Recargar lista
+          return response.data;
         } else {
           throw new Error(response.message || 'Error al cancelar la venta');
         }
+      })();
+
+      toast.promise(salePromise, {
+        loading: 'Cancelando venta...',
+        success: 'Venta cancelada exitosamente',
+        error: (err) => {
+          console.error('Error canceling sale:', err);
+          return err.response?.data?.message || err.message || 'Error al cancelar la venta';
+        },
+      });
+
+      try {
+        await salePromise;
       } catch (error) {
-        console.error('Error canceling sale:', error);
-        toast.error(error.message || 'Error al cancelar la venta', { position: 'top-right' });
+        // Error ya manejado por toast.promise
       } finally {
         setLoading(false);
       }
@@ -323,40 +330,76 @@ const SalesProducts = () => {
                 <i className="bi bi-plus-circle mr-2"></i> Nueva venta
               </button>
               <button
-                className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                className="bg-yellow-500 hover:bg-yellow-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
                 onClick={handleDownloadReport}
               >
                 <i className="bi bi-file-earmark-excel mr-2"></i>
-                Generar Reporte
               </button>
             </div>
 
             {/* Tabla de ventas */}
-            {loading ? (
-              <LoadingTable message="Cargando ventas..." />
-            ) : filteredSales.length === 0 ? (
-              <div className="text-center py-12">
-                <i className="bi bi-inbox text-6xl text-gray-300"></i>
-                <p className="mt-4 text-gray-500">
-                  {searchTerm
-                    ? 'No se encontraron ventas que coincidan con tu búsqueda'
-                    : 'No hay ventas registradas'}
-                </p>
-              </div>
-            ) : (
-              <>
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {loading ? (
                 <SalesTable
-                  sales={paginatedSales}
-                  customers={customers}
-                  onView={handleViewSale}
-                  onAnnul={handleDeleteSale}
-                  onDownload={() => {
-                    toast.info('Función de descarga en desarrollo', { position: 'top-right' });
-                  }}
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
+                  sales={[]}
+                  customers={[]}
+                  onView={() => {}}
+                  onAnnul={() => {}}
+                  onDownload={() => {}}
+                  currentPage={1}
+                  totalPages={1}
+                  onPageChange={() => {}}
+                  loading={true}
                 />
+              ) : filteredSales.length === 0 ? (
+                <div className="text-center py-12">
+                  <i className="bi bi-inbox text-6xl text-gray-300"></i>
+                  <p className="mt-4 text-gray-500">
+                    {searchTerm
+                      ? 'No se encontraron ventas que coincidan con tu búsqueda'
+                      : 'No hay ventas registradas'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <SalesTable
+                    sales={paginatedSales}
+                    customers={[]}
+                    onView={handleViewSale}
+                    onAnnul={handleDeleteSale}
+                    onDownload={async (sale) => {
+                      try {
+                        const res = await salesService.getById(sale.id);
+                        if (!res.success || !res.data) throw new Error(res.message || 'No se pudo obtener la venta');
+                        const venta = res.data;
+                        await generateProductInvoicePDF({
+                          sale: venta,
+                          customer: {
+                            nombre: venta.customer?.nombre || 'Cliente',
+                            documentNumber: venta.customer?.documentNumber || '',
+                            email: venta.customer?.email || '',
+                            phone: venta.customer?.phone || ''
+                          },
+                          company: {
+                            name: 'CAPEX',
+                            email: 'info@capex.local',
+                            phone: '+57',
+                            address: 'Colombia'
+                          },
+                          theme: { primary: '#9C5B2B', accent: '#FACC15' },
+                          fileName: `factura_${venta.numeroVenta}.pdf`
+                        })
+                        toast.success('Factura PDF descargada')
+                      } catch (e) {
+                        console.error('Error al descargar factura:', e);
+                        toast.error(e.message || 'Error al descargar factura');
+                      }
+                    }}
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    loading={false}
+                  />
 
                 {/* Paginación */}
                 {totalPages > 1 && (
@@ -368,8 +411,9 @@ const SalesProducts = () => {
                     />
                   </div>
                 )}
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -379,7 +423,6 @@ const SalesProducts = () => {
         <CreateSaleModal
           onClose={closeModals}
           onCreate={handleCreateSale}
-          customers={customers}
           products={products}
           isOpen={showCreateModal}
         />
@@ -388,13 +431,12 @@ const SalesProducts = () => {
       {showDetailModal && selectedSale && (
         <SaleDetailModal
           sale={selectedSale}
-          customer={customers.find(c => c.id === selectedSale.clienteId)}
+          customer={null}
           isOpen={showDetailModal}
           onClose={closeModals}
         />
       )}
       
-      <ToastContainer />
     </div>
   );
 };

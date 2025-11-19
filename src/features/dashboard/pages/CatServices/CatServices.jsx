@@ -10,10 +10,13 @@ import {
 import AddCatServices from "./components/AddCatServices";
 import EditCatServices from "./components/EditCatServices";
 import SearchProduct from '../../../../shared/Search';
+import TableContentSkeleton from "../../../../shared/components/TableContentSkeleton";
+import Paginator from "../../../../shared/Paginator";
 import Swal from "sweetalert2";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
+
+const ITEMS_PER_PAGE = 5;
 
 const CatServices = () => {
   const { setTitle } = useOutletContext();
@@ -24,6 +27,7 @@ const CatServices = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [togglingId, setTogglingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const loadCategories = async () => {
     setLoading(true);
@@ -108,7 +112,14 @@ const CatServices = () => {
     }
   };
 
-  const handleSearch = (e) => setSearchTerm(e.target.value);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset a la primera página al buscar
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
   // Filtrar categorías por término de búsqueda
   const filteredCategories = categories.filter((cat) =>
@@ -118,16 +129,10 @@ const CatServices = () => {
     (cat.estado || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando categorías...</p>
-        </div>
-      </div>
-    );
-  }
+  // Paginación
+  const totalPages = Math.ceil(filteredCategories.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   if (error) {
     return (
@@ -162,79 +167,90 @@ const CatServices = () => {
                 onClick={() => setShowAdd(true)}
               >
                 <i className="bi bi-plus-circle mr-2"></i>
-                Nueva Categoría
+                crear Categoría
               </button>
             </div>
 
-            {/* Tabla de categorías */}
-            {categories.length === 0 ? (
+            {/* Tabla de categorías o skeleton */}
+            {loading ? (
+              <TableContentSkeleton columns={5} rows={5} showActions={true} />
+            ) : categories.length === 0 ? (
               <p className="text-gray-600 text-center py-8">No hay categorías registradas.</p>
             ) : (
-              <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-50 hover:bg-gray-100">
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DESCRIPCIÓN</th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ESTADO</th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredCategories.map((cat) => {
-                      const isActive = cat.estado === "Activo";
-                      const isToggling = togglingId === cat.id_categoria_servicio;
-                      return (
-                        <tr key={cat.id_categoria_servicio} className="hover:bg-gray-50 transition-colors duration-150">
-                          <td className="py-4 px-4 text-xs font-medium text-gray-900">{cat.id_categoria_servicio}</td>
-                          <td className="py-4 px-4 text-xs font-medium text-gray-900">{cat.nombre}</td>
-                          <td className="py-4 px-4 text-xs text-gray-600 max-w-[300px] truncate">{cat.descripcion || "—"}</td>
-                          <td className="py-4 px-4 text-xs">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => handleToggleStatus(cat)}
-                                disabled={isToggling}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                                  isActive ? 'bg-gray-900' : 'bg-gray-300'
-                                } ${isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                title="Click para cambiar estado"
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                                    isActive ? 'translate-x-6' : 'translate-x-1'
-                                  }`}
-                                />
-                              </button>
-                              <span className={`text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
-                                {isToggling ? 'Cambiando...' : cat.estado}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 px-4 text-sm font-medium text-right">
-                            <div className="flex justify-end space-x-2">
-                              <button
-                                onClick={() => setEditingCategory(cat)}
-                                className="h-8 w-8 p-0 flex items-center justify-center"
-                                title="Editar"
-                              >
-                                <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(cat.id_categoria_servicio)}
-                                className="h-8 w-8 p-0 flex items-center justify-center"
-                                title="Eliminar"
-                              >
-                                <i className="bi bi-trash text-red-500 text-lg"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="bg-gray-50 hover:bg-gray-100">
+                        <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
+                        <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Descripción</th>
+                        <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+                        <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {paginatedCategories.map((cat) => {
+                        const isActive = cat.estado === "Activo";
+                        const isToggling = togglingId === cat.id_categoria_servicio;
+                        return (
+                          <tr key={cat.id_categoria_servicio} className="hover:bg-gray-50 transition-colors duration-150">
+                            <td className="py-4 px-4 text-xs font-medium text-gray-900">{cat.nombre}</td>
+                            <td className="py-4 px-4 text-xs text-gray-600 max-w-[300px] truncate">{cat.descripcion || "—"}</td>
+                            <td className="py-4 px-4 text-xs">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => handleToggleStatus(cat)}
+                                  disabled={isToggling}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    isActive ? 'bg-gray-900' : 'bg-gray-300'
+                                  } ${isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                  title="Click para cambiar estado"
+                                >
+                                  <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
+                                      isActive ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                                  />
+                                </button>
+                                <span className={`text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
+                                  {isToggling ? 'Cambiando...' : cat.estado}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-sm font-medium text-right">
+                              <div className="flex justify-end space-x-2">
+                                <button
+                                  onClick={() => setEditingCategory(cat)}
+                                  className="h-8 w-8 p-0 flex items-center justify-center"
+                                  title="Editar"
+                                >
+                                  <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(cat.id_categoria_servicio)}
+                                  className="h-8 w-8 p-0 flex items-center justify-center"
+                                  title="Eliminar"
+                                >
+                                  <i className="bi bi-trash text-red-500 text-lg"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Paginación */}
+                {totalPages > 1 && (
+                  <Paginator
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
@@ -257,7 +273,6 @@ const CatServices = () => {
         />
       )}
 
-      <ToastContainer position="top-right" />
     </div>
   );
 };

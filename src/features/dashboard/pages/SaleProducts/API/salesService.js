@@ -42,9 +42,15 @@ class SalesService {
             nombre: det.producto?.nombre || 'N/A',
             cantidad: det.cantidad,
             precio: parseFloat(det.precio_unitario || 0),
-            subtotal: parseFloat(det.subtotal || 0)
+            subtotal: parseFloat(det.subtotal || ((parseFloat(det.precio_unitario||0))*(parseInt(det.cantidad||0))))
           })),
-          metodoPago: venta.metodoPago || 'No especificado'
+          metodoPago: venta.metodoPago || 'No especificado',
+          customer: venta.usuario ? {
+            nombre: venta.usuario.nombre || '',
+            email: venta.usuario.correo || '',
+            phone: venta.usuario.telefono || '',
+            documentNumber: venta.usuario.documento || ''
+          } : undefined
         }));
       }
 
@@ -81,9 +87,15 @@ class SalesService {
             nombre: det.producto?.nombre || 'N/A',
             cantidad: det.cantidad,
             precio: parseFloat(det.precio_unitario || 0),
-            subtotal: parseFloat(det.subtotal || 0)
+            subtotal: parseFloat(det.subtotal || ((parseFloat(det.precio_unitario||0))*(parseInt(det.cantidad||0))))
           })),
-          metodoPago: venta.metodoPago || 'No especificado'
+          metodoPago: venta.metodoPago || 'No especificado',
+          customer: venta.usuario ? {
+            nombre: venta.usuario.nombre || '',
+            email: venta.usuario.correo || '',
+            phone: venta.usuario.telefono || '',
+            documentNumber: venta.usuario.documento || ''
+          } : undefined
         };
       }
 

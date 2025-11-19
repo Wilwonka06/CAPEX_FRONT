@@ -2,12 +2,18 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import ordersService from '../../pages/orders/API/OrdersService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
-import { jsPDF } from 'jspdf';
+import { generateProductInvoicePDF } from '../../../../shared/utils/invoicePdf';
 
-const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
+import { formatNumber } from '../../../../shared/utils/formatters';
 const formatDate = (dateStr) => {
   const date = new Date(dateStr);
   return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=128&bold=true`;
 };
 
 const ThankYou = () => {
@@ -17,7 +23,8 @@ const ThankYou = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
+  const user = currentUser;
 
   useEffect(() => {
     const loadOrderData = async () => {
@@ -65,30 +72,30 @@ const ThankYou = () => {
 
         // ✅ Formatear el pedido para mostrar
         const formattedOrder = {
-          id: orderData.id_pedido,
-          numeroOrden: `PED-${orderData.id_pedido.toString().padStart(6, '0')}`,
-          fecha: orderData.fecha,
+          id: orderData.id_pedido || orderData.id,
+          numeroOrden: `PED-${String(orderData.id_pedido || orderData.id || 0).padStart(6, '0')}`,
+          fecha: orderData.fecha || orderData.fecha_creacion,
           estado: orderData.estado || 'Pendiente',
           valor: parseFloat(orderData.total || 0),
-          subtotal: parseFloat(orderData.total || 0),
-          productos: (orderData.detalles || []).map(det => ({
-            id: det.id_producto,
-            nombre: det.producto?.nombre || 'Producto',
-            imagen: det.producto?.url_foto || '/placeholder.png',
-            cantidad: det.cantidad,
-            precio: parseFloat(det.precio_unitario || 0)
+          subtotal: parseFloat(orderData.subtotal || orderData.total || 0),
+          costoEnvio: parseFloat(orderData.costo_envio || 0),
+          productos: (orderData.detalles || orderData.productos || []).map(det => ({
+            id: det.id_producto || det.id,
+            nombre: det.producto?.nombre || det.nombre || 'Producto',
+            imagen: det.producto?.url_foto || det.imagen || det.foto || getDefaultProductImage(det.producto?.nombre || det.nombre),
+            cantidad: parseInt(det.cantidad || 1),
+            precio: parseFloat(det.precio_unitario || det.precio || 0)
           })),
-          direccion: user.direccion || 'No especificada',
-          ciudad: 'N/A',
-          pais: 'Colombia'
+          direccion: orderData.direccion_entrega || user.direccion || 'No especificada',
+          ciudad: orderData.ciudad || 'N/A',
+          pais: orderData.pais || 'Colombia'
         };
 
         setOrder(formattedOrder);
         
         // Datos del cliente
         setCustomer({
-          firstName: user.nombre || 'Cliente',
-          lastName: user.apellido || '',
+          nombre: user.nombre || 'Cliente',
           documentType: user.tipo_documento || 'CC',
           documentNumber: user.documento || 'N/A',
           email: user.correo || 'N/A',
@@ -122,77 +129,24 @@ const ThankYou = () => {
   // Generar PDF
   const handleDownloadPDF = () => {
     if (!order) return;
-
-    const doc = new jsPDF();
-    
-    // Encabezado
-    doc.setFontSize(20);
-    doc.setTextColor(40);
-    doc.text('RECIBO DE COMPRA', 105, 20, { align: 'center' });
-    
-    // Línea separadora
-    doc.setDrawColor(250, 204, 21);
-    doc.setLineWidth(1);
-    doc.line(20, 25, 190, 25);
-    
-    // Información del pedido
-    doc.setFontSize(12);
-    doc.setTextColor(0);
-    doc.text(`Pedido: ${order.numeroOrden}`, 20, 35);
-    doc.text(`Estado: ${order.estado}`, 20, 42);
-    doc.text(`Fecha: ${formatDate(order.fecha)}`, 20, 49);
-    
-    // Información del cliente
-    doc.setFontSize(14);
-    doc.setTextColor(40);
-    doc.text('Información del Cliente', 20, 62);
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    if (customer) {
-      doc.text(`Nombre: ${customer.firstName} ${customer.lastName}`, 20, 70);
-      doc.text(`Documento: ${customer.documentType} ${customer.documentNumber}`, 20, 77);
-      doc.text(`Email: ${customer.email}`, 20, 84);
-      doc.text(`Teléfono: ${customer.phone}`, 20, 91);
-      doc.text(`Dirección: ${customer.address}`, 20, 98);
-    }
-    
-    // Productos
-    doc.setFontSize(14);
-    doc.setTextColor(40);
-    doc.text('Productos', 20, 113);
-    
-    let yPos = 123;
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    
-    order.productos.forEach((prod, idx) => {
-      const subtotal = prod.precio * prod.cantidad;
-      doc.text(`${idx + 1}. ${prod.nombre}`, 20, yPos);
-      doc.text(`x${prod.cantidad}`, 130, yPos);
-      doc.text(`$${formatNumber(prod.precio)}`, 150, yPos);
-      doc.text(`$${formatNumber(subtotal)}`, 170, yPos, { align: 'right' });
-      yPos += 7;
-    });
-    
-    // Total
-    yPos += 5;
-    doc.setDrawColor(200);
-    doc.line(20, yPos, 190, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(14);
-    doc.setTextColor(40);
-    doc.text('TOTAL:', 130, yPos);
-    doc.setFontSize(16);
-    doc.setTextColor(250, 204, 21);
-    doc.text(`$${formatNumber(order.valor)}`, 190, yPos, { align: 'right' });
-    
-    // Pie de página
-    doc.setFontSize(8);
-    doc.setTextColor(100);
-    doc.text('Gracias por su compra', 105, 280, { align: 'center' });
-    
-    doc.save(`recibo_pedido_${order.numeroOrden}.pdf`);
+    generateProductInvoicePDF({
+      sale: {
+        numeroVenta: order.numeroOrden,
+        fecha: order.fecha,
+        productos: order.productos,
+        valor: order.valor,
+        metodoPago: 'Online',
+        estado: order.estado
+      },
+      customer: {
+        nombre: customer?.nombre,
+        documentNumber: customer?.documentNumber,
+        email: customer?.email,
+        phone: customer?.phone
+      },
+      theme: { primary: '#9C5B2B', accent: '#FACC15' },
+      fileName: `pedido_${order.numeroOrden}.pdf`
+    })
   };
 
   // Estados de carga y error
@@ -289,11 +243,15 @@ const ThankYou = () => {
               <div key={idx} className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-white border-2 border-[#FACC15] flex items-center justify-center rounded-xl shadow overflow-hidden">
                   <img 
-                    src={prod.imagen} 
+                    src={
+                      (prod.fotos && prod.fotos.length > 0 && prod.fotos[0])
+                        ? prod.fotos[0]
+                        : (prod.imagen || prod.foto || getDefaultProductImage(prod.nombre))
+                    }
                     alt={prod.nombre} 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.src = '/placeholder.png';
+                      e.target.src = getDefaultProductImage(prod.nombre);
                     }}
                   />
                 </div>

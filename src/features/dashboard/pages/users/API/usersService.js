@@ -92,20 +92,21 @@ export const usersService = {
       if (!userData.correo || userData.correo.trim() === '') {
         throw new Error('El correo electrónico es requerido');
       }
-      if (!userData.contrasena || userData.contrasena.trim() === '') {
-        throw new Error('La contraseña es requerida');
-      }
+      // Contraseña opcional: si el backend tiene default/auto-generación, no exigir
 
       // Limpiar datos
+      const normalizePhone = (t) => {
+        if (!t) return t;
+        const digits = String(t).replace(/[^0-9]/g, '');
+        return `+${digits}`;
+      };
       const cleanData = {
         nombre: userData.nombre.trim(),
         correo: userData.correo.trim(),
-        contrasena: userData.contrasena,
         tipo_documento: userData.tipo_documento,
         documento: userData.documento,
-        telefono: userData.telefono,
+        telefono: normalizePhone(userData.telefono),
         roleId: userData.roleId,
-        estado: userData.estado,
         ...(userData.foto && { foto: userData.foto }),
         ...(userData.direccion && { direccion: userData.direccion }),
       };
@@ -141,12 +142,20 @@ export const usersService = {
 
       // Limpiar datos - excluir contraseña para evitar actualizaciones accidentales
       const { contrasena, ...dataWithoutPassword } = userData;
+      const normalizePhone = (t) => {
+        if (!t) return t;
+        const digits = String(t).replace(/[^0-9]/g, '');
+        return `+${digits}`;
+      };
       const cleanData = { ...dataWithoutPassword };
       if (cleanData.nombre) {
         cleanData.nombre = cleanData.nombre.trim();
       }
       if (cleanData.correo) {
         cleanData.correo = cleanData.correo.trim();
+      }
+      if (cleanData.telefono) {
+        cleanData.telefono = normalizePhone(cleanData.telefono);
       }
 
       const response = await apiRequest.put(`${USERS_ENDPOINT}/${id}`, cleanData);
@@ -280,7 +289,7 @@ export const usersService = {
         throw new Error('La nueva contraseña es requerida');
       }
 
-      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/contrasena`, { newPassword });
+      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/password`, { newPassword });
       return response;
     } catch (error) {
       console.error(`Error changing password for user ${id}:`, error);

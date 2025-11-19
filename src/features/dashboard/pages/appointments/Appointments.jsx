@@ -9,9 +9,10 @@ import esLocale from '@fullcalendar/core/locales/es';
 
 import AppointmentDetailModal from './components/AppointmentDetailModal';
 import AppointmentEditModal from './components/AppointmentEditModal';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Search from '../../../../shared/Search';
+import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
+import '../../../../shared/styles/calendar.css';
 
 // Colores personalizados para los estados
 const ESTADO_COLORES = {
@@ -34,6 +35,7 @@ const Appointments = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [loading, setLoading] = useState(true);
   // Para pasar datos a los modales
   const [editData, setEditData] = useState(null);
   const { setTitle } = useOutletContext();
@@ -86,6 +88,7 @@ const Appointments = () => {
 
   // Cargar citas desde la API
   const loadAppointments = async () => {
+    setLoading(true);
     try {
       const response = await appointmentsService.getAll();
       if (response.success) {
@@ -102,17 +105,15 @@ const Appointments = () => {
       console.error('Error details:', err.response?.data || err.message);
       // Mostrar datos de ejemplo para desarrollo
       setAppointments([]);
-      toast.error('Error al cargar citas. Verifica la conexión con el servidor.', { position: 'top-right' });
+      toast.error('Error al cargar citas. Verifica la conexión con el servidor.');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Refrescar citas tras crear/editar/cancelar
   const refreshAppointments = () => {
-    loadAppointments().then(() => {
-      toast.success('Citas actualizadas', { position: 'top-right' });
-    }).catch(() => {
-      toast.error('Error al actualizar citas', { position: 'top-right' });
-    });
+    loadAppointments();
   };
 
   // Al hacer clic en un día vacío
@@ -139,14 +140,33 @@ const Appointments = () => {
 
     // Color según estado
     const estadoColor = ESTADO_COLORES[cita.estado] || { bg: '#A0522D', text: '#fff' };
+    
+    // Nombre del cliente
+    const clienteNombre = cita.usuario?.nombre || cita.cliente?.nombre || 'Cliente';
+    
+    // Servicios
+    const serviciosTexto = cita.servicios?.map(s => s.servicio?.nombre || s.nombre_servicio).join(', ') || 'Sin servicios';
+    
+    // Formatear hora para mostrar
+    const horaInicioFormato = horaInicio.substring(0, 5);
+    const horaFinFormato = horaFin.substring(0, 5);
+    
     return {
       id: cita.id_cita,
-      title: (cita.usuario?.nombre || cita.cliente?.nombre || 'Cliente') + ' - ' + (cita.servicios?.map(s => s.servicio?.nombre || s.nombre_servicio).join(', ') || 'Sin servicios'),
+      title: `${horaInicioFormato} - ${clienteNombre}: ${serviciosTexto}`,
       start: `${cita.fecha_servicio}T${horaInicio}`,
       end: `${cita.fecha_servicio}T${horaFin}`,
       ...cita,
-      color: estadoColor.bg,
+      backgroundColor: estadoColor.bg,
+      borderColor: estadoColor.bg,
       textColor: estadoColor.text,
+      classNames: ['custom-event'],
+      extendedProps: {
+        ...cita,
+        estado: cita.estado,
+        clienteNombre,
+        serviciosTexto,
+      }
     };
   });
 
@@ -154,32 +174,24 @@ const Appointments = () => {
     <div className="min-h-screen bg-background p-6 font-inter">
       <div className="w-full">
         {/* Leyenda de estados */}
-        <div className="mb-6">
-          <div className="bg-white rounded-lg shadow p-4 border border-gray-200 flex flex-col items-center">
-            <span className="font-semibold text-text-main mb-2 text-center text-sm">¿Qué significa cada color?</span>
-            <div className="flex flex-wrap gap-4 justify-center">
+        <div className="mb-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex flex-wrap gap-3 items-center">
+              <span className="text-sm font-semibold text-gray-700 mr-2">Estados:</span>
               {Object.entries(ESTADO_COLORES).map(([estado, color]) => (
-                <span key={estado} className="flex items-center gap-2 text-xs font-medium">
-                  <span className="inline-block w-4 h-4 rounded-full border border-gray-300" style={{ background: color.bg, borderColor: color.bg }}></span>
-                  <span className="text-text-main">{estado}</span>
-                </span>
+                <div key={estado} className="flex items-center gap-2">
+                  <span 
+                    className="inline-block w-3 h-3 rounded" 
+                    style={{ background: color.bg }}
+                  ></span>
+                  <span className="text-xs text-gray-600">{estado}</span>
+                </div>
               ))}
             </div>
           </div>
         </div>
         
-        {/* Indicador de datos de ejemplo */}
-        {appointments.length > 0 && appointments[0]?.id_cita === 1 && (
-          <div className="mb-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-2">
-              <i className="bi bi-exclamation-triangle text-yellow-600 text-lg"></i>
-              <div className="text-sm">
-                <span className="font-semibold text-yellow-800">Modo de desarrollo:</span>
-                <span className="text-yellow-700 ml-1">Mostrando datos de ejemplo debido a un error en el servidor.</span>
-              </div>
-            </div>
-          </div>
-        )}
+        
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <Search
             searchTerm={searchTerm}
@@ -190,43 +202,52 @@ const Appointments = () => {
             className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
             onClick={() => setShowCreateModal(true)}
           >
-            <i className="bi bi-calendar-plus text-lg"></i>
-            Nueva cita
+            <i className="bi bi-calendar-plus text-sm"></i>
+            Crear cita
           </button>
         </div>
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2 overflow-x-auto text-xs">
-          <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay',
-            }}
-            events={calendarEvents}
-            dateClick={handleDateClick}
-            eventClick={handleEventClick}
-            height="auto"
-            locale={esLocale}
-            buttonText={{
-              today: 'Hoy',
-              month: 'Mes',
-              week: 'Semana',
-              day: 'Día',
-              list: 'Lista',
-              prev: 'Anterior',
-              next: 'Siguiente',
-            }}
-            dayHeaderFormat={{ weekday: 'short' }}
-            titleFormat={{ year: 'numeric', month: 'long' }}
-            contentHeight="auto"
-            handleWindowResize={true}
-            dayMaxEventRows={true}
-            slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
-            dayCellClassNames={() => 'min-w-[90px]'}
-            slotLabelClassNames={() => 'whitespace-nowrap'}
-            allDayText="Todo el día"
-          />
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 overflow-x-auto">
+          {loading ? (
+            <CalendarContentSkeleton />
+          ) : (
+            <FullCalendar
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView="dayGridMonth"
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay',
+              }}
+              events={calendarEvents}
+              dateClick={handleDateClick}
+              eventClick={handleEventClick}
+              height="auto"
+              locale={esLocale}
+              buttonText={{
+                today: 'Hoy',
+                month: 'Mes',
+                week: 'Semana',
+                day: 'Día',
+                list: 'Lista',
+                prev: '←',
+                next: '→',
+              }}
+              dayHeaderFormat={{ weekday: 'short' }}
+              titleFormat={{ year: 'numeric', month: 'long' }}
+              contentHeight="auto"
+              handleWindowResize={true}
+              dayMaxEventRows={3}
+              moreLinkClick="popover"
+              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              dayCellClassNames="hover:bg-gray-50 transition-colors"
+              slotLabelClassNames="text-gray-600 font-medium"
+              allDayText="Todo el día"
+              eventDisplay="block"
+              eventTextColor="#ffffff"
+              eventBorderColor="transparent"
+              eventClassNames="shadow-md hover:shadow-lg"
+            />
+          )}
         </div>
         {/* Modales */}
         {showDetailModal && (
@@ -251,7 +272,6 @@ const Appointments = () => {
             onSave={refreshAppointments}
           />
         )}
-        <ToastContainer />
       </div>
     </div>
   );

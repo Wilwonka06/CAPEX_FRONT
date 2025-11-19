@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../../../../../shared/contexts/AuthContext";
+import { useAuth } from "../../../../shared/contexts/AuthContext";
 
 const ChangeUserStatus = ({ user, onStatusChange }) => {
   const [isChanging, setIsChanging] = useState(false);

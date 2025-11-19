@@ -1,7 +1,13 @@
 import PropTypes from "prop-types";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
+import { formatPrice } from "../../../../../shared/utils/formatters";
 
-export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, currentPage, totalPages, onPageChange }) {
-  const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, currentPage, totalPages, onPageChange, loading = false }) {
+  const formatNumber = (num) => formatPrice(num).replace('$','');
+
+  if (loading) {
+    return <TableSkeleton columns={5} rows={5} hasAvatar={false} hasActions={true} />;
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -24,7 +30,7 @@ export default function SalesTable({ sales, customers = [], onView, onAnnul, onD
                 <td className="py-2 px-3">{sale.fecha}</td>
                 <td className="py-2 px-3">{sale.numeroVenta}</td>
                 <td className="py-2 px-3">{cliente ? `${cliente.firstName} ${cliente.lastName}` : "-"}</td>
-                <td className="py-2 px-3">${formatNumber(sale.valor)}</td>
+                <td className="py-2 px-3">{formatPrice(sale.valor)}</td>
                 <td className="py-2 px-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${sale.estado === 'Completado' ? ' text-green-800' : ' text-red-500'}`}>{sale.estado}</span>
                 </td>
@@ -37,7 +43,7 @@ export default function SalesTable({ sales, customers = [], onView, onAnnul, onD
                       <i className="bi bi-x-octagon"></i>
                     </button>
                   )}
-                  <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => onDownload()}>
+                  <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => onDownload(sale)}>
                     <i className="bi bi-file-earmark-pdf"></i>
                   </button>
                 </td>
@@ -71,4 +77,4 @@ SalesTable.propTypes = {
   currentPage: PropTypes.number.isRequired,
   totalPages: PropTypes.number.isRequired,
   onPageChange: PropTypes.func.isRequired,
-}; 
+};

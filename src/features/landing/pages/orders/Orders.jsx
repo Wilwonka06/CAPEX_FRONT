@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import OrderList from "./components/OrderList";
 import { ordersService } from "./API/OrdersService";
 import { useAuth } from "../../../../shared/contexts/AuthContext";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -211,19 +212,7 @@ const Orders = () => {
 
   // Estado de carga
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background py-10 px-2">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 text-text-main font-montserrat">
-            Mis Pedidos
-          </h1>
-          <div className="flex flex-col justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mb-4"></div>
-            <p className="text-gray-600">Cargando pedidos...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando pedidos..." subMessage="Estamos preparando tus pedidos" />;
   }
 
   // Estado de error

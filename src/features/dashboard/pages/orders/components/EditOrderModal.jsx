@@ -1,5 +1,7 @@
 import PropTypes from "prop-types";
 import { useState, useEffect } from "react";
+import { formatNumber } from "../../../../../shared/utils/formatters";
+ 
 
 export default function EditOrderModal({ order, customer, isOpen, onClose, estados, onUpdateEstado }) {
   const [estado, setEstado] = useState(order ? order.estado : "");
@@ -24,14 +26,12 @@ export default function EditOrderModal({ order, customer, isOpen, onClose, estad
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Editar Pedido</h2>
-          <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose}>×</button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-pencil-square text-lg"></i></div><h2 className="text-xl font-bold m-0">Editar Pedido</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        {/* Contenido */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-8 flex-1">
+        <form onSubmit={handleSubmit} id="edit-order-form" className="space-y-4">
           <div className="text-lg font-bold text-gray-800 text-center mb-2">Editar Pedido</div>
           <div className="flex flex-col md:flex-row gap-8 mb-8">
             {/* Información de Cliente */}
@@ -70,7 +70,7 @@ export default function EditOrderModal({ order, customer, isOpen, onClose, estad
                 </div>
                 <div className="flex justify-between px-4 py-2">
                   <span className="text-xs text-gray-500">Valor Total</span>
-                  <span className="font-semibold text-gray-800 text-sm">${order.valor.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.valor)}</span>
                 </div>
               </div>
             </div>
@@ -92,19 +92,16 @@ export default function EditOrderModal({ order, customer, isOpen, onClose, estad
                     <tr key={idx}>
                       <td className="py-2 px-3">{prod.nombre}</td>
                       <td className="py-2 px-3 text-right">{prod.cantidad}</td>
-                      <td className="py-2 px-3 text-right">${prod.precio.toLocaleString()}</td>
-                      <td className="py-2 px-3 text-right">${(prod.precio * prod.cantidad).toLocaleString()}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio)}</td>
+                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio * prod.cantidad)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-          <div className="flex justify-end mt-6">
-            <button type="button" className="px-4 py-2 rounded-md border text-sm mr-2" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-text-main text-white font-semibold text-sm">Guardar Cambios</button>
-          </div>
         </form>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200"><button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button><button type="submit" form="edit-order-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar Cambios</button></div>
       </div>
     </div>
   );
@@ -117,4 +114,4 @@ EditOrderModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   estados: PropTypes.array.isRequired,
   onUpdateEstado: PropTypes.func.isRequired,
-}; 
+};
