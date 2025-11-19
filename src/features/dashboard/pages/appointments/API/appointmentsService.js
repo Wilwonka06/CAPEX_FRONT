@@ -65,13 +65,7 @@ export const appointmentsService = {
   /**
    * Crear una nueva cita
    * @param {Object} appointmentData - Datos de la cita
-   * @param {number} appointmentData.id_cliente - ID del cliente
-   * @param {string} appointmentData.fecha_servicio - Fecha del servicio (YYYY-MM-DD)
-   * @param {string} appointmentData.hora_entrada - Hora de entrada (HH:MM:SS)
-   * @param {string} appointmentData.hora_salida - Hora de salida (HH:MM:SS)
-   * @param {string} appointmentData.estado - Estado de la cita
-   * @param {number} appointmentData.valor_total - Valor total
-   * @param {string} appointmentData.motivo - Motivo (opcional)
+   * @param {Object} appointmentData.cita - Datos de la cita
    * @param {Array} appointmentData.servicios - Array de servicios
    * @returns {Promise<Object>} Cita creada
    */
@@ -142,6 +136,7 @@ export const appointmentsService = {
 
       console.log('API Service: Sending appointment data to backend:', JSON.stringify(cleanData, null, 2));
       const response = await apiRequest.post(APPOINTMENTS_ENDPOINT, cleanData);
+
       return response;
     } catch (error) {
       console.error('Error creating appointment:', error);
@@ -341,6 +336,54 @@ export const appointmentsService = {
       return response;
     } catch (error) {
       console.error(`Error fetching appointments for user ${userId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener empleados disponibles
+   * @returns {Promise<Object>} Lista de empleados
+   */
+  getEmployees: async () => {
+    try {
+      const response = await apiRequest.get('/empleados');
+      return response;
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener servicios disponibles
+   * @returns {Promise<Object>} Lista de servicios
+   */
+  getServices: async () => {
+    try {
+      const response = await apiRequest.get('/servicios');
+      return response;
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener programación de un empleado por fecha
+   * @param {number|string} employeeId - ID del empleado
+   * @param {string} date - Fecha en formato YYYY-MM-DD
+   * @returns {Promise<Object>} Programación del empleado
+   */
+  getEmployeeSchedule: async (employeeId, date) => {
+    try {
+      if (!employeeId || !date) {
+        throw new Error('ID del empleado y fecha son requeridos');
+      }
+
+      const response = await apiRequest.get(`/programaciones/usuario/${employeeId}?fecha=${date}`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching schedule for employee ${employeeId} on ${date}:`, error);
       throw error;
     }
   },
