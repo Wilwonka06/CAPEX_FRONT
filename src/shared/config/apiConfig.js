@@ -34,6 +34,12 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // Evitar interferencias del localStorage: usar cookies HttpOnly
+    const token = (() => {
+      try { return localStorage.getItem('authToken'); } catch { return null; }
+    })();
+    if (token && !config.headers?.Authorization) {
+      config.headers = { ...(config.headers || {}), Authorization: `Bearer ${token}` };
+    }
 
     // Log de requests en desarrollo
     if (import.meta.env.DEV) {
@@ -96,6 +102,7 @@ apiClient.interceptors.response.use(
           break;
         case 401: {
           localStorage.removeItem('currentUser');
+          try { localStorage.removeItem('authToken'); } catch {}
           const currentPath = window.location.pathname;
           const isPublicRoute = ['/', '/login', '/iniciar-sesion', '/registrarse', '/register', '/forgot-password', '/reset-password'].includes(currentPath) || 
                                currentPath.startsWith('/landing');

@@ -18,6 +18,7 @@ const Scheduling = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // LOG TEMPORAL PARA DEBUG
   useEffect(() => {

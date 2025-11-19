@@ -7,6 +7,7 @@ import {
   validateSchedulingStartTime,
   validateSchedulingEndTime,
 } from '../../../../../shared/validations';
+import { isFutureTimeToday } from '../../../../../shared/utils/timeValidation';
 import { schedulingService } from '../API/employeesService';
 
 const horas = [
@@ -126,6 +127,17 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     }
   };
 
+  const availableStartHours = (() => {
+    if (!prog.fechaInicio) return horas;
+    return horas.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+  })();
+
+  const availableEndHours = (() => {
+    const base = horas.filter(h => (!prog.horaInicio || h > prog.horaInicio));
+    if (!prog.fechaInicio) return base;
+    return base.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+  })();
+
   const handleBlur = (e) => {
     const { name, value } = e.target;
     let error = '';
@@ -171,6 +183,10 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     
     if (prog.horaInicio && prog.horaFin && prog.horaFin <= prog.horaInicio) {
       formErrors.horaFin = 'La hora de fin debe ser mayor que la hora de inicio';
+    }
+
+    if (prog.fechaInicio && prog.horaInicio && !isFutureTimeToday(prog.fechaInicio, prog.horaInicio)) {
+      formErrors.horaInicio = 'La hora de inicio debe ser posterior a la hora actual del dispositivo';
     }
     
     setErrors(formErrors);
@@ -414,7 +430,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                   }`}
                   required
                 >
-                  {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                  {availableStartHours.map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
                 {errors.horaInicio && <p className="text-red-500 text-xs mt-1">{errors.horaInicio}</p>}
               </div>
@@ -433,7 +449,7 @@ const EditScheduling = ({ empleadoId, onClose }) => {
                   }`}
                   required
                 >
-                  {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                  {availableEndHours.map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
                 {errors.horaFin && <p className="text-red-500 text-xs mt-1">{errors.horaFin}</p>}
               </div>

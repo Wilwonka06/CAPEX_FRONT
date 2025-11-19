@@ -1,6 +1,6 @@
-// ✅ ACTUALIZADO: Permisos y privilegios se obtienen dinámicamente del backend
 import { useState, useEffect } from 'react';
 import TableSkeleton from '../../../../../shared/components/TableSkeleton';
+import { rolesService } from '../API/rolesService';
 
 /**
  * Componente para gestionar privilegios de roles
@@ -11,7 +11,6 @@ import TableSkeleton from '../../../../../shared/components/TableSkeleton';
  *  disabled: boolean (opcional)
  */
 const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
-  const { getAvailablePermissions, getAvailablePrivileges } = useRoles();
   const [modules, setModules] = useState([]);
   const [actions, setActions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,8 +21,8 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
       try {
         setLoading(true);
         const [permissionsData, privilegesData] = await Promise.all([
-          getAvailablePermissions(),
-          getAvailablePrivileges()
+          rolesService.getAvailablePermissions(),
+          rolesService.getAvailablePrivileges()
         ]);
 
         // Ordenar permisos de forma lógica: principales primero, luego submódulos
@@ -84,7 +83,7 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
     };
 
     loadPermissionsAndPrivileges();
-  }, [getAvailablePermissions, getAvailablePrivileges]);
+  }, []);
   // Handler para seleccionar todos los permisos
   const handleSelectAll = () => {
     modules.forEach(mod => {

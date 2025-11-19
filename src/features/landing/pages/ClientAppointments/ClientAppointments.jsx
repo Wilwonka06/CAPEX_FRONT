@@ -9,6 +9,7 @@ import { showError, showSuccess } from '../../../../shared/utils/toastUtils';
 import Swal from 'sweetalert2';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { isFutureTimeToday } from '../../../../shared/utils/timeValidation';
 
 function limpiarPrecio(valor) {
   // Si el valor es null, undefined o vacío, devolver 0
@@ -520,6 +521,10 @@ const ClientAppointments = () => {
               break;
             }
           }
+        }
+        // Filtrar horas pasadas si la fecha es hoy
+        if (formData.fecha && !isFutureTimeToday(formData.fecha, hora)) {
+          disponible = false;
         }
         horas.push({ hora, disponible });
       }
@@ -1597,4 +1602,4 @@ const ClientAppointments = () => {
   );
 };
 
-export default ClientAppointments; 
+export default ClientAppointments;

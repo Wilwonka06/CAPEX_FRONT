@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { isValidEmail, isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
 import { useAuth } from '../../../shared/contexts/AuthContext';
@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 export default function LoginPage() {
   const { login } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Obtener la página anterior desde location.state (si existe)
   const previousPath = location.state?.from?.pathname || null;
@@ -31,7 +32,6 @@ export default function LoginPage() {
       const errorMsg = 'Por favor ingresa un correo válido.';
       setError(errorMsg);
       setEmail('');
-      toast.error(errorMsg);
       setLoading(false);
       return;
     }
@@ -40,7 +40,6 @@ export default function LoginPage() {
       const errorMsg = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.';
       setError(errorMsg);
       setPassword('');
-      toast.error(errorMsg);
       setLoading(false);
       return;
     }
@@ -60,6 +59,9 @@ export default function LoginPage() {
       console.log('📥 Respuesta del servidor:', response);
 
       if (response.success && response.data) {
+        if (response.data.token) {
+          try { localStorage.setItem('authToken', response.data.token); } catch {}
+        }
         // Verificar que el usuario tenga rol
         if (!response.data.user?.rol) {
           throw new Error('Usuario sin rol asignado');
@@ -95,7 +97,10 @@ export default function LoginPage() {
         console.log('📍 Página anterior guardada:', previousPath);
 
         // Login exitoso - delegar al contexto con la página anterior
-        await login(userData, previousPath);
+        const redirectPath = await login(userData, previousPath);
+
+        // Navegar sin recargar toda la página
+        navigate(redirectPath, { replace: true });
 
         return userData;
       } else {

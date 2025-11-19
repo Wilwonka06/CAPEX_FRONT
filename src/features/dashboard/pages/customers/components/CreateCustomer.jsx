@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import customersService from "../API/customersService"
-import { validateCustomer } from "../../../../../shared/validations.js"
+import { validateCustomer, isNumberInputValid } from "../../../../../shared/validations.js"
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
@@ -139,8 +139,12 @@ export default function CreateCustomer({ isOpen, onClose, onSuccess, customers =
                 type="text"
                 name="documentNumber"
                 value={formData.documentNumber}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  const onlyDigits = e.target.value.replace(/[^\d]/g, '')
+                  handleInputChange({ target: { name: 'documentNumber', value: onlyDigits } })
+                }}
                 onBlur={handleBlur}
+                onKeyDown={isNumberInputValid}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               />
                 {touched.documentNumber && errors.documentNumber && (

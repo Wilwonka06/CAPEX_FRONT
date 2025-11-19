@@ -8,6 +8,7 @@ import {
   validateSchedulingEndTime,
   validateSchedulingDays
 } from '../../../../../shared/validations';
+import { isFutureTimeToday } from '../../../../../shared/utils/timeValidation';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -100,6 +101,17 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
     }
   };
 
+  const availableStartHours = (() => {
+    if (!prog.fechaInicio) return horas;
+    return horas.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+  })();
+
+  const availableEndHours = (() => {
+    const base = horas.filter(h => (!prog.horaInicio || h > prog.horaInicio));
+    if (!prog.fechaInicio) return base;
+    return base.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+  })();
+
   const handleEditEvent = (e) => {
     e.preventDefault();
     
@@ -126,6 +138,10 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
     // Validar que hora fin sea mayor que hora inicio
     if (prog.horaInicio && prog.horaFin && prog.horaInicio >= prog.horaFin) {
       formErrors.horaFin = 'La hora de fin debe ser mayor a la hora de inicio';
+    }
+
+    if (prog.fechaInicio && prog.horaInicio && !isFutureTimeToday(prog.fechaInicio, prog.horaInicio)) {
+      formErrors.horaInicio = 'La hora de inicio debe ser posterior a la hora actual del dispositivo';
     }
     
     setErrors(formErrors);
@@ -192,7 +208,7 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
                 className={`border rounded px-3 py-2 ${errors.horaInicio ? 'border-red-500' : ''}`}
                 required
               >
-                {horas.map((h) => (
+                {availableStartHours.map((h) => (
                   <option key={`inicio-${h}`} value={h}>{h}</option>
                 ))}
               </select>
@@ -204,7 +220,7 @@ const EditScheduling = ({ onSave, editing, onCancelEdit }) => {
                 className={`border rounded px-3 py-2 ${errors.horaFin ? 'border-red-500' : ''}`}
                 required
               >
-                {horas.map((h) => (
+                {availableEndHours.map((h) => (
                   <option key={`fin-${h}`} value={h}>{h}</option>
                 ))}
               </select>

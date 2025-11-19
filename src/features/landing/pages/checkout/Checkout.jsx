@@ -5,6 +5,7 @@ import ordersService from '../../pages/orders/API/OrdersService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import OrderProgressIndicator from './components/OrderProgressIndicator';
 import { formatNumber } from '../../../../shared/utils/formatters';
+import { isNumberInputValid } from '../../../../shared/validations';
 
 const empresasEnvio = [
   { nombre: 'INTER rapidísimo', precio: { 'Bogotá': 13500, 'Medellín': 15000, 'default': 18000 } },
@@ -204,7 +205,13 @@ const Checkout = () => {
                 className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
                 placeholder="Número identificación*"
                 value={form.documento}
-                onChange={e => setForm(f => ({ ...f, documento: e.target.value }))}
+                onChange={e => {
+                  const raw = e.target.value
+                  const isPassport = form.documentType === 'PP' || form.documentType === 'Pasaporte'
+                  const sanitized = isPassport ? raw.replace(/[^A-Za-z0-9]/g, '') : raw.replace(/[^\d]/g, '')
+                  setForm(f => ({ ...f, documento: sanitized }))
+                }}
+                onKeyDown={isNumberInputValid}
                 readOnly={!isEditing}
                 required
               />
@@ -226,7 +233,11 @@ const Checkout = () => {
                 className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
                 placeholder="Teléfono*"
                 value={form.telefono}
-                onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))}
+                onChange={e => {
+                  const onlyDigits = e.target.value.replace(/[^\d]/g, '')
+                  setForm(f => ({ ...f, telefono: onlyDigits }))
+                }}
+                onKeyDown={isNumberInputValid}
                 readOnly={!isEditing}
                 required
               />

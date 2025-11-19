@@ -8,7 +8,8 @@ import {
   validateEmployeeDocument,
   validateEmployeeEmail,
   validateEmployeePassword,
-  validatePasswordConfirmation
+  validatePasswordConfirmation,
+  isNumberInputValid
 } from '../../../../../shared/validations';
 
 const initialForm = {
@@ -302,6 +303,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   value={form.documento}
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  onKeyDown={isNumberInputValid}
                   placeholder="Ingrese el número de documento"
                   maxLength={15}
                   className={`w-full border-2 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
@@ -326,6 +328,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   value={form.telefono}
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  onKeyDown={isNumberInputValid}
                   placeholder="Ingrese el número de teléfono"
                   maxLength={15}
                   className={`w-full border-2 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${

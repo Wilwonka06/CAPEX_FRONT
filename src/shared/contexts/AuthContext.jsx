@@ -263,14 +263,10 @@ export const AuthProvider = ({ children }) => {
         redirectPath = getRoleRedirect(userData.rol, userData);
       }
 
-      console.log('🔄 Redirigiendo a:', redirectPath);
-
-      // Redirigir usando navigate si está disponible (React Router), sino usar window.location
-      // Esto evita recargas completas de página cuando es posible
-      if (typeof window !== 'undefined' && window.location) {
-        // Usar replace para evitar que el usuario pueda volver atrás al login
-        window.location.replace(redirectPath);
-      }
+      console.log('🔄 Redirección sugerida:', redirectPath);
+      // No realizar navegación directa aquí para evitar recargas completas.
+      // Devolver la ruta sugerida y permitir que el componente de UI navegue.
+      return redirectPath;
     } catch (error) {
       console.error('❌ Error en login:', error);
       throw error;
@@ -299,6 +295,7 @@ export const AuthProvider = ({ children }) => {
 
       // Limpiar datos locales
       localStorage.removeItem('currentUser');
+      try { localStorage.removeItem('authToken'); } catch {}
       setCurrentUser(null);
       
       // Emitir evento de cambio

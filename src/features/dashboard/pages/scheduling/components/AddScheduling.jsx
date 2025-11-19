@@ -8,6 +8,7 @@ import {
   validateSchedulingEndTime,
   validateSchedulingDays
 } from '../../../../../shared/validations';
+import { isFutureTimeToday } from '../../../../../shared/utils/timeValidation';
 
 const horas = [
   '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -139,6 +140,17 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
     }
   };
 
+  const availableStartHours = (() => {
+    if (!prog.fechaInicio) return horas;
+    return horas.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+  })();
+
+  const availableEndHours = (() => {
+    const base = horas.filter(h => (!prog.horaInicio || h > prog.horaInicio));
+    if (!prog.fechaInicio) return base;
+    return base.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+  })();
+
   const handleEmployeeChange = (e) => {
     const value = e.target.value;
     console.log("[DEBUG] handleEmployeeChange:");
@@ -189,6 +201,12 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
 
     if (Object.keys(formErrors).length > 0) {
       toast.error('Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    // Validación de hora actual para el mismo día
+    if (prog.fechaInicio && prog.horaInicio && !isFutureTimeToday(prog.fechaInicio, prog.horaInicio)) {
+      setErrors(prev => ({ ...prev, horaInicio: 'La hora inicio debe ser posterior a la hora actual del dispositivo' }));
       return;
     }
 
@@ -314,13 +332,16 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, employees = [] }) => {
         <div className="flex flex-wrap items-end gap-4 mt-2">
           <div className="flex items-center gap-2">
             <select name="horaInicio" value={prog.horaInicio} onChange={handleProgChange} className="border rounded px-3 py-2">
-              {horas.map(h => <option key={`inicio-${h}`} value={h}>{h}</option>)}
+              {availableStartHours.map(h => <option key={`inicio-${h}`} value={h}>{h}</option>)}
             </select>
             <span className="mx-1">-</span>
             <select name="horaFin" value={prog.horaFin} onChange={handleProgChange} className="border rounded px-3 py-2">
-              {horas.map(h => <option key={`fin-${h}`} value={h}>{h}</option>)}
+              {availableEndHours.map(h => <option key={`fin-${h}`} value={h}>{h}</option>)}
             </select>
           </div>
+          {(errors.horaInicio || errors.horaFin) && (
+            <p className="text-red-500 text-xs mt-1 w-full">{errors.horaInicio || errors.horaFin}</p>
+          )}
           <div className="flex-1 flex justify-end gap-2">
             <button 
               type="button" 

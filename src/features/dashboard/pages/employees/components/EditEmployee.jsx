@@ -7,7 +7,8 @@ import {
   validateEmployeeEditForm,
   validateEmployeeName,
   validateEmployeeDocument,
-  validateEmployeeEmail
+  validateEmployeeEmail,
+  isNumberInputValid
 } from '../../../../../shared/validations';
 
 const tiposDocumento = [
@@ -277,6 +278,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   value={form.documento}
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  onKeyDown={isNumberInputValid}
                   placeholder="Ingresa el número de documento"
                   maxLength={15}
                   className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato font-mono ${
@@ -299,6 +301,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   value={form.telefono}
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  onKeyDown={isNumberInputValid}
                   placeholder="Ingresa el número de teléfono"
                   maxLength={15}
                   className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato font-mono ${
