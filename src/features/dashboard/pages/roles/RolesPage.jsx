@@ -37,7 +37,11 @@ const RolesPage = () => {
       (role.name || role.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (role.description || role.descripcion || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (role.estado || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ).sort((a, b) => {
+    const nameA = (a.name || a.nombre || '').toLowerCase();
+    const nameB = (b.name || b.nombre || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
 
   const handleCreateRole = async (newRole, privileges) => {
     try {

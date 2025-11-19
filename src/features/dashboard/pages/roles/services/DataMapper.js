@@ -145,9 +145,10 @@ class DataMapper {
   }
 
   static convertPrivilegesToBackendFormat(frontendPrivileges) {
-    const backendFormat = [];
+    console.log('🔄 CONVERTIR A BACKEND FORMAT');
+    console.log('Input:', JSON.stringify(frontendPrivileges, null, 2));
     
-    console.log('🔄 Convirtiendo privilegios para backend:', frontendPrivileges);
+    const backendFormat = [];
 
     if (!frontendPrivileges || typeof frontendPrivileges !== 'object') {
       console.warn('⚠️ No hay privilegios o formato inválido');
@@ -159,40 +160,67 @@ class DataMapper {
       const permisos = frontendPrivileges[modulo];
       const privilegios = [];
 
-      console.log(`📋 Procesando módulo ${modulo}:`, permisos);
+      console.log(`\n📋 Procesando módulo: ${modulo}`);
+      console.log(`   Permisos del módulo:`, permisos);
+      console.log(`   Tipo de permisos:`, typeof permisos);
+      console.log(`   Es array?:`, Array.isArray(permisos));
 
       // ✅ Verificar que el módulo existe en el mapeo
       if (!this.BACKEND_MODULE_IDS[modulo]) {
         console.warn(`⚠️ Módulo "${modulo}" no encontrado en mapeo`);
+        console.warn(`   Módulos disponibles:`, Object.keys(this.BACKEND_MODULE_IDS));
         return;
       }
 
+      const moduleId = this.BACKEND_MODULE_IDS[modulo];
+      console.log(`   ID del módulo: ${moduleId}`);
+
       // Recolectar privilegios activos
-      if (permisos && typeof permisos === 'object') {
+      if (permisos && typeof permisos === 'object' && !Array.isArray(permisos)) {
         Object.keys(permisos).forEach(accion => {
+          const isActive = permisos[accion] === true;
+          const privilegeId = this.PRIVILEGE_IDS[accion];
+          
+          console.log(`   - ${accion}: ${isActive ? '✅ ACTIVO' : '❌ INACTIVO'} (id=${privilegeId || 'NO ENCONTRADO'})`);
+          
           // ✅ SOLO incluir privilegios que están ACTIVOS (true)
-          if (permisos[accion] === true && this.PRIVILEGE_IDS[accion]) {
+          if (isActive && privilegeId) {
             privilegios.push({
-              id_privilegio: this.PRIVILEGE_IDS[accion],
+              id_privilegio: privilegeId,
               nombre: accion
             });
+            console.log(`     → Agregado a array de privilegios`);
+          } else if (isActive && !privilegeId) {
+            console.warn(`     ⚠️ Privilegio "${accion}" activo pero no tiene ID mapeado`);
           }
         });
+      } else {
+        console.warn(`   ⚠️ Permisos no es un objeto válido o es un array`);
       }
+
+      console.log(`   Total privilegios para ${modulo}: ${privilegios.length}`);
+      console.log(`   Array de privilegios:`, JSON.stringify(privilegios, null, 2));
 
       // ✅ SOLO agregar el módulo si tiene privilegios activos
       if (privilegios.length > 0) {
         backendFormat.push({
-          id_permiso: this.BACKEND_MODULE_IDS[modulo],
+          id_permiso: moduleId,
           nombre: modulo,
           privilegios: privilegios
         });
+        console.log(`   ✅ Módulo ${modulo} agregado con ${privilegios.length} privilegios`);
       } else {
-        console.log(`⚠️ Módulo ${modulo} no tiene privilegios activos, se omite`);
+        console.log(`   ⚠️ Módulo ${modulo} no tiene privilegios activos, se omite`);
       }
     });
 
-    console.log('✅ Formato final para backend:', JSON.stringify(backendFormat, null, 2));
+    console.log('\n✅ OUTPUT FINAL:');
+    console.log(JSON.stringify(backendFormat, null, 2));
+    console.log(`Total módulos con privilegios: ${backendFormat.length}`);
+    backendFormat.forEach((p, i) => {
+      console.log(`  Módulo ${i + 1}: ${p.nombre} con ${p.privilegios.length} privilegios`);
+    });
+    
     return backendFormat;
   }
 

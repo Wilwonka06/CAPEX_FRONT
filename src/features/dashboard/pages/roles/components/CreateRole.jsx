@@ -47,13 +47,19 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   };
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
-    setPrivileges(prev => ({
-      ...prev,
-      [modulo]: {
-        ...prev[modulo],
-        [accion]: checked
-      }
-    }));
+    setPrivileges(prev => {
+      const newPrivileges = {
+        ...prev,
+        [modulo]: {
+          ...prev[modulo],
+          [accion]: checked
+        }
+      };
+      console.log(`🔄 Actualizando privilegio: ${modulo} → ${accion} = ${checked}`);
+      console.log(`   Estado anterior:`, prev[modulo]);
+      console.log(`   Estado nuevo:`, newPrivileges[modulo]);
+      return newPrivileges;
+    });
   };
 
   const handleBlur = (e) => {
@@ -67,6 +73,28 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
     setTouched({ nombre: true, descripcion: true, privilegios: true });
     const validationErrors = validateRole(formData, privileges, roles).errors;
     setErrors(validationErrors);
+    
+    // === DEBUG CREATE ROLE ===
+    console.log('=== DEBUG CREATE ROLE ===');
+    console.log('1. formData:', formData);
+    console.log('2. privileges (raw state):', privileges);
+    console.log('2.1. privileges (JSON):', JSON.stringify(privileges, null, 2));
+    
+    // Contar privilegios seleccionados
+    let totalSelected = 0;
+    const selectedPrivileges = [];
+    Object.keys(privileges).forEach(modulo => {
+      Object.keys(privileges[modulo] || {}).forEach(accion => {
+        if (privileges[modulo][accion] === true) {
+          totalSelected++;
+          selectedPrivileges.push(`${modulo} → ${accion}`);
+          console.log(`   ✓ ${modulo} → ${accion}`);
+        }
+      });
+    });
+    console.log(`3. Total privilegios seleccionados: ${totalSelected}`);
+    console.log('4. Lista de privilegios seleccionados:', selectedPrivileges);
+    
     if (Object.keys(validationErrors).length === 0 && onCreate) {
       try {
         await onCreate(formData, privileges);

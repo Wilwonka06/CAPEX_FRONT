@@ -32,6 +32,36 @@ apiClient.interceptors.request.use(
       });
     }
 
+    // Interceptor específico para roles
+    if (config.url && config.url.includes('/roles') && (config.method === 'post' || config.method === 'put')) {
+      console.log('🚀 INTERCEPTED REQUEST TO /roles');
+      console.log('   URL:', config.url);
+      console.log('   Method:', config.method?.toUpperCase());
+      
+      try {
+        const bodyData = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
+        console.log('   Body (parsed):', JSON.stringify(bodyData, null, 2));
+        
+        if (bodyData.permisos_privilegios) {
+          console.log('   📦 permisos_privilegios array length:', bodyData.permisos_privilegios.length);
+          bodyData.permisos_privilegios.forEach((p, i) => {
+            console.log(`   Permiso ${i + 1}: ${p.nombre} con ${p.privilegios?.length || 0} privilegios`);
+            if (p.privilegios && Array.isArray(p.privilegios)) {
+              p.privilegios.forEach((priv, j) => {
+                console.log(`     Privilegio ${j + 1}: ${priv.nombre} (id=${priv.id_privilegio})`);
+              });
+            } else {
+              console.warn(`     ⚠️ Privilegios no es un array o está vacío`);
+            }
+          });
+        } else {
+          console.warn('   ⚠️ No se encontró permisos_privilegios en el body');
+        }
+      } catch (e) {
+        console.error('   ❌ Error al parsear body:', e);
+      }
+    }
+
     return config;
   },
   (error) => {
