@@ -17,25 +17,30 @@ const ViewCustomer = ({ isOpen, onClose, customer }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 font-inter">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm font-inter">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative animate-fade-in max-h-[95vh] flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-2xl flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl md:text-2xl font-bold text-primary m-0">Detalle del cliente</h2>
-          <button className="text-gray-400 hover:text-primary text-2xl font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-person text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Detalle del cliente</h2>
+          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <div className="overflow-y-auto p-8 flex-1">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <div className="flex flex-col md:flex-row gap-8">
             {/* Avatar y nombre */}
             <div className="flex flex-col justify-center items-center md:w-1/2 w-full">
               <div className="w-36 h-36 bg-gray-50 border-2 border-gray-200 rounded-lg flex items-center justify-center mb-4 shadow-sm overflow-hidden">
                 <img
                   src={DEFAULT_AVATAR}
-                  alt={customer.firstName}
+                  alt={customer.nombre || customer.firstName || 'Cliente'}
                   className="w-full h-full object-cover rounded-lg"
                 />
               </div>
-              <div className="text-lg font-bold text-gray-800 text-center mb-2">{customer.firstName} {customer.lastName}</div>
+              <div className="text-lg font-bold text-gray-800 text-center mb-2">{customer.nombre || (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : customer.firstName || 'Cliente')}</div>
               <div className="text-sm text-gray-500 text-center">{customer.email}</div>
               <div className="mt-2">
                 <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full shadow-sm transition-all duration-200
@@ -96,8 +101,11 @@ const ViewCustomer = ({ isOpen, onClose, customer }) => {
             </div>
           </div>
         </div>
-        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-2xl flex justify-end px-8 py-4">
-          <button className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition" onClick={onClose}>Cerrar</button>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2" onClick={onClose}>
+            <i className="bi bi-check-circle"></i>
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
@@ -110,6 +118,8 @@ ViewCustomer.propTypes = {
   customer: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     status: PropTypes.string,
+    nombre: PropTypes.string,
+    // Mantener firstName y lastName para retrocompatibilidad
     firstName: PropTypes.string,
     lastName: PropTypes.string,
     documentType: PropTypes.string,

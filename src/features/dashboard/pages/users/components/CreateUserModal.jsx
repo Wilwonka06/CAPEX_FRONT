@@ -8,7 +8,8 @@ import 'react-phone-input-2/lib/style.css';
 import './phoneinput-search.css';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=eee&color=888&size=128';
-const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
+const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
+const DOC_TYPES = ['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'];
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -63,8 +64,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     telefono: '',
     roles: [],
     correo: '',
-    password: '',
-    confirmPassword: '',
     avatar: '',
     avatarCompressed: '',
   });
@@ -73,10 +72,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState('');
   const [error, setError] = useState({});
-  const [country, setCountry] = useState({
-    countryCode: 'co',
-    dialCode: '+57',
-  });
   const [numero, setNumero] = useState('');
 
   useEffect(() => {
@@ -102,13 +97,8 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
         if (users.some(u => u.correo === value)) return 'Correo ya registrado';
         return '';
       case 'telefono':
-        // Validar que el número tenga al menos 7 dígitos (sin contar el código de país)
-        if (!numero || numero.trim() === '' || numero.replace(/\D/g, '').length < 7) {
-          return 'El teléfono es requerido y debe tener al menos 7 dígitos';
-        }
-        if (numero.replace(/\D/g, '').length > 15) {
-          return 'El teléfono debe tener máximo 15 dígitos';
-        }
+        if (!numero) return 'El teléfono es requerido';
+        if (numero.length < 7 || numero.length > 15) return 'El teléfono debe tener entre 7 y 15 dígitos';
         return '';
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
@@ -116,10 +106,6 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
         if (!value.trim()) return 'Campo obligatorio';
         if (form.documento && users.some(u => u.tipoDocumento === value && u.documento === form.documento)) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
-      case 'password':
-        return value ? (isValidPassword(value) ? '' : 'Contraseña débil') : 'Campo obligatorio';
-      case 'confirmPassword':
-        return value === form.password ? '' : 'No coincide';
       case 'roles':
         return value.length > 0 ? '' : 'Selecciona al menos un rol';
       default:
@@ -164,11 +150,19 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
     // Validar todos los campos obligatorios
     let valid = true;
     let newError = {};
-    for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo','password','confirmPassword']) {
-      const err = validate(key, form[key]);
-      if (err) {
-        newError[key] = err;
-        valid = false;
+    for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo']) {
+      if (key === 'telefono') {
+        const err = validate('telefono', numero);
+        if (err) {
+          newError.telefono = err;
+          valid = false;
+        }
+      } else {
+        const err = validate(key, form[key]);
+        if (err) {
+          newError[key] = err;
+          valid = false;
+        }
       }
     }
     if (!valid) {
@@ -181,16 +175,13 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
       foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
-    const telefonoFinal = country.dialCode + numero;
     const newUser = {
       nombre: form.nombre,
       correo: form.correo,
-      contrasena: form.password,
       tipo_documento: form.tipoDocumento,
       documento: form.documento,
-      telefono: telefonoFinal,
-      roleId: parseInt(form.roles[0]) || 1, // Asignar el primer rol seleccionado o rol por defecto
-      estado: 'Activo',
+      telefono: '+' + numero,
+      roleId: parseInt(form.roles[0]) || 1,
       ...(foto && { foto }),
       ...(form.direccion && { direccion: form.direccion }),
     };
@@ -204,7 +195,7 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
           <h2 className="text-xl font-bold text-primary m-0">Crear usuario</h2>
@@ -256,71 +247,33 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <div className="flex gap-1 items-start">
-                  <PhoneInput
-                    country={country.countryCode}
-                    value={country.dialCode}
-                    onChange={(value, data) => {
-                      setCountry({
-                        countryCode: data.countryCode,
-                        dialCode: '+' + data.dialCode
-                      });
-                    }}
-                    inputProps={{
-                      name: 'prefijo',
-                      readOnly: true,
-                      className: 'w-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 cursor-pointer',
-                      style: { backgroundColor: '#f9fafb' }
-                    }}
-                    specialLabel=""
-                    containerClass="w-28"
-                    inputClass="w-full"
-                    buttonClass=""
-                    dropdownClass=""
-                    enableSearch
-                    disableCountryCode={false}
-                    disableDropdown={false}
-                    countryCodeEditable={false}
-                    disableSearchIcon={false}
-                    onlyCountries={['co','mx','cl','ar','pe','ve','ec','us','es']}
-                  />
-                  <input
-                    type="text"
-                    name="numero"
-                    value={numero}
-                    onChange={e => {
-                      // Solo permitir dígitos
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setNumero(val.slice(0, 15));
-                      // Validación en tiempo real del número
-                      let err = '';
-                      if (val && !/^\d{7,15}$/.test(val)) {
-                        err = 'El número debe tener entre 7 y 15 dígitos';
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    onBlur={e => {
-                      const val = e.target.value;
-                      let err = '';
-                      if (!/^\d{7,15}$/.test(val)) {
-                        err = 'El número debe tener entre 7 y 15 dígitos';
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="Número sin prefijo"
-                    required
-                    autoComplete="off"
-                    maxLength={15}
-                  />
-                </div>
-                {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
+                <PhoneInput
+                  country={'co'}
+                  value={numero}
+                  onChange={(value) => {
+                    setNumero(value);
+                    const error = validate('telefono', value);
+                    setError(prev => ({ ...prev, telefono: error }));
+                  }}
+                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${error.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  containerClass="w-full"
+                  inputProps={{
+                    name: 'telefono',
+                    required: true,
+                    placeholder: 'Ej: 3001234567',
+                  }}
+                  specialLabel=""
+                />
+                {error.telefono && <span className="text-red-500 text-xs mt-1 block">{error.telefono}</span>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Roles <span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-2">
+                <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-md bg-gray-50">
                   {availableRoles.map(role => (
-                    <label key={role.id_rol} className="flex items-center gap-2 text-sm font-medium text-text-main">
+                    <label 
+                      key={role.id_rol} 
+                      className="flex items-center gap-2 text-sm font-medium text-text-main cursor-pointer hover:text-primary transition-colors px-3 py-2 rounded-md hover:bg-white border border-transparent hover:border-gray-300"
+                    >
                       <input
                         type="checkbox"
                         name="roles"
@@ -328,34 +281,18 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                         checked={form.roles.includes(role.id_rol.toString())}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        className="accent-primary-dark"
+                        className="accent-primary-dark w-4 h-4 cursor-pointer"
                       />
-                      {role.nombre}
+                      <span>{role.nombre}</span>
                     </label>
                   ))}
                 </div>
-                {error.roles && <span className="text-red-500 text-xs">{error.roles}</span>}
+                {error.roles && <span className="text-red-500 text-xs mt-1 block">{error.roles}</span>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Correo <span className="text-red-500">*</span></label>
                 <input type="email" name="correo" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.correo} onChange={handleChange} onBlur={handleBlur} required />
                 {error.correo && <span className="text-red-500 text-xs">{error.correo}</span>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Contraseña <span className="text-red-500">*</span></label>
-                <input type={showPassword ? 'text' : 'password'} name="password" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.password} onChange={handleChange} onBlur={handleBlur} required />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
-                </div>
-                {error.password && <span className="text-red-500 text-xs">{error.password}</span>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Confirmar contraseña <span className="text-red-500">*</span></label>
-                <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} required />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
-                </div>
-                {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
@@ -375,4 +312,4 @@ CreateUserModal.propTypes = {
   users: PropTypes.array.isRequired,
 };
 
-export default CreateUserModal; 
+export default CreateUserModal;

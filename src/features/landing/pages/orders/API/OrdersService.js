@@ -468,7 +468,9 @@ export const ordersService = {
     if (price === null || price === undefined) return '0';
 
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    return numPrice.toFixed(2);
+    // Usar el estándar del proyecto: sin decimales, separador de miles con punto
+    const { formatNumber } = require('../../../../shared/utils/formatters');
+    return formatNumber(numPrice);
   },
 
   /**

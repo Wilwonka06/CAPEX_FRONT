@@ -3,19 +3,21 @@ import { useState, useEffect } from "react";
 import OrderDetailModal from "./components/OrderDetailModal";
 import EditOrderModal from "./components/EditOrderModal";
 import Paginator from '../../../../shared/Paginator';
-import LoadingTable from '../../../../shared/components/LoadingTable';
+import TableSkeleton from '../../../../shared/components/TableSkeleton';
 import Search from '../../../../shared/Search';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import ordersService from './API/ordersService';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 // Estados posibles según el backend unificado
 const estados = ["Pendiente", "En proceso", "Enviado", "Entregado", "Cancelado"];
 
-function OrdersTable({ orders, onView, onEdit }) {
+function OrdersTable({ orders, onView, onEdit, loading = false }) {
+  if (loading) {
+    return <TableSkeleton columns={5} rows={5} hasAvatar={false} hasActions={true} />;
+  }
   
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -109,24 +111,7 @@ export default function OrdersPage() {
       });
 
       if (response.success) {
-        // Transformar datos del backend al formato frontend
-        const transformedOrders = (response.data || []).map(pedido => ({
-          id: pedido.id_pedido,
-          numeroOrden: `PED-${(pedido.id_pedido || 0).toString().padStart(6, '0')}`,
-          fecha: pedido.fecha || new Date().toISOString().split('T')[0],
-          clienteId: pedido.id_usuario,
-          clienteNombre: pedido.usuario?.nombre || `Usuario ${pedido.id_usuario || 'N/A'}`,
-          valor: parseFloat(pedido.total || 0),
-          estado: pedido.estado || 'Pendiente',
-          productos: (pedido.detalles || []).map(det => ({
-            codigo: `P${(det.id_producto || 0).toString().padStart(3, '0')}`,
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad || 0,
-            precio: parseFloat(det.precio_unitario || 0)
-          }))
-        }));
-
-        setOrders(transformedOrders);
+        setOrders(response.data || []);
       } else {
         throw new Error(response.message || 'Error al cargar pedidos');
       }
@@ -188,9 +173,7 @@ export default function OrdersPage() {
         const response = await ordersService.changeStatus(id, nuevoEstado);
         
         if (response.success) {
-          toast.success(`Estado del pedido cambiado a ${nuevoEstado}`, { 
-            position: 'top-right' 
-          });
+          toast.success(`Estado del pedido cambiado a ${nuevoEstado}`);
           
           // Actualizar estado local
           setOrders(prev => prev.map(o => 
@@ -203,9 +186,7 @@ export default function OrdersPage() {
         }
       } catch (error) {
         console.error('Error updating order status:', error);
-        toast.error(error.message || 'Error al actualizar el estado del pedido', { 
-          position: 'top-right' 
-        });
+        toast.error(error.message || 'Error al actualizar el estado del pedido');
       } finally {
         setLoading(false);
       }
@@ -227,9 +208,7 @@ export default function OrdersPage() {
               />
             </div>
 
-            {loading ? (
-              <LoadingTable message="Cargando pedidos..." />
-            ) : filteredOrders.length === 0 ? (
+            {filteredOrders.length === 0 && !loading ? (
               <div className="text-center py-12">
                 <i className="bi bi-inbox text-6xl text-gray-300"></i>
                 <p className="mt-4 text-gray-500">
@@ -244,6 +223,7 @@ export default function OrdersPage() {
                   orders={paginatedOrders}
                   onView={setDetailOrder}
                   onEdit={setEditOrder}
+                  loading={loading}
                 />
 
                 {totalPages > 1 && (
@@ -263,13 +243,14 @@ export default function OrdersPage() {
       <OrderDetailModal
         order={detailOrder}
         customer={detailOrder ? {
-          firstName: detailOrder.clienteNombre || 'Cliente',
+          nombre: detailOrder.usuario?.nombre || detailOrder.clienteNombre || 'Cliente',
+          firstName: detailOrder.usuario?.nombre || detailOrder.clienteNombre || 'Cliente',
           lastName: '',
-          documentType: 'CC',
-          documentNumber: `DOC-${detailOrder.clienteId}`,
-          email: 'cliente@example.com',
-          phone: '300123456',
-          address: 'Dirección del cliente'
+          documentType: detailOrder.usuario?.tipo_documento || 'CC',
+          documentNumber: detailOrder.usuario?.documento || `DOC-${detailOrder.clienteId || 'N/A'}`,
+          email: detailOrder.usuario?.correo || 'N/A',
+          phone: detailOrder.usuario?.telefono || 'N/A',
+          address: detailOrder.direccion_entrega || detailOrder.usuario?.direccion || 'No especificada'
         } : null}
         isOpen={!!detailOrder}
         onClose={() => setDetailOrder(null)}
@@ -279,21 +260,20 @@ export default function OrdersPage() {
       <EditOrderModal
         order={editOrder}
         customer={editOrder ? {
-          firstName: editOrder.clienteNombre || 'Cliente',
+          nombre: editOrder.usuario?.nombre || editOrder.clienteNombre || 'Cliente',
+          firstName: editOrder.usuario?.nombre || editOrder.clienteNombre || 'Cliente',
           lastName: '',
-          documentType: 'CC',
-          documentNumber: `DOC-${editOrder.clienteId}`,
-          email: 'cliente@example.com',
-          phone: '300123456',
-          address: 'Dirección del cliente'
+          documentType: editOrder.usuario?.tipo_documento || 'CC',
+          documentNumber: editOrder.usuario?.documento || `DOC-${editOrder.clienteId || 'N/A'}`,
+          email: editOrder.usuario?.correo || 'N/A',
+          phone: editOrder.usuario?.telefono || 'N/A',
+          address: editOrder.direccion_entrega || editOrder.usuario?.direccion || 'No especificada'
         } : null}
         isOpen={!!editOrder}
         estados={estados}
         onClose={() => setEditOrder(null)}
         onUpdateEstado={handleUpdateEstado}
       />
-      
-      <ToastContainer />
     </div>
   );
 }

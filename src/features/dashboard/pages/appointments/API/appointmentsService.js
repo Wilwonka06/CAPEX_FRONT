@@ -38,137 +38,7 @@ export const appointmentsService = {
     } catch (error) {
       console.error('Error fetching appointments:', error);
       
-      // Si es error 500, devolver datos de ejemplo para desarrollo
-      if (error.response?.status === 500) {
-        console.warn('Backend error 500 detected. Returning mock data for development.');
-        
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const dayAfter = new Date(today);
-        dayAfter.setDate(dayAfter.getDate() + 2);
-        
-        return {
-          success: true,
-          message: 'Datos de ejemplo (backend con error)',
-          data: {
-            citas: [
-              {
-                id_cita: 1,
-                id_cliente: 1,
-                fecha_servicio: today.toISOString().split('T')[0],
-                hora_entrada: '09:00:00',
-                hora_salida: '10:00:00',
-                estado: 'Agendada',
-                valor_total: 50000,
-                motivo: 'Corte de cabello',
-                usuario: {
-                  id_usuario: 1,
-                  nombre: 'María González',
-                  telefono: '3001234567',
-                  correo: 'maria@ejemplo.com'
-                },
-                servicios: [
-                  {
-                    id_detalle_servicio: 1,
-                    id_empleado: 2,
-                    id_servicio: 1,
-                    precio_unitario: 50000,
-                    cantidad: 1,
-                    hora_inicio: '09:00:00',
-                    hora_finalizacion: '10:00:00',
-                    estado: 'Agendada',
-                    empleado: {
-                      id_usuario: 2,
-                      nombre: 'Carlos Estilista'
-                    },
-                    servicio: {
-                      id_servicio: 1,
-                      nombre: 'Corte de Cabello',
-                      descripcion: 'Corte y peinado profesional'
-                    }
-                  }
-                ]
-              },
-              {
-                id_cita: 2,
-                id_cliente: 2,
-                fecha_servicio: tomorrow.toISOString().split('T')[0],
-                hora_entrada: '14:00:00',
-                hora_salida: '15:30:00',
-                estado: 'Confirmada',
-                valor_total: 80000,
-                motivo: 'Tratamiento capilar',
-                usuario: {
-                  id_usuario: 2,
-                  nombre: 'Ana Rodríguez',
-                  telefono: '3009876543',
-                  correo: 'ana@ejemplo.com'
-                },
-                servicios: [
-                  {
-                    id_detalle_servicio: 2,
-                    id_empleado: 3,
-                    id_servicio: 2,
-                    precio_unitario: 80000,
-                    cantidad: 1,
-                    hora_inicio: '14:00:00',
-                    hora_finalizacion: '15:30:00',
-                    estado: 'Confirmada',
-                    empleado: {
-                      id_usuario: 3,
-                      nombre: 'Laura Especialista'
-                    },
-                    servicio: {
-                      id_servicio: 2,
-                      nombre: 'Tratamiento Capilar',
-                      descripcion: 'Hidratación y nutrición profunda'
-                    }
-                  }
-                ]
-              },
-              {
-                id_cita: 3,
-                id_cliente: 3,
-                fecha_servicio: dayAfter.toISOString().split('T')[0],
-                hora_entrada: '11:00:00',
-                hora_salida: '12:00:00',
-                estado: 'Agendada',
-                valor_total: 60000,
-                motivo: 'Manicure y pedicure',
-                usuario: {
-                  id_usuario: 3,
-                  nombre: 'Sofia Martínez',
-                  telefono: '3005555555',
-                  correo: 'sofia@ejemplo.com'
-                },
-                servicios: [
-                  {
-                    id_detalle_servicio: 3,
-                    id_empleado: 4,
-                    id_servicio: 3,
-                    precio_unitario: 60000,
-                    cantidad: 1,
-                    hora_inicio: '11:00:00',
-                    hora_finalizacion: '12:00:00',
-                    estado: 'Agendada',
-                    empleado: {
-                      id_usuario: 4,
-                      nombre: 'Carmen Manicurista'
-                    },
-                    servicio: {
-                      id_servicio: 3,
-                      nombre: 'Manicure y Pedicure',
-                      descripcion: 'Cuidado completo de uñas'
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        };
-      }
-      
+      // No devolver datos mock, lanzar el error para que se maneje correctamente
       throw error;
     }
   },
@@ -204,13 +74,26 @@ export const appointmentsService = {
       console.log('Validating appointment data:', appointmentData);
 
       // Validaciones básicas
-      if (!appointmentData.cita || !appointmentData.cita.id_cliente) {
-        console.error('Validation failed: cita or id_cliente missing', {
+      // Permitir creación con id_cliente (usuario autenticado) o con cliente (usuario no autenticado)
+      const hasIdCliente = appointmentData.cita?.id_cliente;
+      const hasClienteData = appointmentData.cliente && 
+                            appointmentData.cliente.nombre && 
+                            appointmentData.cliente.correo && 
+                            appointmentData.cliente.telefono;
+      
+      if (!appointmentData.cita) {
+        console.error('Validation failed: cita missing', appointmentData);
+        throw new Error('Los datos de la cita son requeridos');
+      }
+      
+      if (!hasIdCliente && !hasClienteData) {
+        console.error('Validation failed: id_cliente or cliente data missing', {
           hasCita: !!appointmentData.cita,
           cita: appointmentData.cita,
-          id_cliente: appointmentData.cita?.id_cliente
+          id_cliente: appointmentData.cita?.id_cliente,
+          cliente: appointmentData.cliente
         });
-        throw new Error('El ID del cliente es requerido');
+        throw new Error('El ID del cliente o los datos del cliente son requeridos');
       }
       if (!appointmentData.cita.fecha_servicio) {
         throw new Error('La fecha del servicio es requerida');
@@ -233,8 +116,27 @@ export const appointmentsService = {
         throw new Error('Uno o más empleados no tienen ID válido');
       }
 
-      console.log('API Service: Sending appointment data to backend:', JSON.stringify(appointmentData, null, 2));
-      const response = await apiRequest.post(APPOINTMENTS_ENDPOINT, appointmentData);
+      // Estructurar datos según lo esperado por el backend
+      const cleanData = {
+        cita: {
+          id_cliente: appointmentData.cita.id_cliente,
+          fecha_servicio: appointmentData.cita.fecha_servicio,
+          hora_entrada: appointmentData.cita.hora_entrada, // Asegurar que hora_entrada esté presente
+          estado: appointmentData.cita.estado || 'Agendada',
+          ...(appointmentData.cita.motivo && { motivo: appointmentData.cita.motivo.trim() })
+        },
+        servicios: appointmentData.servicios.map(s => ({
+          id_servicio: s.id_servicio,
+          id_empleado: s.id_empleado,
+          hora_inicio: s.hora_inicio,
+          cantidad: s.cantidad || 1,
+          ...(s.observaciones && { observaciones: s.observaciones })
+        }))
+      };
+
+      console.log('API Service: Sending appointment data to backend:', JSON.stringify(cleanData, null, 2));
+      const response = await apiRequest.post(APPOINTMENTS_ENDPOINT, cleanData);
+
       return response;
     } catch (error) {
       console.error('Error creating appointment:', error);

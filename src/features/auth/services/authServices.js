@@ -27,29 +27,15 @@ export const authService = {
         throw new Error('Respuesta inválida del servidor');
       }
 
-      const { token, user } = response.data;
-
-      if (!token) {
-        throw new Error('Token no recibido del servidor');
-      }
-
-      // Guardar token en localStorage (aunque usamos cookies HttpOnly, mantenemos compatibilidad)
-      localStorage.setItem('authToken', token);
-      console.log('✅ Auth Service: Token stored successfully');
-
+      const { user } = response.data;
       return {
         success: true,
-        data: {
-          token,
-          user
-        }
+        data: { user }
       };
     } catch (error) {
       console.error('❌ Auth Service: Login error:', error);
 
-      // Limpiar token en caso de error
-      localStorage.removeItem('authToken');
-      sessionStorage.removeItem('authToken');
+      
 
       throw error;
     }
@@ -96,13 +82,8 @@ export const authService = {
    */
   async verifyToken(token) {
     try {
-      if (!token) {
-        throw new Error('Token es requerido');
-      }
-
-      console.log('🔍 Auth Service: Verifying token');
-
-      const response = await apiRequest.post('/auth/verify', { token });
+      const payload = token ? { token } : {};
+      const response = await apiRequest.post('/auth/verify', payload);
 
       console.log('✅ Auth Service: Token valid');
       return response;
@@ -127,11 +108,7 @@ export const authService = {
     } catch (error) {
       console.error('❌ Auth Service: Get current user error:', error);
 
-      // Si el token es inválido, limpiarlo
-      if (error.response?.status === 401) {
-        localStorage.removeItem('authToken');
-        sessionStorage.removeItem('authToken');
-      }
+      
 
       throw error;
     }
@@ -173,10 +150,7 @@ export const authService = {
       // Continuar con el logout incluso si falla la petición
       return { success: true };
     } finally {
-      // Siempre limpiar tokens locales
-      localStorage.removeItem('authToken');
-      sessionStorage.removeItem('authToken');
-      console.log('🧹 Auth Service: Local tokens cleared');
+      
     }
   },
 

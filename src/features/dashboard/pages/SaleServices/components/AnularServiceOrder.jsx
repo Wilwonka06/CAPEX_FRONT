@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { anularServiceOrder } from '../services/ServiceOrderService';
+import { useState } from 'react';
+import { anularServiceOrder } from '../API/ServiceOrderService';
 import Swal from 'sweetalert2';
+import { formatNumber } from '../../../../../shared/utils/formatters';
 
 const AnularServiceOrder = ({ isOpen, onClose, order, onAnularSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -37,7 +38,7 @@ const AnularServiceOrder = ({ isOpen, onClose, order, onAnularSuccess }) => {
   if (!isOpen || !order) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Anular Orden de Servicio</h2>
@@ -60,7 +61,7 @@ const AnularServiceOrder = ({ isOpen, onClose, order, onAnularSuccess }) => {
               <p><span className="font-medium">ID:</span> {order.id}</p>
               <p><span className="font-medium">Cliente:</span> {order.clientName}</p>
               <p><span className="font-medium">Estado:</span> {order.status}</p>
-              <p><span className="font-medium">Total:</span> ${order.totalGeneral?.toLocaleString() || 0}</p>
+              <p><span className="font-medium">Total:</span> ${formatNumber(order.totalGeneral || 0)}</p>
             </div>
           </div>
         </div>
@@ -93,4 +94,4 @@ const AnularServiceOrder = ({ isOpen, onClose, order, onAnularSuccess }) => {
   );
 };
 
-export default AnularServiceOrder; 
+export default AnularServiceOrder;

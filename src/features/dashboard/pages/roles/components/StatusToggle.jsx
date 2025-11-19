@@ -1,24 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import Swal from 'sweetalert2';
 
 const StatusToggle = ({ role, onStatusChange }) => {
   const handleToggle = async () => {
-    const newStatus = role.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    const roleName = role.name || role.nombre || '';
-    
-    const result = await Swal.fire({
-      title: '¿Confirmar cambio de estado?',
-      text: `¿Estás seguro de que deseas cambiar el estado del rol "${roleName}" a ${newStatus}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, cambiar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed && onStatusChange) {
+    if (onStatusChange) {
       await onStatusChange(role.id, role.estado);
     }
   };
@@ -27,14 +12,14 @@ const StatusToggle = ({ role, onStatusChange }) => {
     <div className="flex items-center gap-3">
       <button
         onClick={handleToggle}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-          role.estado === 'Activo' ? 'bg-gray-800' : 'bg-gray-300'
+        className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
+          role.estado === 'Activo' ? 'bg-text-main' : 'bg-gray-300'
         }`}
         title={`Cambiar a ${role.estado === 'Activo' ? 'Inactivo' : 'Activo'}`}
       >
         <span
           className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-            role.estado === 'Activo' ? 'translate-x-5' : 'translate-x-1'
+            role.estado === 'Activo' ? 'translate-x-6' : 'translate-x-1'
           }`}
         />
       </button>

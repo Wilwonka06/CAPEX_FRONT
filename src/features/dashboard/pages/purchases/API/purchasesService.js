@@ -179,15 +179,24 @@ export const purchasesService = {
 
       // Agregar datos de compras con todos los campos relevantes
       purchases.forEach(purchase => {
+        const id = purchase.id || purchase.id_compra || '';
+        const fechaRegistro = purchase.fechaRegistro || purchase.fecha_registro || '';
+        const fechaCompra = purchase.fechaCompra || purchase.fecha_compra || '';
+        const proveedorNombre = (purchase.proveedor && (purchase.proveedor.nombre || purchase.proveedor)) || '';
+        const proveedorNit = (purchase.proveedor && purchase.proveedor.nit) || purchase.nit || 'N/A';
+        const ivaMonto = (purchase.iva !== undefined && purchase.iva !== null) ? purchase.iva : (purchase.ivaGeneral || purchase.iva_general || 0);
+        const total = parseFloat(purchase.total || 0);
+        const estado = purchase.estado || 'Registrada';
+
         worksheetData.push([
-          purchase.id || '',
-          purchase.fechaRegistro || purchase.fecha_registro || '',
-          purchase.fechaCompra || purchase.fecha_compra || '',
-          purchase.proveedor || '',
-          purchase.nit || '',
-          purchase.ivaGeneral || purchase.iva_general || 0,
-          parseFloat(purchase.total || 0),
-          purchase.estado || ''
+          id,
+          fechaRegistro,
+          fechaCompra,
+          proveedorNombre,
+          proveedorNit,
+          ivaMonto,
+          total,
+          estado
         ]);
       });
 

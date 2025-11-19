@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import {
   getServices,
   createService,
@@ -14,9 +13,11 @@ import EditServices from "./components/EditServices";
 import SeeServices from './components/SeeServices';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
+import TableContentSkeleton from "../../../../shared/components/TableContentSkeleton";
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import PropTypes from "prop-types";
+import { formatNumber } from "../../../../shared/utils/formatters";
 
 const SERVICES_PER_PAGE = 5;
 
@@ -26,13 +27,12 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete, togg
     <table className="min-w-full">
       <thead>
         <tr className="bg-gray-50 hover:bg-gray-100">
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DURACIÓN</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PRECIO</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ESTADO</th>
-          <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Duración</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
+          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+          <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200">
@@ -41,13 +41,12 @@ const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete, togg
           const isToggling = togglingId === service.id;
           return (
             <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-4 px-4 text-xs font-medium text-gray-900">{service.id}</td>
               <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.nombre}</td>
               <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">
                 {service.categoria?.nombre || service.categoria || 'Sin categoría'}
               </td>
               <td className="py-4 px-4 text-xs text-gray-600">{service.duracion} min</td>
-              <td className="py-4 px-4 text-xs text-gray-600">${service.precio?.toLocaleString()}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">${formatNumber(service.precio || 0)}</td>
               <td className="py-4 px-4 text-xs">
                 <div className="flex items-center gap-3">
                   <button
@@ -198,42 +197,67 @@ const Services = () => {
 
   // CRUD handlers
   const handleAddService = async (newServiceData) => {
-    try {
+    const servicePromise = (async () => {
       await createService(newServiceData);
       // SOLUCIÓN: Recargar todos los datos después de crear
       await loadData();
       setShowAddModal(false);
-      toast.success("Servicio agregado exitosamente");
+      return true;
+    })();
+
+    toast.promise(
+      servicePromise,
+      {
+        loading: 'Agregando servicio...',
+        success: 'Servicio agregado exitosamente',
+        error: (err) => {
+          console.error("Error agregando servicio:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al agregar servicio";
+        },
+      },
+      {
+        id: 'create-service',
+      }
+    );
+
+    try {
+      await servicePromise;
     } catch (error) {
-      console.error("Error agregando servicio:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al agregar servicio");
+      // Error ya manejado por toast.promise
     }
   };
 
   const handleEditService = async (editedServiceData) => {
-    const result = await Swal.fire({
-      title: "¿Confirmar edición?",
-      text: `¿Editar el servicio "${editedServiceData.nombre}"?`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Sí, editar",
-      cancelButtonText: "Cancelar",
-    });
-    
-    if (result.isConfirmed) {
-      try {
-        await updateService(editedServiceData.id, editedServiceData);
-        // SOLUCIÓN: Recargar todos los datos después de editar
-        await loadData();
-        setShowEditModal(false);
-        setSelectedService(null);
-        toast.success("Servicio actualizado exitosamente");
-      } catch (error) {
-        console.error("Error actualizando servicio:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al actualizar servicio");
+    const servicePromise = (async () => {
+      await updateService(editedServiceData.id, editedServiceData);
+      // SOLUCIÓN: Recargar todos los datos después de editar
+      await loadData();
+      setShowEditModal(false);
+      setSelectedService(null);
+      return true;
+    })();
+
+    toast.promise(
+      servicePromise,
+      {
+        loading: 'Actualizando servicio...',
+        success: 'Servicio actualizado exitosamente',
+        error: (err) => {
+          console.error("Error actualizando servicio:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al actualizar servicio";
+        },
+      },
+      {
+        id: `update-service-${editedServiceData.id}`,
       }
+    );
+
+    try {
+      await servicePromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -248,14 +272,32 @@ const Services = () => {
     });
     
     if (result.isConfirmed) {
-      try {
+      const servicePromise = (async () => {
         await deleteService(service.id);
         setServices(prev => prev.filter(s => s.id !== service.id));
-        toast.success("Servicio eliminado exitosamente");
+        return true;
+      })();
+
+      toast.promise(
+        servicePromise,
+        {
+          loading: 'Eliminando servicio...',
+          success: 'Servicio eliminado exitosamente',
+          error: (err) => {
+            console.error("Error eliminando servicio:", err);
+            const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+            return backendMsg || "Error al eliminar servicio";
+          },
+        },
+        {
+          id: `delete-service-${service.id}`,
+        }
+      );
+
+      try {
+        await servicePromise;
       } catch (error) {
-        console.error("Error eliminando servicio:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al eliminar servicio");
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -295,17 +337,6 @@ const Services = () => {
     setSelectedService(null);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando servicios...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
@@ -339,12 +370,14 @@ const Services = () => {
                 onClick={() => setShowAddModal(true)}
               >
                 <i className="bi bi-plus-circle mr-2"></i>
-                Nuevo Servicio
+                Crear Servicio
               </button>
             </div>
 
-            {/* Tabla de servicios */}
-            {services.length === 0 ? (
+            {/* Tabla de servicios o skeleton */}
+            {loading ? (
+              <TableContentSkeleton columns={7} rows={5} showActions={true} />
+            ) : services.length === 0 ? (
               <p className="text-gray-600 text-center py-8">No hay servicios registrados.</p>
             ) : (
               <>
@@ -403,8 +436,6 @@ const Services = () => {
           service={selectedService}
         />
       )}
-
-      <ToastContainer position="top-right" />
     </div>
   );
 };

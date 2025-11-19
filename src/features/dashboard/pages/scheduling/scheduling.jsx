@@ -1,16 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import GeneralCalendar from './components/GeneralCalendar';
+import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
 import { useOutletContext } from 'react-router-dom';
-import {
-  getAllSchedulings,
-  createScheduling,
-  updateScheduling,
-  deleteScheduling,
-  searchSchedulings,
-} from './services/schedulingApi';
-import { getEmployees } from '../employees/api/employeesApi';
+import { schedulingService } from './API/schedulingService';
+import { employeesService } from '../employees/API/employeesService';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -24,6 +18,7 @@ const Scheduling = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // LOG TEMPORAL PARA DEBUG
   useEffect(() => {
@@ -40,11 +35,11 @@ const Scheduling = () => {
     setError("");
     try {
       console.log("[DEBUG] Intentando cargar empleados...");
-      const employeesData = await getEmployees();
+      const employeesData = await employeesService.getAll();
       console.log("[DEBUG] Empleados cargados:", employeesData);
 
       console.log("[DEBUG] Intentando cargar programaciones...");
-      const schedulingsData = await getAllSchedulings();
+      const schedulingsData = await schedulingService.getAll();
       console.log("[DEBUG] Programaciones cargadas:", schedulingsData);
 
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
@@ -66,7 +61,7 @@ const Scheduling = () => {
   }, []);
 
   useEffect(() => {
-    setTitle('Agendamiento de Servicios');
+    setTitle('Programación de Empleados');
     return () => setTitle('');
   }, [setTitle]);
 
@@ -133,29 +128,29 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
   // Handler para agregar programación
   const handleAddEvent = async (prog) => {
-    try {
+    // Validar que los datos requeridos estén presentes
+    if (!prog.empleadoId || !prog.fechaInicio || !prog.horaInicio || !prog.horaFin) {
+      toast.error("Faltan datos obligatorios para crear la programación");
+      console.error("[DEBUG] Missing required fields:", {
+        empleadoId: prog.empleadoId,
+        fechaInicio: prog.fechaInicio,
+        horaInicio: prog.horaInicio,
+        horaFin: prog.horaFin
+      });
+      return;
+    }
+
+    // Calcular las fechas específicas basadas en días seleccionados
+    const fechasEspecificas = calculateSpecificDates(prog.fechaInicio, prog.fechaFin, prog.dias);
+    console.log("[DEBUG] Calculated specific dates:", fechasEspecificas.map(d => d.toISOString().split('T')[0]));
+
+    if (fechasEspecificas.length === 0) {
+      toast.error("No se encontraron fechas válidas para los días seleccionados");
+      return;
+    }
+
+    const schedulingPromise = (async () => {
       console.log("[DEBUG] handleAddEvent received prog:", JSON.stringify(prog, null, 2));
-
-      // Validar que los datos requeridos estén presentes
-      if (!prog.empleadoId || !prog.fechaInicio || !prog.horaInicio || !prog.horaFin) {
-        toast.error("Faltan datos obligatorios para crear la programación");
-        console.error("[DEBUG] Missing required fields:", {
-          empleadoId: prog.empleadoId,
-          fechaInicio: prog.fechaInicio,
-          horaInicio: prog.horaInicio,
-          horaFin: prog.horaFin
-        });
-        return;
-      }
-
-      // Calcular las fechas específicas basadas en días seleccionados
-      const fechasEspecificas = calculateSpecificDates(prog.fechaInicio, prog.fechaFin, prog.dias);
-      console.log("[DEBUG] Calculated specific dates:", fechasEspecificas.map(d => d.toISOString().split('T')[0]));
-
-      if (fechasEspecificas.length === 0) {
-        toast.error("No se encontraron fechas válidas para los días seleccionados");
-        return;
-      }
 
       const createdSchedulings = [];
 
@@ -173,7 +168,7 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
         console.log("[DEBUG] API data to send for date", fechaStr, ":", JSON.stringify(apiData, null, 2));
 
-        const createdScheduling = await createScheduling(apiData);
+        const createdScheduling = await schedulingService.create(apiData);
         console.log("[DEBUG] Created scheduling response:", JSON.stringify(createdScheduling, null, 2));
 
         createdSchedulings.push(createdScheduling);
@@ -181,22 +176,34 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
       // Agregar todas las programaciones creadas al estado
       setSchedulings(prev => [...prev, ...createdSchedulings]);
-      toast.success(`${createdSchedulings.length} programación(es) creada(s) exitosamente`);
+      return createdSchedulings;
+    })();
+
+    toast.promise(schedulingPromise, {
+      loading: 'Creando programación(es)...',
+      success: (schedulings) => `${schedulings.length} programación(es) creada(s) exitosamente`,
+      error: (err) => {
+        console.error("Error creando programación:", err);
+        console.error("Error details:", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          message: err?.message
+        });
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+        return backendMsg || "Error al crear programación";
+      },
+    });
+
+    try {
+      await schedulingPromise;
     } catch (error) {
-      console.error("Error creando programación:", error);
-      console.error("Error details:", {
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message
-      });
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al crear programación");
+      // Error ya manejado por toast.promise
     }
   };
 
   // Handler para actualizar programación
   const handleUpdateEvent = async (prog) => {
-    try {
+    const schedulingPromise = (async () => {
       console.log("[DEBUG] Actualizando programación:", prog);
 
       // Convertir el formato del frontend al formato de la API (solo los 4 campos del modelo)
@@ -209,15 +216,27 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
 
       console.log("[DEBUG] API data to send:", JSON.stringify(apiData, null, 2));
 
-      const updatedScheduling = await updateScheduling(prog.id, apiData);
+      const updatedScheduling = await schedulingService.update(prog.id, apiData);
       setSchedulings(prev => prev.map(s =>
         s.id === updatedScheduling.id ? updatedScheduling : s
       ));
-      toast.success('Programación actualizada exitosamente');
+      return updatedScheduling;
+    })();
+
+    toast.promise(schedulingPromise, {
+      loading: 'Actualizando programación...',
+      success: 'Programación actualizada exitosamente',
+      error: (err) => {
+        console.error("Error actualizando programación:", err);
+        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+        return backendMsg || "Error al actualizar programación";
+      },
+    });
+
+    try {
+      await schedulingPromise;
     } catch (error) {
-      console.error("Error actualizando programación:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al actualizar programación");
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -226,17 +245,6 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
     console.log("[DEBUG] Eliminando programación del estado:", schedulingId);
     setSchedulings(prev => prev.filter(s => s.id !== schedulingId));
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando programaciones...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -255,43 +263,40 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-end mb-8">
-            <div className="relative w-full max-w-xs pr-4">
-              <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
-              <input
-                type="text"
-                placeholder="Buscar programación..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="border border-gray-300 pl-10 pr-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 w-full"
-              />
-            </div>
-          </div>
-          <div className="w-full">
-            {console.log("[DEBUG] Passing to GeneralCalendar:")}
-            {console.log("  - filteredEmployees:", filteredEmployees)}
-            {console.log("  - schedulings:", schedulings)}
-            <GeneralCalendar
-              employees={filteredEmployees}
-              schedulings={schedulings}
-              onAddEvent={handleAddEvent}
-              onUpdateEvent={handleUpdateEvent}
-              onDeleteEvent={handleDeleteEvent}
+    <div className="min-h-screen bg-background p-6 font-inter">
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1 max-w-md">
+            <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-text-main/50"></i>
+            <input
+              type="text"
+              placeholder="Buscar empleado por nombre o documento..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="border border-gray-300 pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 w-full shadow-sm"
             />
           </div>
         </div>
+        
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 overflow-x-auto">
+          {loading ? (
+            <CalendarContentSkeleton />
+          ) : (
+            <>
+              {console.log("[DEBUG] Passing to GeneralCalendar:")}
+              {console.log("  - filteredEmployees:", filteredEmployees)}
+              {console.log("  - schedulings:", schedulings)}
+              <GeneralCalendar
+                employees={filteredEmployees}
+                schedulings={schedulings}
+                onAddEvent={handleAddEvent}
+                onUpdateEvent={handleUpdateEvent}
+                onDeleteEvent={handleDeleteEvent}
+              />
+            </>
+          )}
+        </div>
       </div>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        closeOnClick
-        draggable
-        pauseOnHover
-        style={{ zIndex: 9999 }}
-      />
     </div>
   );
 }

@@ -7,8 +7,7 @@ import UserDetailModal from './components/UserDetailModal';
 import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import usersService from './API/usersService';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -90,48 +89,71 @@ const Users = () => {
 
   // Acciones CRUD
   const handleCreateUser = async (newUser) => {
-    try {
+    const userPromise = (async () => {
       const response = await usersService.create(newUser);
       if (response.success) {
-        toast.success('Usuario creado exitosamente', { position: 'top-right' });
         await loadUsers(); // Recargar lista
         setShowCreateModal(false);
+        return response.data;
       } else {
         throw new Error(response.message || 'Error al crear el usuario');
       }
+    })();
+
+    toast.promise(
+      userPromise,
+      {
+        loading: 'Creando usuario...',
+        success: 'Usuario creado exitosamente',
+        error: (err) => {
+          console.error('Error creating user:', err);
+          return err.response?.data?.message || err.message || 'Error al crear el usuario';
+        },
+      },
+      {
+        id: 'create-user',
+      }
+    );
+
+    try {
+      await userPromise;
     } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error(error.message || 'Error al crear el usuario', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     }
   };
 
   const handleEditUser = async (updatedUser) => {
-    const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar al usuario "${updatedUser.nombre || updatedUser.name}"?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
-        if (response.success) {
-          setShowEditModal(false);
-          setSelectedUser(null);
-          toast.success('Usuario actualizado exitosamente', { position: 'top-right' });
-          await loadUsers(); // Recargar lista
-        } else {
-          throw new Error(response.message || 'Error al actualizar el usuario');
-        }
-      } catch (error) {
-        console.error('Error updating user:', error);
-        toast.error(error.message || 'Error al actualizar el usuario', { position: 'top-right' });
+    const userPromise = (async () => {
+      const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
+      if (response.success) {
+        setShowEditModal(false);
+        setSelectedUser(null);
+        await loadUsers(); // Recargar lista
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Error al actualizar el usuario');
       }
+    })();
+
+    toast.promise(
+      userPromise,
+      {
+        loading: 'Actualizando usuario...',
+        success: 'Usuario actualizado exitosamente',
+        error: (err) => {
+          console.error('Error updating user:', err);
+          return err.response?.data?.message || err.message || 'Error al actualizar el usuario';
+        },
+      },
+      {
+        id: `update-user-${updatedUser.id_usuario || updatedUser.id}`,
+      }
+    );
+
+    try {
+      await userPromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -150,17 +172,35 @@ const Users = () => {
       });
 
       if (result.isConfirmed) {
-        try {
+        const userPromise = (async () => {
           const response = await usersService.delete(userId);
           if (response.success) {
-            toast.success('Usuario eliminado exitosamente', { position: 'top-right' });
             await loadUsers(); // Recargar lista
+            return response.data;
           } else {
             throw new Error(response.message || 'Error al eliminar el usuario');
           }
+        })();
+
+        toast.promise(
+          userPromise,
+          {
+            loading: 'Eliminando usuario...',
+            success: 'Usuario eliminado exitosamente',
+            error: (err) => {
+              console.error('Error deleting user:', err);
+              return err.response?.data?.message || err.message || 'Error al eliminar el usuario';
+            },
+          },
+          {
+            id: `delete-user-${userId}`,
+          }
+        );
+
+        try {
+          await userPromise;
         } catch (error) {
-          console.error('Error deleting user:', error);
-          toast.error(error.message || 'Error al eliminar el usuario', { position: 'top-right' });
+          // Error ya manejado por toast.promise
         }
       }
     }
@@ -181,17 +221,29 @@ const Users = () => {
       });
 
       if (result.isConfirmed) {
-        try {
+        const userPromise = (async () => {
           const response = await usersService.changeStatus(userId, newStatus, conceptoEstado);
           if (response.success) {
-            toast.success(`Estado cambiado a ${newStatus}`, { position: 'top-right' });
             await loadUsers(); // Recargar lista
+            return response.data;
           } else {
             throw new Error(response.message || 'Error al cambiar el estado');
           }
+        })();
+
+        toast.promise(userPromise, {
+          loading: 'Cambiando estado...',
+          success: `Estado cambiado a ${newStatus}`,
+          error: (err) => {
+            console.error('Error changing user status:', err);
+            return err.response?.data?.message || err.message || 'Error al cambiar el estado';
+          },
+        });
+
+        try {
+          await userPromise;
         } catch (error) {
-          console.error('Error changing user status:', error);
-          toast.error(error.message || 'Error al cambiar el estado', { position: 'top-right' });
+          // Error ya manejado por toast.promise
         }
       }
     }
@@ -308,7 +360,6 @@ const Users = () => {
           user={selectedUser}
         />
       )}
-      <ToastContainer />
     </div>
   );
 };

@@ -7,8 +7,7 @@ import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
 import LoadingTable from "../../../../shared/components/LoadingTable";
 import suppliersService from "./API/suppliersService";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -39,9 +38,7 @@ const SuppliersPage = () => {
       const data = await suppliersService.getAll();
       setSuppliers(data);
     } catch (error) {
-      toast.error(error.message || 'Error al cargar los proveedores', { 
-        position: 'top-right' 
-      });
+      toast.error(error.message || 'Error al cargar los proveedores');
     } finally {
       setLoading(false);
     }
@@ -89,7 +86,7 @@ const SuppliersPage = () => {
 
   // Crear proveedor
   const handleCreateSupplier = async (newSupplier) => {
-    try {
+    const supplierPromise = (async () => {
       // Limpiar el teléfono para que solo tenga + y números
       const cleanedSupplier = {
         ...newSupplier,
@@ -97,17 +94,25 @@ const SuppliersPage = () => {
       };
       const createdSupplier = await suppliersService.create(cleanedSupplier);
       setSuppliers(prev => [...prev, createdSupplier]);
-      toast.success('Proveedor creado exitosamente', { position: 'top-right' });
+      return createdSupplier;
+    })();
+
+    toast.promise(supplierPromise, {
+      loading: 'Creando proveedor...',
+      success: 'Proveedor creado exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al crear el proveedor',
+    });
+
+    try {
+      await supplierPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al crear el proveedor', { 
-        position: 'top-right' 
-      });
+      // Error ya manejado por toast.promise
     }
   };
 
   // Editar proveedor
   const handleEditSupplier = async (updatedSupplier) => {
-    try {
+    const supplierPromise = (async () => {
       const updated = await suppliersService.update(updatedSupplier.id, updatedSupplier);
       setSuppliers(prev => 
         prev.map(s => s.id === updated.id ? updated : s)
@@ -115,11 +120,19 @@ const SuppliersPage = () => {
       // Cerrar el modal y limpiar el estado
       setShowEditModal(false);
       setSelectedSupplier(null);
-      toast.success('Proveedor actualizado exitosamente', { position: 'top-right' });
+      return updated;
+    })();
+
+    toast.promise(supplierPromise, {
+      loading: 'Actualizando proveedor...',
+      success: 'Proveedor actualizado exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al actualizar el proveedor',
+    });
+
+    try {
+      await supplierPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al actualizar el proveedor', { 
-        position: 'top-right' 
-      });
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -138,14 +151,22 @@ const SuppliersPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
+      const supplierPromise = (async () => {
         await suppliersService.delete(supplierId);
         setSuppliers(prev => prev.filter(s => s.id !== supplierId));
-        toast.success('Proveedor eliminado exitosamente', { position: 'top-right' });
+        return true;
+      })();
+
+      toast.promise(supplierPromise, {
+        loading: 'Eliminando proveedor...',
+        success: 'Proveedor eliminado exitosamente',
+        error: (err) => err.response?.data?.message || err.message || 'Error al eliminar el proveedor',
+      });
+
+      try {
+        await supplierPromise;
       } catch (error) {
-        toast.error(error.message || 'Error al eliminar el proveedor', { 
-          position: 'top-right' 
-        });
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -167,19 +188,25 @@ const SuppliersPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
+      const supplierPromise = (async () => {
         const updated = await suppliersService.toggleStatus(supplierId, newStatus);
         setSuppliers(prev => 
           prev.map(s => s.id === updated.id ? updated : s)
         );
         setSelectedSupplier(null);
-        toast.success(`Estado cambiado a ${newStatus ? 'Activo' : 'Inactivo'}`, { 
-          position: 'top-right' 
-        });
+        return updated;
+      })();
+
+      toast.promise(supplierPromise, {
+        loading: 'Cambiando estado...',
+        success: `Estado cambiado a ${newStatus ? 'Activo' : 'Inactivo'}`,
+        error: (err) => err.response?.data?.message || err.message || 'Error al cambiar el estado',
+      });
+
+      try {
+        await supplierPromise;
       } catch (error) {
-        toast.error(error.message || 'Error al cambiar el estado', { 
-          position: 'top-right' 
-        });
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -211,9 +238,7 @@ const SuppliersPage = () => {
             </div>
             
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              {isInitialLoading ? (
-                <LoadingTable message="Cargando proveedores..." />
-              ) : filteredSuppliers.length === 0 ? (
+              {filteredSuppliers.length === 0 && !isInitialLoading ? (
                 <div className="text-center py-12">
                   <i className="bi bi-inbox text-6xl text-gray-300"></i>
                   <p className="mt-4 text-gray-500">
@@ -235,6 +260,7 @@ const SuppliersPage = () => {
                     setShowDetailModal(true);
                   }}
                   onStatusChange={handleStatusChange}
+                  loading={isInitialLoading}
                 />
               )}
             </div>
@@ -265,8 +291,6 @@ const SuppliersPage = () => {
           onClose={closeModals}
         />
       )}
-
-      <ToastContainer />
     </div>
   );
 };

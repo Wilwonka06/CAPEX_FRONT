@@ -8,8 +8,6 @@ import { formatNumber } from '../../../../shared/utils/formatters';
 import productsService from '../products/API/productsService';
 import purchasesService from './API/purchasesService';
 import suppliersService from '../suppliers/API/suppliersService';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -178,22 +176,19 @@ export default function Shopping() {
                 className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
                 onClick={() => setIsCreateOpen(true)}
               >
-                <i className="bi bi-plus-circle mr-2"></i> Registrar compra
+                <i className="bi bi-plus-circle mr-2"></i> Crear compra
               </button>
               <button
-                className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                className="bg-yellow-500 hover:bg-yellow-700 text-sm px-4 py-2 rounded-lg shadow-md flex items-center"
                 onClick={handleDownloadReport}
               >
                 <i className="bi bi-file-earmark-excel mr-2"></i>
-                Generar Reporte
               </button>
             </div>
 
             {/* Tabla de compras con loading integrado */}
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              {loading ? (
-                <LoadingTable message="Cargando compras..." />
-              ) : error ? (
+              {error && !loading ? (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
@@ -219,6 +214,7 @@ export default function Shopping() {
                   currentPage={pagination.currentPage}
                   totalPages={pagination.totalPages}
                   onPageChange={handlePageChange}
+                  loading={loading}
                 />
               )}
             </div>
@@ -238,7 +234,6 @@ export default function Shopping() {
         isOpen={!!detailCompra} 
         onClose={() => setDetailCompra(null)} 
       />
-      <ToastContainer />
     </div>
   );
 }

@@ -3,19 +3,12 @@ import CreateCustomer from "./components/CreateCustomer.jsx";
 import EditCustomer from "./components/EditCustomer.jsx";
 import ViewCustomer from "./components/ViewCustomer.jsx";
 import DeleteCustomer from "./components/DeleteCustomer.jsx";
-import { createCustomer } from "./services/CreateCustomerService.js";
-import { editCustomer } from "./services/EditCustomerService.js";
-import { deleteCustomer } from "./services/DeleteCustomerService.js";
-import { toggleCustomerStatus } from "./services/ToggleCustomerStatusService.js";
-import { getCustomers } from "./services/CustomerService.js";
-import SearchCustomer from "./components/SearchCustomer.jsx";
+import customersService from "./API/customersService.js";
 import Paginator from "../../../../shared/Paginator.jsx";
-import { normalizeText } from '../../../../shared/normalizers.js';
-import Swal from 'sweetalert2';
-import { useOutletContext } from 'react-router-dom';
+import Swal from "sweetalert2";
+import { useOutletContext } from "react-router-dom";
 import CustomerTable from "./components/CustomerTable.jsx";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from "react-hot-toast";
 
 // Datos iniciales vacíos - se cargarán desde el backend
 const initialCustomers = [];
@@ -37,20 +30,20 @@ const CustomersPage = () => {
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
 
   useEffect(() => {
-    setTitle('Gestión de Clientes');
-    return () => setTitle('');
+    setTitle("Gestión de Clientes");
+    return () => setTitle("");
   }, [setTitle]);
 
   // Función para cargar clientes desde el backend
-  const loadCustomers = async (page = 1, search = '') => {
+  const loadCustomers = async (page = 1, search = "") => {
     setIsLoadingCustomers(true);
     try {
-      const response = await getCustomers(page, itemsPerPage, search);
-      setCustomers(response.data || response.customers || []);
-      setTotalCustomers(response.total || response.count || 0);
+      const response = await customersService.getAll({ page, limit: itemsPerPage, search });
+      setCustomers(response.data || []);
+      setTotalCustomers(response.total || response.pagination?.total || 0);
     } catch (error) {
-      console.error('Error al cargar clientes:', error);
-      showMessage('Error al cargar los clientes', 'error');
+      console.error("Error al cargar clientes:", error);
+      showMessage("Error al cargar los clientes", "error");
       setCustomers([]);
       setTotalCustomers(0);
     } finally {
@@ -64,20 +57,19 @@ const CustomersPage = () => {
   }, [currentPage, searchTerm]);
 
   // Función para mostrar mensajes de feedback
-  const showMessage = (text, type = 'success') => {
-    if (type === 'success') {
-      toast.success(text, { position: 'top-right' });
+  const showMessage = (text, type = "success") => {
+    if (type === "success") {
+      toast.success(text);
     } else {
-      toast.error(text, { position: 'top-right' });
+      toast.error(text);
     }
   };
 
-  // Los clientes ya vienen filtrados del backend, no necesitamos filtrar localmente
-  const filteredCustomers = customers;
-  
+  // Los clientes ya vienen filtrados del backend
+
   // Cálculo de paginación basado en el total del backend
   const totalPages = Math.max(1, Math.ceil(totalCustomers / itemsPerPage));
-  
+
   // Los clientes ya vienen paginados del backend
   const paginatedCustomers = customers;
 
@@ -94,8 +86,8 @@ const CustomersPage = () => {
 
   // handleEditClick ahora abre el modal directamente
   const handleEditClick = (customer) => {
-        setSelectedCustomer(customer);
-        setIsEditModalOpen(true);
+    setSelectedCustomer(customer);
+    setIsEditModalOpen(true);
   };
 
   const handleViewClick = (customer) => {
@@ -106,12 +98,12 @@ const CustomersPage = () => {
   // handleDeleteClick ahora solo usa SweetAlert2
   const handleDeleteClick = (customer) => {
     Swal.fire({
-      title: '¿Eliminar cliente?',
-      text: 'Esta acción eliminará el cliente permanentemente.',
-      icon: 'warning',
+      title: "¿Eliminar cliente?",
+      text: "Esta acción eliminará el cliente permanentemente.",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
     }).then((result) => {
       if (result.isConfirmed) {
         // Ejecutar eliminación directamente
@@ -122,26 +114,32 @@ const CustomersPage = () => {
 
   const handleDeleteCustomer = async (customerId) => {
     try {
-      await deleteCustomer(customerId);
+      await customersService.delete(customerId);
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
       setIsDeleteModalOpen(false);
       setSelectedCustomer(null);
-      showMessage('Cliente eliminado exitosamente', 'success');
+      showMessage("Cliente eliminado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al eliminar el cliente', 'error');
+      showMessage(error.message || "Error al eliminar el cliente", "error");
     }
   };
 
   // handleToggleStatus ahora usa el servicio real
   const handleToggleStatus = async (customerId) => {
     try {
-      await toggleCustomerStatus(customerId);
+      // Por defecto, alternar entre 'Activo' e 'Inactivo'
+      const current = customers.find(c => c.id === customerId)?.status || 'Activo';
+      const next = current === 'Activo' ? 'Inactivo' : 'Activo';
+      await customersService.changeStatus(customerId, next);
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
-      showMessage('Estado del cliente actualizado exitosamente', 'success');
+      showMessage("Estado del cliente actualizado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al cambiar el estado del cliente', 'error');
+      showMessage(
+        error.message || "Error al cambiar el estado del cliente",
+        "error"
+      );
     }
   };
 
@@ -149,13 +147,13 @@ const CustomersPage = () => {
   const handleCreateCustomer = async (formData) => {
     setLoading(true);
     try {
-      await createCustomer(formData, customers);
+      await customersService.create(formData);
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
       setIsCreateModalOpen(false);
-      showMessage('Cliente creado exitosamente', 'success');
+      showMessage("Cliente creado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al crear el cliente', 'error');
+      showMessage(error.message || "Error al crear el cliente", "error");
     } finally {
       setLoading(false);
     }
@@ -164,28 +162,24 @@ const CustomersPage = () => {
   // Editar cliente usando servicio, con confirmación al guardar
   const handleEditCustomer = async (formData) => {
     const result = await Swal.fire({
-      title: '¿Guardar cambios?',
-      text: '¿Deseas guardar los cambios realizados a este cliente?',
-      icon: 'question',
+      title: "¿Guardar cambios?",
+      text: "¿Deseas guardar los cambios realizados a este cliente?",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Sí, guardar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonText: "Sí, guardar",
+      cancelButtonText: "Cancelar",
     });
     if (!result.isConfirmed) return;
     setLoading(true);
     try {
-      await editCustomer({
-        id: selectedCustomer.id,
-        ...formData,
-        status: selectedCustomer.status
-      }, customers);
+      await customersService.update(selectedCustomer.id, { ...formData, status: selectedCustomer.status });
       // Recargar la lista de clientes
       await loadCustomers(currentPage, searchTerm);
       setIsEditModalOpen(false);
       setSelectedCustomer(null);
-      showMessage('Cliente actualizado exitosamente', 'success');
+      showMessage("Cliente actualizado exitosamente", "success");
     } catch (error) {
-      showMessage(error.message || 'Error al actualizar el cliente', 'error');
+      showMessage(error.message || "Error al actualizar el cliente", "error");
     } finally {
       setLoading(false);
     }
@@ -197,88 +191,83 @@ const CustomersPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-6 font-inter">
-      <ToastContainer />
-      {/* Mensaje de feedback */}
-
-      {/* Modal CreateCustomer overlay */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <CreateCustomer
-            isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
-            onCreate={handleCreateCustomer}
-            loading={loading}
-            setLoading={setLoading}
-            customers={customers}
-          />
-        </div>
-      )}
-
-      {/* Modal EditCustomer overlay */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <EditCustomer
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
-            customer={selectedCustomer}
-            onUpdate={handleEditCustomer}
-            loading={loading}
-            setLoading={setLoading}
-            customers={customers}
-          />
-        </div>
-      )}
-
+    <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchCustomer searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar cliente..." />
+              <div className="relative w-full max-w-xs flex-1">
+                <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                <input
+                  type="text"
+                  placeholder="Buscar cliente..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-gray-50 hover:bg-white transition-all duration-300 text-gray-700 placeholder-gray-400"
+                />
+              </div>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center text-xs"
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
               >
-                <i className="bi bi-plus-circle mr-2"></i>
-                Nuevo Cliente
+                <i className="bi bi-plus-circle mr-2"></i> Crear Cliente
               </button>
             </div>
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              {isLoadingCustomers ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">Cargando clientes...</span>
-                </div>
-              ) : (
-                <CustomerTable
-                  customers={paginatedCustomers}
-                  onView={handleViewClick}
-                  onEdit={handleEditClick}
-                  onDelete={handleDeleteClick}
-                  onToggleStatus={handleToggleStatus}
-                />
-              )}
+              <CustomerTable
+                customers={paginatedCustomers}
+                onView={handleViewClick}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+                onToggleStatus={handleToggleStatus}
+                loading={isLoadingCustomers}
+              />
             </div>
 
             {/* Paginación */}
             {totalPages > 1 && (
-            <div className="mt-6">
-              <Paginator
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
+              <div className="mt-6">
+                <Paginator
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
             )}
-
-            {/* Mostrar información de paginación */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-text-main">
-                Mostrando <span className="font-medium">{customers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> a <span className="font-medium">{(currentPage - 1) * itemsPerPage + customers.length}</span> de <span className="font-medium">{totalCustomers}</span> cliente{totalCustomers !== 1 ? 's' : ''}
-              </p>
-            </div>
           </div>
         </div>
+
+        {/* Modal CreateCustomer overlay */}
+        {isCreateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <CreateCustomer
+              isOpen={isCreateModalOpen}
+              onClose={() => setIsCreateModalOpen(false)}
+              onSuccess={() => {
+                loadCustomers(currentPage, searchTerm);
+                showMessage("Cliente creado exitosamente", "success");
+              }}
+              customers={customers}
+            />
+          </div>
+        )}
+
+        {/* Modal EditCustomer overlay */}
+        {isEditModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <EditCustomer
+              isOpen={isEditModalOpen}
+              onClose={() => setIsEditModalOpen(false)}
+              customer={selectedCustomer}
+              onSuccess={() => {
+                loadCustomers(currentPage, searchTerm);
+                setSelectedCustomer(null);
+                showMessage("Cliente actualizado exitosamente", "success");
+              }}
+              customers={customers}
+            />
+          </div>
+        )}
 
         <ViewCustomer
           isOpen={isViewModalOpen}

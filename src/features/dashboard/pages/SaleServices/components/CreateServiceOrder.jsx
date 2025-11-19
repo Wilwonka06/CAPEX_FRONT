@@ -3,13 +3,22 @@ import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder } from "../../../../../shared/validations";
+import usersService from "../../users/API/usersService";
+import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
 
 const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) => {
   const [formData, setFormData] = useState({
-    clientName: "",
+    id_cliente: null,
     dineroProporcionado: "",
     status: "En ejecucion"
   });
+
+  const [clienteDoc, setClienteDoc] = useState("");
+  const [clienteEncontrado, setClienteEncontrado] = useState(false);
+  const [cliente, setCliente] = useState({ id: null, documentType: "", documentNumber: "", nombre: "", email: "", phone: "" });
+  const [clienteNuevo, setClienteNuevo] = useState({ nombre: "", correo: "", telefono: "", documento: "" });
+  const [numero, setNumero] = useState("");
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
 
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -38,17 +47,23 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   }, [selectedServices.length, selectedProducts.length, totalGeneral, services]);
 
   // Helpers para errores separados - solo servicios son obligatorios
-  const showServiceError = (showErrors || touched.clientName || touched.dineroProporcionado) && (!selectedServices || selectedServices.length === 0);
+  const showServiceError = (showErrors || touched.dineroProporcionado) && (!selectedServices || selectedServices.length === 0);
   // Los productos son opcionales, no se muestran errores
 
   // Reset form cuando se cierra el modal
   useEffect(() => {
     if (!isOpen) {
       setFormData({
-        clientName: "",
+        id_cliente: null,
         dineroProporcionado: "",
         status: "En ejecucion"
       });
+      setClienteDoc("");
+      setClienteEncontrado(false);
+      setCliente({ id: null, documentType: "", documentNumber: "", nombre: "", email: "", phone: "" });
+      setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: "" });
+      setNumero("");
+      setBuscandoCliente(false);
       setSelectedServices([]);
       setSelectedProducts([]);
       setErrors({});
@@ -57,11 +72,10 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
     }
   }, [isOpen]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
     setTouched({
-      clientName: true,
       dineroProporcionado: true,
       // Agrega aquí otros campos si los hay
     });
@@ -70,24 +84,49 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
       return;
     }
 
-    const orderData = {
-      ...formData,
-      servicios: selectedServices,
-      productos: selectedProducts,
-      totalServices,
-      totalProducts,
-      totalGeneral
-    };
+    try {
+      let clienteId = formData.id_cliente;
+      if (!clienteId) {
+        if (!clienteEncontrado) {
+          if (!clienteDoc || clienteDoc.trim().length < 8) {
+            return;
+          }
+          const newUserData = {
+            nombre: clienteNuevo.nombre.trim(),
+            telefono: '+' + numero,
+            correo: clienteNuevo.correo.trim(),
+            tipo_documento: 'Cedula de ciudadania',
+            documento: clienteDoc.trim(),
+            roleId: 2,
+          };
+          const createResponse = await usersService.create(newUserData);
+          clienteId = createResponse?.data?.id_usuario || createResponse?.data?.id;
+        } else {
+          clienteId = cliente.id;
+        }
+      }
 
-    onCreate(orderData);
+      const orderData = {
+        ...formData,
+        id_cliente: clienteId,
+        servicios: selectedServices,
+        productos: selectedProducts,
+        totalServices,
+        totalProducts,
+        totalGeneral,
+        dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
+      };
+
+      onCreate(orderData);
+    } catch (err) {
+      // Silenciar, validación visual se maneja en la UI de página
+    }
   };
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const newVal = name === 'dineroProporcionado' ? formatNumberInput(value) : value;
+    setFormData(prev => ({ ...prev, [name]: newVal }));
     // Solo marcar como tocado, no validar en tiempo real
     setTouched(prev => ({ ...prev, [name]: true }));
   }, []);
@@ -107,7 +146,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   if (!isOpen) return null;
 
   const CreateOrderCard = ({ children }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -136,21 +175,51 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Cliente */}
         <div>
-          <label className="block text-xs font-medium text-black mb-1">
-            Nombre del Cliente <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="clientName"
-            value={formData.clientName}
-            onChange={handleInputChange}
-            onBlur={handleBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-            placeholder="Ingrese el nombre del cliente..."
-          />
-          {(touched.clientName || showErrors) && errors.clientName && (
-            <p className="text-red-600 text-xs mt-1">{errors.clientName}</p>
-          )}
+          <label className="block text-xs font-medium text-black mb-1">Documento Cliente <span className="text-red-500">*</span></label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="relative">
+              <input
+                type="text"
+                value={clienteDoc}
+                onChange={(e) => setClienteDoc(e.target.value.replace(/[^0-9]/g, ''))}
+                maxLength={15}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                placeholder="Número de documento"
+                required
+              />
+              {buscandoCliente && (
+                <div className="absolute right-2 top-2">
+                  <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">Nombre</label>
+              {clienteEncontrado ? (
+                <input type="text" value={cliente.nombre} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
+              ) : (
+                <input type="text" value={clienteNuevo.nombre} onChange={(e) => setClienteNuevo(prev => ({ ...prev, nombre: e.target.value }))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="Nombre completo" required />
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">Teléfono</label>
+              {clienteEncontrado ? (
+                <input type="text" value={cliente.phone} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
+              ) : (
+                <input type="text" value={numero} onChange={(e) => setNumero(e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="Ej: 3001234567" required />
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">Correo</label>
+              {clienteEncontrado ? (
+                <input type="email" value={cliente.email} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
+              ) : (
+                <input type="email" value={clienteNuevo.correo} onChange={(e) => setClienteNuevo(prev => ({ ...prev, correo: e.target.value }))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="correo@ejemplo.com" required />
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Estado */}
@@ -206,19 +275,19 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Servicios:</span>
-                <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
+                <span className="text-blue-600 font-bold">{formatPrice(totalServices)}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Productos:</span>
-                <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
+                <span className="text-green-600 font-bold">{formatPrice(totalProducts)}</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total General:</span>
-                <span className="text-primary font-bold">${totalGeneral.toLocaleString()}</span>
+                <span className="text-primary font-bold">{formatPrice(totalGeneral)}</span>
               </div>
 
               <div>
@@ -244,9 +313,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
                   Devolución
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                  ${formData.dineroProporcionado && !isNaN(parseFloat(formData.dineroProporcionado)) 
-                    ? Math.max(0, parseFloat(formData.dineroProporcionado) - totalGeneral).toLocaleString() 
-                    : '0'}
+                  {formatPrice(Math.max(0, parseFormattedNumber(formData.dineroProporcionado) - totalGeneral))}
                 </div>
               </div>
             </div>

@@ -45,7 +45,7 @@ const RequireAuth = () => {
   
   if (!currentUser) {
     console.log('❌ RequireAuth: Usuario no autenticado, redirigiendo a login');
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/iniciar-sesion" state={{ from: location }} replace />;
   }
   
   console.log('✅ RequireAuth: Usuario autenticado, renderizando contenido');

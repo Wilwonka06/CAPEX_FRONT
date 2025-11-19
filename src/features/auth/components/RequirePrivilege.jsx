@@ -13,7 +13,7 @@ const RequirePrivilege = ({ module, action, children }) => {
 
     if (!currentUser) {
         console.log('Usuario no autenticado, redirigiendo a login');
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/iniciar-sesion" replace />;
     }
     
     // Verificar privilegios usando la función del contexto
@@ -47,8 +47,10 @@ const RequirePrivilege = ({ module, action, children }) => {
                     <p className="text-gray-700 mb-2">No tienes permisos para acceder a esta sección.</p>
                     <p className="text-sm text-gray-500 mb-4">Módulo: {module} | Acción: {action}</p>
                     <div className="text-xs text-gray-400 mb-4">
-                        <p>Usuario: {currentUser.nombre}</p>
-                        <p>Rol: {currentUser.rol}</p>
+                        <p>Usuario: {currentUser.nombre || 'N/A'}</p>
+                        <p>Rol: {typeof currentUser.rol === 'string' 
+                          ? currentUser.rol 
+                          : (currentUser.rol?.nombre || 'N/A')}</p>
                         <p>Privilegios disponibles: {JSON.stringify(currentUser.privileges, null, 2)}</p>
                     </div>
                     <div className="flex gap-3 justify-center">
@@ -59,7 +61,7 @@ const RequirePrivilege = ({ module, action, children }) => {
                             Volver al inicio
                         </button>
                         <button 
-                            onClick={() => window.location.href = '/login'} 
+                            onClick={() => window.location.href = '/iniciar-sesion'}
                             className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition"
                         >
                             Cerrar sesión

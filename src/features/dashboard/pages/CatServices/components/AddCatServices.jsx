@@ -108,22 +108,13 @@ const AddCatServices = ({ onClose, onAdd, existingCategories }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl relative">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-[#8B4513] m-0">Crear Nueva Categoría</h2>
-          <button
-            className="text-gray-400 hover:text-gray-600 text-2xl font-light leading-none"
-            onClick={onClose}
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-tags text-lg"></i></div><h2 className="text-xl font-bold m-0">Crear Nueva Categoría</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-
-        {/* Form */}
-        <div className="px-6 py-6">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="create-category-form" onSubmit={handleSubmit} className="space-y-5">
             {/* Nombre */}
             <div>
@@ -168,28 +159,9 @@ const AddCatServices = ({ onClose, onAdd, existingCategories }) => {
             </div>
           </form>
         </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 rounded-b-xl">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            form="create-category-form"
-            disabled={!isNameValid}
-            className={`px-6 py-2.5 rounded-lg font-medium transition text-sm ${
-              isNameValid
-                ? "bg-black text-white hover:bg-gray-800"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            Guardar
-          </button>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition">Cancelar</button>
+          <button type="submit" form="create-category-form" disabled={!isNameValid} className={`px-4 py-2 rounded-lg ml-2 text-xs font-semibold ${isNameValid ? 'bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 hover:from-yellow-400 hover:to-yellow-500' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>Guardar</button>
         </div>
       </div>
     </div>
