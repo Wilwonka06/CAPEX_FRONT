@@ -24,6 +24,21 @@ function limpiarPrecio(valor) {
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+// Document type descriptions
+const DOCUMENT_TYPE_DESCRIPTIONS = {
+  RC: 'Registro civil',
+  TI: 'Tarjeta de identidad',
+  CC: 'Cedula de ciudadania',
+  TE: 'Tarjeta de extranjeria',
+  CE: 'Cedula de extranjeria',
+  NIT: 'Número de identificación tributaria',
+  PP: 'Pasaporte',
+  PEP: 'Permiso especial de permanencia',
+  DIE: 'Documento de identificación extranjero',
+  NUIP: 'NUIP',
+  FOREIGN_NIT: 'NIT de otro país'
+};
+
 const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   const [serviceQuery, setServiceQuery] = useState('');
   const [filteredServices, setFilteredServices] = useState([]);
@@ -888,9 +903,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               >
                 <option value="">Seleccionar</option>
                 {['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'].map(type => (
-                  <option key={type} value={type}>{`${type} - ${{
-                    RC:'Registro civil',TI:'Tarjeta de identidad',CC:'Cedula de ciudadania',TE:'Tarjeta de extranjeria',CE:'Cedula de extranjeria',NIT:'Número de identificación tributaria',PP:'Pasaporte',PEP:'Permiso especial de permanencia',DIE:'Documento de identificación extranjero',NUIP:'NUIP',FOREIGN_NIT:'NIT de otro país'
-                  }[type]}`}</option>
+                  <option key={type} value={type}>{`${type} - ${DOCUMENT_TYPE_DESCRIPTIONS[type]}`}</option>
                 ))}
               </select>
               {touchedFields.tipoDocumento && errors.tipoDocumento && <p className="text-red-500 text-xs mt-1">{errors.tipoDocumento}</p>}
