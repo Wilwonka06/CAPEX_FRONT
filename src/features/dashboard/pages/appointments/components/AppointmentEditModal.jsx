@@ -648,8 +648,8 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       return;
     }
 
-    setLoading(true);+
-    
+    setLoading(true);
+
     const appointmentPromise = (async () => {
       // Buscar o crear cliente por documento
       console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.documento);
@@ -707,12 +707,12 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
       console.log('Datos a enviar:', JSON.stringify(appointmentData, null, 2));
 
+      let result;
       if (cita) {
         appointmentData.cita.id_cliente = cita.id_cliente;
         result = await appointmentsService.update(cita.id_cita, appointmentData);
       } else {
         result = await appointmentsService.create(appointmentData);
-
       }
 
       // Validación de conflictos en tiempo real posterior (informativa)
