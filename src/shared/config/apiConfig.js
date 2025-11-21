@@ -52,36 +52,6 @@ apiClient.interceptors.request.use(
       });
     }
 
-    // Interceptor específico para roles
-    if (config.url && config.url.includes('/roles') && (config.method === 'post' || config.method === 'put')) {
-      console.log('🚀 INTERCEPTED REQUEST TO /roles');
-      console.log('   URL:', config.url);
-      console.log('   Method:', config.method?.toUpperCase());
-      
-      try {
-        const bodyData = typeof config.data === 'string' ? JSON.parse(config.data) : config.data;
-        console.log('   Body (parsed):', JSON.stringify(bodyData, null, 2));
-        
-        if (bodyData.permisos_privilegios) {
-          console.log('   📦 permisos_privilegios array length:', bodyData.permisos_privilegios.length);
-          bodyData.permisos_privilegios.forEach((p, i) => {
-            console.log(`   Permiso ${i + 1}: ${p.nombre} con ${p.privilegios?.length || 0} privilegios`);
-            if (p.privilegios && Array.isArray(p.privilegios)) {
-              p.privilegios.forEach((priv, j) => {
-                console.log(`     Privilegio ${j + 1}: ${priv.nombre} (id=${priv.id_privilegio})`);
-              });
-            } else {
-              console.warn(`     ⚠️ Privilegios no es un array o está vacío`);
-            }
-          });
-        } else {
-          console.warn('   ⚠️ No se encontró permisos_privilegios en el body');
-        }
-      } catch (e) {
-        console.error('   ❌ Error al parsear body:', e);
-      }
-    }
-
     return config;
   },
   (error) => {
@@ -126,40 +96,8 @@ apiClient.interceptors.response.use(
 
       switch (status) {
         case 400:
-<<<<<<< HEAD
-          toast.error(data?.message || 'Solicitud incorrecta');
-          break;
-        case 401:
-          // No mostrar toast ni redirigir si estamos en rutas públicas
-          const currentPath = window.location.pathname;
-          const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/'];
-          const isOnPublicRoute = publicRoutes.some(route => currentPath.startsWith(route));
-
-          if (!isOnPublicRoute) {
-            toast.error('No autorizado. Por favor, inicia sesión nuevamente');
-            // Las cookies HttpOnly se limpian automáticamente en el backend
-            // Redirigir al login
-            setTimeout(() => {
-              window.location.href = '/login';
-            }, 2000);
-          }
-          break;
-        case 403:
-          toast.error('No tienes permisos para realizar esta acción');
-          break;
-        case 404:
-          toast.error(data?.message || 'Recurso no encontrado');
-          break;
-        case 422:
-          // Errores de validación
-          if (data?.errors && Array.isArray(data.errors)) {
-            data.errors.forEach(err => toast.error(err.message || err));
-          } else {
-            toast.error(data?.message || 'Error de validación');
-=======
           if (import.meta.env.DEV) {
             console.warn('Error 400:', data?.message || 'Solicitud incorrecta');
->>>>>>> origin/dev
           }
           break;
         case 401: {
