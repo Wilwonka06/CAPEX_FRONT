@@ -51,32 +51,19 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   };
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
-<<<<<<< HEAD
-    setPrivileges(prev => {
-      const newPrivileges = {
-        ...prev,
-        [modulo]: {
-          ...prev[modulo],
-          [accion]: checked
-        }
-      };
-      console.log(`🔄 Actualizando privilegio: ${modulo} → ${accion} = ${checked}`);
-      console.log(`   Estado anterior:`, prev[modulo]);
-      console.log(`   Estado nuevo:`, newPrivileges[modulo]);
-=======
     console.log(`🔄 handlePrivilegeChange: ${modulo} -> ${accion} = ${checked}`);
-    
+
     setPrivileges(prev => {
       // Obtener el estado actual del módulo, o un objeto vacío si no existe
       const currentModulePrivileges = prev[modulo] || {};
-      
+
       // Crear el nuevo estado del módulo SOLO con los privilegios que se están modificando
       const newModulePrivileges = {
         ...currentModulePrivileges,
         [accion]: checked
       };
 
-      // Si se selecciona cualquier privilegio que NO sea "Visualizar", 
+      // Si se selecciona cualquier privilegio que NO sea "Visualizar",
       // automáticamente activar "Visualizar" también
       if (checked && accion !== 'Visualizar') {
         newModulePrivileges['Visualizar'] = true;
@@ -103,8 +90,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
       };
 
       console.log(`📊 Nuevo estado de privilegios para ${modulo}:`, newModulePrivileges);
-      
->>>>>>> origin/dev
+
       return newPrivileges;
     });
   };
