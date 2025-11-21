@@ -284,12 +284,9 @@ export const AuthProvider = ({ children }) => {
         console.warn('⚠️ Error al cerrar sesión en el backend:', error);
       }
 
-<<<<<<< HEAD
-=======
       // Limpiar datos locales
       localStorage.removeItem('currentUser');
       try { localStorage.removeItem('authToken'); } catch {}
->>>>>>> origin/dev
       setCurrentUser(null);
       
       // Emitir evento de cambio
@@ -317,9 +314,6 @@ export const AuthProvider = ({ children }) => {
 
   // Verificar autenticación al cargar (solo una vez y no en rutas públicas)
   useEffect(() => {
-<<<<<<< HEAD
-    const isPublicRoute = publicRoutes.includes(location.pathname);
-=======
     console.log('🚀 AuthProvider montado, iniciando verificación...');
     // Si ya hay un usuario en el estado inicial, verificar su validez
     if (currentUser) {
@@ -329,17 +323,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   }, []);
->>>>>>> origin/dev
-
-    if (!initialCheckDone.current && !isPublicRoute) {
-      initialCheckDone.current = true;
-      checkAuth();
-    } else if (isPublicRoute && !authChecked) {
-      // Para rutas públicas, marcar como verificado sin hacer petición
-      setAuthChecked(true);
-      setLoading(false);
-    }
-  }, [location.pathname]);
 
 
   const value = {
