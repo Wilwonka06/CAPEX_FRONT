@@ -1,5 +1,5 @@
 // routes/Routes.jsx
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import RequireAuth from "../features/auth/components/RequireAuth";
 import RequirePrivilege from "../features/auth/components/RequirePrivilege";
 import NotFound from "../shared/components/NotFound";
@@ -45,254 +45,172 @@ import ResetPassword from "../features/auth/pages/ResetPassword";
 import EditProfilePage from "../shared/pages/EditProfilePage";
 import RegisterPage from "../features/auth/pages/RegisterPage";
 
-const router = createBrowserRouter([
-  // Ruta raíz - Home público con navbar
-  {
-    path: "/",
-    element: <Landing />,
-    children: [
-      {
-        index: true,
-        element: <Home />,
-      },
-    ],
-  },
-  {
-    path: "/login",
-    element: <LoginPage />,
-  },
-  {
-    path: "/register",
-    element: <RegisterPage />,
-  },
-  {
-    path: "/forgot-password",
-    element: <ForgotPassword />,
-  },
-  {
-    path: "/reset-password",
-    element: <ResetPassword />,
-  },
-  {
-    path: "/edit-profile",
-    element: <EditProfile />,
-  },
-  {
-    path: "/perfil",
-    element: <EditProfilePage />,
-  },
-  {
-    path: "/dashboard/perfil",
-    element: <EditProfilePage />,
-  },
-  {
-    path: "/landing",
-    element: <Landing />,
-    children: [
-      {
-        index: true,
-        element: <Home />,
-      },
-      {
-        path: "cart",
-        element: <Cart />,
-      },
-      {
-        path: "citas",
-        element: <ClientAppointments />,
-      },
-      {
-        path: "pedidos",
-        element: <Orders />,
-      },
-      {
-        path: "mis-pedidos",
-        element: <Orders />,
-      },
-      {
-        path: "productos/:id",
-        element: <ProductDetailPageCliente />,
-      },
-      {
-        path: "servicios",
-        element: <ServicesPage />,
-      },
-      {
-        path: "citas-cliente",
-        element: <ClientAppointments />,
-      },
-      {
-        path: "catalogo",
-        element: <Catalogo />,
-      },
-      {
-        path: "checkout",
-        element: <Checkout />,
-      },
-      {
-        path: "gracias",
-        element: <ThankYou />,
-      },
-    ],
-  },
-  {
-    element: <RequireAuth />,
-    children: [
-      {
-        path: "/dashboard",
-        element: <Layout />,
-        children: [
-          // Dashboard principal
-          {
-            index: true,
-            element: (
-              <RequirePrivilege module="Dashboard" action="Visualizar">
-                <Dashboard />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "roles",
-            element: (
-              <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
-                <RolesProvider>
-                  <RolesPage />
-                </RolesProvider>
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "usuarios",
-            element: (
-              <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
-                <Users />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "productos",
-            element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
-                <Productos />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "compras",
-            element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
-                <Compras />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "proveedores",
-            element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
-                <Proveedores />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "categorias-productos",
-            element: (
-              <RequirePrivilege module="Gestión de Compras" action="Visualizar">
-                <CategoriasProductos />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "servicios",
-            element: (
-              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
-                <Servicios />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "empleados",
-            element: (
-              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
-                <Empleados />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "categorias-servicios",
-            element: (
-              <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
-                <CategoriasServicios />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "ventas-servicios",
-            element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
-                <SaleServices />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "ventas-productos",
-            element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
-                <VentasProductos />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "pedidos",
-            element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
-                <Pedidos />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "citas",
-            element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
-                <Appointments />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "clientes",
-            element: (
-              <RequirePrivilege module="Ventas" action="Visualizar">
-                <Clientes />
-              </RequirePrivilege>
-            ),
-          },
-          {
-            path: "programacion",
-            element: (
-              <RequirePrivilege module="Dashboard" action="Visualizar">
-                <Scheduling />
-              </RequirePrivilege>
-            ),
-          },
-        ],
-      },
-      {
-        path: "/roles",
-        element: <Navigate to="/dashboard/roles" replace />,
-      },
-    ],
-  },
-  {
-    path: "/catalogo",
-    element: <Navigate to="/landing/catalogo" replace />,
-  },
-  {
-    path: "/servicios",
-    element: <Navigate to="/landing/servicios" replace />,
-  },
-  {
-    path: "*",
-    element: <NotFound />,
-  },
-]);
+const AppRoutes = () => (
+  <Routes>
+    {/* Ruta raíz - Home público con navbar */}
+    <Route path="/" element={<Landing />}>
+      <Route index element={<Home />} />
+    </Route>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/edit-profile" element={<EditProfile />} />
+    <Route path="/perfil" element={<EditProfilePage />} />
+    <Route path="/dashboard/perfil" element={<EditProfilePage />} />
+    <Route path="/landing" element={<Landing />}>
+      <Route index element={<Home />} />
+      <Route path="cart" element={<Cart />} />
+      <Route path="citas" element={<ClientAppointments />} />
+      <Route path="pedidos" element={<Orders />} />
+      <Route path="mis-pedidos" element={<Orders />} />
+      <Route path="productos/:id" element={<ProductDetailPageCliente />} />
+      <Route path="servicios" element={<ServicesPage />} />
+      <Route path="citas-cliente" element={<ClientAppointments />} />
+      <Route path="catalogo" element={<Catalogo />} />
+      <Route path="checkout" element={<Checkout />} />
+      <Route path="gracias" element={<ThankYou />} />
+    </Route>
+    <Route element={<RequireAuth />}>
+      <Route path="/dashboard" element={<Layout />}>
+        {/* Dashboard principal */}
+        <Route
+          index
+          element={
+            <RequirePrivilege module="Dashboard" action="Visualizar">
+              <Dashboard />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="roles"
+          element={
+            <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
+              <RolesProvider>
+                <RolesPage />
+              </RolesProvider>
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="usuarios"
+          element={
+            <RequirePrivilege module="Gestión de Usuarios" action="Visualizar">
+              <Users />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="productos"
+          element={
+            <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <Productos />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="compras"
+          element={
+            <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <Compras />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="proveedores"
+          element={
+            <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <Proveedores />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="categorias-productos"
+          element={
+            <RequirePrivilege module="Gestión de Compras" action="Visualizar">
+              <CategoriasProductos />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="servicios"
+          element={
+            <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+              <Servicios />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="empleados"
+          element={
+            <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+              <Empleados />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="categorias-servicios"
+          element={
+            <RequirePrivilege module="Gestión de Servicios" action="Visualizar">
+              <CategoriasServicios />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="ventas-servicios"
+          element={
+            <RequirePrivilege module="Ventas" action="Visualizar">
+              <SaleServices />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="ventas-productos"
+          element={
+            <RequirePrivilege module="Ventas" action="Visualizar">
+              <VentasProductos />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="pedidos"
+          element={
+            <RequirePrivilege module="Ventas" action="Visualizar">
+              <Pedidos />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="citas"
+          element={
+            <RequirePrivilege module="Ventas" action="Visualizar">
+              <Appointments />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="clientes"
+          element={
+            <RequirePrivilege module="Ventas" action="Visualizar">
+              <Clientes />
+            </RequirePrivilege>
+          }
+        />
+        <Route
+          path="programacion"
+          element={
+            <RequirePrivilege module="Dashboard" action="Visualizar">
+              <Scheduling />
+            </RequirePrivilege>
+          }
+        />
+      </Route>
+      <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
+    </Route>
+    <Route path="/catalogo" element={<Navigate to="/landing/catalogo" replace />} />
+    <Route path="/servicios" element={<Navigate to="/landing/servicios" replace />} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
 
-export default router;
+export default AppRoutes;

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { apiRequest } from '../config/apiConfig';
 
@@ -15,17 +16,13 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const initialCheckDone = useRef(false);
+  const location = useLocation();
 
-  // Función para obtener el usuario del localStorage
-  const getUserFromStorage = () => {
-    try {
-      const user = localStorage.getItem('currentUser');
-      return user ? JSON.parse(user) : null;
-    } catch (error) {
-      console.error('Error al obtener usuario del localStorage:', error);
-      return null;
-    }
-  };
+  // Rutas públicas donde NO se debe verificar autenticación
+  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+
 
   /**
    * ✅ CORREGIDO: Verificar privilegios con nombres correctos
@@ -128,9 +125,7 @@ export const AuthProvider = ({ children }) => {
       
       if (response.success && response.data) {
         console.log('✅ Token válido, usuario autenticado:', response.data);
-        
-        // Actualizar usuario en localStorage y estado
-        localStorage.setItem('currentUser', JSON.stringify(response.data));
+
         setCurrentUser(response.data);
         return true;
       } else {
@@ -139,9 +134,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('❌ Error al verificar autenticación:', error);
-      
-      // Limpiar datos de usuario
-      localStorage.removeItem('currentUser');
+
       setCurrentUser(null);
       return false;
     }
@@ -154,8 +147,6 @@ export const AuthProvider = ({ children }) => {
       console.log('📝 Datos del usuario recibidos:', userData);
       console.log('🔑 Privilegios del usuario:', userData.privileges);
 
-      // Guardar usuario en localStorage
-      localStorage.setItem('currentUser', JSON.stringify(userData));
       setCurrentUser(userData);
 
       // Emitir evento de cambio
@@ -195,8 +186,6 @@ export const AuthProvider = ({ children }) => {
         console.warn('⚠️ Error al cerrar sesión en el backend:', error);
       }
 
-      // Limpiar datos locales
-      localStorage.removeItem('currentUser');
       setCurrentUser(null);
       
       // Emitir evento de cambio
@@ -210,62 +199,37 @@ export const AuthProvider = ({ children }) => {
   // Función para verificar autenticación
   const checkAuth = async () => {
     try {
-      console.log('🔍 Verificando autenticación...');
-      
-      const storedUser = getUserFromStorage();
-      
-      if (!storedUser) {
-        console.log('❌ No hay usuario en localStorage');
-        setLoading(false);
-        return null;
-      }
-
-      console.log('📝 Usuario en localStorage:', storedUser);
-      console.log('🔑 Privilegios almacenados:', storedUser.privileges);
-      
       const isValid = await verifyAuth();
-      
-      if (!isValid) {
-        console.log('❌ Token inválido o expirado');
-        setLoading(false);
-        return null;
-      }
-
-      console.log('✅ Autenticación verificada exitosamente');
       setLoading(false);
-      return currentUser;
+      setAuthChecked(true);
+      return isValid ? currentUser : null;
     } catch (error) {
       console.error('❌ Error al verificar autenticación:', error);
       setLoading(false);
+      setAuthChecked(true);
       return null;
     }
   };
 
-  // Verificar autenticación al cargar
+  // Verificar autenticación al cargar (solo una vez y no en rutas públicas)
   useEffect(() => {
-    console.log('🚀 AuthProvider montado, iniciando verificación...');
-    checkAuth();
-  }, []);
+    const isPublicRoute = publicRoutes.includes(location.pathname);
 
-  // Escuchar cambios en localStorage
-  useEffect(() => {
-    const handleStorageChange = () => {
-      console.log('🔄 Cambio detectado en localStorage');
+    if (!initialCheckDone.current && !isPublicRoute) {
+      initialCheckDone.current = true;
       checkAuth();
-    };
+    } else if (isPublicRoute && !authChecked) {
+      // Para rutas públicas, marcar como verificado sin hacer petición
+      setAuthChecked(true);
+      setLoading(false);
+    }
+  }, [location.pathname]);
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('user-auth-changed', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('user-auth-changed', handleStorageChange);
-    };
-  }, []);
 
   const value = {
     currentUser,
     loading,
+    authChecked,
     login,
     logout,
     hasPrivilege,

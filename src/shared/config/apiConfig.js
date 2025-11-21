@@ -102,13 +102,19 @@ apiClient.interceptors.response.use(
           toast.error(data?.message || 'Solicitud incorrecta');
           break;
         case 401:
-          toast.error('No autorizado. Por favor, inicia sesión nuevamente');
-          // Limpiar datos de usuario del localStorage (las cookies HttpOnly se limpian automáticamente)
-          localStorage.removeItem('currentUser');
-          // Redirigir al login
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 2000);
+          // No mostrar toast ni redirigir si estamos en rutas públicas
+          const currentPath = window.location.pathname;
+          const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/'];
+          const isOnPublicRoute = publicRoutes.some(route => currentPath.startsWith(route));
+
+          if (!isOnPublicRoute) {
+            toast.error('No autorizado. Por favor, inicia sesión nuevamente');
+            // Las cookies HttpOnly se limpian automáticamente en el backend
+            // Redirigir al login
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 2000);
+          }
           break;
         case 403:
           toast.error('No tienes permisos para realizar esta acción');
