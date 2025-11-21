@@ -21,11 +21,7 @@ const RequireAuth = () => {
 
   if (!currentUser) {
     console.log('❌ RequireAuth: Usuario no autenticado, redirigiendo a login');
-    // No redirigir si ya estamos en login
-    if (location.pathname === '/login') {
-      return null; // O un componente vacío
-    }
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/iniciar-sesion" state={{ from: location }} replace />;
   }
 
   console.log('✅ RequireAuth: Usuario autenticado, renderizando contenido');

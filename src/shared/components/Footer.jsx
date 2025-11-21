@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { companyInfo } from '../config/companyInfo';
 
 const Footer = () => {
   return (
@@ -6,14 +7,14 @@ const Footer = () => {
       <div className="max-w-6xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-2xl font-bold text-[#FACC15] mb-4 font-montserrat">CAPEX</h3>
+            <h3 className="text-2xl font-bold text-[#FACC15] mb-4 font-montserrat">{companyInfo.name}</h3>
             <p className="text-white/80 mb-4 font-lato">
               Tu destino para productos de belleza premium y servicios profesionales.
               Transformamos tu imagen con calidad y pasión.
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://www.facebook.com/Astridpariass/"
+                href={companyInfo.social.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#FACC15] hover:text-yellow-400 transition-colors"
@@ -22,7 +23,7 @@ const Footer = () => {
                 <i className="bi bi-facebook text-xl"></i>
               </a>
               <a
-                href="https://www.instagram.com/extensiones_astrid_parias?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                href={companyInfo.social.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#FACC15] hover:text-yellow-400 transition-colors"
@@ -31,7 +32,7 @@ const Footer = () => {
                 <i className="bi bi-instagram text-xl"></i>
               </a>
               <a
-                href="https://wa.me/573215956758"
+                href={companyInfo.social.whatsapp}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#FACC15] hover:text-yellow-400 transition-colors"
@@ -55,17 +56,17 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4 text-white">Atención al Cliente</h4>
             <ul className="space-y-2 text-white/80">
-              <li>📞 321 5956758</li>
-              <li>📧 info@capex.com</li>
-              <li>📍 Medellín, Colombia</li>
-              <li>🕒 Lun-Sáb: 9:30-18:40</li>
+              <li>📞 {companyInfo.phone}</li>
+              <li>📧 {companyInfo.email}</li>
+              <li>📍 {companyInfo.address}</li>
+              <li>🕒 {companyInfo.hours}</li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-white/10 mt-8 pt-8 text-center">
           <p className="text-white/60 text-sm">
-            © 2025 CAPEX. Todos los derechos reservados. |
+            © 2025 {companyInfo.name}. Todos los derechos reservados. |
             <span className="text-[#FACC15]"> Hecho con ❤️ para tu belleza</span>
           </p>
         </div>

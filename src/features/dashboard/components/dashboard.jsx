@@ -2,458 +2,18 @@
 import { useState, useEffect } from "react";
 import MonthlySalesChart from "./MonthlySalesChart";
 import MonthlyTotalsChart from "./MonthlyTotalsChart";
+import WeeklySalesChart from "./WeeklySalesChart";
 import TopServicesChart from "./TopServicesChart";
 import TopProductsChart from "./TopProductsChart";
 import { FaMoneyBillWave, FaBoxOpen, FaUserTie } from "react-icons/fa";
 import AnnualComparisonChart from "./AnnualComparisonChart";
-import purchasesService from "../pages/purchases/API/purchasesService";
+import ReportsPanel from "./ReportsPanel";
+import AccessCards from "./AccessCards";
+import { ChartContentSkeleton, OrdersListSkeleton, TopListContentSkeleton } from "./DashboardSkeleton";
 import salesService from "../pages/SaleProducts/API/salesService";
 import ordersService from "../pages/orders/API/ordersService";
-
-// Mock de ventas de productos (2023-2025)
-const mockSales = [
-  // 2023
-  {
-    fecha: "2023-01-10",
-    valor: 3000000,
-    estado: "Completada",
-    productos: [{ nombre: "Shampoo", cantidad: 10, precio: 30000 }],
-  },
-  {
-    fecha: "2023-02-15",
-    valor: 5000000,
-    estado: "Completada",
-    productos: [{ nombre: "Acondicionador", cantidad: 15, precio: 35000 }],
-  },
-  {
-    fecha: "2023-03-20",
-    valor: 7000000,
-    estado: "Completada",
-    productos: [{ nombre: "Tinte", cantidad: 20, precio: 35000 }],
-  },
-  {
-    fecha: "2023-04-05",
-    valor: 4000000,
-    estado: "Completada",
-    productos: [{ nombre: "Gel", cantidad: 8, precio: 50000 }],
-  },
-  {
-    fecha: "2023-05-12",
-    valor: 6000000,
-    estado: "Completada",
-    productos: [{ nombre: "Cera", cantidad: 12, precio: 50000 }],
-  },
-  {
-    fecha: "2023-06-18",
-    valor: 8000000,
-    estado: "Completada",
-    productos: [{ nombre: "Laca", cantidad: 16, precio: 50000 }],
-  },
-  {
-    fecha: "2023-07-22",
-    valor: 9000000,
-    estado: "Completada",
-    productos: [{ nombre: "Peine", cantidad: 18, precio: 50000 }],
-  },
-  {
-    fecha: "2023-08-30",
-    valor: 10000000,
-    estado: "Completada",
-    productos: [{ nombre: "Secador", cantidad: 20, precio: 50000 }],
-  },
-  {
-    fecha: "2023-09-10",
-    valor: 11000000,
-    estado: "Completada",
-    productos: [{ nombre: "Plancha", cantidad: 22, precio: 50000 }],
-  },
-  {
-    fecha: "2023-10-15",
-    valor: 12000000,
-    estado: "Completada",
-    productos: [{ nombre: "Cepillo", cantidad: 24, precio: 50000 }],
-  },
-  {
-    fecha: "2023-11-20",
-    valor: 13000000,
-    estado: "Completada",
-    productos: [{ nombre: "Mascarilla", cantidad: 26, precio: 50000 }],
-  },
-  {
-    fecha: "2023-12-25",
-    valor: 14000000,
-    estado: "Completada",
-    productos: [{ nombre: "Serum", cantidad: 28, precio: 50000 }],
-  },
-  // 2024
-  {
-    fecha: "2024-01-10",
-    valor: 4000000,
-    estado: "Completada",
-    productos: [{ nombre: "Shampoo", cantidad: 12, precio: 35000 }],
-  },
-  {
-    fecha: "2024-02-15",
-    valor: 6000000,
-    estado: "Completada",
-    productos: [{ nombre: "Acondicionador", cantidad: 18, precio: 35000 }],
-  },
-  {
-    fecha: "2024-03-20",
-    valor: 8000000,
-    estado: "Completada",
-    productos: [{ nombre: "Tinte", cantidad: 24, precio: 35000 }],
-  },
-  {
-    fecha: "2024-04-05",
-    valor: 5000000,
-    estado: "Completada",
-    productos: [{ nombre: "Gel", cantidad: 10, precio: 50000 }],
-  },
-  {
-    fecha: "2024-05-12",
-    valor: 7000000,
-    estado: "Completada",
-    productos: [{ nombre: "Cera", cantidad: 14, precio: 50000 }],
-  },
-  {
-    fecha: "2024-06-18",
-    valor: 9000000,
-    estado: "Completada",
-    productos: [{ nombre: "Laca", cantidad: 18, precio: 50000 }],
-  },
-  {
-    fecha: "2024-07-22",
-    valor: 10000000,
-    estado: "Completada",
-    productos: [{ nombre: "Peine", cantidad: 20, precio: 50000 }],
-  },
-  {
-    fecha: "2024-08-30",
-    valor: 11000000,
-    estado: "Completada",
-    productos: [{ nombre: "Secador", cantidad: 22, precio: 50000 }],
-  },
-  {
-    fecha: "2024-09-10",
-    valor: 12000000,
-    estado: "Completada",
-    productos: [{ nombre: "Plancha", cantidad: 24, precio: 50000 }],
-  },
-  {
-    fecha: "2024-10-15",
-    valor: 13000000,
-    estado: "Completada",
-    productos: [{ nombre: "Cepillo", cantidad: 26, precio: 50000 }],
-  },
-  {
-    fecha: "2024-11-20",
-    valor: 14000000,
-    estado: "Completada",
-    productos: [{ nombre: "Mascarilla", cantidad: 28, precio: 50000 }],
-  },
-  {
-    fecha: "2024-12-25",
-    valor: 15000000,
-    estado: "Completada",
-    productos: [{ nombre: "Serum", cantidad: 30, precio: 50000 }],
-  },
-  // 2025
-  {
-    fecha: "2025-01-10",
-    valor: 5000000,
-    estado: "Completada",
-    productos: [{ nombre: "Shampoo", cantidad: 14, precio: 35000 }],
-  },
-  {
-    fecha: "2025-02-15",
-    valor: 7000000,
-    estado: "Completada",
-    productos: [{ nombre: "Acondicionador", cantidad: 21, precio: 35000 }],
-  },
-  {
-    fecha: "2025-03-20",
-    valor: 9000000,
-    estado: "Completada",
-    productos: [{ nombre: "Tinte", cantidad: 27, precio: 35000 }],
-  },
-  {
-    fecha: "2025-04-05",
-    valor: 6000000,
-    estado: "Completada",
-    productos: [{ nombre: "Gel", cantidad: 12, precio: 50000 }],
-  },
-  {
-    fecha: "2025-05-12",
-    valor: 8000000,
-    estado: "Completada",
-    productos: [{ nombre: "Cera", cantidad: 16, precio: 50000 }],
-  },
-  {
-    fecha: "2025-06-18",
-    valor: 10000000,
-    estado: "Completada",
-    productos: [{ nombre: "Laca", cantidad: 20, precio: 50000 }],
-  },
-  {
-    fecha: "2025-07-22",
-    valor: 11000000,
-    estado: "Completada",
-    productos: [{ nombre: "Peine", cantidad: 22, precio: 50000 }],
-  },
-  {
-    fecha: "2025-08-30",
-    valor: 12000000,
-    estado: "Completada",
-    productos: [{ nombre: "Secador", cantidad: 24, precio: 50000 }],
-  },
-  {
-    fecha: "2025-09-10",
-    valor: 13000000,
-    estado: "Completada",
-    productos: [{ nombre: "Plancha", cantidad: 26, precio: 50000 }],
-  },
-  {
-    fecha: "2025-10-15",
-    valor: 14000000,
-    estado: "Completada",
-    productos: [{ nombre: "Cepillo", cantidad: 28, precio: 50000 }],
-  },
-  {
-    fecha: "2025-11-20",
-    valor: 15000000,
-    estado: "Completada",
-    productos: [{ nombre: "Mascarilla", cantidad: 30, precio: 50000 }],
-  },
-  {
-    fecha: "2025-12-25",
-    valor: 16000000,
-    estado: "Completada",
-    productos: [{ nombre: "Serum", cantidad: 32, precio: 50000 }],
-  },
-];
-
-// Mock de servicios (2023-2025)
-const mockServices = [
-  // 2023
-  {
-    id: 1,
-    clientName: "Ana",
-    status: "Pagado",
-    date: "10/01/2023",
-    servicios: [
-      {
-        id: 1,
-        name: "Corte",
-        quantity: 1,
-        price: 20000,
-        subtotal: 20000,
-        employee: { name: "Wilson" },
-      },
-    ],
-    totalServices: 20000,
-    productos: [],
-  },
-  {
-    id: 2,
-    clientName: "Luis",
-    status: "Pagado",
-    date: "15/02/2023",
-    servicios: [
-      {
-        id: 2,
-        name: "Manicura",
-        quantity: 2,
-        price: 15000,
-        subtotal: 30000,
-        employee: { name: "Maria" },
-      },
-    ],
-    totalServices: 30000,
-    productos: [],
-  },
-  {
-    id: 3,
-    clientName: "Sofia",
-    status: "Pagado",
-    date: "20/03/2023",
-    servicios: [
-      {
-        id: 3,
-        name: "Barbería",
-        quantity: 1,
-        price: 25000,
-        subtotal: 25000,
-        employee: { name: "Cruz" },
-      },
-    ],
-    totalServices: 25000,
-    productos: [],
-  },
-  {
-    id: 4,
-    clientName: "Pedro",
-    status: "Pagado",
-    date: "05/04/2023",
-    servicios: [
-      {
-        id: 4,
-        name: "Color",
-        quantity: 1,
-        price: 30000,
-        subtotal: 30000,
-        employee: { name: "Ana" },
-      },
-    ],
-    totalServices: 30000,
-    productos: [],
-  },
-  {
-    id: 5,
-    clientName: "Lucia",
-    status: "Pagado",
-    date: "12/05/2023",
-    servicios: [
-      {
-        id: 5,
-        name: "Peinado",
-        quantity: 1,
-        price: 18000,
-        subtotal: 18000,
-        employee: { name: "Luis" },
-      },
-    ],
-    totalServices: 18000,
-    productos: [],
-  },
-  {
-    id: 6,
-    clientName: "Carlos",
-    status: "Pagado",
-    date: "18/06/2023",
-    servicios: [
-      {
-        id: 6,
-        name: "Depilación",
-        quantity: 1,
-        price: 22000,
-        subtotal: 22000,
-        employee: { name: "Sofia" },
-      },
-    ],
-    totalServices: 22000,
-    productos: [],
-  },
-  {
-    id: 7,
-    clientName: "Marta",
-    status: "Pagado",
-    date: "22/07/2023",
-    servicios: [
-      {
-        id: 7,
-        name: "Masaje",
-        quantity: 1,
-        price: 35000,
-        subtotal: 35000,
-        employee: { name: "Pedro" },
-      },
-    ],
-    totalServices: 35000,
-    productos: [],
-  },
-  {
-    id: 8,
-    clientName: "Jorge",
-    status: "Pagado",
-    date: "30/08/2023",
-    servicios: [
-      {
-        id: 8,
-        name: "Tratamiento",
-        quantity: 1,
-        price: 40000,
-        subtotal: 40000,
-        employee: { name: "Lucia" },
-      },
-    ],
-    totalServices: 40000,
-    productos: [],
-  },
-  {
-    id: 9,
-    clientName: "Elena",
-    status: "Pagado",
-    date: "10/09/2023",
-    servicios: [
-      {
-        id: 9,
-        name: "Corte",
-        quantity: 1,
-        price: 20000,
-        subtotal: 20000,
-        employee: { name: "Carlos" },
-      },
-    ],
-    totalServices: 20000,
-    productos: [],
-  },
-  {
-    id: 10,
-    clientName: "Raul",
-    status: "Pagado",
-    date: "15/10/2023",
-    servicios: [
-      {
-        id: 10,
-        name: "Manicura",
-        quantity: 2,
-        price: 15000,
-        subtotal: 30000,
-        employee: { name: "Marta" },
-      },
-    ],
-    totalServices: 30000,
-    productos: [],
-  },
-  {
-    id: 11,
-    clientName: "Paula",
-    status: "Pagado",
-    date: "20/11/2023",
-    servicios: [
-      {
-        id: 11,
-        name: "Barbería",
-        quantity: 1,
-        price: 25000,
-        subtotal: 25000,
-        employee: { name: "Jorge" },
-      },
-    ],
-    totalServices: 25000,
-    productos: [],
-  },
-  {
-    id: 12,
-    clientName: "Nina",
-    status: "Pagado",
-    date: "25/12/2023",
-    servicios: [
-      {
-        id: 12,
-        name: "Color",
-        quantity: 1,
-        price: 30000,
-        subtotal: 30000,
-        employee: { name: "Elena" },
-      },
-    ],
-    totalServices: 30000,
-    productos: [],
-  },
-  // 2024 y 2025 (agrega más si lo deseas)
-];
+import { useAuth } from "../../../shared/contexts/AuthContext";
+import apiRequest from "../../../shared/config/apiConfig";
 
 // Declarar mesesES al inicio del archivo para evitar errores de hoisting
 const mesesES = [
@@ -471,68 +31,240 @@ const mesesES = [
   "Diciembre",
 ];
 
+// Función helper para agrupar servicios por cliente/cita (fuera del componente)
+const groupServicesByClient = (serviceDetails) => {
+  const grouped = {};
+  
+  serviceDetails.forEach(detail => {
+    const key = detail.id_cita 
+      ? `cita_${detail.id_cita}` 
+      : `cliente_${detail.id_cliente}_${detail.fecha_programada || 'sin_fecha'}`;
+    
+    if (!grouped[key]) {
+      grouped[key] = {
+        id_cita: detail.id_cita,
+        id_cliente: detail.id_cliente,
+        cliente: detail.cliente || detail.usuario,
+        fecha_programada: detail.fecha_programada || detail.fecha_creacion,
+        servicios: []
+      };
+    }
+    
+    grouped[key].servicios.push(detail);
+  });
+  
+  return Object.values(grouped);
+};
+
+// Función helper para transformar detalles de servicio al formato esperado (fuera del componente)
+const transformServiceDetailToOrder = (grupo) => {
+  const servicios = grupo.servicios || [];
+  
+  if (servicios.length === 0) {
+    return null;
+  }
+  
+  const primerServicio = servicios[0];
+  
+  // Calcular totales de servicios
+  const totalServices = servicios.reduce((sum, servicio) => {
+    const precio = parseFloat(servicio.precio_unitario || servicio.precio || 0);
+    const cantidad = parseInt(servicio.cantidad || 1);
+    return sum + (precio * cantidad);
+  }, 0);
+
+  // Obtener fecha
+  const fecha = primerServicio.fecha_programada || primerServicio.fecha_creacion || new Date().toISOString();
+  const fechaDate = new Date(fecha);
+  
+  // Formatear fecha al formato DD/MM/YYYY
+  const formattedDate = fechaDate.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+
+  // Determinar estado
+  const estados = servicios.map(s => s.estado || s.status);
+  const estado = estados.includes('Pagada') ? 'Pagado' : 
+                 estados.includes('Finalizada') ? 'Pagado' :
+                 estados.includes('En proceso') ? 'En ejecucion' :
+                 estados.includes('Cancelada por el usuario') ? 'Anulado' :
+                 estados[0] || 'En ejecucion';
+
+  return {
+    id: primerServicio.id_cita || primerServicio.id_detalle_servicio,
+    clientName: grupo.cliente?.nombre || primerServicio.cliente?.nombre || primerServicio.usuario?.nombre || 'Cliente no especificado',
+    status: estado,
+    date: formattedDate,
+    servicios: servicios.map(servicio => ({
+      id: servicio.id_detalle_servicio,
+      name: servicio.servicio?.nombre || 'Servicio',
+      quantity: parseInt(servicio.cantidad || 1),
+      price: parseFloat(servicio.precio_unitario || servicio.precio || 0),
+      subtotal: parseFloat(servicio.precio_unitario || servicio.precio || 0) * parseInt(servicio.cantidad || 1),
+      employee: {
+        name: servicio.empleado?.nombre || 'Empleado no asignado'
+      }
+    })),
+    productos: [],
+    totalServices: totalServices,
+    fecha_programada: fecha
+  };
+};
+
+const getStartOfWeek = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = (d.getDay() + 6) % 7; // 0 = lunes
+  d.setDate(d.getDate() - day);
+  return d;
+};
+
+const formatWeekRange = (start, end) => {
+  const fmt = (dt) =>
+    `${String(dt.getDate()).padStart(2, "0")}/${String(
+      dt.getMonth() + 1
+    ).padStart(2, "0")}`;
+  return `${fmt(start)} - ${fmt(end)}`;
+};
+
 const Dashboard = () => {
+  const { hasPrivilege, currentUser } = useAuth();
+  
   // Estados para datos reales
-  const [realPurchases, setRealPurchases] = useState([]);
-  const [realSales, setRealSales] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [services, setServices] = useState([]);
   const [realOrders, setRealOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para datos calculados - Usar datos reales cuando estén disponibles
-  const [sales] = useState(mockSales); // Mantener mock para gráficas por ahora
-  const [services] = useState(mockServices); // Mantener mock para gráficas por ahora
-
   // ===== CARGAR DATOS REALES =====
-  useEffect(() => {
-    const loadRealData = async () => {
+  const loadRealData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-
-        // Cargar compras reales
-        const purchasesResponse = await purchasesService.getAll({ limit: 50 });
-        if (purchasesResponse.success) {
-          setRealPurchases(purchasesResponse.data || []);
+        // Cargar ventas de productos reales (con límite alto para obtener todas)
+        try {
+          const salesResponse = await salesService.getAll({ limit: 1000 });
+          if (salesResponse.success && salesResponse.data) {
+            // Transformar datos de ventas al formato esperado
+            const transformedSales = salesResponse.data.map(venta => ({
+              fecha: venta.fecha || venta.createdAt || new Date().toISOString().split('T')[0],
+              valor: venta.valor || venta.total || 0,
+              estado: venta.estado || 'Completada',
+              productos: venta.productos || [],
+              createdAt: venta.fecha || venta.createdAt,
+              total: venta.valor || venta.total || 0
+            }));
+            setSales(transformedSales);
+          }
+        } catch (error) {
+          console.error("Error loading sales:", error);
+          setSales([]);
         }
 
-        // Cargar ventas reales
-        const salesResponse = await salesService.getAll({ limit: 50 });
-        if (salesResponse.success) {
-          setRealSales(salesResponse.data || []);
+        // Cargar servicios reales desde la API
+        try {
+          const servicesResponse = await apiRequest.get('/ventas/detalles-servicios');
+          let serviceDetails = [];
+          
+          if (servicesResponse.success && servicesResponse.data) {
+            serviceDetails = Array.isArray(servicesResponse.data) ? servicesResponse.data : [];
+          } else if (Array.isArray(servicesResponse)) {
+            serviceDetails = servicesResponse;
+          }
+
+          // Agrupar servicios por cita/cliente y transformar al formato esperado
+          const groupedServices = groupServicesByClient(serviceDetails);
+          const transformedServices = groupedServices
+            .map(transformServiceDetailToOrder)
+            .filter(service => service !== null);
+          
+          setServices(transformedServices);
+        } catch (error) {
+          console.error("Error loading services:", error);
+          setServices([]);
         }
 
         // Cargar pedidos reales
-        const ordersResponse = await ordersService.getAll({ limit: 50 });
-        if (ordersResponse.success) {
-          setRealOrders(ordersResponse.data || []);
+        try {
+          const ordersResponse = await ordersService.getAll({ limit: 50 });
+          if (ordersResponse.success) {
+            setRealOrders(ordersResponse.data || []);
+          }
+        } catch (error) {
+          console.error("Error loading orders:", error);
+          setRealOrders([]);
         }
       } catch (error) {
         console.error("Error loading real data for dashboard:", error);
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     loadRealData();
+    const handler = () => loadRealData();
+    window.addEventListener('sales-updated', handler);
+    window.addEventListener('services-updated', handler);
+    return () => {
+      window.removeEventListener('sales-updated', handler);
+      window.removeEventListener('services-updated', handler);
+    };
   }, []);
 
-  // Ventas de productos (solo completadas/no canceladas) - Usar datos reales cuando estén disponibles
-  const ventasProductos =
-    realSales.length > 0
-      ? realSales
-          .filter(
-            (sale) => sale.estado !== "Cancelada" && sale.estado !== "Anulada"
-          )
-          .reduce((acc, sale) => acc + (sale.total || sale.valor || 0), 0)
-      : sales
-          .filter(
-            (sale) => sale.estado !== "Cancelada" && sale.estado !== "Anulada"
-          )
-          .reduce((acc, sale) => acc + (sale.valor || sale.total || 0), 0);
+  // Selector de mes (actual y tres meses atrás) - Debe estar antes de cualquier return condicional
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  
+  // Verificar si el usuario tiene acceso completo al dashboard
+  const hasFullDashboardAccess = hasPrivilege('Dashboard', 'Visualizar');
+  
+  // Verificar si el usuario tiene acceso a algún módulo administrativo
+  // Lista de módulos administrativos
+  const administrativeModules = [
+    'Dashboard',
+    'Gestión de Usuarios',
+    'Gestión de Compras',
+    'Gestión de Servicios',
+    'Clientes',
+    'Citas',
+    'Pedidos',
+    'Ventas',
+    'Venta de Productos',
+    'Productos',
+    'Compras',
+    'Proveedores',
+    'Categorías de Productos',
+    'Categorías de Servicios',
+    'Servicios',
+    'Empleados',
+    'Programación'
+  ];
+  
+  // Verificar si tiene acceso a algún módulo
+  const hasAnyModuleAccess = currentUser?.privileges && administrativeModules.some(module => {
+    const modulePrivileges = currentUser.privileges[module];
+    return modulePrivileges && (
+      modulePrivileges.Visualizar === true || 
+      modulePrivileges['Visualizar'] === true ||
+      modulePrivileges.Read === true
+    );
+  });
 
-  // Ventas de servicios (solo pagados/no anulados) - Mantener mock por ahora
+  // Ventas de productos (solo completadas/no canceladas)
+  const ventasProductos = sales
+    .filter(
+      (sale) => sale.estado !== "Cancelada" && sale.estado !== "Anulada"
+    )
+    .reduce((acc, sale) => acc + (sale.valor || sale.total || 0), 0);
+
+  // Ventas de servicios (solo pagados/no anulados)
   const ventasServicios = services
     .filter(
-      (order) => order.status !== "Anulado" && order.status !== "Cancelada"
+      (order) => order.status !== "Anulado" && order.status !== "Cancelada" && order.status !== "En ejecucion"
     )
     .reduce((acc, order) => acc + (order.totalServices || 0), 0);
 
@@ -542,31 +274,44 @@ const Dashboard = () => {
     {
       title: "Total Ventas",
       value: `$${totalVentas.toLocaleString("es-CO")}`,
-      color: "bg-gradient-to-r from-purple-500 to-green-700",
-      icon: <FaMoneyBillWave className="text-3xl text-green-600" />,
+      color: "bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A]",
+      icon: <FaMoneyBillWave className="text-3xl text-[#FACC15]" />,
     },
     {
       title: "Ventas Productos",
       value: `$${ventasProductos.toLocaleString("es-CO")}`,
-      color: "bg-gradient-to-r from-purple-500 to-[cfb997]-700",
-      icon: <FaBoxOpen className="text-3xl text-[cfb997]-600" />,
+      color: "bg-gradient-to-r from-[#FACC15] to-yellow-400",
+      icon: <FaBoxOpen className="text-3xl text-[#1E1E1E]" />,
     },
     {
       title: "Ventas Servicios",
       value: `$${ventasServicios.toLocaleString("es-CO")}`,
-      color: "bg-gradient-to-r from-purple-500 to-purple-700",
-      icon: <FaUserTie className="text-3xl text-blue-600" />,
+      color: "bg-gradient-to-r from-gray-700 to-gray-900",
+      icon: <FaUserTie className="text-3xl text-[#FACC15]" />,
     },
   ];
-
-  // Selector de mes (actual y tres meses atrás)
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}`;
-  });
+  
+  // Si no tiene acceso completo al dashboard pero tiene acceso a algún módulo, mostrar AccessCards
+  // Si no tiene acceso a ningún módulo, redirigir
+  if (!hasFullDashboardAccess) {
+    if (hasAnyModuleAccess) {
+      return <AccessCards />;
+    } else {
+      // Si no tiene acceso a ningún módulo, mostrar mensaje de acceso denegado
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center p-8">
+            <div className="text-6xl mb-4">🔒</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Sin acceso</h2>
+            <p className="text-gray-600">
+              No tienes permisos para acceder a ningún módulo del sistema.
+              Contacta a un administrador para obtener los permisos necesarios.
+            </p>
+          </div>
+        </div>
+      );
+    }
+  }
   // Generar opciones de meses
   const monthOptions = [];
   for (let i = 0; i < 4; i++) {
@@ -595,25 +340,37 @@ const Dashboard = () => {
   sales.forEach((sale) => {
     if (sale.estado !== "Cancelada" && sale.estado !== "Anulada") {
       const fecha = new Date(sale.fecha || sale.createdAt || sale.date || null);
-      if (
-        fecha.getMonth() + 1 === selMonth &&
-        fecha.getFullYear() === selYear
-      ) {
+      if (!isNaN(fecha.getTime()) && 
+          fecha.getMonth() + 1 === selMonth &&
+          fecha.getFullYear() === selYear) {
         const dayIdx = fecha.getDate() - 1;
-        dailyDataFiltered[dayIdx].productos += sale.valor || sale.total || 0;
+        if (dayIdx >= 0 && dayIdx < dailyDataFiltered.length) {
+          dailyDataFiltered[dayIdx].productos += sale.valor || sale.total || 0;
+        }
       }
     }
   });
   services.forEach((order) => {
     if (order.status !== "Anulado" && order.status !== "Cancelada") {
+      // Intentar parsear fecha desde diferentes formatos
+      let fecha = null;
       if (order.date) {
-        const [day, monthStr, yearStr] = order.date.split("/");
-        const fecha = new Date(`${yearStr}-${monthStr}-${day}`);
-        if (
+        // Formato DD/MM/YYYY
+        const dateParts = order.date.split("/");
+        if (dateParts.length === 3) {
+          fecha = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+        }
+      }
+      // Si no se pudo parsear desde date, intentar desde fecha_programada
+      if (!fecha && order.fecha_programada) {
+        fecha = new Date(order.fecha_programada);
+      }
+      
+      if (fecha && !isNaN(fecha.getTime()) &&
           fecha.getMonth() + 1 === selMonth &&
-          fecha.getFullYear() === selYear
-        ) {
-          const dayIdx = fecha.getDate() - 1;
+          fecha.getFullYear() === selYear) {
+        const dayIdx = fecha.getDate() - 1;
+        if (dayIdx >= 0 && dayIdx < dailyDataFiltered.length) {
           dailyDataFiltered[dayIdx].servicios += order.totalServices || 0;
         }
       }
@@ -624,15 +381,23 @@ const Dashboard = () => {
   services.forEach((order) => {
     if (
       order.status !== "Anulado" &&
-      order.status !== "Cancelada" &&
-      order.date
+      order.status !== "Cancelada"
     ) {
-      const [d, m, y] = order.date.split("/");
-      const fecha = new Date(`${y}-${m}-${d}`);
-      if (
-        fecha.getMonth() + 1 === selMonth &&
-        fecha.getFullYear() === selYear
-      ) {
+      // Intentar parsear fecha desde diferentes formatos
+      let fecha = null;
+      if (order.date) {
+        const dateParts = order.date.split("/");
+        if (dateParts.length === 3) {
+          fecha = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+        }
+      }
+      if (!fecha && order.fecha_programada) {
+        fecha = new Date(order.fecha_programada);
+      }
+      
+      if (fecha && !isNaN(fecha.getTime()) &&
+          fecha.getMonth() + 1 === selMonth &&
+          fecha.getFullYear() === selYear) {
         (order.servicios || []).forEach((serv) => {
           if (!serviciosMes[serv.name]) {
             serviciosMes[serv.name] = {
@@ -682,15 +447,23 @@ const Dashboard = () => {
   services.forEach((order) => {
     if (
       order.status !== "Anulado" &&
-      order.status !== "Cancelada" &&
-      order.date
+      order.status !== "Cancelada"
     ) {
-      const [d, m, y] = order.date.split("/");
-      const fecha = new Date(`${y}-${m}-${d}`);
-      if (
-        fecha.getMonth() + 1 === selMonth &&
-        fecha.getFullYear() === selYear
-      ) {
+      // Intentar parsear fecha desde diferentes formatos
+      let fecha = null;
+      if (order.date) {
+        const dateParts = order.date.split("/");
+        if (dateParts.length === 3) {
+          fecha = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+        }
+      }
+      if (!fecha && order.fecha_programada) {
+        fecha = new Date(order.fecha_programada);
+      }
+      
+      if (fecha && !isNaN(fecha.getTime()) &&
+          fecha.getMonth() + 1 === selMonth &&
+          fecha.getFullYear() === selYear) {
         (order.productos || []).forEach((prod) => {
           if (!productosMes[prod.name]) {
             productosMes[prod.name] = {
@@ -711,6 +484,80 @@ const Dashboard = () => {
   while (topProductos.length < 5) {
     topProductos.push({ nombre: "", cantidad: 0, total: 0 });
   }
+
+  // Calcular ventas semanales (últimas 8 semanas)
+  const currentWeekStart = getStartOfWeek(new Date());
+  const weekKeys = [];
+  const weeksMap = {};
+  for (let i = 7; i >= 0; i--) {
+    const start = new Date(currentWeekStart);
+    start.setDate(start.getDate() - i * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    const key = start.toISOString();
+    weekKeys.push(key);
+    weeksMap[key] = {
+      start,
+      end,
+      label: `Semana ${formatWeekRange(start, end)}`,
+      productos: 0,
+      servicios: 0,
+    };
+  }
+
+  const addAmountToWeek = (amount, type, dateValue) => {
+    if (!dateValue) return;
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return;
+    for (const key of weekKeys) {
+      const info = weeksMap[key];
+      if (date >= info.start && date <= info.end) {
+        if (type === "productos") {
+          info.productos += amount;
+        } else {
+          info.servicios += amount;
+        }
+        return;
+      }
+    }
+  };
+
+  sales.forEach((sale) => {
+    if (sale.estado === "Cancelada" || sale.estado === "Anulada") return;
+    const amount = sale.valor || sale.total || 0;
+    const fecha = sale.fecha || sale.createdAt || sale.date || null;
+    addAmountToWeek(amount, "productos", fecha);
+  });
+
+  services.forEach((order) => {
+    if (order.status === "Anulado" || order.status === "Cancelada") return;
+    const amount = order.totalServices || 0;
+    let fecha = null;
+    if (order.date) {
+      const parts = order.date.split("/");
+      if (parts.length === 3) {
+        fecha = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      }
+    }
+    if (!fecha && order.fecha_programada) {
+      fecha = new Date(order.fecha_programada);
+    }
+    addAmountToWeek(amount, "servicios", fecha);
+  });
+
+  const weeklyData = weekKeys.map((key) => {
+    const info = weeksMap[key];
+    const productos = info.productos || 0;
+    const servicios = info.servicios || 0;
+    return {
+      label: info.label,
+      productos,
+      servicios,
+      total: productos + servicios,
+    };
+  });
 
   // Calcular totales de ventas por mes (últimos 6 meses)
   const hoy = new Date();
@@ -734,12 +581,23 @@ const Dashboard = () => {
     // Sumar ventas de servicios de ese mes
     const totalServicios = services
       .filter((order) => {
-        if (!order.date) return false;
-        const [d, m, y] = order.date.split("/");
-        const f = new Date(`${y}-${m}-${d}`);
+        // Intentar parsear fecha desde diferentes formatos
+        let fecha = null;
+        if (order.date) {
+          const dateParts = order.date.split("/");
+          if (dateParts.length === 3) {
+            fecha = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+          }
+        }
+        if (!fecha && order.fecha_programada) {
+          fecha = new Date(order.fecha_programada);
+        }
+        
+        if (!fecha || isNaN(fecha.getTime())) return false;
+        
         return (
-          f.getMonth() === month &&
-          f.getFullYear() === year &&
+          fecha.getMonth() === month &&
+          fecha.getFullYear() === year &&
           order.status !== "Anulado" &&
           order.status !== "Cancelada"
         );
@@ -760,10 +618,20 @@ const Dashboard = () => {
     if (!isNaN(fecha)) allYears.add(fecha.getFullYear());
   });
   services.forEach((order) => {
+    // Intentar parsear fecha desde diferentes formatos
+    let fecha = null;
     if (order.date) {
-      const [d, m, y] = order.date.split("/");
-      const fecha = new Date(`${y}-${m}-${d}`);
-      if (!isNaN(fecha)) allYears.add(fecha.getFullYear());
+      const dateParts = order.date.split("/");
+      if (dateParts.length === 3) {
+        fecha = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+      }
+    }
+    if (!fecha && order.fecha_programada) {
+      fecha = new Date(order.fecha_programada);
+    }
+    
+    if (fecha && !isNaN(fecha.getTime())) {
+      allYears.add(fecha.getFullYear());
     }
   });
   Array.from(allYears)
@@ -781,113 +649,303 @@ const Dashboard = () => {
     }
   });
   services.forEach((order) => {
+    // Intentar parsear fecha desde diferentes formatos
+    let fecha = null;
     if (order.date) {
-      const [d, m, y] = order.date.split("/");
-      const fecha = new Date(`${y}-${m}-${d}`);
-      if (!isNaN(fecha)) {
-        const year = fecha.getFullYear();
-        const month = fecha.getMonth();
-        if (annualData[year])
-          annualData[year][month] += order.totalServices || 0;
+      const dateParts = order.date.split("/");
+      if (dateParts.length === 3) {
+        fecha = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+      }
+    }
+    if (!fecha && order.fecha_programada) {
+      fecha = new Date(order.fecha_programada);
+    }
+    
+    if (fecha && !isNaN(fecha.getTime())) {
+      const year = fecha.getFullYear();
+      const month = fecha.getMonth();
+      if (annualData[year]) {
+        annualData[year][month] += order.totalServices || 0;
       }
     }
   });
 
+  // Ya no retornamos skeleton completo, solo mostramos skeletons en áreas de contenido
+
   return (
-    <div className="xl:col-span-1 bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-bold text-gray-800 mb-1">
-            Pedidos Recientes
-          </h3>
-          <p className="text-sm text-gray-600">Últimos 5 pedidos</p>
-        </div>
-        <div className="p-2 bg-blue-500/10 rounded-lg">
-          <i className="bi bi-receipt text-blue-500 text-xl"></i>
+    <div className="min-h-screen rounded-xl bg-gradient-to-br from-white via-gray-50 to-white p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header del Dashboard */}
+        <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] text-white py-8 relative overflow-hidden rounded-3xl shadow-xl">
+          <div className="relative z-10 px-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2 font-montserrat">
+                  Dashboard
+                </h1>
+                <p className="text-lg text-white/80 font-lato">
+                  Resumen general del sistema y métricas de rendimiento
+                </p>
+              </div>
+              {/* Selector de período */}
+              <div className="flex items-center gap-4">
+                <span className="text-white/90 font-medium font-lato">Período:</span>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-4 py-2 border border-white/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-white/10 text-white placeholder-white/70 backdrop-blur-sm"
+                >
+                  {monthOptions.map((option) => (
+                    <option key={option.value} value={option.value} className="text-black">
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
         </div>
       </div>
-      <div className="space-y-4">
-        {/* ✅ VALIDACIONES AGREGADAS */}
-        {realOrders && realOrders.length > 0 ? (
-          realOrders
-            .filter((order) => {
-              // ✅ Validar que el pedido tenga los campos necesarios
-              if (!order) return false;
-              const estado = order.estado || order.status || "";
-              return estado === "Pendiente" || estado === "En proceso";
-            })
-            .slice(0, 5)
-            .map((order, idx) => {
-              // ✅ Normalizar datos del pedido
-              const id = order.id_pedido || order.id || 0;
-              const fecha =
-                order.fecha_pedido ||
-                order.fecha ||
-                order.createdAt ||
-                "Sin fecha";
-              const total = parseFloat(order.total || order.valor || 0);
-              const estado = order.estado || order.status || "Pendiente";
 
-              return (
-                <div
-                  key={id || `order-${idx}`}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#FACC15] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <span className="text-xs font-bold text-[#1E1E1E]">
-                        {idx + 1}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800 group-hover:text-[#FACC15] transition-colors">
-                        {/* ✅ Validar que id sea un número antes de usar toString */}
-                        PED-{id > 0 ? id.toString().padStart(6, "0") : "000000"}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {/* ✅ Formatear fecha de forma segura */}
-                        {typeof fecha === "string"
-                          ? fecha.split("T")[0]
-                          : "Sin fecha"}
-                      </p>
-                    </div>
+        {/* Cards de Estadísticas - Mostrar skeleton solo en valores si loading */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {loading ? (
+            // Mostrar skeletons en las cards mientras carga
+            [...Array(3)].map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-32 mb-3 animate-pulse"></div>
+                    <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-800">
-                      {/* ✅ Validar que total sea un número */}$
-                      {!isNaN(total) ? total.toLocaleString("es-CO") : "0"}
+                  <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                </div>
+              </div>
+            ))
+          ) : (
+            stats.map((stat, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600 mb-1 font-lato">
+                      {stat.title}
                     </p>
-                    <span
-                      className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
-                        estado === "Completado" || estado === "Completada"
-                          ? "bg-green-100 text-green-800"
-                          : estado === "Pendiente"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : estado === "En proceso"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {estado}
-                    </span>
+                    <p className="text-2xl font-bold text-[#1E1E1E] font-montserrat">{stat.value}</p>
+                  </div>
+                  <div className="bg-[#FACC15]/10 rounded-xl p-3">
+                    <div className="text-[#FACC15]">
+                      {stat.icon}
+                    </div>
                   </div>
                 </div>
-              );
-            })
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-2">📦</div>
-            <p className="text-sm text-gray-500">No hay pedidos pendientes</p>
+              </div>
+            ))
+          )}
+        </div>
+
+        <ReportsPanel
+          weeklyData={weeklyData}
+          topServicios={topServicios}
+          topProductos={topProductos}
+          mesesData={mesesData}
+          annualData={annualData}
+        />
+
+        {/* Gráficas y Widgets */}
+        <div className="space-y-8">
+          {/* Primera fila: Ventas Diarias y Totales Mensuales */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {/* Gráfica de Ventas Mensuales */}
+            <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">
+                  Ventas Diarias del Mes
+                </h3>
+                <p className="text-sm text-gray-600 font-lato">Análisis detallado de ventas por día</p>
+              </div>
+              {loading ? (
+                <ChartContentSkeleton />
+              ) : (
+                <MonthlySalesChart data={dailyDataFiltered} />
+              )}
+            </div>
+
+            {/* Gráfica de Totales Mensuales */}
+            <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-[#1E1E1E] mb-2 font-montserrat">
+                  Totales por Mes
+                </h3>
+                <p className="text-sm text-gray-600 font-lato">Últimos 6 meses de actividad</p>
+              </div>
+              {loading ? (
+                <ChartContentSkeleton />
+              ) : (
+                <MonthlyTotalsChart data={mesesData} />
+              )}
+            </div>
           </div>
-        )}
-      </div>
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <button
-          className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-semibold py-2 px-4 rounded-lg transition-colors"
-          onClick={() => (window.location.href = "/dashboard/pedidos")}
-        >
-          Gestionar pedidos
-        </button>
+
+          {/* Segunda fila: Ventas Semanales */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">
+                Ventas Semanales (últimas 8 semanas)
+              </h3>
+              <p className="text-sm text-gray-600 font-lato">
+                Comparativo de productos y servicios por semana
+              </p>
+            </div>
+            {loading ? (
+              <ChartContentSkeleton />
+            ) : (
+              <WeeklySalesChart data={weeklyData} />
+            )}
+          </div>
+
+          {/* Tercera fila: Top Servicios y Productos */}
+          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">
+                Top Servicios y Productos
+              </h3>
+              <p className="text-sm text-gray-600 font-lato">Más solicitados y vendidos este mes</p>
+            </div>
+            {loading ? (
+              <TopListContentSkeleton />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                  <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Servicios</h4>
+                  <TopServicesChart data={topServicios} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Productos</h4>
+                  <TopProductsChart data={topProductos} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tercera fila: Pedidos Recientes y Comparativa Anual */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {/* Widget de Pedidos Recientes */}
+            <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-[#1E1E1E] mb-1 font-montserrat">
+                    Pedidos Recientes
+                  </h3>
+                  <p className="text-sm text-gray-600 font-lato">Últimos 5 pedidos pendientes</p>
+                </div>
+                <div className="p-3 bg-[#FACC15]/10 rounded-2xl">
+                  <i className="bi bi-receipt text-[#FACC15] text-2xl"></i>
+                </div>
+              </div>
+              {loading ? (
+                <OrdersListSkeleton />
+              ) : (
+                <div className="space-y-4">
+                  {realOrders && realOrders.length > 0 ? (
+                    realOrders
+                      .filter((order) => {
+                        if (!order) return false;
+                        const estado = order.estado || order.status || "";
+                        return estado === "Pendiente" || estado === "En proceso";
+                      })
+                      .slice(0, 5)
+                      .map((order, idx) => {
+                        const id = order.id_pedido || order.id || 0;
+                        const fecha =
+                          order.fecha_pedido ||
+                          order.fecha ||
+                          order.createdAt ||
+                          "Sin fecha";
+                        const total = parseFloat(order.total || order.valor || 0);
+                        const estado = order.estado || order.status || "Pendiente";
+
+                        return (
+                          <div
+                            key={id || `order-${idx}`}
+                            className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all duration-300 cursor-pointer group hover:shadow-md"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-[#FACC15] rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                                <span className="text-sm font-bold text-[#1E1E1E]">
+                                  {idx + 1}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800 group-hover:text-[#FACC15] transition-colors duration-300 font-montserrat">
+                                  PED-{id > 0 ? id.toString().padStart(6, "0") : "000000"}
+                                </p>
+                                <p className="text-xs text-gray-600 font-lato">
+                                  {typeof fecha === "string"
+                                    ? fecha.split("T")[0]
+                                    : "Sin fecha"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-gray-800 font-montserrat">
+                                ${!isNaN(total) ? total.toLocaleString("es-CO") : "0"}
+                              </p>
+                              <span
+                                className={`inline-block px-3 py-1 text-xs rounded-full font-semibold ${
+                                  estado === "Completado" || estado === "Completada"
+                                    ? "bg-gray-100 text-gray-700"
+                                    : estado === "Pendiente"
+                                    ? "bg-[#FACC15]/20 text-[#FACC15]"
+                                    : estado === "En proceso"
+                                    ? "bg-gray-200 text-gray-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {estado}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">📦</div>
+                      <p className="text-gray-500 font-lato">No hay pedidos pendientes</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <button
+                  className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-lato"
+                  onClick={() => (window.location.href = "/dashboard/pedidos")}
+                >
+                  Ir al módulo
+                </button>
+              </div>
+            </div>
+
+            {/* Gráfica Comparativa Anual */}
+            <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-[#1E1E1E] mb-2 font-montserrat">
+                  Comparativa Anual
+                </h3>
+                <p className="text-sm text-gray-600 font-lato">Evolución de ventas por año</p>
+              </div>
+              {loading ? (
+                <ChartContentSkeleton />
+              ) : (
+                <AnnualComparisonChart data={annualData} />
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

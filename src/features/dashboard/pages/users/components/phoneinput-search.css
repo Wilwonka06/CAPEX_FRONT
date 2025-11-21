@@ -20,7 +20,12 @@
   opacity: 0.6;
 }
 
-/* Ajuste para que la bandera y el código no tapen el número */
+/* Ocultar el código de país (+n) visualmente pero mantenerlo en el valor */
+.react-phone-input-2 .iti__selected-dial-code {
+  display: none !important;
+}
+
+/* Ajustar el padding del input cuando se oculta el código de país */
 .react-phone-input-2 .form-control {
-  padding-left: 3.2rem !important;
+  padding-left: 2.5rem !important;
 } 

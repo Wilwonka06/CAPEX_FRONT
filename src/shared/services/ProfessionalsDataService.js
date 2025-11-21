@@ -1,75 +1,50 @@
-const PROFESSIONALS_KEY = 'professionals';
-
-// Función para obtener empleados desde el módulo de empleados existente
-const getEmployeesFromStorage = () => {
-  const data = localStorage.getItem('capex_employees');
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-};
+import apiRequest from '../config/apiConfig';
+import { employeesService } from '../../features/dashboard/pages/employees/API/employeesService';
 
 // Función para convertir empleados a formato de profesionales
 const convertEmployeesToProfessionals = (employees) => {
   return employees
-    .filter(emp => emp.estado) // Solo empleados activos
-    .map(emp => ({
-      id: emp.id,
-      name: `${emp.nombre} ${emp.apellido}`.trim(),
-      active: emp.estado,
-      role: 'Empleado',
-      phone: '',
-      email: ''
-    }));
+    .filter(emp => emp.estado === 'Activo' || emp.estado === true) // Solo empleados activos
+    .map(emp => {
+      // Usar solo el campo nombre (nombre completo)
+      const nombreCompleto = emp.nombre || emp.name || "";
+      
+      return {
+        id: emp.id_empleado ?? emp.id_usuario ?? emp.id,
+        name: nombreCompleto,
+        active: emp.estado === 'Activo' || emp.estado === true,
+        role: 'Empleado',
+        phone: emp.telefono || '',
+        email: emp.correo || ''
+      };
+    });
 };
 
-// Lista inicial de profesionales (fallback)
-const initialProfessionals = [
-  { id: 1, name: 'Ana Torres', active: true },
-  { id: 2, name: 'Carlos Ruiz', active: true },
-  { id: 3, name: 'Lucía Gómez', active: true },
-];
-
-function saveProfessionalsToStorage(professionals) {
-  localStorage.setItem(PROFESSIONALS_KEY, JSON.stringify(professionals));
-}
-
-function loadProfessionalsFromStorage() {
-  const data = localStorage.getItem(PROFESSIONALS_KEY);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return null;
-    }
+export const getProfessionals = async () => {
+  try {
+    console.log('🔄 Obteniendo profesionales desde la API...');
+    
+    // Obtener empleados desde la API
+    const employees = await employeesService.getAll();
+    
+    console.log('👥 Empleados obtenidos:', employees?.length || 0, employees);
+    
+    // Convertir a formato de profesionales
+    const professionals = convertEmployeesToProfessionals(employees || []);
+    
+    console.log('✅ Profesionales convertidos:', professionals.length, professionals);
+    
+    return professionals;
+  } catch (error) {
+    console.error('❌ Error fetching professionals from API:', error);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    // Retornar array vacío en caso de error
+    return [];
   }
-  return null;
-}
-
-export const getProfessionals = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Obtener empleados desde el módulo de empleados existente
-      const employees = getEmployeesFromStorage();
-      const professionals = convertEmployeesToProfessionals(employees);
-      
-      // Si no hay empleados activos, usar datos de respaldo
-      if (professionals.length === 0) {
-        let fallbackProfessionals = loadProfessionalsFromStorage();
-        if (!fallbackProfessionals) {
-          saveProfessionalsToStorage(initialProfessionals);
-          fallbackProfessionals = initialProfessionals;
-        }
-        resolve(fallbackProfessionals);
-      } else {
-        resolve(professionals);
-      }
-    }, 200);
-  });
 };
 
 export const addProfessional = (professional) => {

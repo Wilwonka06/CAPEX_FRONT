@@ -1,15 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import PasswordEye from '../../../../../shared/components/PasswordEye';
-import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
+import { isValidEmail, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
 import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import Swal from 'sweetalert2';
 import { useAuth } from '../../../../../shared/contexts/AuthContext';
+ 
 
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
-const DOC_TYPES = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
+const DOC_TYPES = ['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'];
+const DOC_TYPE_LABELS = {
+  RC: 'Registro civil',
+  TI: 'Tarjeta de identidad',
+  CC: 'Cedula de ciudadania',
+  TE: 'Tarjeta de extranjeria',
+  CE: 'Cedula de extranjeria',
+  NIT: 'Número de identificación tributaria',
+  PP: 'Pasaporte',
+  PEP: 'Permiso especial de permanencia',
+  DIE: 'Documento de identificación extranjero',
+  NUIP: 'NUIP',
+  FOREIGN_NIT: 'NIT de otro país'
+};
 const CONCEPTOS_ESTADO = ['vacaciones', 'enfermo', 'licencia', 'suspensión', 'renuncia', 'Otro'];
 
 function fileToBase64(file) {
@@ -47,50 +59,19 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
     ...user,
     tipoDocumento: user.tipo_documento, // Map backend field to frontend field
     telefono: user.telefono, // Ensure telefono field is properly set
-    password: '',
-    confirmPassword: '',
     roles: user.roleId ? [user.roleId.toString()] : [],
     conceptoEstado: user.concepto_estado || '' // Add concepto_estado field
   });
   const [availableRoles, setAvailableRoles] = useState([]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [preview, setPreview] = useState(user.avatarCompressed || '');
   const [error, setError] = useState({});
   const canModifyStatus = hasPrivilege('Gestión de Usuarios', 'Editar');
 
   // Parsear teléfono guardado
   const parseTelefono = (telefono) => {
-    if (!telefono) return { countryCode: 'co', dialCode: '+57', number: '' };
-
-    // Primero intentar el formato con guion (legacy)
-    const matchWithDash = telefono.match(/^(\+\d+)-(\d{4,15})$/);
-    if (matchWithDash) {
-      return {
-        countryCode: 'co', // puedes mejorar esto si guardas el país
-        dialCode: matchWithDash[1],
-        number: matchWithDash[2]
-      };
-    }
-
-    // Si no tiene guion, intentar extraer código de país y número
-    // Ejemplo: "+57123456789" -> dialCode: "+57", number: "123456789"
-    const matchWithoutDash = telefono.match(/^(\+\d{1,3})(\d{4,15})$/);
-    if (matchWithoutDash) {
-      return {
-        countryCode: 'co', // puedes mejorar esto si guardas el país
-        dialCode: matchWithoutDash[1],
-        number: matchWithoutDash[2]
-      };
-    }
-
-    return { countryCode: 'co', dialCode: '+57', number: '' };
+    return telefono || '';
   };
-  const [country, setCountry] = useState({
-    countryCode: parseTelefono(user.telefono).countryCode,
-    dialCode: parseTelefono(user.telefono).dialCode,
-  });
-  const [numero, setNumero] = useState(parseTelefono(user.telefono).number);
+  const [numero, setNumero] = useState(parseTelefono(user.telefono));
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -113,19 +94,13 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       case 'correo':
         return isValidEmail(value) ? '' : 'Correo inválido';
       case 'telefono':
-        // Validar el teléfono completo (código de país + número)
-        const telefonoCompleto = country.dialCode + numero;
-        return validateUserPhone(telefonoCompleto);
+        return validateUserPhone(value);
       case 'documento':
         return validateUserDocument(form.tipoDocumento, value);
       case 'tipoDocumento':
         if (!value.trim()) return 'Campo obligatorio';
         if (form.documento && users.some(u => (u.tipoDocumento || u.tipo_documento) === value && u.documento === form.documento && (u.id_usuario || u.id) !== (form.id_usuario || form.id))) return 'Ya existe un usuario con ese tipo y número de documento';
         return '';
-      case 'password':
-        return value ? (isValidPassword(value) ? '' : 'Contraseña débil') : '';
-      case 'confirmPassword':
-        return value === form.password ? '' : 'No coincide';
       case 'roles':
         return value.length > 0 ? '' : 'Selecciona al menos un rol';
       case 'estado':
@@ -178,10 +153,18 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
     let valid = true;
     let newError = {};
     for (const key of ['tipoDocumento','documento','nombre','telefono','roles','correo','estado']) {
-      const err = validate(key, form[key]);
-      if (err) {
-        newError[key] = err;
-        valid = false;
+      if (key === 'telefono') {
+        const err = validate('telefono', numero);
+        if (err) {
+          newError.telefono = err;
+          valid = false;
+        }
+      } else {
+        const err = validate(key, form[key]);
+        if (err) {
+          newError[key] = err;
+          valid = false;
+        }
       }
     }
     // Validar conceptoEstado si es requerido
@@ -189,17 +172,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       const err = validate('conceptoEstado', form.conceptoEstado);
       if (err) {
         newError.conceptoEstado = err;
-        valid = false;
-      }
-    }
-    // Si se está cambiando la contraseña, validar ambas
-    if (form.password || form.confirmPassword) {
-      if (form.password !== form.confirmPassword) {
-        newError.confirmPassword = 'Las contraseñas no coinciden';
-        valid = false;
-      }
-      if (!isValidPassword(form.password)) {
-        newError.password = 'Contraseña débil';
         valid = false;
       }
     }
@@ -213,14 +185,13 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
-    const telefonoFinal = country.dialCode + numero;
     const updatedUser = {
       id_usuario: form.id_usuario || form.id,
       nombre: form.nombre,
       correo: form.correo,
       tipo_documento: form.tipoDocumento,
       documento: form.documento,
-      telefono: telefonoFinal,
+      telefono: numero,
       roleId: parseInt(form.roles[0]) || form.roleId,
       estado: form.estado,
       ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
@@ -237,14 +208,17 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Editar usuario</h2>
-          <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose} aria-label="Cerrar">×</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-pencil-square text-lg"></i></div>
+            <h2 className="text-xl font-bold m-0">Editar usuario</h2>
+          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <div className="overflow-y-auto p-8 flex-1">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
+          <form onSubmit={handleSubmit} id="edit-user-form" className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-text-main mb-1">Foto de perfil</label>
               <div className="space-y-3">
@@ -273,7 +247,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 <label className="block text-xs font-medium text-text-main mb-1">Tipo de documento <span className="text-red-500">*</span></label>
                 <select name="tipoDocumento" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} required>
                   <option value="">Seleccionar</option>
-                  {DOC_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                  {DOC_TYPES.map(type => <option key={type} value={type}>{`${type} - ${DOC_TYPE_LABELS[type]}`}</option>)}
                 </select>
                 {error.tipoDocumento && <span className="text-red-500 text-xs">{error.tipoDocumento}</span>}
               </div>
@@ -289,79 +263,33 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <div className="flex gap-1 items-start">
                 <PhoneInput
-                    country={country.countryCode}
-                    value={country.dialCode}
-                    onChange={(value, data) => {
-                      setCountry({
-                      countryCode: data.countryCode,
-                        dialCode: '+' + data.dialCode
-                    });
+                  country={'co'}
+                  value={numero}
+                  onChange={(value) => {
+                    setNumero(value);
+                    const error = validate('telefono', value);
+                    setError(prev => ({ ...prev, telefono: error }));
                   }}
+                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${error.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  containerClass="w-full"
                   inputProps={{
-                      name: 'prefijo',
-                      readOnly: true,
-                      className: 'w-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50 cursor-pointer',
-                      style: { backgroundColor: '#f9fafb' }
+                    name: 'telefono',
+                    required: true,
+                    placeholder: 'Ej: 3001234567',
                   }}
                   specialLabel=""
-                    containerClass="w-28"
-                  inputClass="w-full"
-                  buttonClass=""
-                  dropdownClass=""
-                  enableSearch
-                  disableCountryCode={false}
-                  disableDropdown={false}
-                  countryCodeEditable={false}
-                    disableSearchIcon={false}
-                    onlyCountries={['co','mx','cl','ar','pe','ve','ec','us','es']}
-                  />
-                  <input
-                    type="text"
-                    name="numero"
-                    value={numero}
-                    onChange={e => {
-                      // Solo permitir dígitos
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setNumero(val.slice(0, 15));
-                      // Validación en tiempo real del número
-                      let err = '';
-                      if (val && !/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else if (val && val.length >= 4) {
-                        // Validar teléfono completo si tenemos suficientes dígitos
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    onBlur={e => {
-                      const val = e.target.value;
-                      let err = '';
-                      if (!/^\d{4,15}$/.test(val)) {
-                        err = 'El número debe tener entre 4 y 15 dígitos';
-                      } else {
-                        // Validar teléfono completo
-                        const telefonoCompleto = country.dialCode + val;
-                        err = validateUserPhone(telefonoCompleto);
-                      }
-                      setError(prev => ({ ...prev, telefono: err }));
-                    }}
-                    className="w-70 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="Número sin prefijo"
-                    required
-                    autoComplete="off"
-                    maxLength={15}
-                  />
-                </div>
-                {error.telefono && <span className="text-red-500 text-xs">{error.telefono}</span>}
+                />
+                {error.telefono && <span className="text-red-500 text-xs mt-1 block">{error.telefono}</span>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Roles <span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-2">
+                <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-md bg-gray-50">
                   {availableRoles.map(role => (
-                    <label key={role.id_rol} className="flex items-center gap-2 text-sm font-medium text-text-main">
+                    <label 
+                      key={role.id_rol} 
+                      className="flex items-center gap-2 text-sm font-medium text-text-main cursor-pointer hover:text-primary transition-colors px-3 py-2 rounded-md hover:bg-white border border-transparent hover:border-gray-300"
+                    >
                       <input
                         type="checkbox"
                         name="roles"
@@ -369,34 +297,18 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                         checked={form.roles.includes(role.id_rol.toString())}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        className="accent-primary-dark"
+                        className="accent-primary-dark w-4 h-4 cursor-pointer"
                       />
-                      {role.nombre}
+                      <span>{role.nombre}</span>
                     </label>
                   ))}
                 </div>
-                {error.roles && <span className="text-red-500 text-xs">{error.roles}</span>}
+                {error.roles && <span className="text-red-500 text-xs mt-1 block">{error.roles}</span>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Correo <span className="text-red-500">*</span></label>
                 <input type="email" name="correo" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.correo} onChange={handleChange} onBlur={handleBlur} required />
                 {error.correo && <span className="text-red-500 text-xs">{error.correo}</span>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Contraseña</label>
-                <input type={showPassword ? 'text' : 'password'} name="password" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.password} onChange={handleChange} onBlur={handleBlur} />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showPassword} onToggle={() => setShowPassword(v => !v)} />
-                </div>
-                {error.password && <span className="text-red-500 text-xs">{error.password}</span>}
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-text-main mb-1">Confirmar contraseña</label>
-                <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} />
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto" style={{top: '50%', transform: 'translateY(-50%)'}}>
-                <PasswordEye visible={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
-                </div>
-                {error.confirmPassword && <span className="text-red-500 text-xs">{error.confirmPassword}</span>}
               </div>
               {canModifyStatus && (
                 <>
@@ -413,7 +325,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                           className="accent-green-500"
                         />
                         <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
                           Activo
                         </span>
                       </label>
@@ -427,7 +338,6 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                           className="accent-gray-500"
                         />
                         <span className="flex items-center gap-1">
-                          <div className="w-3 h-3 rounded-full bg-gray-500"></div>
                           Inactivo
                         </span>
                       </label>
@@ -458,11 +368,12 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 </>
               )}
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>
-              <button type="submit" className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition">Guardar</button>
-            </div>
+            
           </form>
+        </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.keys(errors).length > 0}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
         </div>
       </div>
     </div>
@@ -476,4 +387,4 @@ EditUserModal.propTypes = {
   users: PropTypes.array.isRequired,
 };
 
-export default EditUserModal; 
+export default EditUserModal;

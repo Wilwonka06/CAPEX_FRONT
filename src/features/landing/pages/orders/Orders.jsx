@@ -1,7 +1,9 @@
+// src/features/landing/pages/orders/Orders.jsx - VERSIÓN CORREGIDA
 import { useState, useEffect } from "react";
 import OrderList from "./components/OrderList";
 import { ordersService } from "./API/OrdersService";
 import { useAuth } from "../../../../shared/contexts/AuthContext";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -16,7 +18,6 @@ const Orders = () => {
     entregados: 0,
   });
 
-  // Obtener el ID del usuario del contexto de autenticación
   const { currentUser, loading: authLoading } = useAuth();
   const customerId = currentUser?.id_usuario;
 
@@ -24,27 +25,21 @@ const Orders = () => {
     currentUser,
     customerId,
     authLoading,
-    userFromStorage: localStorage.getItem("currentUser"),
   });
 
-  // Cargar pedidos al montar el componente
   useEffect(() => {
     console.log("🔄 Orders useEffect triggered:", { customerId, authLoading });
 
     if (authLoading) {
-      console.log("⏳ Auth still loading, waiting...");
+      console.log("Auth still loading, waiting...");
       return;
     }
 
     if (customerId) {
-      console.log(
-        "✅ User authenticated, loading orders for customerId:",
-        customerId
-      );
+      console.log("User authenticated, loading orders for customerId:", customerId);
       loadOrders();
     } else {
-      console.log("❌ No customerId found, setting auth error");
-      // Only set error if we're sure auth has finished loading and user is not authenticated
+      console.log("No customerId found, setting auth error");
       if (!authLoading) {
         setError("Debes iniciar sesión para ver tus pedidos");
         setLoading(false);
@@ -54,7 +49,7 @@ const Orders = () => {
 
   const loadOrders = async () => {
     if (!customerId) {
-      console.warn("⚠️ No hay customerId, abortando carga");
+      console.warn("No hay customerId, abortando carga");
       return;
     }
 
@@ -62,54 +57,61 @@ const Orders = () => {
     setError(null);
 
     try {
-      console.log("📦 Cargando pedidos para usuario:", customerId);
+      console.log("Cargando pedidos para usuario:", customerId);
 
       const response = await ordersService.getByUsuario(customerId);
 
-      console.log("📦 Respuesta del servicio:", response);
+      console.log("Respuesta del servicio:", response);
 
       if (response.success && response.data) {
-        // ✅ Mapear con validaciones estrictas
+        // Mapear con validaciones y CORRECCIÓN de cálculos
         const formattedOrders = (response.data || [])
           .filter((pedido) => {
-            // ✅ Filtrar pedidos inválidos
             if (!pedido) return false;
             const id = pedido.id_pedido || pedido.id;
             return id && id > 0;
           })
           .map((pedido) => {
-            // ✅ Normalizar datos del pedido
             const id = pedido.id_pedido || pedido.id || 0;
-            const fecha =
-              pedido.fecha ||
-              pedido.fecha_creacion ||
-              new Date().toISOString().split("T")[0];
+            const fecha = pedido.fecha || new Date().toISOString().split("T")[0];
+            const subtotal = parseFloat(pedido.subtotal || 0);
+            const envio = parseFloat(pedido.costo_envio || 0);
             const total = parseFloat(pedido.total || 0);
+            
             const estado = pedido.estado || "Pendiente";
-
-            // ✅ Procesar detalles de forma segura
             const productos = (pedido.detalles || [])
-              .filter((det) => det && det.id_producto) // Filtrar detalles inválidos
-              .map((det) => ({
-                id: det.id_producto || 0,
-                nombre: det.producto?.nombre || "Producto sin nombre",
-                imagen: det.producto?.url_foto || "/placeholder.png",
-                foto: det.producto?.url_foto || "/placeholder.png",
-                fotos: det.producto?.url_foto ? [det.producto.url_foto] : [],
-                cantidad: parseInt(det.cantidad || 0),
-                precioUnitario: parseFloat(det.precio_unitario || 0),
-                color: null,
-                textura: null,
-              }));
+              .filter((det) => det && det.id_producto)
+              .map((det) => {
+                let fotos = [];
+                if (det.producto?.url_foto) {
+                  if (typeof det.producto.url_foto === 'string') {
+                    fotos = det.producto.url_foto.split(',').map(url => url.trim());
+                  } else if (Array.isArray(det.producto.url_foto)) {
+                    fotos = det.producto.url_foto;
+                  }
+                }
+
+                return {
+                  id: det.id_producto || 0,
+                  nombre: det.producto?.nombre || "Producto sin nombre",
+                  imagen: fotos[0] || "/placeholder.png",
+                  foto: fotos[0] || "/placeholder.png",
+                  fotos: fotos.length > 0 ? fotos : ["/placeholder.png"],
+                  cantidad: parseInt(det.cantidad || 0),
+                  precioUnitario: parseFloat(det.precio_unitario || 0),
+                  color: null,
+                  textura: null,
+                };
+              });
 
             return {
               id,
               numero: id,
               fecha: typeof fecha === "string" ? fecha.split("T")[0] : fecha,
               estado,
+              subtotal, 
+              envio,
               total,
-              subtotal: total,
-              envio: 0,
               medioPago: "No especificado",
               direccion: pedido.direccion_entrega || "No especificada",
               productos,
@@ -119,7 +121,7 @@ const Orders = () => {
         console.log("✅ Pedidos formateados:", formattedOrders.length);
         setOrders(formattedOrders);
 
-        // ✅ Calcular estadísticas de forma segura
+        // Calcular estadísticas
         const orderStats = {
           total: formattedOrders.length,
           pendientes: formattedOrders.filter(
@@ -137,14 +139,13 @@ const Orders = () => {
         };
 
         setStats(orderStats);
-        console.log("📊 Estadísticas:", orderStats);
+        console.log("Estadísticas:", orderStats);
       } else {
         throw new Error(response.message || "Error al cargar pedidos");
       }
     } catch (err) {
-      console.error("❌ Error cargando pedidos:", err);
+      console.error("Error cargando pedidos:", err);
 
-      // ✅ Mensaje de error más específico
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -161,6 +162,31 @@ const Orders = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Manejar cambio de estado de pedido
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      console.log(`Cambiando estado de pedido ${orderId} a: ${newStatus}`);
+      
+      // Actualizar estado local inmediatamente (optimistic update)
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, estado: newStatus }
+            : order
+        )
+      );
+
+      // Recargar pedidos del servidor
+      await loadOrders();
+      
+      console.log("Estado actualizado exitosamente");
+    } catch (error) {
+      console.error("Error al cambiar estado:", error);
+      // Revertir cambio optimista
+      await loadOrders();
     }
   };
 
@@ -186,19 +212,7 @@ const Orders = () => {
 
   // Estado de carga
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background py-10 px-2">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8 text-text-main font-montserrat">
-            Mis Pedidos
-          </h1>
-          <div className="flex flex-col justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mb-4"></div>
-            <p className="text-gray-600">Cargando pedidos...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Cargando pedidos..." subMessage="Estamos preparando tus pedidos" />;
   }
 
   // Estado de error
@@ -257,7 +271,6 @@ const Orders = () => {
             className="flex items-center justify-center gap-2 px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto"
             title="Actualizar pedidos"
           >
-            <span className="text-lg">🔄</span>
             <span className="hidden sm:inline">Actualizar</span>
           </button>
         </div>
@@ -449,7 +462,7 @@ const Orders = () => {
         {/* Lista de pedidos */}
         {filteredOrders.length > 0 ? (
           <div className="space-y-4">
-            <OrderList orders={filteredOrders} />
+            <OrderList orders={filteredOrders} onStatusChange={handleStatusChange} />
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-12 text-center border border-gray-100">

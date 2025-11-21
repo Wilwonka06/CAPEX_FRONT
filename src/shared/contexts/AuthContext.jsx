@@ -3,18 +3,41 @@ import { useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { apiRequest } from '../config/apiConfig';
 
-const AuthContext = createContext();
+// Valor por defecto del contexto para evitar errores cuando no está disponible
+const defaultContextValue = {
+  currentUser: null,
+  loading: true,
+  login: async () => {},
+  logout: async () => {},
+  hasPrivilege: () => false,
+  getRoleRedirect: () => '/landing',
+  checkAuth: async () => null,
+  verifyAuth: async () => false,
+  _isProviderActive: false, // Flag para identificar si el Provider está activo
+};
+
+const AuthContext = createContext(defaultContextValue);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  // Verificar si el Provider está activo usando el flag
+  if (!context || context._isProviderActive === false) {
     throw new Error('useAuth debe ser usado dentro de un AuthProvider');
   }
   return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  // Inicializar con usuario del localStorage si existe (sincrónico)
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const user = localStorage.getItem('currentUser');
+      return user ? JSON.parse(user) : null;
+    } catch (error) {
+      console.error('Error al obtener usuario del localStorage:', error);
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const initialCheckDone = useRef(false);
@@ -40,10 +63,10 @@ export const AuthProvider = ({ children }) => {
       : currentUser.rol?.nombre || '';
 
     // Si el usuario es Administrador, tiene todos los privilegios
-    const isAdmin = roleName.toLowerCase() === 'administrador';
+    const isAdmin = roleName.toLowerCase() === 'administrador' || roleName.toLowerCase() === 'admin';
 
     if (isAdmin) {
-      console.log('✅ Usuario es Administrador, tiene todos los privilegios');
+      console.log(`✅ Usuario es Administrador (${roleName}), tiene todos los privilegios para ${module} -> ${action}`);
       return true;
     }
 
@@ -90,8 +113,8 @@ export const AuthProvider = ({ children }) => {
     return hasPrivilege;
   };
 
-  // Función para obtener la ruta de redirección basada en el rol
-  const getRoleRedirect = (role) => {
+  // Función para obtener la ruta de redirección basada en el rol y permisos
+  const getRoleRedirect = (role, userData = null) => {
     const roleName = typeof role === 'string' 
       ? role 
       : (role?.nombre || '');
@@ -104,6 +127,55 @@ export const AuthProvider = ({ children }) => {
       normalizedRole 
     });
 
+    // Obtener datos del usuario si están disponibles
+    const user = userData || currentUser;
+    
+    // ⚠️ IMPORTANTE: Clientes y usuarios NUNCA deben acceder al dashboard
+    // Incluso si tienen algunos privilegios, deben ir al landing
+    if (normalizedRole === 'cliente' || normalizedRole === 'usuario') {
+      console.log('🚫 Cliente/Usuario detectado, redirigiendo a /landing (sin acceso administrativo)');
+      return '/landing';
+    }
+    
+    // Para otros roles, verificar si tienen permisos administrativos
+    if (user && user.privileges) {
+      const administrativeModules = [
+        'Dashboard',
+        'Gestión de Usuarios',
+        'Gestión de Compras',
+        'Gestión de Servicios',
+        'Empleados',
+        'Programación',
+        'Productos',
+        'Compras',
+        'Proveedores',
+        'Categorías de Productos',
+        'Categorías de Servicios',
+        'Servicios',
+        'Ventas',
+        'Venta de Productos',
+        'Pedidos',
+        'Citas',
+        'Clientes'
+      ];
+      
+      // Verificar si tiene acceso a algún módulo administrativo
+      const hasAdministrativeAccess = administrativeModules.some(module => {
+        const modulePrivileges = user.privileges[module];
+        return modulePrivileges && (
+          modulePrivileges.Visualizar === true || 
+          modulePrivileges['Visualizar'] === true ||
+          modulePrivileges.Read === true
+        );
+      });
+      
+      if (hasAdministrativeAccess) {
+        console.log('✅ Usuario tiene permisos administrativos, redirigiendo a /dashboard');
+        return '/dashboard';
+      }
+    }
+
+    // Fallback: redirección basada en rol
     const roleRedirects = {
       'administrador': '/dashboard',
       'empleado': '/dashboard/citas',
@@ -141,25 +213,51 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Función de login
-  const login = async (userData) => {
+  const login = async (userData, previousPath = null) => {
     try {
       console.log('=== LOGIN INICIADO ===');
       console.log('📝 Datos del usuario recibidos:', userData);
       console.log('🔑 Privilegios del usuario:', userData.privileges);
+      console.log('📍 Página anterior:', previousPath);
 
       setCurrentUser(userData);
 
       // Emitir evento de cambio
       window.dispatchEvent(new Event('user-auth-changed'));
 
-      // Obtener ruta de redirección
-      const redirectPath = getRoleRedirect(userData.rol);
-      console.log('🔄 Redirigiendo a:', redirectPath);
+      // Obtener nombre del rol
+      const roleName = typeof userData.rol === 'string'
+        ? userData.rol
+        : userData.rol?.nombre || '';
+      const normalizedRole = roleName.toLowerCase();
 
-      // Redirigir con un pequeño delay para mejor UX
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 1000);
+      // Determinar ruta de redirección
+      let redirectPath;
+
+      // Si es cliente/usuario y hay una página anterior válida, redirigir ahí
+      if ((normalizedRole === 'cliente' || normalizedRole === 'usuario') && previousPath) {
+        // Verificar que la página anterior no sea el dashboard ni rutas administrativas
+        const isAdminRoute = previousPath.startsWith('/dashboard') || 
+                           previousPath.startsWith('/admin') ||
+                           previousPath === '/iniciar-sesion' ||
+                           previousPath === '/registrarse';
+        
+        if (!isAdminRoute) {
+          console.log('🔄 Cliente: Redirigiendo a página anterior:', previousPath);
+          redirectPath = previousPath;
+        } else {
+          // Si la página anterior es administrativa, redirigir al landing
+          redirectPath = getRoleRedirect(userData.rol, userData);
+        }
+      } else {
+        // Para otros roles o si no hay página anterior, usar la lógica normal
+        redirectPath = getRoleRedirect(userData.rol, userData);
+      }
+
+      console.log('🔄 Redirección sugerida:', redirectPath);
+      // No realizar navegación directa aquí para evitar recargas completas.
+      // Devolver la ruta sugerida y permitir que el componente de UI navegue.
+      return redirectPath;
     } catch (error) {
       console.error('❌ Error en login:', error);
       throw error;
@@ -186,13 +284,19 @@ export const AuthProvider = ({ children }) => {
         console.warn('⚠️ Error al cerrar sesión en el backend:', error);
       }
 
+<<<<<<< HEAD
+=======
+      // Limpiar datos locales
+      localStorage.removeItem('currentUser');
+      try { localStorage.removeItem('authToken'); } catch {}
+>>>>>>> origin/dev
       setCurrentUser(null);
       
       // Emitir evento de cambio
       window.dispatchEvent(new Event('user-auth-changed'));
       
       // Redirigir al login
-      window.location.href = '/login';
+      window.location.href = '/iniciar-sesion';
     }
   };
 
@@ -213,7 +317,19 @@ export const AuthProvider = ({ children }) => {
 
   // Verificar autenticación al cargar (solo una vez y no en rutas públicas)
   useEffect(() => {
+<<<<<<< HEAD
     const isPublicRoute = publicRoutes.includes(location.pathname);
+=======
+    console.log('🚀 AuthProvider montado, iniciando verificación...');
+    // Si ya hay un usuario en el estado inicial, verificar su validez
+    if (currentUser) {
+      checkAuth();
+    } else {
+      // Si no hay usuario, marcar como no cargando
+      setLoading(false);
+    }
+  }, []);
+>>>>>>> origin/dev
 
     if (!initialCheckDone.current && !isPublicRoute) {
       initialCheckDone.current = true;
@@ -236,6 +352,7 @@ export const AuthProvider = ({ children }) => {
     getRoleRedirect,
     checkAuth,
     verifyAuth,
+    _isProviderActive: true, // Flag para indicar que el Provider está activo
   };
 
   return (

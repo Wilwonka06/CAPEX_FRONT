@@ -8,8 +8,7 @@ import categoriesService from './API/categoriesService';
 import EditCategory from "./components/EditCategory";
 import CategoryDetail from "./components/CategoryDetail";
 import ChangeStatus from "./components/ChangeStatus";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -87,47 +86,58 @@ const CatProductsPage = () => {
 
   // Acciones CRUD
   const handleCreateCategory = async (newCategory) => {
-    try {
+    const categoryPromise = (async () => {
       const response = await categoriesService.create(newCategory);
       if (response.success) {
-        toast.success('Categoría creada exitosamente', { position: 'top-right' });
         await loadCategories(); // Recargar lista
+        return response.data;
       } else {
         throw new Error(response.message || 'Error al crear la categoría');
       }
+    })();
+
+    toast.promise(categoryPromise, {
+      loading: 'Creando categoría...',
+      success: 'Categoría creada exitosamente',
+      error: (err) => {
+        console.error('Error creating category:', err);
+        return err.response?.data?.message || err.message || 'Error al crear la categoría';
+      },
+    });
+
+    try {
+      await categoryPromise;
     } catch (error) {
-      console.error('Error creating category:', error);
-      toast.error(error.message || 'Error al crear la categoría', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     }
   };
 
   const handleEditCategory = async (updatedCategory) => {
-    const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar la categoría "${updatedCategory.nombre || updatedCategory.name}"?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
+    const categoryPromise = (async () => {
+      const response = await categoriesService.update(updatedCategory.id_categoria_producto, updatedCategory);
+      if (response.success) {
+        setShowEditModal(false);
+        setSelectedCategory(null);
+        await loadCategories(); // Recargar lista
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Error al actualizar la categoría');
+      }
+    })();
+
+    toast.promise(categoryPromise, {
+      loading: 'Actualizando categoría...',
+      success: 'Categoría actualizada exitosamente',
+      error: (err) => {
+        console.error('Error updating category:', err);
+        return err.response?.data?.message || err.message || 'Error al actualizar la categoría';
+      },
     });
 
-    if (result.isConfirmed) {
-      try {
-        const response = await categoriesService.update(updatedCategory.id_categoria_producto, updatedCategory);
-        if (response.success) {
-          setShowEditModal(false);
-          setSelectedCategory(null);
-          toast.success('Categoría actualizada exitosamente', { position: 'top-right' });
-          await loadCategories(); // Recargar lista
-        } else {
-          throw new Error(response.message || 'Error al actualizar la categoría');
-        }
-      } catch (error) {
-        console.error('Error updating category:', error);
-        toast.error(error.message || 'Error al actualizar la categoría', { position: 'top-right' });
-      }
+    try {
+      await categoryPromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -145,17 +155,29 @@ const CatProductsPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
+      const categoryPromise = (async () => {
         const response = await categoriesService.delete(categoryId);
         if (response.success) {
-          toast.success('Categoría eliminada exitosamente', { position: 'top-right' });
           await loadCategories(); // Recargar lista
+          return response.data;
         } else {
           throw new Error(response.message || 'Error al eliminar la categoría');
         }
+      })();
+
+      toast.promise(categoryPromise, {
+        loading: 'Eliminando categoría...',
+        success: 'Categoría eliminada exitosamente',
+        error: (err) => {
+          console.error('Error deleting category:', err);
+          return err.response?.data?.message || err.message || 'Error al eliminar la categoría';
+        },
+      });
+
+      try {
+        await categoryPromise;
       } catch (error) {
-        console.error('Error deleting category:', error);
-        toast.error(error.message || 'Error al eliminar la categoría', { position: 'top-right' });
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -177,17 +199,29 @@ const CatProductsPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
+      const categoryPromise = (async () => {
         const response = await categoriesService.changeStatus(categoryId, newStatus);
         if (response.success) {
-          toast.success(`Estado cambiado a ${newStatusText}`, { position: 'top-right' });
           await loadCategories(); // Recargar lista
+          return response.data;
         } else {
           throw new Error(response.message || 'Error al cambiar el estado');
         }
+      })();
+
+      toast.promise(categoryPromise, {
+        loading: 'Cambiando estado...',
+        success: `Estado cambiado a ${newStatusText}`,
+        error: (err) => {
+          console.error('Error changing category status:', err);
+          return err.response?.data?.message || err.message || 'Error al cambiar el estado';
+        },
+      });
+
+      try {
+        await categoryPromise;
       } catch (error) {
-        console.error('Error changing category status:', error);
-        toast.error(error.message || 'Error al cambiar el estado', { position: 'top-right' });
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -228,23 +262,20 @@ const CatProductsPage = () => {
 
             {/* Tabla de categorías */}
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              {loading ? (
-                <LoadingTable message="Cargando categorías..." />
-              ) : (
-                <CategoryTable
-                  categories={paginatedCategories}
-                  onToggleStatus={handleToggleStatus}
-                  onEdit={(category) => {
-                    setSelectedCategory(category);
-                    setShowEditModal(true);
-                  }}
-                  onDelete={handleDeleteCategory}
-                  onView={(category) => {
-                    setSelectedCategory(category);
-                    setShowDetailModal(true);
-                  }}
-                />
-              )}
+              <CategoryTable
+                categories={paginatedCategories}
+                onToggleStatus={handleToggleStatus}
+                onEdit={(category) => {
+                  setSelectedCategory(category);
+                  setShowEditModal(true);
+                }}
+                onDelete={handleDeleteCategory}
+                onView={(category) => {
+                  setSelectedCategory(category);
+                  setShowDetailModal(true);
+                }}
+                loading={loading}
+              />
             </div>
 
             {/* Paginación */}
@@ -284,7 +315,6 @@ const CatProductsPage = () => {
           onStatusChange={handleToggleStatus}
         />
       )}
-      <ToastContainer />
     </div>
   );
 };

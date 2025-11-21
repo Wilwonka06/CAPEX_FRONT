@@ -33,7 +33,7 @@ const UserProfileModal = ({ user, onClose, onEdit, onLogout }) => {
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
-            <div className="text-xl font-bold text-text-main text-center mb-1">{user.nombre} {user.apellido}</div>
+            <div className="text-xl font-bold text-text-main text-center mb-1">{user.nombre}</div>
             <div className="text-gray-500 text-center text-sm mb-2">{user.correo}</div>
             <div className="flex flex-col gap-2 w-full max-w-md mx-auto">
               <div className="flex justify-between text-sm">

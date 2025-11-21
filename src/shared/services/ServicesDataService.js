@@ -1,42 +1,36 @@
-const SERVICES_KEY = 'services';
+import apiRequest from '../config/apiConfig';
+import { getAllServices } from '../../features/landing/pages/ServicesPage/api/servicesApi';
 
-// Servicios de ejemplo iniciales
-const initialServices = [
-  { id: 1, name: 'Corte de cabello', category: 'Peluquería', duration: 30, price: 25000, active: true, description: 'Corte clásico para hombre o mujer', estado: 'Activo' },
-  { id: 2, name: 'Manicura Completa', category: 'Uñas', duration: 45, price: 35000, active: true, description: 'Manicura profesional con esmaltado', estado: 'Activo' },
-  { id: 3, name: 'Masaje Relajante', category: 'Bienestar', duration: 60, price: 80000, active: false, description: 'Masaje corporal relajante', estado: 'Inactivo' },
-  { id: 4, name: 'Depilación Láser', category: 'Estética', duration: 20, price: 150000, active: true, description: 'Depilación láser definitiva', estado: 'Activo' },
-  { id: 5, name: 'Limpieza Facial', category: 'Cuidado Facial', duration: 50, price: 60000, active: true, description: 'Limpieza profunda de cutis', estado: 'Activo' },
-  { id: 6, name: 'Tratamiento Capilar', category: 'Peluquería', duration: 40, price: 75000, active: false, description: 'Tratamiento nutritivo para el cabello', estado: 'Inactivo' },
-];
+// Función para normalizar servicios del backend al formato esperado por el frontend
+const normalizeService = (item) => {
+  return {
+    id: item.id_servicio ?? item.id ?? item.idServicio ?? item.ID,
+    name: item.nombre ?? item.name ?? "",
+    descripcion: item.descripcion ?? item.description ?? "",
+    duracion: item.duracion ?? item.duration ?? 0,
+    precio: item.precio ?? item.price ?? 0,
+    price: item.precio ?? item.price ?? 0,
+    active: item.estado === "Activo" || item.isActive !== false,
+    estado: item.estado ?? (item.isActive === false ? "Inactivo" : "Activo"),
+    imagen: item.foto ?? item.imagen ?? item.img ?? null,
+    img: item.foto ?? item.imagen ?? item.img ?? null,
+    category: item.categoria?.nombre ?? item.categoriaServicio?.nombre ?? item.category_name ?? item.categoria ?? "General",
+    id_categoria_servicio: item.id_categoria_servicio ?? item.categoryId ?? null,
+    createdAt: item.createdAt ?? item.fecha_creacion ?? new Date().toISOString(),
+    updatedAt: item.updatedAt ?? item.fecha_actualizacion ?? new Date().toISOString(),
+  };
+};
 
-function saveServicesToStorage(services) {
-  localStorage.setItem(SERVICES_KEY, JSON.stringify(services));
-}
-
-function loadServicesFromStorage() {
-  const data = localStorage.getItem(SERVICES_KEY);
-  if (data) {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return null;
-    }
+export const getServices = async () => {
+  try {
+    const services = await getAllServices();
+    // Normalizar y retornar
+    return services.map(normalizeService);
+  } catch (error) {
+    console.error('Error fetching services from API:', error);
+    // Retornar array vacío en caso de error
+    return [];
   }
-  return null;
-}
-
-export const getServices = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let services = loadServicesFromStorage();
-      if (!services) {
-        saveServicesToStorage(initialServices);
-        services = initialServices;
-      }
-      resolve(services);
-    }, 300);
-  });
 };
 
 export const addService = (service) => {

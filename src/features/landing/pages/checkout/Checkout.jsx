@@ -4,13 +4,13 @@ import { useCart } from '../../components/CartContext';
 import ordersService from '../../pages/orders/API/OrdersService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import OrderProgressIndicator from './components/OrderProgressIndicator';
+import { formatNumber } from '../../../../shared/utils/formatters';
+import { isNumberInputValid } from '../../../../shared/validations';
 
 const empresasEnvio = [
   { nombre: 'INTER rapidísimo', precio: { 'Bogotá': 13500, 'Medellín': 15000, 'default': 18000 } },
   { nombre: 'CO-ORDINADORA', precio: { 'Bogotá': 20500, 'Medellín': 22000, 'default': 25000 } },
 ];
-
-const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
 
 const Checkout = () => {
   const { cart, clearCart } = useCart();
@@ -20,7 +20,7 @@ const Checkout = () => {
 
   const [form, setForm] = useState({
     documentType: 'CC',
-    documento: '', nombre: '', apellidos: '', telefono: '', email: '',
+    documento: '', nombre: '', telefono: '', email: '',
     empresa: '', direccion: '', apto: '', ciudad: '', pais: 'Colombia',
   });
 
@@ -40,7 +40,6 @@ const Checkout = () => {
         documentType: user.tipo_documento || 'CC',
         documento: user.numero_documento || user.documento || '',
         nombre: user.nombre || '',
-        apellidos: user.apellido || '',
         telefono: user.telefono || '',
         email: user.correo || '',
         direccion: user.direccion || '',
@@ -116,26 +115,38 @@ const Checkout = () => {
       setCurrentStep(3);
       await new Promise(resolve => setTimeout(resolve, 1000));
   
-      if (response.success) {
-        setCurrentStep(4);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        clearCart();
-        
-        // ✅ Pasar el pedido creado a través del state de navegación
-        navigate('/landing/gracias', {
-          state: {
-            order: response.data,
-            justCreated: true
-          }
-        });
-      } else {
-        throw new Error(response.message || 'Error al crear el pedido');
+      // Verificar que la respuesta sea exitosa
+      if (!response || !response.success) {
+        const errorMsg = response?.message || 'Error al crear el pedido';
+        console.error('❌ Error en respuesta del servidor:', response);
+        throw new Error(errorMsg);
       }
+
+      // Verificar que haya datos del pedido
+      if (!response.data) {
+        console.error('❌ No se recibieron datos del pedido:', response);
+        throw new Error('No se recibieron datos del pedido creado');
+      }
+
+      setCurrentStep(4);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      clearCart();
+      
+      // ✅ Pasar el pedido creado a través del state de navegación
+      console.log('✅ Navegando a página de agradecimiento con pedido:', response.data);
+      navigate('/landing/gracias', {
+        state: {
+          order: response.data,
+          justCreated: true
+        },
+        replace: true // Usar replace para evitar que el usuario vuelva atrás
+      });
     } catch (error) {
       console.error('❌ Error creating order:', error);
       setError(error.message || 'Error al procesar el pedido. Inténtalo de nuevo.');
       setCurrentStep(1);
+      // NO redirigir al home en caso de error, dejar que el usuario vea el error
     } finally {
       setLoading(false);
     }
@@ -194,13 +205,19 @@ const Checkout = () => {
                 className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
                 placeholder="Número identificación*"
                 value={form.documento}
-                onChange={e => setForm(f => ({ ...f, documento: e.target.value }))}
+                onChange={e => {
+                  const raw = e.target.value
+                  const isPassport = form.documentType === 'PP' || form.documentType === 'Pasaporte'
+                  const sanitized = isPassport ? raw.replace(/[^A-Za-z0-9]/g, '') : raw.replace(/[^\d]/g, '')
+                  setForm(f => ({ ...f, documento: sanitized }))
+                }}
+                onKeyDown={isNumberInputValid}
                 readOnly={!isEditing}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre*</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo*</label>
               <input
                 className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
                 placeholder="Nombre*"
@@ -211,22 +228,16 @@ const Checkout = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Apellidos</label>
-              <input
-                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
-                placeholder="Apellidos"
-                value={form.apellidos}
-                onChange={e => setForm(f => ({ ...f, apellidos: e.target.value }))}
-                readOnly={!isEditing}
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono*</label>
               <input
                 className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
                 placeholder="Teléfono*"
                 value={form.telefono}
-                onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))}
+                onChange={e => {
+                  const onlyDigits = e.target.value.replace(/[^\d]/g, '')
+                  setForm(f => ({ ...f, telefono: onlyDigits }))
+                }}
+                onKeyDown={isNumberInputValid}
                 readOnly={!isEditing}
                 required
               />

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import AddScheduling from './AddScheduling';
-import { createScheduling } from '../api/schedulingApi';
-import { toast } from 'react-toastify';
+import { schedulingService } from '../API/employeesService';
+import toast from 'react-hot-toast';
 
 const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -125,7 +125,7 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
         };
 
         console.log("[Calendar] Creating scheduling for fecha:", fecha, schedulingData);
-        const created = await createScheduling(schedulingData);
+        const created = await schedulingService.create(schedulingData);
         createdSchedulings.push(created);
       }
 
@@ -161,17 +161,32 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
   }, [empleado, schedulings]);
 
   return (
-    <div className="w-full p-4">
-      <FullCalendar
-        plugins={[dayGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        events={eventos}
-        dateClick={() => setModalOpen(true)}
-        height="auto"
-      />
+    <div className="w-full">
+      <div className="bg-gray-50 rounded-xl mt-4 p-4 border border-gray-200">
+        <FullCalendar
+          plugins={[dayGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          events={eventos}
+          dateClick={() => setModalOpen(true)}
+          height="500px"
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+          }}
+          buttonText={{
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            day: 'Día'
+          }}
+          dayHeaderFormat={{ weekday: 'short' }}
+          locale="es"
+        />
+      </div>
 
       {modalOpen && (
-        <div className="mt-4">
+        <div className="mt-6">
           <AddScheduling
             onAdd={handleAddEvent}
             empleado={empleado}

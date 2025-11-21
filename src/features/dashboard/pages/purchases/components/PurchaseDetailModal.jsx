@@ -1,5 +1,5 @@
-import PropTypes from "prop-types";
-import { formatNumber } from "../../../../../shared/utils/formatters";
+import PropTypes from 'prop-types';
+import { formatNumber, formatPercentage } from "../../../../../shared/utils/formatters";
 
 const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
   if (!isOpen || !compra) return null;
@@ -30,16 +30,13 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">Detalle de Compra #{compra.id}</h2>
-          <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose}>×</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-receipt text-lg"></i></div><h2 className="text-xl font-bold m-0">Detalle de Compra #{compra.id}</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1 space-y-8">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           {/* Sección de Resumen */}
           <div className="p-6 border rounded-lg bg-gray-50 mb-8 shadow-md space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -61,7 +58,6 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
               </div>
           </div>
           </div>
-          
           {/* Tabla de productos en la compra */}
           <div className="mt-8">
             <h3 className="text-md font-semibold text-text-main mb-4">Lista de Productos</h3>
@@ -85,7 +81,7 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
                       <td className="py-2 px-3 text-sm">{item.producto?.nombre || item.nombre || item.descripcion || 'Producto sin nombre'}</td>
                       <td className="py-2 px-3 text-right">{item.cantidad || 1}</td>
                       <td className="py-2 px-3 text-right">${formatNumber(item.precio_unitario || item.costo || item.precioBase || 0)}</td>
-                      <td className="py-2 px-3 text-right">{(parseFloat(item.iva || 0) * 100).toFixed(0)}%</td>
+                      <td className="py-2 px-3 text-right">{formatPercentage(parseFloat(item.iva || 0) * 100)}</td>
                       <td className="py-2 px-3 text-right">${formatNumber((parseFloat(item.precio_unitario || item.costo || item.precioBase || 0) * (1 + parseFloat(item.iva || 0))))}</td>
                       <td className="py-2 px-3 text-right font-semibold">${formatNumber((parseFloat(item.precio_unitario || item.costo || item.precioBase || 0) * parseInt(item.cantidad || 1)))}</td>
                     </tr>
@@ -100,7 +96,6 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
               </table>
             </div>
           </div>
-
           {/* Sección de Totales */}
           <div className="flex justify-end mt-10">
             <div className="w-full max-w-xs space-y-4">
@@ -109,23 +104,17 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
                 <span className="font-semibold text-gray-800">${formatNumber(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">IVA ({subtotal > 0 ? ((totalIva/subtotal) * 100).toFixed(0) : 0}%):</span>
+                <span className="text-gray-600">IVA:</span>
                 <span className="font-semibold text-gray-800">${formatNumber(totalIva)}</span>
               </div>
               <div className="flex justify-between text-lg border-t border-gray-500 pt-4 mt-4">
-                <span className="font-bold text-primary">Total a Pagar:</span>
+                <span className="font-bold text-primary">Total:</span>
                 <span className="font-bold text-primary">${formatNumber(total)}</span>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Footer fijo */}
-        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-lg flex justify-end px-8 py-4">
-          <button className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200"><button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-check-circle"></i>Cerrar</button></div>
       </div>
     </div>
   );
@@ -137,4 +126,4 @@ PurchaseDetailModal.propTypes = {
   onClose: PropTypes.func.isRequired,
 }; 
 
-export default PurchaseDetailModal; 
+export default PurchaseDetailModal;

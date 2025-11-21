@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import authService from '../services/authServices';
 
 const ResetPassword = () => {
@@ -27,7 +27,7 @@ const ResetPassword = () => {
     if (!token) {
       console.error('❌ No se encontró token de recuperación');
       setError('Token de recuperación no encontrado. Por favor, solicita un nuevo enlace de recuperación.');
-      toast.error('Token de recuperación inválido', { position: 'top-right' });
+      toast.error('Token de recuperación inválido');
     } else {
       console.log('✅ Token de recuperación encontrado');
     }
@@ -80,10 +80,10 @@ const ResetPassword = () => {
       console.log('✅ Contraseña restablecida:', response);
 
       setSuccess('¡Contraseña restablecida exitosamente!');
-      toast.success('Contraseña actualizada correctamente', { position: 'top-right' });
+      toast.success('Contraseña actualizada correctamente');
 
       // Redirigir al login después de 2 segundos
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate('/iniciar-sesion'), 2000);
 
     } catch (error) {
       console.error('❌ Error al restablecer contraseña:', error);
@@ -97,7 +97,7 @@ const ResetPassword = () => {
       }
 
       setError(errorMsg);
-      toast.error(errorMsg, { position: 'top-right' });
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -212,7 +212,7 @@ const ResetPassword = () => {
             <button
               type="button"
               className="px-6 py-2 bg-gray-200 text-[#6d3b3b] rounded shadow hover:bg-gray-300 transition font-semibold"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/iniciar-sesion')}
               disabled={loading}
             >
               Volver al login

@@ -5,8 +5,8 @@ export { default as RolesPage } from './RolesPage';
 export { useRoles, RolesProvider } from './hooks/useRoles';
 
 // Servicios
-export { default as rolesService } from './services';
-export * from './services';
+export { rolesService } from './API/rolesService';
+export * from './API/rolesService';
 
 // Componentes (re-exportados desde components/index.js)
 export * from './components';

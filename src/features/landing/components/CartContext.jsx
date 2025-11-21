@@ -12,11 +12,30 @@ const getStoredCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(getStoredCart);
+  const [cart, setCart] = useState([]);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Inicializar carrito desde localStorage
+  useEffect(() => {
+    try {
+      const storedCart = getStoredCart();
+      setCart(storedCart);
+    } catch (error) {
+      console.error('Error loading cart from localStorage:', error);
+      setCart([]);
+    } finally {
+      // Pequeño delay para mostrar el loading si es necesario
+      setTimeout(() => {
+        setIsInitializing(false);
+      }, 100);
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
+    if (!isInitializing) {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    }
+  }, [cart, isInitializing]);
 
   const addToCart = (product, cantidad = 1) => {
     setCart(prev => {
@@ -35,7 +54,16 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = (id, cantidad) => {
-    setCart(prev => prev.map(p => p.id === id ? { ...p, cantidad: Math.max(1, cantidad) } : p));
+    setCart(prev => prev.map(p => {
+      if (p.id === id) {
+        // Obtener stock disponible del producto (puede ser stock, cantidad, o cantidad_disponible)
+        const stockDisponible = p.stock ?? p.cantidad ?? p.cantidad_disponible ?? 999;
+        // Validar que la cantidad no exceda el stock disponible
+        const nuevaCantidad = Math.max(1, Math.min(cantidad, stockDisponible));
+        return { ...p, cantidad: nuevaCantidad };
+      }
+      return p;
+    }));
   };
 
   const removeFromCart = (id) => {
@@ -45,7 +73,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => setCart([]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, updateQuantity, removeFromCart, clearCart }}>
+    <CartContext.Provider value={{ cart, addToCart, updateQuantity, removeFromCart, clearCart, isInitializing }}>
       {children}
     </CartContext.Provider>
   );

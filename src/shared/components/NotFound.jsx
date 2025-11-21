@@ -7,7 +7,7 @@ const NotFound = () => {
     if (currentUser) {
       window.location.href = getRoleRedirect(currentUser.rol);
     } else {
-      window.location.href = '/login';
+      window.location.href = '/iniciar-sesion';
     }
   };
 

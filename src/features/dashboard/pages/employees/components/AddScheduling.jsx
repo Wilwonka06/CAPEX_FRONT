@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import {
   validateSchedulingForm,
   validateSchedulingStartDate,
   validateSchedulingEndDate,
   validateSchedulingStartTime,
   validateSchedulingEndTime,
-  validateSchedulingRepetition,
-  validateSchedulingDays
 } from '../../../../../shared/validations';
 
 const horas = [
@@ -43,7 +41,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     const { name, value, type, checked } = e.target;
 
     if (type === 'checkbox' && name === 'dias') {
-      const cleanValue = value.trim();  // ⚡️ Normaliza espacios
+      const cleanValue = value.trim();
       const newDias = checked
         ? [...prog.dias, cleanValue]
         : prog.dias.filter((d) => d !== cleanValue);
@@ -79,13 +77,18 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
         const horaFinErrors = validateSchedulingEndTime(value, prog.horaInicio);
         error = horaFinErrors.horaFin || '';
         break;
-      // Removed repeticion validation
       default:
         break;
     }
     
     if (error) {
       setErrors(prev => ({ ...prev, [name]: error }));
+    } else {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
@@ -103,12 +106,12 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
 
     const nuevaProg = {
       ...prog,
-      dias: diasLimpios,               // ⚡️ Guarda días limpios
+      dias: diasLimpios,
       empleadoId: empleado?.id || null,
       id: editing?.id || Date.now().toString(),
     };
 
-    console.log('✅ PROG GUARDADO:', nuevaProg); // 📌 Te muestra la base que se guarda
+    console.log('✅ PROG GUARDADO:', nuevaProg);
 
     onAdd(nuevaProg);
     if (!editing) {
@@ -117,126 +120,141 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     setErrors({});
   };
 
-  const handleAddEvent = (e) => {
-    e.preventDefault();
-    
-    // Validación completa del formulario
-    const formErrors = validateSchedulingForm(prog);
-    
-    // Agregar validación de empleado
-    if (!selectedEmployee) {
-      formErrors.empleado = 'Selecciona un empleado';
-    }
-    
-    setErrors(formErrors);
-    
-    if (Object.keys(formErrors).length === 0) {
-      let progWithIds = { ...prog };
-      progWithIds.empleadoId = selectedEmployee;
-      if (!progWithIds.id) {
-        progWithIds.id = Date.now().toString() + Math.floor(Math.random() * 10000).toString();
-      }
-      if (!progWithIds.idBase) {
-        progWithIds.idBase = progWithIds.id;
-      }
-      if (onAdd) onAdd(progWithIds);
-      setProg(initialProg);
-      setSelectedEmployee('');
-      setErrors({});
-      toast.success('Programación agregada exitosamente!', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
-    }
-  };
-
   return (
-    <div className="border border-accent-light rounded-md p-4 mt-4">
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label>Fecha inicio</label>
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div className="mb-6">
+        <h3 className="text-xl font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
+          <i className={`bi ${editing ? 'bi-pencil-square text-[#FACC15]' : 'bi-plus-circle text-[#FACC15]'}`}></i>
+          {editing ? 'Editar Programación' : 'Agregar Nueva Programación'}
+        </h3>
+        <p className="text-gray-600 font-lato">Configura el horario de trabajo del empleado</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+              <i className="bi bi-calendar-event text-[#FACC15]"></i>
+              Fecha de Inicio *
+            </label>
             <input
               type="date"
               name="fechaInicio"
               value={prog.fechaInicio}
               onChange={handleProgChange}
               onBlur={handleBlur}
-              className="w-full border rounded px-3 py-2"
+              className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
+                errors.fechaInicio ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
             />
-            {errors.fechaInicio && <p className="text-red-500 text-xs">{errors.fechaInicio}</p>}
+            {errors.fechaInicio && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.fechaInicio}</p>}
           </div>
 
-          <div>
-            <label>Fecha fin</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+              <i className="bi bi-calendar-check text-[#FACC15]"></i>
+              Fecha de Fin *
+            </label>
             <input
               type="date"
               name="fechaFin"
               value={prog.fechaFin}
               onChange={handleProgChange}
               onBlur={handleBlur}
-              className="w-full border rounded px-3 py-2"
+              className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
+                errors.fechaFin ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
             />
-            {errors.fechaFin && <p className="text-red-500 text-xs">{errors.fechaFin}</p>}
-          </div>
-
-
-          <div className="md:col-span-2">
-            <div className="flex flex-wrap gap-4 mt-2">
-              {diasSemana.map(dia => (
-                <label key={dia} className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    name="dias"
-                    value={dia}
-                    checked={prog.dias.includes(dia)}
-                    onChange={handleProgChange}
-                    onBlur={handleBlur}
-                  />
-                  {dia}
-                </label>
-              ))}
-            </div>
-            {errors.dias && <p className="text-red-500 text-xs">{errors.dias}</p>}
-          </div>
-
-          <div className="flex items-center gap-2 md:col-span-2 mt-2">
-            <select
-              name="horaInicio"
-              value={prog.horaInicio}
-              onChange={handleProgChange}
-              onBlur={handleBlur}
-              className="border rounded px-3 py-2"
-            >
-              {horas.map(h => <option key={h}>{h}</option>)}
-            </select>
-            {errors.horaInicio && <p className="text-red-500 text-xs">{errors.horaInicio}</p>}
-            <span>-</span>
-            <select
-              name="horaFin"
-              value={prog.horaFin}
-              onChange={handleProgChange}
-              onBlur={handleBlur}
-              className="border rounded px-3 py-2"
-            >
-              {horas.map(h => <option key={h}>{h}</option>)}
-            </select>
-            {errors.horaFin && <p className="text-red-500 text-xs">{errors.horaFin}</p>}
+            {errors.fechaFin && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.fechaFin}</p>}
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="space-y-4">
+          <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+            <i className="bi bi-calendar-week text-[#FACC15]"></i>
+            Días de la Semana *
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {diasSemana.map(dia => (
+              <label key={dia} className="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl hover:border-[#FACC15] hover:bg-yellow-50 transition-all cursor-pointer group">
+                <input
+                  type="checkbox"
+                  name="dias"
+                  value={dia}
+                  checked={prog.dias.includes(dia)}
+                  onChange={handleProgChange}
+                  className="w-5 h-5 text-[#FACC15] focus:ring-[#FACC15] border-2 border-gray-300 rounded focus:ring-2 transition-all"
+                />
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-800 transition-colors">{dia}</span>
+              </label>
+            ))}
+          </div>
+          {errors.dias && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.dias}</p>}
+        </div>
+
+        <div className="space-y-4">
+          <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+            <i className="bi bi-clock text-[#FACC15]"></i>
+            Horario de Trabajo *
+          </label>
+          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Desde:</span>
+              <select
+                name="horaInicio"
+                value={prog.horaInicio}
+                onChange={handleProgChange}
+                onBlur={handleBlur}
+                className={`border-2 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+                  errors.horaInicio ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {horas.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <i className="bi bi-arrow-right text-gray-400"></i>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Hasta:</span>
+              <select
+                name="horaFin"
+                value={prog.horaFin}
+                onChange={handleProgChange}
+                onBlur={handleBlur}
+                className={`border-2 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+                  errors.horaFin ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {horas.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            {errors.horaInicio && <p className="text-red-500 text-sm flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.horaInicio}</p>}
+            {errors.horaFin && <p className="text-red-500 text-sm flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.horaFin}</p>}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
           {editing && (
-            <button type="button" onClick={onCancelEdit} className="bg-gray-200 px-4 py-2 rounded">
-              Cancelar edición
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-semibold font-lato flex items-center gap-2"
+            >
+              <i className="bi bi-x-lg"></i>
+              Cancelar Edición
             </button>
           )}
-          <button type="submit" className="bg-primary-dark text-white px-8 py-2 rounded">
-            {editing ? 'Guardar cambios' : 'Agregar'}
+          <button
+            type="submit"
+            className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 font-semibold font-lato flex items-center gap-2 shadow-lg hover:shadow-xl"
+          >
+            <i className={`bi ${editing ? 'bi-check-circle' : 'bi-plus-circle'}`}></i>
+            {editing ? 'Guardar Cambios' : 'Agregar Programación'}
           </button>
         </div>
       </form>

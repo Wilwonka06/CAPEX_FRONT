@@ -4,6 +4,7 @@ import EditRoles from "./EditRole";
 import RoleRow from "./RoleRow";
 import TableHeader from "./TableHeader";
 import EmptyState from "./EmptyState";
+import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 import { useState } from "react";
 
 export default function RolesTable({ roles, onEdit, onDelete, onStatusChange, loading = false }) {
@@ -42,6 +43,14 @@ export default function RolesTable({ roles, onEdit, onDelete, onStatusChange, lo
       await onStatusChange(roleId, newStatus);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+        <TableSkeleton columns={3} rows={5} hasActions={true} hasAvatar={false} />
+      </div>
+    );
+  }
 
   if (roles.length === 0) {
     return (
@@ -86,9 +95,9 @@ export default function RolesTable({ roles, onEdit, onDelete, onStatusChange, lo
                 key={role.id}
                 role={role}
                 onView={handleViewDetail}
-                onEdit={handleEdit}
-                onDelete={onDelete}
-                onStatusChange={handleStatusChange}
+                onEdit={onEdit ? handleEdit : null}
+                onDelete={onDelete ? onDelete : null}
+                onStatusChange={onStatusChange ? handleStatusChange : null}
               />
             ))}
           </tbody>
@@ -124,8 +133,10 @@ RolesTable.propTypes = {
   roles: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-      name: PropTypes.string.isRequired,
+      name: PropTypes.string,
+      nombre: PropTypes.string,
       description: PropTypes.string,
+      descripcion: PropTypes.string,
       estado: PropTypes.string,
     })
   ).isRequired,

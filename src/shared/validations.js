@@ -528,6 +528,95 @@ export function isValidNIT(nit) {
   return nitRegex.test(nit);
 }
 
+// Valida formato de NIT colombiano (solo números, guiones o puntos, máximo 14 dígitos con dígito de verificación)
+export function isValidColombianNIT(nit) {
+  if (!nit || !nit.trim()) return false;
+  
+  // Remover puntos y guiones para validar
+  const cleanNit = nit.replace(/[.-]/g, '');
+  
+  // Debe tener entre 9 y 14 dígitos (mínimo 8 + 1 verificación, máximo 13 + 1 verificación)
+  if (cleanNit.length < 9 || cleanNit.length > 14) return false;
+  
+  // Solo debe contener números
+  if (!/^\d+$/.test(cleanNit)) return false;
+  
+  // El último carácter debe ser un dígito (dígito de verificación)
+  const lastChar = cleanNit[cleanNit.length - 1];
+  if (!/^\d$/.test(lastChar)) return false;
+  
+  return true;
+}
+
+// Valida número de documento para persona natural (8 a 15 dígitos)
+export function isValidDocumentNumber(documento) {
+  if (!documento || !documento.trim()) return false;
+  
+  // Solo números, sin espacios ni caracteres especiales
+  const cleanDoc = documento.replace(/\s/g, '');
+  
+  // Debe tener entre 8 y 15 dígitos
+  if (cleanDoc.length < 8 || cleanDoc.length > 15) return false;
+  
+  // Solo debe contener números
+  return /^\d+$/.test(cleanDoc);
+}
+
+// Formatea NIT mientras se escribe (XXX.XXX.XXX-Y)
+export function formatNIT(value) {
+  if (!value) return '';
+  
+  // Remover todo excepto números y guiones
+  let cleanValue = value.replace(/[^\d-]/g, '');
+  
+  // Si tiene guión, separar número base y dígito de verificación
+  const hasDash = cleanValue.includes('-');
+  let baseNumber = '';
+  let verificationDigit = '';
+  
+  if (hasDash) {
+    const parts = cleanValue.split('-');
+    baseNumber = parts[0].replace(/\D/g, '');
+    verificationDigit = parts[1] ? parts[1].replace(/\D/g, '').substring(0, 1) : '';
+  } else {
+    // Si no tiene guión, el último dígito es el de verificación (solo si hay más de 1 dígito)
+    const allDigits = cleanValue.replace(/\D/g, '');
+    if (allDigits.length > 1) {
+      baseNumber = allDigits.slice(0, -1);
+      verificationDigit = allDigits.slice(-1);
+    } else if (allDigits.length === 1) {
+      // Si solo hay un dígito, es parte del número base
+      baseNumber = allDigits;
+      verificationDigit = '';
+    }
+  }
+  
+  // Limitar base a 13 dígitos
+  if (baseNumber.length > 13) {
+    baseNumber = baseNumber.substring(0, 13);
+    // Si se cortó, el último dígito cortado podría ser el de verificación
+    if (verificationDigit === '' && value.replace(/\D/g, '').length > 14) {
+      verificationDigit = value.replace(/\D/g, '').substring(13, 14);
+    }
+  }
+  
+  // Formatear base con puntos cada 3 dígitos desde la derecha
+  let formatted = '';
+  if (baseNumber.length > 0) {
+    // Agregar puntos cada 3 dígitos desde la derecha
+    const reversed = baseNumber.split('').reverse().join('');
+    const chunks = reversed.match(/.{1,3}/g) || [];
+    formatted = chunks.join('.').split('').reverse().join('');
+  }
+  
+  // Agregar dígito de verificación con guión
+  if (verificationDigit) {
+    formatted = formatted ? `${formatted}-${verificationDigit}` : verificationDigit;
+  }
+  
+  return formatted;
+}
+
 // Valida formato de teléfono (código de país + números)
 export function isValidPhone(telefono) {
   // Nota: Esta validación es básica, ya que el campo de teléfono en los formularios de cliente
@@ -543,15 +632,38 @@ export function isValidSupplierType(tipo) {
 
 // Valida tipo de documento
 export function isValidDocumentType(tipo) {
-
-  return ['Cedula de ciudadania', 'Tarjeta de identidad', 'Cedula de extranjeria', 'Pasaporte'].includes(tipo);
-
+  const valid = ['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT','Registro civil','Tarjeta de identidad','Cedula de ciudadania','Tarjeta de extranjeria','Cedula de extranjeria','Pasaporte','Permiso especial de permanencia','Documento de identificación extranjero','NUIP','NIT de otro país'];
+  return valid.includes(tipo);
 }
 
-// Valida número de documento (solo números)
-export function isValidDocumentNumber(documento) {
-  const docRegex = /^\d{8,15}$/;
-  return docRegex.test(documento);
+export function isValidDocumentByType(tipo, numero) {
+  const num = (numero || '').toString().trim();
+  const onlyDigits = /^\d+$/;
+  const onlyAlphaNum = /^[A-Za-z0-9]+$/;
+  switch (tipo) {
+    case 'RC':
+    case 'TI':
+    case 'NUIP':
+    case 'CC':
+      return onlyDigits.test(num) && num.length >= 6 && num.length <= 10;
+    case 'TE':
+    case 'CE':
+      return onlyDigits.test(num) && num.length <= 20 && num.length >= 6;
+    case 'NIT': {
+      // permitir con dígito de verificación: 800000000-9
+      const clean = num.replace(/[.-]/g, '');
+      return onlyDigits.test(clean) && clean.length >= 9 && clean.length <= 14;
+    }
+    case 'PP':
+      return onlyAlphaNum.test(num) && num.length >= 9 && num.length <= 12;
+    case 'PEP':
+    case 'DIE':
+    case 'FOREIGN_NIT':
+      return num.length >= 6; // variable según país
+    default:
+      // Si llega descripción en vez de código, aplicar reglas generales de 6-15 dígitos
+      return onlyDigits.test(num) && num.length >= 6 && num.length <= 15;
+  }
 }
 
 // Valida contraseña (mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número)
@@ -744,22 +856,14 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
     errors.documentType = 'El tipo de documento es requerido.';
   }
   // Nombres
-  if (!customerData.firstName || customerData.firstName.trim().length < 2) {
-    errors.firstName = 'El nombre es requerido y debe tener al menos 2 caracteres.';
+  // Validar nombre completo (en lugar de firstName y lastName)
+  if (!customerData.nombre || customerData.nombre.trim().length < 2) {
+    errors.nombre = 'El nombre completo es requerido y debe tener al menos 2 caracteres.';
   } else {
-    if (!isValidAlphaOnly(customerData.firstName)) {
-      errors.firstName = 'Solo se permiten letras y espacios.';
-    } else if (!startsWithAlpha(customerData.firstName)) {
-      errors.firstName = 'Debe comenzar con una letra.';
-    }
-  }
-  if (!customerData.lastName || customerData.lastName.trim().length < 2) {
-    errors.lastName = 'El apellido es requerido y debe tener al menos 2 caracteres.';
-  } else {
-    if (!isValidAlphaOnly(customerData.lastName)) {
-      errors.lastName = 'Solo se permiten letras y espacios.';
-    } else if (!startsWithAlpha(customerData.lastName)) {
-      errors.lastName = 'Debe comenzar con una letra.';
+    if (!isValidAlphaOnly(customerData.nombre)) {
+      errors.nombre = 'Solo se permiten letras y espacios.';
+    } else if (!startsWithAlpha(customerData.nombre)) {
+      errors.nombre = 'Debe comenzar con una letra.';
     }
   }
   // Número de Documento
@@ -847,24 +951,9 @@ export function isValidName(name) {
 // Valida documento según tipo
 export function validateUserDocument(tipo, documento) {
   if (!documento) return 'El documento es obligatorio';
-  if (tipo === 'Pasaporte') {
-    if (!/^[A-Z]{3}\d{6}$/.test(documento)) {
-      return 'Pasaporte: 3 letras mayúsculas seguidas de 6 dígitos (ej: ABC123456)';
-    }
-  } else if (tipo === 'Cedula de ciudadania' || tipo === 'Tarjeta de identidad') {
-    if (!/^\d{7,15}$/.test(documento)) {
-      return 'Debe tener solo números (7 a 15 dígitos)';
-    }
-  } else if (tipo === 'Cedula de extranjeria') {
-    if (!/^\d{7,15}$/.test(documento)) {
-      return 'Debe tener solo números (7 a 15 dígitos)';
-    }
-  } else if (tipo === 'NIT') {
-    if (!/^[A-Za-z]\d+$/.test(documento)) {
-      return 'NIT: Una letra seguida de números (ej: A123456789)';
-    }
-  } else {
-    return 'Selecciona un tipo de documento válido';
+  const ok = isValidDocumentByType(tipo, documento);
+  if (!ok) {
+    return 'Número de documento inválido para el tipo seleccionado';
   }
   return '';
 }

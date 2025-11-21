@@ -1,4 +1,4 @@
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 
 /**
  * Utilidades para manejo de APIs y optimización de respuestas
