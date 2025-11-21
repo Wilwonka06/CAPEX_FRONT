@@ -237,19 +237,20 @@ const EmployeesPage = () => {
 
           console.log("[DEBUG] Fechas específicas calculadas:", fechasEspecificas.length);
 
-          // Crear una programación por cada fecha calculada
+          // Crear una programación por cada fecha calculada y por cada bloque de horario
+          const blocks = (prog.bloques && prog.bloques.length > 0) ? prog.bloques : [{ inicio: prog.horaInicio, fin: prog.horaFin }];
           for (const fecha of fechasEspecificas) {
             const fechaFormateada = fecha.toISOString().split('T')[0];
-            
-            const schedulingData = {
-              id_usuario: createdEmployee.id,
-              fecha_inicio: fechaFormateada,
-              hora_entrada: prog.horaInicio,
-              hora_salida: prog.horaFin,
-            };
-            
-            console.log("[DEBUG] Creando programación para fecha:", fechaFormateada);
-            schedulingPromises.push(schedulingService.create(schedulingData));
+            for (const b of blocks) {
+              const schedulingData = {
+                id_usuario: createdEmployee.id,
+                fecha_inicio: fechaFormateada,
+                hora_entrada: b.inicio.includes('M') ? to24h(b.inicio) : b.inicio,
+                hora_salida: b.fin.includes('M') ? to24h(b.fin) : b.fin,
+              };
+              console.log("[DEBUG] Creando programación para fecha:", fechaFormateada, schedulingData);
+              schedulingPromises.push(schedulingService.create(schedulingData));
+            }
           }
         }
 
@@ -405,6 +406,18 @@ const EmployeesPage = () => {
           console.log("[DEBUG] Employees after delete:", updated);
           return updated;
         });
+        try {
+          const userId = employee.id || employee.id_usuario;
+          if (userId) {
+            const userSchedulings = await schedulingService.getByUser(userId);
+            const deletePromises = userSchedulings.map(s => schedulingService.delete(s.id));
+            await Promise.all(deletePromises);
+            setSchedulings(prev => prev.filter(s => String(s.id_usuario) !== String(userId)));
+            console.log("[DEBUG] Cascaded schedulings deleted for user:", userId);
+          }
+        } catch (e) {
+          console.warn("[DEBUG] Cascade delete of schedulings failed:", e);
+        }
         
         return true;
       })();
@@ -608,13 +621,7 @@ const EmployeesPage = () => {
                                   >
                                     <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
                                   </button>
-                                  <button
-                                    className="h-8 w-8 p-0 flex items-center justify-center"
-                                    onClick={() => handleDeleteEmployee(emp)}
-                                    title="Eliminar"
-                                  >
-                                    <i className="bi bi-trash text-red-500 text-lg"></i>
-                                  </button>
+                                  {/* Eliminación deshabilitada: usar inactivación */}
                                 </div>
                               </td>
                             </tr>

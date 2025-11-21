@@ -8,12 +8,12 @@ const ViewCustomer = ({ isOpen, onClose, customer }) => {
   if (!isOpen || !customer) return null
 
   const getDocumentTypeLabel = (type) => {
-    const types = {
-      CC: "Cédula de Ciudadanía",
-      CE: "Cédula de Extranjería",
-      TI: "Tarjeta de Identidad",
+    try {
+      const { labelFromAny } = require('../../../../shared/constants/documentTypes');
+      return labelFromAny(type) || type;
+    } catch {
+      return type;
     }
-    return types[type] || type
   }
 
   return (

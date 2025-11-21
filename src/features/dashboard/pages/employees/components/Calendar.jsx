@@ -24,7 +24,7 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
       return [{
         id: prog.id,
         title: `${prog.horaInicio || prog.hora_entrada} - ${prog.horaFin || prog.hora_salida}`,
-        start: prog.fecha || prog.fechaInicio,
+        start: prog.fecha || prog.fecha_inicio || prog.fechaInicio,
         allDay: true,
       }];
     }
@@ -40,8 +40,8 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
     }).filter(d => d !== undefined);
   
     const eventos = [];
-    const start = new Date(fechaInicio + 'T00:00');
-    const end = new Date(fechaFin + 'T23:59');
+    const start = new Date((fechaInicio || prog.fecha_inicio) + 'T00:00');
+    const end = new Date((fechaFin || prog.fecha_fin || fechaInicio || prog.fecha_inicio) + 'T23:59');
   
     let current = new Date(start);
   
@@ -69,7 +69,7 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
     console.log("[Calendar] handleAddEvent input:", prog);
     
     try {
-      if (!empleado || !empleado.id) {
+      if (!empleado || !(empleado.id || empleado.id_usuario)) {
         toast.error("No hay empleado seleccionado");
         return;
       }
@@ -118,7 +118,7 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
       const createdSchedulings = [];
       for (const fecha of fechasEspecificas) {
         const schedulingData = {
-          id_usuario: empleado.id,
+          id_usuario: empleado.id || empleado.id_usuario,
           fecha_inicio: fecha,
           hora_entrada: horaInicio,
           hora_salida: horaFin,
@@ -163,6 +163,16 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
   return (
     <div className="w-full">
       <div className="bg-gray-50 rounded-xl mt-4 p-4 border border-gray-200">
+        <div className="flex justify-end mb-2">
+          <button
+            type="button"
+            className="px-3 py-1.5 bg-[#FACC15] text-[#1E1E1E] rounded-lg text-xs font-semibold hover:bg-yellow-400 transition"
+            onClick={() => setModalOpen(true)}
+          >
+            <i className="bi bi-calendar-plus mr-1"></i>
+            Crear Programación
+          </button>
+        </div>
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"

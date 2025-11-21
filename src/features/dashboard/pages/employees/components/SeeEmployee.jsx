@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import SeeScheduling from './SeeScheduling';
 
-const tiposDocumento = {
-  'Cedula de ciudadania': 'Cédula de Ciudadanía',
-  'Tarjeta de identidad': 'Tarjeta de Identidad',
-  'Cedula de extranjeria': 'Cédula de Extranjería',
-  'Pasaporte': 'Pasaporte',
-};
+import { labelFromAny } from '../../../../../shared/constants/documentTypes';
 
 const SeeEmployee = ({ employee, onClose }) => {
   const [activeTab, setActiveTab] = useState('empleado');
@@ -14,7 +9,7 @@ const SeeEmployee = ({ employee, onClose }) => {
 
   // Normalizar tipo_documento para manejar ambos formatos
   const tipoDoc = employee.tipo_documento || employee.tipoDocumento || '';
-  const tipoDocumentoLabel = tiposDocumento[tipoDoc] || tipoDoc || 'No especificado';
+  const tipoDocumentoLabel = labelFromAny(tipoDoc) || 'No especificado';
 
   return (
     <div className="bg-gray-50 rounded-xl p-6">
@@ -24,15 +19,15 @@ const SeeEmployee = ({ employee, onClose }) => {
           <i className="bi bi-person-circle text-3xl text-white" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 font-nunito">Detalle del Empleado</h2>
-          <p className="text-gray-600 font-lato">Información completa del empleado</p>
+          <h2 className="text-2xl font-bold text-gray-800 font-nunito">Detalle del Empleado</h2>
+          <p className="text-sm text-gray-600 font-lato">Información completa del empleado</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
         <button
-          className={`flex-1 text-lg font-semibold px-4 py-3 rounded-lg transition-all duration-200 ${
+          className={`flex-1 text-base font-semibold px-4 py-3 rounded-lg transition-all duration-200 ${
             activeTab === 'empleado'
               ? 'bg-[#FACC15] text-gray-800 shadow-md'
               : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
@@ -44,7 +39,7 @@ const SeeEmployee = ({ employee, onClose }) => {
           Información Personal
         </button>
         <button
-          className={`flex-1 text-lg font-semibold px-4 py-3 rounded-lg transition-all duration-200 ${
+          className={`flex-1 text-base font-semibold px-4 py-3 rounded-lg transition-all duration-200 ${
             activeTab === 'programacion'
               ? 'bg-[#FACC15] text-gray-800 shadow-md'
               : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
@@ -60,11 +55,11 @@ const SeeEmployee = ({ employee, onClose }) => {
       {activeTab === 'empleado' && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
               <i className="bi bi-person text-[#FACC15]"></i>
               Información Personal
             </h3>
-            <p className="text-gray-600 font-lato">Datos básicos del empleado</p>
+            <p className="text-sm text-gray-600 font-lato">Datos básicos del empleado</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -73,9 +68,9 @@ const SeeEmployee = ({ employee, onClose }) => {
                 <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
                   <i className="bi bi-person text-white text-sm"></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Nombre</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nombre</span>
               </div>
-              <span className="block text-lg font-bold text-gray-800">
+              <span className="block text-base font-bold text-gray-800">
                 {employee.nombre || 'No especificado'}
               </span>
             </div>
@@ -85,9 +80,9 @@ const SeeEmployee = ({ employee, onClose }) => {
                 <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
                   <i className="bi bi-card-text text-white text-sm"></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Tipo de Documento</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo de Documento</span>
               </div>
-              <span className="block text-lg font-bold text-gray-800">
+              <span className="block text-base font-bold text-gray-800">
                 {tipoDocumentoLabel}
               </span>
             </div>
@@ -97,10 +92,10 @@ const SeeEmployee = ({ employee, onClose }) => {
                 <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
                   <i className="bi bi-hash text-white text-sm"></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Documento</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Documento</span>
               </div>
-              <span className="block text-lg font-bold text-gray-800 font-mono">
-                {employee.documento || 'No especificado'}
+              <span className="block text-base font-bold text-gray-800 font-mono">
+                {employee.documento || employee.numero_documento || employee.num_documento || 'No especificado'}
               </span>
             </div>
 
@@ -109,9 +104,9 @@ const SeeEmployee = ({ employee, onClose }) => {
                 <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
                   <i className="bi bi-telephone text-white text-sm"></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Teléfono</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Teléfono</span>
               </div>
-              <span className="block text-lg font-bold text-gray-800 font-mono">
+              <span className="block text-base font-bold text-gray-800 font-mono">
                 {employee.telefono || 'No especificado'}
               </span>
             </div>
@@ -121,9 +116,9 @@ const SeeEmployee = ({ employee, onClose }) => {
                 <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
                   <i className="bi bi-envelope text-white text-sm"></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Correo</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Correo</span>
               </div>
-              <span className="block text-lg font-bold text-gray-800 break-words">
+              <span className="block text-base font-bold text-gray-800 break-words">
                 {employee.correo || 'No especificado'}
               </span>
             </div>
@@ -133,9 +128,9 @@ const SeeEmployee = ({ employee, onClose }) => {
                 <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
                   <i className="bi bi-geo-alt text-white text-sm"></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Dirección</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Dirección</span>
               </div>
-              <span className="block text-lg font-bold text-gray-800">
+              <span className="block text-base font-bold text-gray-800">
                 {employee.direccion || 'No especificado'}
               </span>
             </div>
@@ -145,11 +140,11 @@ const SeeEmployee = ({ employee, onClose }) => {
                 <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
                   <i className="bi bi-toggle-on text-white text-sm"></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">Estado</span>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Estado</span>
               </div>
               <div className="flex items-center gap-3">
                 <span
-                  className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${
+                  className={`inline-flex items-center px-4 py-2 rounded-full text-xs font-bold ${
                     employee.estado === 'Activo'
                       ? 'bg-green-100 text-green-800 border-2 border-green-200'
                       : 'bg-red-100 text-red-800 border-2 border-red-200'
@@ -166,7 +161,7 @@ const SeeEmployee = ({ employee, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
+              className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl text-xs"
             >
               <i className="bi bi-check-circle"></i>
               Cerrar
@@ -178,11 +173,11 @@ const SeeEmployee = ({ employee, onClose }) => {
       {activeTab === 'programacion' && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
               <i className="bi bi-calendar-event text-[#FACC15]"></i>
               Programaciones del Empleado
             </h3>
-            <p className="text-gray-600 font-lato">Horarios de trabajo asignados</p>
+            <p className="text-sm text-gray-600 font-lato">Horarios de trabajo asignados</p>
           </div>
           <SeeScheduling
             empleadoId={employee.id || employee.id_usuario}
