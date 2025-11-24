@@ -1,14 +1,13 @@
 import { useState } from "react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import ModalShell from "../../../../../shared/components/ModalShell";
 import {
   isValidEmail,
   isValidColombianNIT,
   isValidSupplierType,
 } from "../../../../../shared/validations";
 
-export default function QuickCreateSupplierModal({ isOpen, onClose, onCreate, suppliers = [] }) {
+export default function QuickCreateSupplier({ isOpen, onClose, onCreate, suppliers = [] }) {
   const [formData, setFormData] = useState({
     nit: "",
     nombre: "",
@@ -327,7 +326,7 @@ export default function QuickCreateSupplierModal({ isOpen, onClose, onCreate, su
   );
 }
 
-QuickCreateSupplierModal.propTypes = {
+QuickCreateSupplier.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onCreate: PropTypes.func.isRequired,

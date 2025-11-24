@@ -1,11 +1,11 @@
 import axios from 'axios';
 import { showError } from '../utils/toastUtils';
 
-const BASE_URL = import.meta.env.DEV
-  ? 'http://localhost:3000/api' 
-  : 'https://capex-back.onrender.com/api';
+/* const BASE_URL = import.meta.env.DEV */
+/*   ? 'http://localhost:3000/api'  */
+/*   : 'https://capex-back.onrender.com/api'; */
 
-/* const BASE_URL = 'https://capex-back.onrender.com/api'; */
+const BASE_URL = 'https://capex-back.onrender.com/api';
 
 
 // Log de configuración en desarrollo

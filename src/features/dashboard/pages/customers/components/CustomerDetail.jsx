@@ -1,5 +1,4 @@
 "use client"
-
 import PropTypes from 'prop-types';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Cliente&background=eee&color=888&size=256';
@@ -130,4 +129,4 @@ ViewCustomer.propTypes = {
   }),
 };
 
-export default ViewCustomer
+export default ViewCustomer;

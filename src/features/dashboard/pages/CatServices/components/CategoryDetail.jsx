@@ -1,40 +1,130 @@
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
 
 const CategoryDetail = ({ category, isOpen, onClose }) => {
   if (!isOpen || !category) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
         {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">Detalles de Categoría</h2>
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-info-circle text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">
+              Detalles de Categoría
+            </h2>
+          </div>
           <button
-            className="text-gray-400 hover:text-primary text-xl font-bold"
+            className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200"
             onClick={onClose}
             aria-label="Cerrar"
           >
             ×
           </button>
         </div>
+        
         {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1">
-          <div className="flex flex-col gap-6">
-            <div className="text-lg font-bold text-gray-800 text-center mb-2">{category.Categoria}</div>
-            <div>
-              <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Descripción</span>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[60px]">
-                {category.Descripcion}
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
+          <div className="space-y-6">
+            {/* Nombre de la categoría */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
+                  <i className="bi bi-tag text-white text-xl"></i>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nombre</span>
+                  <h3 className="text-xl font-bold text-gray-800">
+                    {category.nombre}
+                  </h3>
+                </div>
               </div>
             </div>
+
+            {/* Descripción */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
+                  <i className="bi bi-file-text text-white text-xl"></i>
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Descripción</span>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[80px]">
+                {category.descripcion || 'Sin descripción disponible'}
+              </div>
+            </div>
+
+            {/* Estado */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
+                  <i className="bi bi-toggle-on text-white text-xl"></i>
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Estado</span>
+              </div>
+              <span
+                className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${
+                  category.estado === 'Activo'
+                    ? 'bg-green-100 text-green-800 border-2 border-green-200'
+                    : 'bg-red-100 text-red-800 border-2 border-red-200'
+                }`}
+              >
+                <i className={`bi ${
+                  category.estado === 'Activo' ? 'bi-check-circle' : 'bi-x-circle'
+                } mr-2`}></i>
+                {category.estado}
+              </span>
+            </div>
+
+            {/* Información adicional */}
+            {(category.createdAt || category.updatedAt || category.id_categoria_servicio) && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
+                    <i className="bi bi-info-square text-white text-xl"></i>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Información del Sistema
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  {category.id_categoria_servicio && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">ID:</span>
+                      <span className="font-semibold text-gray-800">{category.id_categoria_servicio}</span>
+                    </div>
+                  )}
+                  {category.createdAt && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Creada:</span>
+                      <span className="font-semibold text-gray-800">
+                        {new Date(category.createdAt).toLocaleDateString('es-ES')}
+                      </span>
+                    </div>
+                  )}
+                  {category.updatedAt && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Actualizada:</span>
+                      <span className="font-semibold text-gray-800">
+                        {new Date(category.updatedAt).toLocaleDateString('es-ES')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+        
         {/* Footer fijo */}
-        <div className="sticky bottom-0 z-10 bg-white  rounded-b-lg flex justify-end px-8 py-4">
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button
-            className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
             onClick={onClose}
           >
+            <i className="bi bi-check-circle"></i>
             Cerrar
           </button>
         </div>
@@ -44,9 +134,16 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
 };
 
 CategoryDetail.propTypes = {
-  category: PropTypes.object,
-  isOpen: PropTypes.bool,
+  category: PropTypes.shape({
+    id_categoria_servicio: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    nombre: PropTypes.string.isRequired,
+    descripcion: PropTypes.string,
+    estado: PropTypes.string,
+    createdAt: PropTypes.string,
+    updatedAt: PropTypes.string,
+  }),
+  isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
 };
 
-export default CategoryDetail; 
+export default CategoryDetail;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function QuickCreateProductModal({ isOpen, onClose, onCreate }) {
+export default function QuickCreateProduct({ isOpen, onClose, onCreate }) {
   const [nombre, setNombre] = useState("");
   const [costo, setCosto] = useState("");
   const [precioVenta, setPrecioVenta] = useState("");
@@ -63,7 +63,7 @@ export default function QuickCreateProductModal({ isOpen, onClose, onCreate }) {
   );
 }
 
-QuickCreateProductModal.propTypes = {
+QuickCreateProduct.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onCreate: PropTypes.func.isRequired,
