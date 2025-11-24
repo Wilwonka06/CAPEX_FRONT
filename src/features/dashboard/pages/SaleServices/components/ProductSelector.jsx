@@ -9,47 +9,39 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [quantity, setQuantity] = useState(1);
   const [availableProducts, setAvailableProducts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [retrying, setRetrying] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Cargar productos desde el backend
   useEffect(() => {
+    let cancelled = false;
+    const fetchWithRetry = async (fn, label, attempts = 3, delayMs = 1000) => {
+      let lastErr;
+      for (let i = 1; i <= attempts; i++) {
+        try { return await fn(); } catch (err) { lastErr = err; if (i < attempts) await new Promise(r => setTimeout(r, delayMs * i)); }
+      }
+      throw lastErr;
+    };
     const cargarProductos = async () => {
       setLoading(true);
+      setErrorMsg('');
       try {
-        const productos = await apiRequest.get('/productos');
-        console.log('🔍 Productos recibidos del backend:', productos);
-        
-        // Manejar diferentes estructuras de respuesta
-        let productosArray = [];
-        if (Array.isArray(productos)) {
-          productosArray = productos;
-        } else if (productos && typeof productos === 'object') {
-          // Si es un objeto, intentar extraer un array
-          if (productos.data && Array.isArray(productos.data)) {
-            productosArray = productos.data;
-          } else if (productos.productos && Array.isArray(productos.productos)) {
-            productosArray = productos.productos;
-          } else if (productos.results && Array.isArray(productos.results)) {
-            productosArray = productos.results;
-          } else {
-            // Si es un objeto con propiedades que parecen productos
-            productosArray = Object.values(productos).filter(item => 
-              item && typeof item === 'object' && (item.id || item.nombre || item.name)
-            );
-          }
-        }
-        
-        console.log('🔧 Productos procesados:', productosArray);
-        setAvailableProducts(productosArray);
+        const productos = await fetchWithRetry(() => apiRequest.get('/productos', { skipGlobalErrorHandling: true }), 'productos');
+        let productosArray = Array.isArray(productos) ? productos : (productos.data || productos.productos || productos.results || []);
+        if (!Array.isArray(productosArray)) productosArray = [];
+        if (!cancelled) setAvailableProducts(productosArray);
       } catch (error) {
-        console.error('Error al cargar productos:', error);
-        setAvailableProducts([]);
+        console.error('❌ Error al cargar productos:', error);
+        if (!cancelled) setErrorMsg('No se pudieron cargar los productos. Verifica conexión y reintenta.');
+        if (!cancelled) setAvailableProducts([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-
     cargarProductos();
+    return () => { cancelled = true; };
   }, []);
 
   // Cleanup del timeout al desmontar el componente
@@ -62,13 +54,17 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   }, [searchTimeout]);
 
   const cargarProductos = async () => {
+    setRetrying(true);
     try {
-      const productos = await apiRequest.get('/productos');
+      const productos = await apiRequest.get('/productos', { skipGlobalErrorHandling: true });
       const productosArray = Array.isArray(productos) ? productos : (productos.data || productos.productos || []);
-      setAvailableProducts(productosArray);
+      setAvailableProducts(Array.isArray(productosArray) ? productosArray : []);
+      setErrorMsg('');
     } catch (error) {
       console.error('Error al cargar productos:', error);
-      setAvailableProducts([]);
+      setErrorMsg('No se pudieron cargar los productos. Intenta nuevamente.');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -147,6 +143,14 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
   return (
     <div className="relative">
+      {errorMsg && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-sm flex items-center justify-between">
+          <span className="text-red-700">{errorMsg}</span>
+          <button onClick={cargarProductos} disabled={retrying} className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 disabled:opacity-50">
+            {retrying ? 'Reintentando...' : 'Reintentar'}
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
         <div>
           <label className="block text-xs font-medium text-black mb-1">Producto</label>

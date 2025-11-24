@@ -51,12 +51,11 @@ const SeeScheduling = ({ empleadoId, onClose }) => {
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString + "T00:00:00");
-    return date.toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    if (!dateString) return "";
+    const safe = String(dateString).split('T')[0];
+    const date = new Date(`${safe}T00:00:00`);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("es-ES", { year: "numeric", month: "2-digit", day: "2-digit" });
   };
 
   const formatTime = (timeString) => {
@@ -65,11 +64,26 @@ const SeeScheduling = ({ empleadoId, onClose }) => {
     return `${parts[0]}:${parts[1]}`;
   };
 
-  const totalPages = programaciones.length;
-  const paginatedProgramaciones = programaciones.slice(
-    currentPage - 1,
-    currentPage
-  );
+  const getProgDate = (p) => p.fechaInicio || p.fecha_inicio || p.fecha;
+  const groupedByMonth = (() => {
+    const groups = {};
+    for (const p of programaciones) {
+      const ds = getProgDate(p);
+      if (!ds) continue;
+      const d = new Date(ds + "T00:00:00");
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      (groups[key] ||= []).push(p);
+    }
+    return groups;
+  })();
+  const monthKeys = Object.keys(groupedByMonth).sort();
+  const totalPages = monthKeys.length;
+  const currentMonthKey = monthKeys[currentPage - 1];
+  const paginatedProgramaciones = groupedByMonth[currentMonthKey] || [];
+  const currentMonthLabel = currentMonthKey
+    ? new Date(currentMonthKey + "-01T00:00:00").toLocaleString("es-ES", { month: "long", year: "numeric" })
+    : "";
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -142,6 +156,12 @@ const SeeScheduling = ({ empleadoId, onClose }) => {
         </div>
       ) : (
         <>
+          {currentMonthLabel && (
+            <div className="flex items-center gap-2 mb-3">
+              <i className="bi bi-calendar2-week text-[#FACC15]"></i>
+              <span className="text-sm font-semibold text-gray-700 font-lato">{currentMonthLabel}</span>
+            </div>
+          )}
           {paginatedProgramaciones.map((programacion) => (
             <div
               key={programacion.id}
@@ -176,7 +196,7 @@ const SeeScheduling = ({ empleadoId, onClose }) => {
                       <span className="text-gray-600 font-medium">Inicio:</span>
                       <span className="text-gray-800 font-bold font-mono">
                         {formatDate(
-                          programacion.fechaInicio || programacion.fecha
+                          programacion.fechaInicio || programacion.fecha_inicio || programacion.fecha
                         )}
                       </span>
                     </div>
@@ -184,7 +204,7 @@ const SeeScheduling = ({ empleadoId, onClose }) => {
                       <span className="text-gray-600 font-medium">Fin:</span>
                       <span className="text-gray-800 font-bold font-mono">
                         {formatDate(
-                          programacion.fechaInicio || programacion.fecha
+                          programacion.fechaFin || programacion.fecha_fin || programacion.fecha
                         )}
                       </span>
                     </div>

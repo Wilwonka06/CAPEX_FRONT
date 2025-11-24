@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { isValidEmail, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
+import { DOC_TYPES_CODES, DOC_TYPE_LABELS, toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -8,20 +9,6 @@ import { useAuth } from '../../../../../shared/contexts/AuthContext';
  
 
 const ESTADOS = ['Activo', 'Inactivo', 'Vacaciones','Suspendido', 'Enfermo', 'Incapacitado','Luto', 'Fallecido'];
-const DOC_TYPES = ['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'];
-const DOC_TYPE_LABELS = {
-  RC: 'Registro civil',
-  TI: 'Tarjeta de identidad',
-  CC: 'Cedula de ciudadania',
-  TE: 'Tarjeta de extranjeria',
-  CE: 'Cedula de extranjeria',
-  NIT: 'Número de identificación tributaria',
-  PP: 'Pasaporte',
-  PEP: 'Permiso especial de permanencia',
-  DIE: 'Documento de identificación extranjero',
-  NUIP: 'NUIP',
-  FOREIGN_NIT: 'NIT de otro país'
-};
 const CONCEPTOS_ESTADO = ['vacaciones', 'enfermo', 'licencia', 'suspensión', 'renuncia', 'Otro'];
 
 function fileToBase64(file) {
@@ -189,7 +176,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       id_usuario: form.id_usuario || form.id,
       nombre: form.nombre,
       correo: form.correo,
-      tipo_documento: form.tipoDocumento,
+      tipo_documento: toBackendDocCode(form.tipoDocumento),
       documento: form.documento,
       telefono: numero,
       roleId: parseInt(form.roles[0]) || form.roleId,
@@ -247,7 +234,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
                 <label className="block text-xs font-medium text-text-main mb-1">Tipo de documento <span className="text-red-500">*</span></label>
                 <select name="tipoDocumento" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} required>
                   <option value="">Seleccionar</option>
-                  {DOC_TYPES.map(type => <option key={type} value={type}>{`${type} - ${DOC_TYPE_LABELS[type]}`}</option>)}
+                  {DOC_TYPES_CODES.map(type => <option key={type} value={type}>{`${type} - ${DOC_TYPE_LABELS[type]}`}</option>)}
                 </select>
                 {error.tipoDocumento && <span className="text-red-500 text-xs">{error.tipoDocumento}</span>}
               </div>
@@ -373,7 +360,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
         </div>
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"><i className="bi bi-x-circle"></i>Cancelar</button>
-          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.keys(errors).length > 0}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
+          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.values(error).some(Boolean)}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
         </div>
       </div>
     </div>

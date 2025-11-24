@@ -46,9 +46,13 @@ const FormField = ({
             aria-describedby={error ? `${name}-error` : undefined}
           >
             <option value="">Seleccionar</option>
-            {options.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
+            {options.map(option => {
+              if (typeof option === 'string') {
+                return <option key={option} value={option}>{option}</option>;
+              }
+              const { value, label } = option || {};
+              return <option key={value || label} value={value || label}>{label || value}</option>;
+            })}
           </select>
         ) : (
           <input

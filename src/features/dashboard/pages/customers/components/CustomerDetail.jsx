@@ -1,5 +1,4 @@
 "use client"
-
 import PropTypes from 'prop-types';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Cliente&background=eee&color=888&size=256';
@@ -8,12 +7,12 @@ const ViewCustomer = ({ isOpen, onClose, customer }) => {
   if (!isOpen || !customer) return null
 
   const getDocumentTypeLabel = (type) => {
-    const types = {
-      CC: "Cédula de Ciudadanía",
-      CE: "Cédula de Extranjería",
-      TI: "Tarjeta de Identidad",
+    try {
+      const { labelFromAny } = require('../../../../shared/constants/documentTypes');
+      return labelFromAny(type) || type;
+    } catch {
+      return type;
     }
-    return types[type] || type
   }
 
   return (
@@ -130,4 +129,4 @@ ViewCustomer.propTypes = {
   }),
 };
 
-export default ViewCustomer
+export default ViewCustomer;

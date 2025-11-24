@@ -137,6 +137,7 @@ const Dashboard = () => {
   const [services, setServices] = useState([]);
   const [realOrders, setRealOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState([]);
 
   // ===== CARGAR DATOS REALES =====
   const loadRealData = async () => {
@@ -144,7 +145,7 @@ const Dashboard = () => {
       try {
         // Cargar ventas de productos reales (con límite alto para obtener todas)
         try {
-          const salesResponse = await salesService.getAll({ limit: 1000 });
+          const salesResponse = await salesService.getAll({ limit: 100 });
           if (salesResponse.success && salesResponse.data) {
             // Transformar datos de ventas al formato esperado
             const transformedSales = salesResponse.data.map(venta => ({
@@ -159,6 +160,7 @@ const Dashboard = () => {
           }
         } catch (error) {
           console.error("Error loading sales:", error);
+          setErrors(prev => [...prev, `Ventas: ${error.message || 'Error interno del servidor'}`]);
           setSales([]);
         }
 
@@ -182,6 +184,7 @@ const Dashboard = () => {
           setServices(transformedServices);
         } catch (error) {
           console.error("Error loading services:", error);
+          setErrors(prev => [...prev, `Servicios: ${error.message || 'Error interno del servidor'}`]);
           setServices([]);
         }
 
@@ -193,6 +196,7 @@ const Dashboard = () => {
           }
         } catch (error) {
           console.error("Error loading orders:", error);
+          setErrors(prev => [...prev, `Pedidos: ${error.message || 'Error interno del servidor'}`]);
           setRealOrders([]);
         }
       } catch (error) {
@@ -675,6 +679,17 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen rounded-xl bg-gradient-to-br from-white via-gray-50 to-white p-6">
       <div className="max-w-7xl mx-auto space-y-8">
+        {errors.length > 0 && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-red-700">{errors[0]}</span>
+              <button onClick={loadRealData} className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700">Reintentar</button>
+            </div>
+            {errors.slice(1).map((e, idx) => (
+              <div key={idx} className="text-red-700 mt-1">{e}</div>
+            ))}
+          </div>
+        )}
         {/* Header del Dashboard */}
         <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] text-white py-8 relative overflow-hidden rounded-3xl shadow-xl">
           <div className="relative z-10 px-6">

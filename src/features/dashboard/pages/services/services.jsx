@@ -1,146 +1,64 @@
 import React, { useState, useEffect } from "react";
 import toast from 'react-hot-toast';
-import {
-  getServices,
-  createService,
-  updateService,
-  deleteService,
-  toggleServiceStatus,
-} from "./api/servicesApi";
-import { getServiceCategories } from "../CatServices/api/serviceCategoriesApi";
-import AddServices from './components/AddServices';
-import EditServices from "./components/EditServices";
-import SeeServices from './components/SeeServices';
-import Paginator from "../../../../shared/Paginator";
-import SearchProduct from '../../../../shared/Search';
-import TableContentSkeleton from "../../../../shared/components/TableContentSkeleton";
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
-import PropTypes from "prop-types";
-import { formatNumber } from "../../../../shared/utils/formatters";
 
-const SERVICES_PER_PAGE = 5;
+// Importar el nuevo servicio API
+import servicesService from './API/ServicesService';
 
-// Componente para la tabla de servicios
-const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete, togglingId }) => (
-  <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
-    <table className="min-w-full">
-      <thead>
-        <tr className="bg-gray-50 hover:bg-gray-100">
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Duración</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
-          <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-200">
-        {services.map((service) => {
-          const isActive = service.estado === "Activo";
-          const isToggling = togglingId === service.id;
-          return (
-            <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.nombre}</td>
-              <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">
-                {service.categoria?.nombre || service.categoria || 'Sin categoría'}
-              </td>
-              <td className="py-4 px-4 text-xs text-gray-600">{service.duracion} min</td>
-              <td className="py-4 px-4 text-xs text-gray-600">${formatNumber(service.precio || 0)}</td>
-              <td className="py-4 px-4 text-xs">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => onToggleStatus(service.id)}
-                    disabled={isToggling}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                      isActive ? 'bg-gray-900' : 'bg-gray-300'
-                    } ${isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    title="Click para cambiar estado"
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                        isActive ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-xs font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
-                    {isToggling ? 'Cambiando...' : service.estado}
-                  </span>
-                </div>
-              </td>
-              <td className="py-4 px-4 text-sm font-medium text-right">
-                <div className="flex justify-end space-x-2">
-                  <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onSee(service)}
-                    title="Ver detalles"
-                  >
-                    <i className="bi bi-eye text-primary text-lg"></i>
-                  </button>
-                  <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onEdit(service)}
-                    title="Editar"
-                  >
-                    <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
-                  </button>
-                  <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onDelete(service)}
-                    title="Eliminar"
-                  >
-                    <i className="bi bi-trash text-red-500 text-lg"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+// Importar servicio de categorías (necesitamos mantener esta importación)
+import { getServiceCategories } from "../CatServices/API/serviceCategoriesService";
 
-ServicesTable.propTypes = {
-  services: PropTypes.array.isRequired,
-  onToggleStatus: PropTypes.func.isRequired,
-  onSee: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  togglingId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-};
+// Importar componentes
+import ServicesTable from './components/ServicesTable';
+import AddServices from './components/CreateService';
+import EditServices from "./components/EditServices";
+import ServiceDetail from './components/ServiceDetail';
+import Paginator from "../../../../shared/Paginator";
+import SearchProduct from '../../../../shared/Search';
+
+const SERVICES_PER_PAGE = 10;
 
 const Services = () => {
   const { setTitle } = useOutletContext();
+  
+  // Estados
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [togglingId, setTogglingId] = useState(null);
+  
+  // Estados para modales
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
-  const [togglingId, setTogglingId] = useState(null);
 
   // Cargar servicios y categorías
   const loadData = async () => {
     setLoading(true);
     setError("");
     try {
-      const [servicesData, categoriesData] = await Promise.all([
-        getServices(),
+      const [servicesResponse, categoriesData] = await Promise.all([
+        servicesService.getAll(),
         getServiceCategories().catch(() => [])
       ]);
 
-      console.log("[DEBUG] Servicios cargados:", servicesData);
+      console.log("[DEBUG] Servicios cargados:", servicesResponse);
       console.log("[DEBUG] Categorías cargadas:", categoriesData);
 
-      setServices(Array.isArray(servicesData) ? servicesData : []);
+      // Procesar servicios
+      const servicesData = servicesResponse.success 
+        ? servicesResponse.data 
+        : (Array.isArray(servicesResponse) ? servicesResponse : []);
+
+      setServices(servicesData);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
 
-      // Enriquecer servicios con nombres de categorías si no vienen del backend
+      // Enriquecer servicios con nombres de categorías si es necesario
       if (servicesData.length && categoriesData.length) {
         const enrichedServices = servicesData.map(service => {
           if (service.categoria?.nombre || typeof service.categoria === 'string') {
@@ -175,7 +93,7 @@ const Services = () => {
     return () => setTitle("");
   }, [setTitle]);
 
-  // Filtrar servicios por término de búsqueda
+  // Filtrar servicios
   const filteredServices = services.filter((service) =>
     (service.id?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (service.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -195,25 +113,24 @@ const Services = () => {
     setCurrentPage(1);
   }, [searchTerm, services]);
 
-  // CRUD handlers
+  // Handler para crear servicio
   const handleAddService = async (newServiceData) => {
     const servicePromise = (async () => {
-      await createService(newServiceData);
-      // SOLUCIÓN: Recargar todos los datos después de crear
+      const response = await servicesService.create(newServiceData);
       await loadData();
       setShowAddModal(false);
-      return true;
+      return response;
     })();
 
     toast.promise(
       servicePromise,
       {
-        loading: 'Agregando servicio...',
-        success: 'Servicio agregado exitosamente',
+        loading: 'Creando servicio...',
+        success: 'Servicio creado exitosamente',
         error: (err) => {
-          console.error("Error agregando servicio:", err);
+          console.error("Error creando servicio:", err);
           const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
-          return backendMsg || "Error al agregar servicio";
+          return backendMsg || "Error al crear servicio";
         },
       },
       {
@@ -228,14 +145,14 @@ const Services = () => {
     }
   };
 
+  // Handler para editar servicio
   const handleEditService = async (editedServiceData) => {
     const servicePromise = (async () => {
-      await updateService(editedServiceData.id, editedServiceData);
-      // SOLUCIÓN: Recargar todos los datos después de editar
+      const response = await servicesService.update(editedServiceData.id, editedServiceData);
       await loadData();
       setShowEditModal(false);
       setSelectedService(null);
-      return true;
+      return response;
     })();
 
     toast.promise(
@@ -261,6 +178,7 @@ const Services = () => {
     }
   };
 
+  // Handler para eliminar servicio
   const handleDeleteService = async (service) => {
     const result = await Swal.fire({
       title: "¿Estás seguro?",
@@ -269,12 +187,14 @@ const Services = () => {
       showCancelButton: true,
       confirmButtonText: "Sí, eliminar",
       cancelButtonText: "Cancelar",
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
     });
     
     if (result.isConfirmed) {
       const servicePromise = (async () => {
-        await deleteService(service.id);
-        setServices(prev => prev.filter(s => s.id !== service.id));
+        await servicesService.delete(service.id);
+        await loadData();
         return true;
       })();
 
@@ -302,6 +222,7 @@ const Services = () => {
     }
   };
 
+  // Handler para cambiar estado
   const handleToggleStatus = async (serviceId) => {
     const current = services.find(s => s.id === serviceId);
     if (!current) {
@@ -311,11 +232,9 @@ const Services = () => {
 
     setTogglingId(serviceId);
     const nextEstado = current.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    const updatedService = { ...current, estado: nextEstado };
 
     try {
-      await toggleServiceStatus(updatedService);
-      // Recargar para asegurar sincronización
+      await servicesService.changeStatus(serviceId, nextEstado);
       await loadData();
       toast.success(`Estado cambiado a ${nextEstado}`);
     } catch (error) {
@@ -327,9 +246,11 @@ const Services = () => {
     }
   };
 
+  // Handlers de paginación y búsqueda
   const handlePageChange = (page) => setCurrentPage(page);
   const handleSearch = (e) => setSearchTerm(e.target.value);
   
+  // Handler para cerrar modales
   const closeModals = () => {
     setShowAddModal(false);
     setShowEditModal(false);
@@ -337,7 +258,8 @@ const Services = () => {
     setSelectedService(null);
   };
 
-  if (error) {
+  // Render de error
+  if (error && !loading) {
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
         <div className="text-center">
@@ -374,37 +296,30 @@ const Services = () => {
               </button>
             </div>
 
-            {/* Tabla de servicios o skeleton */}
-            {loading ? (
-              <TableContentSkeleton columns={7} rows={5} showActions={true} />
-            ) : services.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">No hay servicios registrados.</p>
-            ) : (
-              <>
-                <ServicesTable
-                  services={paginatedServices}
-                  onToggleStatus={handleToggleStatus}
-                  togglingId={togglingId}
-                  onSee={(service) => {
-                    setSelectedService(service);
-                    setShowDetailModal(true);
-                  }}
-                  onEdit={(service) => {
-                    setSelectedService(service);
-                    setShowEditModal(true);
-                  }}
-                  onDelete={handleDeleteService}
-                />
-                
-                {/* Paginación */}
-                {totalPages > 1 && (
-                  <Paginator
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                )}
-              </>
+            {/* Tabla de servicios */}
+            <ServicesTable
+              services={paginatedServices}
+              onToggleStatus={handleToggleStatus}
+              togglingId={togglingId}
+              onView={(service) => {
+                setSelectedService(service);
+                setShowDetailModal(true);
+              }}
+              onEdit={(service) => {
+                setSelectedService(service);
+                setShowEditModal(true);
+              }}
+              onDelete={handleDeleteService}
+              loading={loading}
+            />
+            
+            {/* Paginación */}
+            {totalPages > 1 && !loading && (
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             )}
           </div>
         </div>
@@ -431,9 +346,10 @@ const Services = () => {
       )}
 
       {showDetailModal && selectedService && (
-        <SeeServices
-          onClose={closeModals}
+        <ServiceDetail
           service={selectedService}
+          isOpen={showDetailModal}
+          onClose={closeModals}
         />
       )}
     </div>

@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import customersService from "../API/customersService"
 import { validateCustomer, isNumberInputValid } from "../../../../../shared/validations.js"

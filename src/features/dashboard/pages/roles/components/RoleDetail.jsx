@@ -1,7 +1,7 @@
 import PrivilegesTable from './PrivilegesTable';
  
 
-const ViewRolesCard = ({ children, title, onClose }) => (
+const RolesCard = ({ children, title, onClose }) => (
   <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
     <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
       <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-eye text-lg"></i></div><h2 className="text-xl font-bold m-0">{title}</h2></div>
@@ -12,12 +12,12 @@ const ViewRolesCard = ({ children, title, onClose }) => (
   </div>
 );
 
-const ViewRoles = ({ isOpen, onClose, role }) => {
+const RolesDetail = ({ isOpen, onClose, role }) => {
   if (!isOpen || !role) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <ViewRolesCard title="Detalle del rol" onClose={onClose}>
+      <RolesCard title="Detalle del rol" onClose={onClose}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-xs font-medium mb-1">Nombre</label>
@@ -38,9 +38,9 @@ const ViewRoles = ({ isOpen, onClose, role }) => {
           <label className="block text-xs font-bold mb-2">Privilegios</label>
           <PrivilegesTable value={role.privileges || {}} disabled={true} />
         </div>
-      </ViewRolesCard>
+      </RolesCard>
     </div>
   );
 };
 
-export default ViewRoles;
+export default RolesDetail;

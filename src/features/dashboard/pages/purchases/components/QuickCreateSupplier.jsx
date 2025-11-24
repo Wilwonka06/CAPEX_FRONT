@@ -3,11 +3,11 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import {
   isValidEmail,
-  isValidNIT,
+  isValidColombianNIT,
   isValidSupplierType,
 } from "../../../../../shared/validations";
 
-export default function QuickCreateSupplierModal({ isOpen, onClose, onCreate, suppliers = [] }) {
+export default function QuickCreateSupplier({ isOpen, onClose, onCreate, suppliers = [] }) {
   const [formData, setFormData] = useState({
     nit: "",
     nombre: "",
@@ -24,8 +24,8 @@ export default function QuickCreateSupplierModal({ isOpen, onClose, onCreate, su
     switch (name) {
       case "nit":
         if (!value.trim()) return "El NIT es requerido";
-        if (!isValidNIT(value))
-          return "El NIT debe comenzar con una letra seguida de números";
+        if (!isValidColombianNIT(value))
+          return "El NIT debe tener entre 9 y 14 dígitos con dígito de verificación (ej: 123456789-0)";
         if (suppliers.some((s) => s.nit === value))
           return "Ya existe un proveedor con ese NIT";
         return "";
@@ -318,15 +318,15 @@ export default function QuickCreateSupplierModal({ isOpen, onClose, onCreate, su
           </form>
         </div>
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
-          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={handleClose}><i className="bi bi-x-circle"></i>Cancelar</button>
-          <button type="submit" form="quick-supplier-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar</button>
+          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={handleClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="quick-supplier-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar</button>
         </div>
       </div>
     </div>
   );
 }
 
-QuickCreateSupplierModal.propTypes = {
+QuickCreateSupplier.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onCreate: PropTypes.func.isRequired,

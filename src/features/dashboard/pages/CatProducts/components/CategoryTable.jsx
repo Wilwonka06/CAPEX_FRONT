@@ -55,6 +55,7 @@ const CategoryTable = ({ categories, onToggleStatus, onEdit, onDelete, onView, l
                       category.estado === 'activo' ? 'bg-text-main' : 'bg-gray-300'
                     }`}
                   >
+                    
                     <span
                       className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
                         category.estado === 'activo' ? 'translate-x-6' : 'translate-x-1'

@@ -4,6 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import AddScheduling from './AddScheduling';
 import { schedulingService } from '../API/employeesService';
+import { to24h } from '../../../../../shared/utils/timeFormat';
 import toast from 'react-hot-toast';
 
 const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
@@ -24,7 +25,7 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
       return [{
         id: prog.id,
         title: `${prog.horaInicio || prog.hora_entrada} - ${prog.horaFin || prog.hora_salida}`,
-        start: prog.fecha || prog.fechaInicio,
+        start: prog.fecha || prog.fecha_inicio || prog.fechaInicio,
         allDay: true,
       }];
     }
@@ -40,8 +41,8 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
     }).filter(d => d !== undefined);
   
     const eventos = [];
-    const start = new Date(fechaInicio + 'T00:00');
-    const end = new Date(fechaFin + 'T23:59');
+    const start = new Date((fechaInicio || prog.fecha_inicio) + 'T00:00');
+    const end = new Date((fechaFin || prog.fecha_fin || fechaInicio || prog.fecha_inicio) + 'T23:59');
   
     let current = new Date(start);
   
@@ -69,13 +70,13 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
     console.log("[Calendar] handleAddEvent input:", prog);
     
     try {
-      if (!empleado || !empleado.id) {
+      if (!empleado || !(empleado.id || empleado.id_usuario)) {
         toast.error("No hay empleado seleccionado");
         return;
       }
 
       // Calcular fechas específicas basadas en días seleccionados
-      const { fechaInicio, fechaFin, dias, horaInicio, horaFin } = prog;
+      const { fechaInicio, fechaFin, dias, horaInicio, horaFin, bloques } = prog;
       
       if (!dias || dias.length === 0) {
         toast.error("Debes seleccionar al menos un día");
@@ -114,19 +115,21 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
         return;
       }
 
-      // Crear una programación por cada fecha
+      // Crear una programación por cada fecha y por cada bloque
       const createdSchedulings = [];
+      const blocks = (bloques && bloques.length > 0) ? bloques : [{ inicio: horaInicio, fin: horaFin }];
       for (const fecha of fechasEspecificas) {
-        const schedulingData = {
-          id_usuario: empleado.id,
-          fecha_inicio: fecha,
-          hora_entrada: horaInicio,
-          hora_salida: horaFin,
-        };
-
-        console.log("[Calendar] Creating scheduling for fecha:", fecha, schedulingData);
-        const created = await schedulingService.create(schedulingData);
-        createdSchedulings.push(created);
+        for (const b of blocks) {
+          const schedulingData = {
+            id_usuario: empleado.id || empleado.id_usuario,
+            fecha_inicio: fecha,
+            hora_entrada: to24h(b.inicio),
+            hora_salida: to24h(b.fin),
+          };
+          console.log("[Calendar] Creating scheduling for fecha:", fecha, schedulingData);
+          const created = await schedulingService.create(schedulingData);
+          createdSchedulings.push(created);
+        }
       }
 
       // Actualizar lista de schedulings

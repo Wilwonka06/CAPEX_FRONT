@@ -9,7 +9,7 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import './register-phone-input.css';
 
-const DOC_TYPES = ['Cedula de ciudadania', 'Pasaporte', 'Cedula de extranjeria'];
+import { getDocOptions } from '../../../shared/constants/documentTypes';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -258,7 +258,7 @@ const RegisterPage = () => {
                           icon="bi-card-list"
                           required
                           disabled={loading}
-                          options={DOC_TYPES}
+                          options={getDocOptions()}
                         />
                         <FormField
                           label="Documento"
@@ -511,4 +511,4 @@ const RegisterPage = () => {
   );
 };
 
-export default RegisterPage; 
+export default RegisterPage;
