@@ -4,6 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import AddScheduling from './AddScheduling';
 import { schedulingService } from '../API/employeesService';
+import { to24h } from '../../../../../shared/utils/timeFormat';
 import toast from 'react-hot-toast';
 
 const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
@@ -75,7 +76,7 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
       }
 
       // Calcular fechas específicas basadas en días seleccionados
-      const { fechaInicio, fechaFin, dias, horaInicio, horaFin } = prog;
+      const { fechaInicio, fechaFin, dias, horaInicio, horaFin, bloques } = prog;
       
       if (!dias || dias.length === 0) {
         toast.error("Debes seleccionar al menos un día");
@@ -114,19 +115,21 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
         return;
       }
 
-      // Crear una programación por cada fecha
+      // Crear una programación por cada fecha y por cada bloque
       const createdSchedulings = [];
+      const blocks = (bloques && bloques.length > 0) ? bloques : [{ inicio: horaInicio, fin: horaFin }];
       for (const fecha of fechasEspecificas) {
-        const schedulingData = {
-          id_usuario: empleado.id || empleado.id_usuario,
-          fecha_inicio: fecha,
-          hora_entrada: horaInicio,
-          hora_salida: horaFin,
-        };
-
-        console.log("[Calendar] Creating scheduling for fecha:", fecha, schedulingData);
-        const created = await schedulingService.create(schedulingData);
-        createdSchedulings.push(created);
+        for (const b of blocks) {
+          const schedulingData = {
+            id_usuario: empleado.id || empleado.id_usuario,
+            fecha_inicio: fecha,
+            hora_entrada: to24h(b.inicio),
+            hora_salida: to24h(b.fin),
+          };
+          console.log("[Calendar] Creating scheduling for fecha:", fecha, schedulingData);
+          const created = await schedulingService.create(schedulingData);
+          createdSchedulings.push(created);
+        }
       }
 
       // Actualizar lista de schedulings
@@ -163,16 +166,6 @@ const Calendar = ({ empleado, schedulings = [], onUpdateSchedulings }) => {
   return (
     <div className="w-full">
       <div className="bg-gray-50 rounded-xl mt-4 p-4 border border-gray-200">
-        <div className="flex justify-end mb-2">
-          <button
-            type="button"
-            className="px-3 py-1.5 bg-[#FACC15] text-[#1E1E1E] rounded-lg text-xs font-semibold hover:bg-yellow-400 transition"
-            onClick={() => setModalOpen(true)}
-          >
-            <i className="bi bi-calendar-plus mr-1"></i>
-            Crear Programación
-          </button>
-        </div>
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"

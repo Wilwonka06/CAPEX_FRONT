@@ -12,6 +12,7 @@ import SeeEmployee from "../../../dashboard/pages/employees/components/SeeEmploy
 import EditScheduling from "./components/EditScheduling";
 import { useOutletContext } from 'react-router-dom';
 import { normalizeText } from '../../../../shared/validations';
+import { to24h } from '../../../../shared/utils/timeFormat';
 
 const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
@@ -377,90 +378,29 @@ const EmployeesPage = () => {
     setAddEmployeeSchedulings([]);
   };
 
-  const handleDeleteEmployee = async (employee) => {
-    console.log("[DEBUG] handleDeleteEmployee called with employee:", employee);
-    console.log("[DEBUG] Employee ID:", employee.id);
-    
-    if (!employee || !employee.id) {
-      console.error("[DEBUG] ERROR: Invalid employee or missing ID");
-      toast.error("Error: Empleado inválido");
-      return;
-    }
-
-    const result = await Swal.fire({
-      title: "¿Estás seguro?",
-      text: `Eliminar "${employee.nombre}" no se puede deshacer.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-    });
-
-    if (result.isConfirmed) {
-      const employeePromise = (async () => {
-        console.log("[DEBUG] Deleting employee with ID:", employee.id);
-        await employeesService.delete(employee.id);
-        
-        setEmployees(prev => {
-          const updated = prev.filter(e => String(e.id) !== String(employee.id));
-          console.log("[DEBUG] Employees after delete:", updated);
-          return updated;
-        });
-        try {
-          const userId = employee.id || employee.id_usuario;
-          if (userId) {
-            const userSchedulings = await schedulingService.getByUser(userId);
-            const deletePromises = userSchedulings.map(s => schedulingService.delete(s.id));
-            await Promise.all(deletePromises);
-            setSchedulings(prev => prev.filter(s => String(s.id_usuario) !== String(userId)));
-            console.log("[DEBUG] Cascaded schedulings deleted for user:", userId);
-          }
-        } catch (e) {
-          console.warn("[DEBUG] Cascade delete of schedulings failed:", e);
-        }
-        
-        return true;
-      })();
-
-      toast.promise(employeePromise, {
-        loading: 'Eliminando empleado...',
-        success: 'Empleado eliminado exitosamente',
-        error: (err) => {
-          console.error("Error eliminando empleado:", err);
-          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
-          return backendMsg || "Error al eliminar empleado";
-        },
-      });
-
-      try {
-        await employeePromise;
-      } catch {
-        // Error ya manejado por toast.promise
-      }
-    }
-  };
+  // Eliminación deshabilitada: flujo de inactivación mediante handleToggleStatus
 
   const isInitialLoading = loading;
   const hasError = error && !isInitialLoading;
 
   return (
-    <div className="min-h-screen bg-background p-6 font-inter">
-      <div className="w-full">
-        <div className="flex flex-col gap-6">
-          <div className="w-full">
+    <div className="min-h-screen font-inter">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+          <div className="p-6">
             {!showForm && !editEmployee && !seeEmployee && (
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex items-center gap-4 mb-6">
                 <Search
                   searchTerm={searchTerm}
                   handleSearch={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar empleados por nombre, documento, teléfono o correo..."
                 />
                 <button
-                  className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
+                  className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
                   onClick={() => setShowForm(true)}
                 >
-                  <i className="bi bi-plus-lg text-lg"></i>
-                  Crear Empleado
+                  <i className="bi bi-plus-circle mr-2"></i>
+                  Crear Salado
                 </button>
               </div>
             )}
@@ -508,6 +448,10 @@ const EmployeesPage = () => {
             {(showForm || editEmployee || seeEmployee) && (
               <div className="w-full">
                 <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+                  <div className="flex justify-between items-center mb-3">
+                    <SearchField value={''} onChange={() => {}} placeholder="Buscar programaciones..." containerClass="flex-1 max-w-sm" />
+                    <CreateButton label="Crear programación" onClick={() => setEditingScheduling({})} iconClass="bi bi-calendar-plus" />
+                  </div>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-[#FACC15] rounded-full flex items-center justify-center">
                       <i className="bi bi-calendar-event text-xl text-gray-800"></i>

@@ -9,6 +9,7 @@ import { employeesService } from '@/features/dashboard/pages/employees/API/emplo
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
+import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 
 // Estados posibles de la cita
 const APPOINTMENT_STATES = [
@@ -583,7 +584,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         telefono: cleanPhone, // Formato: +573001234567
         correo: cleanEmail,
         contrasena: tempPassword, // Contraseña temporal generada
-        tipo_documento: formData.tipoDocumento || 'CC',
+        tipo_documento: toBackendDocCode(formData.tipoDocumento || 'CC'),
         documento: cleanDocument,
         roleId: 2, // Rol de cliente
         estado: 'Activo',

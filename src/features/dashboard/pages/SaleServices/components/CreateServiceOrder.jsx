@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder } from "../../../../../shared/validations";
+import { createServiceOrder } from "../API/ServiceOrderService";
 import usersService from "../../users/API/usersService";
 import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
 
-const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) => {
+const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
   const [formData, setFormData] = useState({
     id_cliente: null,
     dineroProporcionado: "",
@@ -25,6 +26,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showErrors, setShowErrors] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
@@ -72,6 +74,53 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const buscarCliente = async () => {
+      if (!clienteDoc || clienteDoc.trim().length < 8) {
+        setClienteEncontrado(false);
+        setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+        setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+        return;
+      }
+      setBuscandoCliente(true);
+      try {
+        const response = await usersService.getAll({ documento: clienteDoc.trim() });
+        if (response.success && Array.isArray(response.data)) {
+          const usuarioEncontrado = response.data.find(u => (u.documento || '').toString().trim() === clienteDoc.trim());
+          if (usuarioEncontrado) {
+            const idc = usuarioEncontrado.id_usuario || usuarioEncontrado.id;
+            setCliente({
+              id: idc,
+              documentType: usuarioEncontrado.tipo_documento || 'Cedula de ciudadania',
+              documentNumber: usuarioEncontrado.documento || '',
+              nombre: usuarioEncontrado.nombre || '',
+              email: usuarioEncontrado.correo || '',
+              phone: usuarioEncontrado.telefono || '',
+            });
+            setClienteEncontrado(true);
+            setFormData(prev => ({ ...prev, id_cliente: idc }));
+          } else {
+            setClienteEncontrado(false);
+            setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+            setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+          }
+        } else {
+          setClienteEncontrado(false);
+          setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+          setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+        }
+      } catch (error) {
+        setClienteEncontrado(false);
+        setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+        setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+      } finally {
+        setBuscandoCliente(false);
+      }
+    };
+    const timeoutId = setTimeout(buscarCliente, 500);
+    return () => clearTimeout(timeoutId);
+  }, [clienteDoc]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
@@ -85,6 +134,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
     }
 
     try {
+      setLoading(true);
       let clienteId = formData.id_cliente;
       if (!clienteId) {
         if (!clienteEncontrado) {
@@ -117,9 +167,13 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
         dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
       };
 
-      onCreate(orderData);
+      const newOrder = await createServiceOrder(orderData, services);
+      if (onCreated) onCreated(newOrder);
+      if (onClose) onClose();
     } catch (err) {
       // Silenciar, validación visual se maneja en la UI de página
+    } finally {
+      setLoading(false);
     }
   };
 

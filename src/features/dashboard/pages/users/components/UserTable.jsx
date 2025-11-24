@@ -38,7 +38,7 @@ const UserTable = ({
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Foto</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Nombre</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Correo</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Rol</th>
+                        <th className="py-2 px-3 text-left font-semibold text-gray-700">Rol</th>
             <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
             <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
           </tr>
@@ -58,7 +58,7 @@ const UserTable = ({
               </td>
               <td className="py-2 px-3">{user.nombre}</td>
               <td className="py-2 px-3">{user.correo}</td>
-              <td className="py-2 px-3">
+                            <td className="py-2 px-3">
                 {user.rol ? user.rol.nombre : "Sin rol asignado"}
               </td>
               <td className="py-2 px-3">
@@ -66,7 +66,7 @@ const UserTable = ({
                   <span
                     className={`text-xs font-semibold rounded-full px-2 py-1
                       ${
-                        user.estado === "Activo"
+user.estado === "Activo"
                           ? "bg-green-100 text-green-800"
                           : user.estado === "Inactivo"
                           ? "bg-red-100 text-red-800"

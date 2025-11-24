@@ -137,6 +137,10 @@ export const schedulingService = {
       const schedulingsData = response?.success ? response.data : response;
       return Array.isArray(schedulingsData) ? schedulingsData : [];
     } catch (error) {
+      if (error?.response?.status === 404) {
+        console.warn('No se encontraron programaciones para el usuario', idUsuario);
+        return [];
+      }
       console.error('Error fetching schedulings by user:', error);
       throw error;
     }
