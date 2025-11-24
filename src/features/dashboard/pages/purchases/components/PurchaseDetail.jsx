@@ -10,13 +10,27 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
     const cantidad = parseInt(p.cantidad || 1);
     return acc + (precio * cantidad);
   }, 0);
-  const totalIva = items.reduce((acc, p) => {
-    const precio = parseFloat(p.precio_unitario || p.costo || p.precioBase || 0);
-    const cantidad = parseInt(p.cantidad || 1);
-    const ivaRate = parseFloat(p.iva || 0);
-    return acc + (precio * cantidad * ivaRate);
-  }, 0);
-  const total = parseFloat(compra.total || 0) || subtotal + totalIva;
+
+  let totalIva = 0;
+  if (items.some(p => p.iva !== undefined && p.iva !== null)) {
+    totalIva = items.reduce((acc, p) => {
+      const precio = parseFloat(p.precio_unitario || p.costo || p.precioBase || 0);
+      const cantidad = parseInt(p.cantidad || 1);
+      let ivaRate = parseFloat(p.iva || 0);
+      if (ivaRate > 1) ivaRate = ivaRate / 100;
+      return acc + (precio * cantidad * ivaRate);
+    }, 0);
+  } else if (compra?.iva !== undefined && compra?.iva !== null) {
+    totalIva = parseFloat(compra.iva || 0);
+  } else {
+    let ivaRate = parseFloat(compra?.ivaGeneral || compra?.ivaRate || 0);
+    if (ivaRate > 1) ivaRate = ivaRate / 100;
+    totalIva = subtotal * ivaRate;
+  }
+
+  const total = compra?.total !== undefined && compra?.total !== null
+    ? parseFloat(compra.total)
+    : subtotal + totalIva;
 
   const getEstadoClass = (estado) => {
     switch (estado) {
@@ -30,8 +44,8 @@ const PurchaseDetailModal = ({ compra, isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
         <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-receipt text-lg"></i></div><h2 className="text-xl font-bold m-0">Detalle de Compra #{compra.id}</h2></div>
           <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import productsService from '../products/API/productsService';
 import salesService from './API/salesService';
+import usersService from '../users/API/usersService';
 import Search from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
@@ -23,6 +24,7 @@ const SalesProducts = () => {
   // Estado para productos
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [customers, setCustomers] = useState([]);
 
   // Los clientes ahora se buscan dinámicamente desde el backend
 
@@ -42,7 +44,7 @@ const SalesProducts = () => {
     setTitle('Venta de Productos');
     loadSales();
     loadProducts();
-    // loadCustomers(); // Implementar cuando tengas API de clientes
+    loadCustomers();
     return () => setTitle('');
   }, [setTitle]);
 
@@ -84,6 +86,29 @@ const SalesProducts = () => {
       toast.error('Error al cargar productos');
     } finally {
       setProductsLoading(false);
+    }
+  };
+
+  // Cargar clientes
+  const loadCustomers = async () => {
+    try {
+      const response = await usersService.getAll({ limit: 100, roleId: 2 });
+      if (response.success) {
+        const list = Array.isArray(response.data) ? response.data : [];
+        const mapped = list.map(u => ({
+          id: u.id_usuario || u.id,
+          nombre: u.nombre || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+          documentNumber: u.documento || '',
+          email: u.correo || '',
+          phone: u.telefono || ''
+        }));
+        setCustomers(mapped);
+      } else {
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      setCustomers([]);
     }
   };
 
@@ -364,7 +389,7 @@ const SalesProducts = () => {
                 <>
                   <SalesTable
                     sales={paginatedSales}
-                    customers={[]}
+                    customers={customers}
                     onView={handleViewSale}
                     onAnnul={handleDeleteSale}
                     onDownload={async (sale) => {
@@ -431,7 +456,7 @@ const SalesProducts = () => {
       {showDetailModal && selectedSale && (
         <SaleDetailModal
           sale={selectedSale}
-          customer={null}
+          customer={customers.find(c => c.id === selectedSale?.clienteId) || selectedSale?.customer || null}
           isOpen={showDetailModal}
           onClose={closeModals}
         />

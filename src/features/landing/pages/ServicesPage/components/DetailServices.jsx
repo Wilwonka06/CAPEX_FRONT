@@ -18,7 +18,7 @@ const DetailServices = ({ service, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in" onClick={handleBackdropClick}>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in" onClick={handleBackdropClick}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative overflow-hidden animate-scale-in">
         {/* Elementos decorativos de fondo */}
         <div className="absolute top-0 left-0 w-32 h-32 bg-[#FACC15]/10 rounded-full blur-2xl"></div>
@@ -27,7 +27,7 @@ const DetailServices = ({ service, onClose }) => {
         {/* Botón cerrar */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 z-20 w-10 h-10 bg-black/20 backdrop-blur-sm text-white rounded-full flex items-center justify-center hover:bg-black/40 transition-all duration-300 hover:scale-110 shadow-lg"
+          className="absolute top-6 right-6 z-20 w-10 h-10 bg-black/20 backdrop-blur-sm text-white rounded-full flex items-center justify-center hover:bg-black/50 transition-all duration-300 hover:scale-110 shadow-lg"
           title="Cerrar"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -248,11 +248,24 @@ export const schedulingService = {
    */
   create: async (data) => {
     try {
-      const response = await apiRequest.post(SCHEDULING_ENDPOINT, data);
+      if (!data) throw new Error('Datos de programación requeridos');
+      const mapped = {
+        id_usuario: parseInt(data.empleadoId || data.id_usuario),
+        fecha_inicio: data.fechaInicio || data.fecha_inicio,
+        hora_entrada: data.horaInicio || data.hora_entrada,
+        hora_salida: data.horaFin || data.hora_salida,
+      };
+
+      if (!mapped.id_usuario || !mapped.fecha_inicio || !mapped.hora_entrada || !mapped.hora_salida) {
+        throw new Error('Campos obligatorios faltantes (empleado, fecha, hora inicio, hora fin)');
+      }
+
+      const response = await apiRequest.post(SCHEDULING_ENDPOINT, mapped);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error creating scheduling:', error);
-      throw error;
+      const msg = error?.response?.data?.message || error.message || 'Error al crear programación';
+      throw new Error(msg);
     }
   },
 
@@ -264,11 +277,20 @@ export const schedulingService = {
    */
   update: async (id, data) => {
     try {
-      const response = await apiRequest.put(`${SCHEDULING_ENDPOINT}/${id}`, data);
+      if (!id) throw new Error('ID de la programación requerido');
+      const mapped = {
+        id_usuario: data?.empleadoId || data?.id_usuario,
+        fecha_inicio: data?.fechaInicio || data?.fecha_inicio,
+        hora_entrada: data?.horaInicio || data?.hora_entrada,
+        hora_salida: data?.horaFin || data?.hora_salida,
+      };
+
+      const response = await apiRequest.put(`${SCHEDULING_ENDPOINT}/${id}`, mapped);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error updating scheduling:', error);
-      throw error;
+      const msg = error?.response?.data?.message || error.message || 'Error al actualizar programación';
+      throw new Error(msg);
     }
   },
 

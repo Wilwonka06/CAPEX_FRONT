@@ -33,7 +33,7 @@ class OrdersService {
           id: pedido.id_pedido,
           numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
           fecha: pedido.fecha,
-          clienteId: pedido.id_cliente || null,
+          clienteId: pedido.id_usuario || pedido.id_cliente || null,
           valor: parseFloat(pedido.total || 0),
           estado: pedido.estado || 'Pendiente',
           productos: (pedido.detalles || []).map(det => ({
