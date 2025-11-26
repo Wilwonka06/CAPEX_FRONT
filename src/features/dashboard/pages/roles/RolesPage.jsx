@@ -6,6 +6,7 @@ import CreateRoles from "./components/CreateRole";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ErrorState from "./components/ErrorState";
 import { rolesService } from "./API/rolesService";
+import { usersService } from "../users/API/usersService";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
@@ -20,13 +21,13 @@ const RolesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const { setTitle } = useOutletContext();
-  
+
   // Verificar permisos
   const canView = hasPrivilege('Gestión de Usuarios', 'Visualizar');
   const canCreate = hasPrivilege('Gestión de Usuarios', 'Crear');
   const canEdit = hasPrivilege('Gestión de Usuarios', 'Editar');
   const canDelete = hasPrivilege('Gestión de Usuarios', 'Eliminar');
-  
+
   // Si no tiene permiso de visualización, mostrar mensaje
   if (!canView) {
     return (
@@ -181,6 +182,38 @@ const RolesPage = () => {
 
   const handleDeleteRole = async (roleId) => {
     const role = roles.find(r => r.id === roleId);
+
+    // Verificar si hay usuarios asignados a este rol
+    try {
+      const response = await usersService.getAll({ roleId: roleId });
+      const usersWithRole = response.data || []; // Asumiendo que la respuesta tiene la data en .data
+
+      // Si la respuesta es paginada, podría venir en response.data.data o similar, 
+      // pero usersService.getAll parece devolver response directo de axios o similar.
+      // Revisando usersService.getAll: return response; (donde response es await apiRequest.get)
+      // apiRequest suele devolver { success: true, data: [...] } o similar.
+      // Vamos a ser defensivos aquí.
+
+      const users = Array.isArray(usersWithRole) ? usersWithRole : (usersWithRole.data || []);
+
+      if (users.length > 0) {
+        await Swal.fire({
+          title: 'No se puede eliminar',
+          text: `No se puede eliminar el rol "${role?.name || role?.nombre}" porque hay ${users.length} usuario(s) asignado(s) a él.`,
+          icon: 'error',
+          confirmButtonColor: '#3085d6',
+          confirmButtonText: 'Entendido'
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Error verificando usuarios del rol:', error);
+      // Si falla la verificación, advertimos al usuario pero permitimos intentar (o podríamos bloquear)
+      // Por seguridad, mejor avisar del error.
+      toast.error('Error al verificar usuarios asignados. Intente nuevamente.');
+      return;
+    }
+
     const result = await Swal.fire({
       title: '¿Estás seguro?',
       text: `¿Estás seguro de que deseas eliminar el rol "${role?.name || role?.nombre}"? Esta acción no se puede deshacer.`,
@@ -281,7 +314,7 @@ const RolesPage = () => {
               </div>
             </div>
 
-            <RolesTable 
+            <RolesTable
               roles={paginatedRoles}
               onEdit={canEdit ? handleEditRole : null}
               onDelete={canDelete ? handleDeleteRole : null}
@@ -291,9 +324,9 @@ const RolesPage = () => {
             {!loading && (
               <>
                 {totalPages > 1 && (
-                  <Paginator 
-                    currentPage={currentPage} 
-                    totalPages={totalPages} 
+                  <Paginator
+                    currentPage={currentPage}
+                    totalPages={totalPages}
                     onPageChange={handlePageChange}
                     itemsPerPage={itemsPerPage}
                     totalItems={filteredRoles.length}
@@ -304,7 +337,7 @@ const RolesPage = () => {
             )}
           </div>
         </div>
-        
+
         {/* Modal de Crear Rol */}
         <CreateRoles
           isOpen={isCreateOpen}

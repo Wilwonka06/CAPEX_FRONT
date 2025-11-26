@@ -22,7 +22,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         try {
           const servicios = await apiRequest.get('/servicios');
           console.log('🔍 Servicios recibidos del backend:', servicios);
-          
+
           // Manejar diferentes estructuras de respuesta
           let serviciosArray = [];
           if (Array.isArray(servicios)) {
@@ -37,12 +37,12 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               serviciosArray = servicios.results;
             } else {
               // Si es un objeto con propiedades que parecen servicios
-              serviciosArray = Object.values(servicios).filter(item => 
+              serviciosArray = Object.values(servicios).filter(item =>
                 item && typeof item === 'object' && (item.id || item.nombre || item.name)
               );
             }
           }
-          
+
           console.log('🔧 Servicios procesados:', serviciosArray);
           setAvailableServices(serviciosArray);
         } catch (error) {
@@ -54,7 +54,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         try {
           const empleados = await apiRequest.get('/empleados');
           console.log('🔍 Empleados recibidos del backend:', empleados);
-          
+
           // Manejar diferentes estructuras de respuesta
           let empleadosArray = [];
           if (Array.isArray(empleados)) {
@@ -69,12 +69,12 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               empleadosArray = empleados.results;
             } else {
               // Si es un objeto con propiedades que parecen empleados
-              empleadosArray = Object.values(empleados).filter(item => 
+              empleadosArray = Object.values(empleados).filter(item =>
                 item && typeof item === 'object' && (item.id || item.nombre || item.name)
               );
             }
           }
-          
+
           console.log('🔧 Empleados procesados:', empleadosArray);
           setAvailableEmployees(empleadosArray);
         } catch (error) {
@@ -134,8 +134,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   };
 
   // Usar directamente los servicios del backend (ya filtrados por la búsqueda)
-  const filteredServices = Array.isArray(availableServices) 
-    ? availableServices.map(normalizarServicio) 
+  const filteredServices = Array.isArray(availableServices)
+    ? availableServices.map(normalizarServicio)
     : [];
 
   const handleServiceSelect = (service) => {
@@ -154,7 +154,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
       const servicioNormalizado = normalizarServicio(selectedServiceForQuantity);
       const empleadoSeleccionado = availableEmployees.find(emp => emp.id === parseInt(selectedEmployeeForService));
       const empleadoNormalizado = empleadoSeleccionado ? normalizarEmpleado(empleadoSeleccionado) : null;
-      
+
       const serviceWithDetails = {
         ...servicioNormalizado,
         name: servicioNormalizado.nombre,
@@ -208,24 +208,19 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
   return (
     <div className="relative">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">Servicio</label>
-          <select
-            value={selectedServiceId}
-            onChange={handleSelectChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            onFocus={cargarServicios}
-          >
-            <option value="">Seleccionar servicio</option>
-            {filteredServices.map(service => (
-              <option key={service.id} value={service.id}>
-                {service.nombre} - ${service.precio}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <select
+        value={selectedServiceId}
+        onChange={handleSelectChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        onFocus={cargarServicios}
+      >
+        <option value="">Seleccionar servicio</option>
+        {filteredServices.map(service => (
+          <option key={service.id} value={service.id}>
+            {service.nombre} - ${service.precio}
+          </option>
+        ))}
+      </select>
 
       {/* Modal para cantidad, empleado y detalles del servicio */}
       {showQuantityModal && selectedServiceForQuantity && (
@@ -244,7 +239,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 ×
               </button>
             </div>
-            
+
             {/* Contenido */}
             <div className="p-8 bg-white">
               <div className="space-y-4">
@@ -254,23 +249,23 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                     {selectedServiceForQuantity.nombre || selectedServiceForQuantity.name}
                   </div>
                 </div>
-                
-                
-                
+
+
+
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Duración</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
                     {selectedServiceForQuantity.duracion || selectedServiceForQuantity.duration || 'No especificada'}
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Precio unitario</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
                     ${selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0}
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">
                     Cantidad <span className="text-red-500">*</span>
@@ -297,7 +292,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">
                     Empleado <span className="text-red-500">*</span>
@@ -313,12 +308,12 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                       return (
                         <option key={empleadoNormalizado.id} value={empleadoNormalizado.id}>
                           {empleadoNormalizado.nombre}
-                      </option>
+                        </option>
                       );
                     })}
                   </select>
                 </div>
-                
+
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-blue-600">
@@ -326,7 +321,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={cancelServiceSelection}
@@ -392,7 +387,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
             </tbody>
           </table>
         </div>
-        
+
         {/* Total de servicios */}
         <div className="mt-2 text-sm bg-blue-50 p-2 rounded-md border border-blue-100">
           <span className="font-medium">TOTAL DE SERVICIOS: </span>
@@ -401,14 +396,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
           </span>
         </div>
       </div>
-
-      {/* Overlay para cerrar dropdown */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-5" 
-          onClick={() => setIsOpen(false)}
-        ></div>
-      )}
     </div>
   );
 };

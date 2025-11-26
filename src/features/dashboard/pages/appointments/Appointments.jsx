@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import appointmentsService from './API/appointmentsService';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import esLocale from '@fullcalendar/core/locales/es';
 
 import AppointmentDetailModal from './components/AppointmentDetailModal';
@@ -39,6 +39,14 @@ const Appointments = () => {
   // Para pasar datos a los modales
   const [editData, setEditData] = useState(null);
   const { setTitle } = useOutletContext();
+  const navigate = useNavigate();
+
+  const handleSaveAppointment = (savedCita) => {
+    refreshAppointments();
+    if (savedCita && (savedCita.estado === 'En proceso' || savedCita.estado === 'En ejecucion')) {
+      navigate('/dashboard/ventas-servicios');
+    }
+  };
 
   // Cargar citas al iniciar
   useEffect(() => {
@@ -66,7 +74,7 @@ const Appointments = () => {
       appointments.filter(appointment =>
         // Buscar por nombre del cliente (usuario o cliente)
         ((appointment.usuario?.nombre || appointment.cliente?.nombre) &&
-         (appointment.usuario?.nombre || appointment.cliente?.nombre).toLowerCase().includes(lowerTerm)) ||
+          (appointment.usuario?.nombre || appointment.cliente?.nombre).toLowerCase().includes(lowerTerm)) ||
         // Buscar por fecha
         (appointment.fecha_servicio && appointment.fecha_servicio.includes(searchTerm)) ||
         // Buscar por estado
@@ -78,10 +86,10 @@ const Appointments = () => {
         )) ||
         // Buscar por teléfono del cliente
         ((appointment.usuario?.telefono || appointment.cliente?.telefono) &&
-         (appointment.usuario?.telefono || appointment.cliente?.telefono).includes(searchTerm)) ||
+          (appointment.usuario?.telefono || appointment.cliente?.telefono).includes(searchTerm)) ||
         // Buscar por correo del cliente
         ((appointment.usuario?.correo || appointment.cliente?.correo) &&
-         (appointment.usuario?.correo || appointment.cliente?.correo).toLowerCase().includes(lowerTerm))
+          (appointment.usuario?.correo || appointment.cliente?.correo).toLowerCase().includes(lowerTerm))
       )
     );
   }, [searchTerm, appointments]);
@@ -140,17 +148,17 @@ const Appointments = () => {
 
     // Color según estado
     const estadoColor = ESTADO_COLORES[cita.estado] || { bg: '#A0522D', text: '#fff' };
-    
+
     // Nombre del cliente
     const clienteNombre = cita.usuario?.nombre || cita.cliente?.nombre || 'Cliente';
-    
+
     // Servicios
     const serviciosTexto = cita.servicios?.map(s => s.servicio?.nombre || s.nombre_servicio).join(', ') || 'Sin servicios';
-    
+
     // Formatear hora para mostrar
     const horaInicioFormato = horaInicio.substring(0, 5);
     const horaFinFormato = horaFin.substring(0, 5);
-    
+
     return {
       id: cita.id_cita,
       title: `${horaInicioFormato} - ${clienteNombre}: ${serviciosTexto}`,
@@ -180,8 +188,8 @@ const Appointments = () => {
               <span className="text-sm font-semibold text-gray-700 mr-2">Estados:</span>
               {Object.entries(ESTADO_COLORES).map(([estado, color]) => (
                 <div key={estado} className="flex items-center gap-2">
-                  <span 
-                    className="inline-block w-3 h-3 rounded" 
+                  <span
+                    className="inline-block w-3 h-3 rounded"
                     style={{ background: color.bg }}
                   ></span>
                   <span className="text-xs text-gray-600">{estado}</span>
@@ -190,8 +198,8 @@ const Appointments = () => {
             </div>
           </div>
         </div>
-        
-        
+
+
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <Search
             searchTerm={searchTerm}
@@ -262,14 +270,14 @@ const Appointments = () => {
           <AppointmentEditModal
             cita={editData}
             onClose={() => setShowEditModal(false)}
-            onSave={refreshAppointments}
+            onSave={handleSaveAppointment}
           />
         )}
         {showCreateModal && (
           <AppointmentEditModal
             fecha={selectedDate}
             onClose={() => setShowCreateModal(false)}
-            onSave={refreshAppointments}
+            onSave={handleSaveAppointment}
           />
         )}
       </div>

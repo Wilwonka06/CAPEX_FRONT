@@ -196,11 +196,11 @@ const CustomersPage = () => {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative w-full max-w-xs flex-1">
+              <div className="relative w-full flex-1">
                 <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
                 <input
                   type="text"
-                  placeholder="Buscar cliente..."
+                  placeholder="Buscar por nombre, documento, correo, teléfono o estado..."
                   value={searchTerm}
                   onChange={handleSearch}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FACC15] focus:border-transparent bg-gray-50 hover:bg-white transition-all duration-300 text-gray-700 placeholder-gray-400"
@@ -208,7 +208,7 @@ const CustomersPage = () => {
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                className="bg-text-main hover:bg-primary-dark text-white px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center text-xs whitespace-nowrap"
               >
                 <i className="bi bi-plus-circle mr-2"></i> Crear Cliente
               </button>

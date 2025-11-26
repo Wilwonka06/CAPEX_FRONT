@@ -18,7 +18,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
       try {
         const productos = await apiRequest.get('/productos');
         console.log('🔍 Productos recibidos del backend:', productos);
-        
+
         // Manejar diferentes estructuras de respuesta
         let productosArray = [];
         if (Array.isArray(productos)) {
@@ -33,12 +33,12 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
             productosArray = productos.results;
           } else {
             // Si es un objeto con propiedades que parecen productos
-            productosArray = Object.values(productos).filter(item => 
+            productosArray = Object.values(productos).filter(item =>
               item && typeof item === 'object' && (item.id || item.nombre || item.name)
             );
           }
         }
-        
+
         console.log('🔧 Productos procesados:', productosArray);
         setAvailableProducts(productosArray);
       } catch (error) {
@@ -83,8 +83,8 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   };
 
   // Usar directamente los productos del backend (ya filtrados por la búsqueda)
-  const filteredProducts = Array.isArray(availableProducts) 
-    ? availableProducts.map(normalizarProducto) 
+  const filteredProducts = Array.isArray(availableProducts)
+    ? availableProducts.map(normalizarProducto)
     : [];
 
   const handleProductSelect = (product) => {
@@ -100,8 +100,8 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const confirmProductSelection = () => {
     if (selectedProductForQuantity && quantity > 0) {
       const productoNormalizado = normalizarProducto(selectedProductForQuantity);
-      
-      const productWithQuantity = { 
+
+      const productWithQuantity = {
         ...productoNormalizado,
         name: productoNormalizado.nombre,
         price: productoNormalizado.precio,
@@ -110,7 +110,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
         subtotal: productoNormalizado.precio * quantity,
         uniqueId: Date.now()
       };
-      
+
       onProductsChange([...selectedProducts, productWithQuantity]);
       setShowQuantityModal(false);
       setSelectedProductForQuantity(null);
@@ -147,24 +147,19 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
   return (
     <div className="relative">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">Producto</label>
-          <select
-            value={selectedProductId}
-            onChange={handleSelectChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            onFocus={cargarProductos}
-          >
-            <option value="">Seleccionar producto</option>
-            {filteredProducts.map(product => (
-              <option key={product.id} value={product.id}>
-                {product.nombre} - ${product.precio}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <select
+        value={selectedProductId}
+        onChange={handleSelectChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        onFocus={cargarProductos}
+      >
+        <option value="">Seleccionar producto</option>
+        {filteredProducts.map(product => (
+          <option key={product.id} value={product.id}>
+            {product.nombre} - ${product.precio}
+          </option>
+        ))}
+      </select>
 
       {/* Modal para cantidad y detalles del producto */}
       {showQuantityModal && selectedProductForQuantity && (
@@ -183,7 +178,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 ×
               </button>
             </div>
-            
+
             {/* Contenido */}
             <div className="p-8 bg-white">
               <div className="space-y-4">
@@ -193,16 +188,16 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                     {selectedProductForQuantity.nombre || selectedProductForQuantity.name}
                   </div>
                 </div>
-                
-                
-                
+
+
+
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Precio unitario</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
                     ${selectedProductForQuantity.precio || selectedProductForQuantity.price || 0}
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">
                     Cantidad <span className="text-red-500">*</span>
@@ -229,7 +224,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-green-600">
@@ -237,7 +232,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={cancelProductSelection}
@@ -307,13 +302,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
           </span>
         </div>
       </div>
-      {/* Overlay para cerrar dropdown */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-5" 
-          onClick={() => setIsOpen(false)}
-        ></div>
-      )}
     </div>
   );
 };

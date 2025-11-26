@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
- 
+
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import { isValidDocumentByType } from '@/shared/validations';
@@ -13,6 +13,11 @@ import '../../users/components/phoneinput-search.css';
 const APPOINTMENT_STATES = [
   { nombre: 'Agendada', descripcion: 'La cita ha sido creada por el cliente.' },
   { nombre: 'Confirmada', descripcion: 'El establecimiento ha confirmado la disponibilidad.' },
+  { nombre: 'En proceso', descripcion: 'El servicio se está llevando a cabo.' },
+  { nombre: 'Finalizada', descripcion: 'El servicio ha concluido.' },
+  { nombre: 'Pagada', descripcion: 'El servicio ha sido pagado.' },
+  { nombre: 'Cancelada por el usuario', descripcion: 'El cliente ha cancelado la cita.' },
+  { nombre: 'No asistio', descripcion: 'El cliente no se presentó a la cita.' },
 ];
 
 import Swal from 'sweetalert2';
@@ -131,19 +136,19 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
           const nombreEmpleado = s.empleado?.nombre || s.nombre_empleado || '';
           const horaInicio = s.hora_inicio ? (s.hora_inicio.includes(':') ? s.hora_inicio.substring(0, 5) : s.hora_inicio) : '08:00';
           const duracion = s.duracion || s.servicio?.duracion || 30;
-          
+
           return {
-          id: s.id_detalle_servicio || Date.now() + Math.random(),
-          servicioId: s.id_servicio || s.servicio?.id_servicio,
-          nombre: s.servicio?.nombre || s.nombre_servicio || 'Servicio',
+            id: s.id_detalle_servicio || Date.now() + Math.random(),
+            servicioId: s.id_servicio || s.servicio?.id_servicio,
+            nombre: s.servicio?.nombre || s.nombre_servicio || 'Servicio',
             profesional: nombreEmpleado,
             id_empleado: s.id_empleado || s.empleado?.id_usuario,
             inicio: horaInicio,
             fin: s.hora_finalizacion ? (s.hora_finalizacion.includes(':') ? s.hora_finalizacion.substring(0, 5) : s.hora_finalizacion) : calcularHoraFin(horaInicio, duracion),
             duracion: duracion,
-          precio: s.precio_unitario || s.precio || 0,
-          cantidad: s.cantidad || 1,
-          observaciones: s.observaciones || ''
+            precio: s.precio_unitario || s.precio || 0,
+            cantidad: s.cantidad || 1,
+            observaciones: s.observaciones || ''
           };
         }),
         notas: cita.motivo || ''
@@ -309,7 +314,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         const cantidad = field === 'cantidad' ? value : newServicios[index].cantidad;
         const duracionTotal = Number(duracion) * Number(cantidad || 1);
         newServicios[index].fin = calcularHoraFin(inicio, duracionTotal);
-      }      
+      }
       return { ...prev, servicios: newServicios };
     });
   };
@@ -321,7 +326,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     const newH = Math.floor(totalMin / 60);
     const newM = totalMin % 60;
     return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
-  }  
+  }
 
   // Validación de teléfono
   function validarTelefono(telefono) {
@@ -351,7 +356,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   function validarFecha(fecha) {
     if (!fecha) return 'La fecha es requerida';
     const hoy = new Date();
-    hoy.setHours(0,0,0,0);
+    hoy.setHours(0, 0, 0, 0);
     const fechaCita = new Date(fecha);
     if (fechaCita < hoy) return 'No puedes agendar una cita en una fecha pasada';
     return '';
@@ -387,20 +392,20 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
     try {
       // Obtener citas del día desde la API
       const response = await appointmentsService.getAll({ fecha_servicio: fecha });
-      
+
       // Manejar la estructura de respuesta correcta
       let todasCitas = [];
       if (response.success && response.data) {
         // La API devuelve { success: true, data: { citas: [...] } }
         todasCitas = response.data.citas || response.data || [];
       }
-      
+
       // Asegurar que todasCitas es un array
       if (!Array.isArray(todasCitas)) {
         console.warn('todasCitas is not an array:', todasCitas);
         todasCitas = [];
       }
-      
+
       const citasMismoDia = todasCitas.filter(c => c.fecha_servicio === fecha && c.id_cita !== idCitaActual);
 
       for (const cita of citasMismoDia) {
@@ -482,7 +487,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   function getHorasDisponibles(idx, profesional, duracion) {
     if (!profesional) return [];
     const horas = [];
-    const hoyISO = new Date().toISOString().slice(0,10);
+    const hoyISO = new Date().toISOString().slice(0, 10);
     const esHoy = formData.fecha === hoyISO;
     const ahora = new Date();
     const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
@@ -613,7 +618,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     let newErrors = {};
     newErrors.cliente = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
     newErrors.telefono = validarTelefono(numero);
@@ -634,23 +639,23 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
     // Validación de hora contra el tiempo actual si es el mismo día
     try {
-      const hoyISO = new Date().toISOString().slice(0,10);
+      const hoyISO = new Date().toISOString().slice(0, 10);
       if (formData.fecha === hoyISO && formData.servicios.length > 0) {
         const ahora = new Date();
         const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
         const earliest = Math.min(...formData.servicios.map(s => {
           const [hh, mm] = (s.inicio || '00:00').split(':').map(Number);
-          return hh*60+mm;
+          return hh * 60 + mm;
         }));
         if (earliest <= ahoraMin) {
-          const msg = `La hora debe ser posterior a ${ahora.toTimeString().slice(0,5)}`;
+          const msg = `La hora debe ser posterior a ${ahora.toTimeString().slice(0, 5)}`;
           newErrors.servicios = msg;
           toast.error(msg);
         } else if (earliest - ahoraMin <= 30) {
           toast('Atención: la hora seleccionada es muy próxima.');
         }
       }
-    } catch {}
+    } catch { }
 
     setErrors(newErrors);
 
@@ -669,15 +674,15 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       // Buscar o crear cliente por documento
       console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.documento);
       const clientResult = await findOrCreateClient(
-        formData.cliente, 
-        numero, 
-        formData.correo, 
+        formData.cliente,
+        numero,
+        formData.correo,
         formData.documento
       );
-      
+
       // clientResult ahora siempre es un ID numérico
       const clientId = clientResult;
-      
+
       console.log('Client ID obtenido:', clientId);
 
       // Mapear profesional a ID usando los profesionales cargados del backend
@@ -686,12 +691,12 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         if (servicio.id_empleado) {
           return servicio.id_empleado;
         }
-        
+
         // Si no, buscar por nombre
         if (!servicio.profesional) {
           throw new Error('Debe seleccionar un profesional para cada servicio');
         }
-        
+
         const profesional = professionals.find(p => p.name === servicio.profesional);
         if (!profesional) {
           throw new Error(`No se encontró el profesional "${servicio.profesional}". Por favor, verifica que esté registrado.`);
@@ -734,13 +739,13 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       try {
         const res = await appointmentsService.getAll({ fecha_servicio: formData.fecha });
         const citas = (res && res.data && res.data.citas) ? res.data.citas : [];
-        const conflicto = citas.some(c => (c.servicios||[]).some(s => appointmentData.servicios.some(ns => ns.id_empleado === (s.id_empleado||s.empleado?.id_usuario) && ns.hora_inicio === (s.hora_inicio||''))));
+        const conflicto = citas.some(c => (c.servicios || []).some(s => appointmentData.servicios.some(ns => ns.id_empleado === (s.id_empleado || s.empleado?.id_usuario) && ns.hora_inicio === (s.hora_inicio || ''))));
         if (conflicto) {
           toast('Se detectó una posible coincidencia de horario. El backend confirmará disponibilidad.');
         }
-      } catch {}
+      } catch { }
 
-      onSave();
+      onSave(appointmentData.cita);
       onClose();
       return result;
     })();
@@ -842,7 +847,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                         className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                       >
                         {getHorasDisponibles(idx, service.profesional, service.duracion).map(opt => (
-                          <option key={opt.hora} value={opt.hora} disabled={!opt.disponible} style={!opt.disponible ? {color:'#aaa'} : {}}>
+                          <option key={opt.hora} value={opt.hora} disabled={!opt.disponible} style={!opt.disponible ? { color: '#aaa' } : {}}>
                             {opt.hora} {!opt.disponible ? ' (hora no disponible)' : ''}
                           </option>
                         ))}
@@ -886,8 +891,8 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Datos del cliente */}
@@ -902,7 +907,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.tipoDocumento && errors.tipoDocumento ? 'border-red-500' : 'border-gray-300'}`}
               >
                 <option value="">Seleccionar</option>
-                {['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'].map(type => (
+                {['RC', 'TI', 'CC', 'TE', 'CE', 'NIT', 'PP', 'PEP', 'DIE', 'NUIP', 'FOREIGN_NIT'].map(type => (
                   <option key={type} value={type}>{`${type} - ${DOCUMENT_TYPE_DESCRIPTIONS[type]}`}</option>
                 ))}
               </select>
@@ -975,7 +980,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               />
               {touchedFields.correo && errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha <span className="text-red-500">*</span></label>
               <input
@@ -986,6 +991,19 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                 className={`w-full px-3 py-2 border rounded-md ${touchedFields.fecha && errors.fecha ? 'border-red-500' : ''}`}
               />
               {touchedFields.fecha && errors.fecha && <p className="text-red-500 text-xs mt-1">{errors.fecha}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+              <select
+                value={formData.estado}
+                onChange={e => handleFieldChange('estado', e.target.value)}
+                className="w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                {APPOINTMENT_STATES.map(state => (
+                  <option key={state.nombre} value={state.nombre}>{state.nombre}</option>
+                ))}
+              </select>
             </div>
           </div>
 

@@ -79,13 +79,6 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
         [accion]: checked
       };
 
-      // Si se selecciona cualquier privilegio que NO sea "Visualizar", 
-      // automáticamente activar "Visualizar" también
-      if (checked && accion !== 'Visualizar') {
-        newModulePrivileges['Visualizar'] = true;
-        console.log(`✅ Activando Visualizar automáticamente para ${modulo}`);
-      }
-
       // Si se deselecciona "Visualizar", deseleccionar todos los demás privilegios
       if (!checked && accion === 'Visualizar') {
         // Limpiar todos los privilegios del módulo
