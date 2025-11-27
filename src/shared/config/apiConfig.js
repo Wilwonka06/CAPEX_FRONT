@@ -1,11 +1,9 @@
 import axios from 'axios';
 import { showError } from '../utils/toastUtils';
 
-/* const BASE_URL = import.meta.env.DEV */
-/*   ? 'http://localhost:3000/api'  */
-/*   : 'https://capex-back.onrender.com/api'; */
-
-const BASE_URL = 'https://capex-back.onrender.com/api';
+const BASE_URL = import.meta.env.DEV
+  ? (localStorage.getItem('apiBaseUrl') || 'http://localhost:3000/api')
+  : 'https://capex-back.onrender.com/api';
 
 
 // Log de configuración en desarrollo
@@ -14,8 +12,7 @@ if (import.meta.env.DEV) {
     BASE_URL,
     MODE: import.meta.env.MODE,
     DEV: import.meta.env.DEV,
-    '⚠️ Nota': 'El frontend en desarrollo está conectándose a la API de producción en Render',
-    '💡 Si el backend está "dormido"': 'El primer request puede tardar 30-60 segundos',
+    '💡 Consejo': 'Puedes cambiar el backend en desarrollo con localStorage.setItem("apiBaseUrl", "http://localhost:3000/api")',
   });
 }
 

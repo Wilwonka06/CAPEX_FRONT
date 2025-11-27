@@ -10,13 +10,6 @@ const APPOINTMENTS_ENDPOINT = '/citas';
 export const appointmentsService = {
   /**
    * Obtener todas las citas con paginación y filtros
-   * @param {Object} params - Parámetros de consulta
-   * @param {number} params.page - Número de página (opcional)
-   * @param {number} params.limit - Límite de resultados por página (opcional)
-   * @param {string} params.fecha_servicio - Fecha del servicio (opcional)
-   * @param {string} params.estado - Estado de la cita (opcional)
-   * @param {number} params.id_cliente - ID del cliente (opcional)
-   * @returns {Promise<Object>} Lista de citas con metadatos de paginación
    */
   getAll: async (params = {}) => {
     try {
@@ -37,16 +30,12 @@ export const appointmentsService = {
       return response;
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      
-      // No devolver datos mock, lanzar el error para que se maneje correctamente
       throw error;
     }
   },
 
   /**
    * Obtener una cita por ID
-   * @param {number|string} id - ID de la cita
-   * @returns {Promise<Object>} Datos de la cita
    */
   getById: async (id) => {
     try {
@@ -64,17 +53,12 @@ export const appointmentsService = {
 
   /**
    * Crear una nueva cita
-   * @param {Object} appointmentData - Datos de la cita
-   * @param {Object} appointmentData.cita - Datos de la cita
-   * @param {Array} appointmentData.servicios - Array de servicios
-   * @returns {Promise<Object>} Cita creada
    */
   create: async (appointmentData) => {
     try {
       console.log('Validating appointment data:', appointmentData);
 
       // Validaciones básicas
-      // Permitir creación con id_cliente (usuario autenticado) o con cliente (usuario no autenticado)
       const hasIdCliente = appointmentData.cita?.id_cliente;
       const hasClienteData = appointmentData.cliente && 
                             appointmentData.cliente.nombre && 
@@ -121,7 +105,7 @@ export const appointmentsService = {
         cita: {
           id_cliente: appointmentData.cita.id_cliente,
           fecha_servicio: appointmentData.cita.fecha_servicio,
-          hora_entrada: appointmentData.cita.hora_entrada, // Asegurar que hora_entrada esté presente
+          hora_entrada: appointmentData.cita.hora_entrada,
           estado: appointmentData.cita.estado || 'Agendada',
           ...(appointmentData.cita.motivo && { motivo: appointmentData.cita.motivo.trim() })
         },
@@ -131,7 +115,9 @@ export const appointmentsService = {
           hora_inicio: s.hora_inicio,
           cantidad: s.cantidad || 1,
           ...(s.observaciones && { observaciones: s.observaciones })
-        }))
+        })),
+        // Si hay datos de cliente para crear usuario nuevo
+        ...(appointmentData.cliente && { cliente: appointmentData.cliente })
       };
 
       console.log('API Service: Sending appointment data to backend:', JSON.stringify(cleanData, null, 2));
@@ -146,9 +132,6 @@ export const appointmentsService = {
 
   /**
    * Actualizar una cita existente
-   * @param {number|string} id - ID de la cita
-   * @param {Object} appointmentData - Datos actualizados de la cita
-   * @returns {Promise<Object>} Cita actualizada
    */
   update: async (id, appointmentData) => {
     try {
@@ -201,9 +184,6 @@ export const appointmentsService = {
 
   /**
    * Cancelar una cita
-   * @param {number|string} id - ID de la cita
-   * @param {string} motivoCancelacion - Motivo de la cancelación (opcional)
-   * @returns {Promise<Object>} Cita cancelada
    */
   cancel: async (id, motivoCancelacion = null) => {
     try {
@@ -222,9 +202,6 @@ export const appointmentsService = {
 
   /**
    * Agregar un servicio a una cita existente
-   * @param {number|string} appointmentId - ID de la cita
-   * @param {Object} serviceData - Datos del servicio
-   * @returns {Promise<Object>} Servicio agregado
    */
   addService: async (appointmentId, serviceData) => {
     try {
@@ -242,9 +219,6 @@ export const appointmentsService = {
 
   /**
    * Cancelar un servicio específico de una cita
-   * @param {number|string} appointmentId - ID de la cita
-   * @param {number|string} serviceDetailId - ID del detalle del servicio
-   * @returns {Promise<Object>} Servicio cancelado
    */
   cancelService: async (appointmentId, serviceDetailId) => {
     try {
@@ -262,9 +236,6 @@ export const appointmentsService = {
 
   /**
    * Buscar citas por término
-   * @param {string} searchTerm - Término de búsqueda
-   * @param {Object} filters - Filtros adicionales (opcional)
-   * @returns {Promise<Object>} Resultados de búsqueda
    */
   search: async (searchTerm, filters = {}) => {
     try {
@@ -286,9 +257,6 @@ export const appointmentsService = {
 
   /**
    * Obtener citas por empleado
-   * @param {number|string} employeeId - ID del empleado
-   * @param {Object} filters - Filtros adicionales (opcional)
-   * @returns {Promise<Object>} Citas del empleado
    */
   getByEmployee: async (employeeId, filters = {}) => {
     try {
@@ -314,9 +282,6 @@ export const appointmentsService = {
 
   /**
    * Obtener citas por usuario/cliente
-   * @param {number|string} userId - ID del usuario
-   * @param {Object} filters - Filtros adicionales (opcional)
-   * @returns {Promise<Object>} Citas del usuario
    */
   getByUser: async (userId, filters = {}) => {
     try {
@@ -342,7 +307,6 @@ export const appointmentsService = {
 
   /**
    * Obtener empleados disponibles
-   * @returns {Promise<Object>} Lista de empleados
    */
   getEmployees: async () => {
     try {
@@ -356,7 +320,6 @@ export const appointmentsService = {
 
   /**
    * Obtener servicios disponibles
-   * @returns {Promise<Object>} Lista de servicios
    */
   getServices: async () => {
     try {
@@ -370,9 +333,6 @@ export const appointmentsService = {
 
   /**
    * Obtener programación de un empleado por fecha
-   * @param {number|string} employeeId - ID del empleado
-   * @param {string} date - Fecha en formato YYYY-MM-DD
-   * @returns {Promise<Object>} Programación del empleado
    */
   getEmployeeSchedule: async (employeeId, date) => {
     try {
@@ -390,7 +350,6 @@ export const appointmentsService = {
 
   /**
    * Obtener estadísticas de citas
-   * @returns {Promise<Object>} Estadísticas de citas
    */
   getStats: async () => {
     try {

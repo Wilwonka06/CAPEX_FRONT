@@ -8,6 +8,7 @@ import TopProductsChart from "./TopProductsChart";
 import { FaMoneyBillWave, FaBoxOpen, FaUserTie } from "react-icons/fa";
 import AnnualComparisonChart from "./AnnualComparisonChart";
 import ReportsPanel from "./ReportsPanel";
+import productsService from "../pages/products/API/productsService";
 import AccessCards from "./AccessCards";
 import { ChartContentSkeleton, OrdersListSkeleton, TopListContentSkeleton } from "./DashboardSkeleton";
 import salesService from "../pages/SaleProducts/API/salesService";
@@ -30,6 +31,8 @@ const mesesES = [
   "Noviembre",
   "Diciembre",
 ];
+
+
 
 // Función helper para agrupar servicios por cliente/cita (fuera del componente)
 const groupServicesByClient = (serviceDetails) => {
@@ -138,6 +141,8 @@ const Dashboard = () => {
   const [realOrders, setRealOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const [topProductosRentables, setTopProductosRentables] = useState([]);
 
   // ===== CARGAR DATOS REALES =====
   const loadRealData = async () => {
@@ -198,6 +203,41 @@ const Dashboard = () => {
           console.error("Error loading orders:", error);
           setErrors(prev => [...prev, `Pedidos: ${error.message || 'Error interno del servidor'}`]);
           setRealOrders([]);
+        }
+
+        // Cargar productos para mapa de costos y calcular top rentables
+        try {
+          const productsResp = await productsService.getAll({ limit: 200 });
+          const productsArr = productsResp.success ? (productsResp.data || []) : [];
+          const costMap = {};
+          productsArr.forEach(p => { costMap[p.id] = parseFloat(p.costo || 0); });
+          const profitAgg = {};
+          sales.forEach((sale) => {
+            if (sale.estado === 'Cancelada' || sale.estado === 'Anulada') return;
+            (sale.productos || []).forEach(prod => {
+              const name = prod.nombre || prod.name;
+              const qty = parseInt(prod.cantidad || prod.quantity || 1);
+              const price = parseFloat(prod.precio || prod.price || 0);
+              const cost = costMap[prod.id_producto || prod.id] || 0;
+              const profit = (price - cost) * qty;
+              if (!profitAgg[name]) profitAgg[name] = { nombre: name, cantidad: 0, total: 0 };
+              profitAgg[name].cantidad += qty;
+              profitAgg[name].total += profit;
+            });
+          });
+          const list = Object.values(profitAgg).sort((a, b) => b.total - a.total).slice(0, 5);
+          while (list.length < 5) list.push({ nombre: '', cantidad: 0, total: 0 });
+          setTopProductosRentables(list);
+        } catch (error) {
+          console.error('Error calculating top rentable products:', error);
+        }
+
+        // Cargar alertas de stock bajo
+        try {
+          const lowResp = await productsService.getLowStock(5);
+          if (lowResp.success) setLowStock(lowResp.data || []);
+        } catch (error) {
+          console.error("Error loading low stock:", error);
         }
       } catch (error) {
         console.error("Error loading real data for dashboard:", error);
@@ -763,6 +803,26 @@ const Dashboard = () => {
           )}
         </div>
 
+        {/* Alertas de Stock Bajo */}
+        <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+          <div className="mb-4">
+            <h3 className="text-xl font-bold text-[#1E1E1E]">Alertas de Stock Bajo</h3>
+            <p className="text-sm text-gray-600">Productos con stock menor o igual a 5</p>
+          </div>
+          {lowStock.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay alertas</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {lowStock.map((p) => (
+                <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border">
+                  <span className="text-xs font-medium text-gray-700">{p.nombre}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${p.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{p.stock} u</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <ReportsPanel
           weeklyData={weeklyData}
           topServicios={topServicios}
@@ -827,7 +887,7 @@ const Dashboard = () => {
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
             <div className="mb-6">
               <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">
-                Top Servicios y Productos
+                Top Servicios y Productos (rentabilidad)
               </h3>
               <p className="text-sm text-gray-600 font-lato">Más solicitados y vendidos este mes</p>
             </div>
@@ -840,8 +900,8 @@ const Dashboard = () => {
                   <TopServicesChart data={topServicios} />
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Productos</h4>
-                  <TopProductsChart data={topProductos} />
+                  <h4 className="text-lg font-semibold text-[#1E1E1E] mb-4 font-montserrat">Top 5 Productos Rentables</h4>
+                  <TopProductsChart data={topProductosRentables.length ? topProductosRentables : topProductos} />
                 </div>
               </div>
             )}

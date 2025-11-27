@@ -326,6 +326,10 @@ export const recurringSchedulingService = {
       const schedulingsData = response?.success ? response.data : response;
       return Array.isArray(schedulingsData) ? schedulingsData : [];
     } catch (error) {
+      if (error?.response?.status === 404) {
+        console.warn('Programaciones recurrentes no disponibles (404). Retornando lista vacía.');
+        return [];
+      }
       console.error('Error fetching recurring schedulings:', error);
       throw error;
     }
@@ -342,6 +346,10 @@ export const recurringSchedulingService = {
       const schedulingsData = response?.success ? response.data : response;
       return Array.isArray(schedulingsData) ? schedulingsData : [];
     } catch (error) {
+      if (error?.response?.status === 404) {
+        console.warn('Programaciones recurrentes por usuario no disponibles (404). Retornando lista vacía.');
+        return [];
+      }
       console.error('Error fetching recurring schedulings by user:', error);
       throw error;
     }
@@ -518,6 +526,27 @@ export const novedadesService = {
       await apiRequest.delete(`${NOVEDADES_ENDPOINT}/${id}`);
     } catch (error) {
       console.error('Error deleting novedad:', error);
+      throw error;
+    }
+  }
+};
+
+/**
+ * Servicio de disponibilidad por programación recurrente
+ * Endpoint: /api/programaciones-recurrentes/disponibilidad
+ */
+export const availabilityService = {
+  check: async (idUsuario, fecha, inicio, fin) => {
+    try {
+      if (!idUsuario || !fecha || !inicio || !fin) {
+        throw new Error('Parámetros de disponibilidad incompletos');
+      }
+      const url = `/programaciones-recurrentes/disponibilidad?id_usuario=${idUsuario}&fecha=${fecha}&inicio=${inicio}&fin=${fin}`;
+      const response = await apiRequest.get(url);
+      const data = response?.success ? response.data : response;
+      return Boolean(data?.disponible ?? data?.disponible === true);
+    } catch (error) {
+      console.error('Error checking availability:', error);
       throw error;
     }
   }

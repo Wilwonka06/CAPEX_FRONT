@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 
 // Importar servicios API
-import { employeesService, schedulingService } from "./API/employeesService";
+import { employeesService, recurringSchedulingService } from "./API/employeesService";
 
 // Importar componentes
 import EmployeesTable from "./components/EmployeesTable";
 import AddEmployee from "./components/CreateEmployee";
 import EditEmployee from "./components/EditEmployee";
 import EmployeeDetail from "./components/EmployeeDetail";
-import Calendar from "./components/Calendar";
-import EditScheduling from "./components/EditScheduling";
+import RecurringSchedulingManager from "./components/RecurringSchedulingManager";
 import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
 import { normalizeText } from '../../../../shared/validations';
@@ -22,6 +21,7 @@ const EMPLOYEES_PER_PAGE = 10;
 
 const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
+  const navigate = useNavigate();
   
   // Estados principales
   const [employees, setEmployees] = useState([]);
@@ -36,8 +36,7 @@ const EmployeesPage = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
   const [viewEmployee, setViewEmployee] = useState(null);
-  const [addEmployeeSchedulings, setAddEmployeeSchedulings] = useState([]);
-  const [editingScheduling, setEditingScheduling] = useState(null);
+  
 
   // Función para calcular fechas específicas basadas en días seleccionados
   const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
@@ -72,7 +71,7 @@ const EmployeesPage = () => {
     try {
       const [employeesData, schedulingsData] = await Promise.all([
         employeesService.getAll(),
-        schedulingService.getAll()
+        recurringSchedulingService.getAll()
       ]);
 
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
@@ -94,7 +93,7 @@ const EmployeesPage = () => {
   }, []);
 
   useEffect(() => {
-    setTitle('Gestión de Empleados');
+    setTitle('Módulo de Empleados');
     return () => setTitle('');
   }, [setTitle]);
 
@@ -270,8 +269,6 @@ const EmployeesPage = () => {
   const handleSearch = (e) => setSearchTerm(e.target.value);
   const handleCancel = () => {
     setShowAddForm(false);
-    setEditingScheduling(null);
-    setAddEmployeeSchedulings([]);
   };
 
   // Render de error
@@ -326,7 +323,7 @@ const EmployeesPage = () => {
                   employees={paginatedEmployees}
                   onToggleStatus={handleToggleStatus}
                   togglingId={togglingId}
-                  onView={(emp) => setViewEmployee(emp)}
+                  onView={(emp) => navigate(`/dashboard/empleados/${emp.id || emp.id_usuario}`)}
                   onEdit={(emp) => setEditEmployee(emp)}
                   loading={loading}
                 />
@@ -348,31 +345,10 @@ const EmployeesPage = () => {
                 <AddEmployee
                   onCancel={handleCancel}
                   onSave={handleAddEmployee}
-                  schedulings={addEmployeeSchedulings}
-                  setSchedulings={setAddEmployeeSchedulings}
+                  schedulings={[]}
+                  setSchedulings={() => {}}
                   employees={employees}
-                  onEditScheduling={(prog) => setEditingScheduling(prog)}
-                />
-
-                {editingScheduling && (
-                  <EditScheduling
-                    editing={editingScheduling}
-                    onSave={(prog) => {
-                      setAddEmployeeSchedulings(prev => [
-                        ...prev.filter(s => s.id !== editingScheduling.id),
-                        prog
-                      ]);
-                      setEditingScheduling(null);
-                    }}
-                    onCancelEdit={() => setEditingScheduling(null)}
-                  />
-                )}
-
-                {/* Calendario para programaciones */}
-                <Calendar
-                  empleado={{ schedulings: addEmployeeSchedulings }}
-                  schedulings={schedulings}
-                  onUpdateSchedulings={setSchedulings}
+                  onEditScheduling={() => {}}
                 />
               </div>
             )}
@@ -387,29 +363,14 @@ const EmployeesPage = () => {
                   onSave={handleEditSave}
                 />
 
-                {/* Calendario para programaciones del empleado */}
-                <Calendar
-                  empleado={{
-                    ...editEmployee,
-                    schedulings: schedulings.filter(s => String(s.id_usuario) === String(editEmployee.id))
-                  }}
-                  schedulings={schedulings}
-                  onUpdateSchedulings={setSchedulings}
-                />
+                <RecurringSchedulingManager empleadoId={editEmployee.id || editEmployee.id_usuario} />
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Modal de detalles */}
-      {viewEmployee && (
-        <EmployeeDetail
-          employee={viewEmployee}
-          isOpen={!!viewEmployee}
-          onClose={() => setViewEmployee(null)}
-        />
-      )}
+      {/* Se redirige a la página dedicada de detalle */}
     </div>
   );
 };

@@ -46,7 +46,7 @@ const Appointments = () => {
   }, []);
 
   useEffect(() => {
-    setTitle('Citas');
+    setTitle('Módulo de Agendamiento de citas');
     return () => setTitle('');
   }, [setTitle]);
 

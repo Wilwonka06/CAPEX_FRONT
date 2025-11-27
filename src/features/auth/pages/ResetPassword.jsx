@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
+import PasswordRequirements from '../../../shared/components/PasswordRequirements';
 import toast from 'react-hot-toast';
 import authService from '../services/authServices';
 
@@ -175,26 +176,7 @@ const ResetPassword = () => {
           </div>
 
           {/* Requisitos de contraseña */}
-          <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded">
-            <p className="font-semibold mb-1">La contraseña debe contener:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li className={password.length >= 8 ? 'text-green-600' : ''}>
-                Mínimo 8 caracteres
-              </li>
-              <li className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>
-                Al menos una mayúscula
-              </li>
-              <li className={/[a-z]/.test(password) ? 'text-green-600' : ''}>
-                Al menos una minúscula
-              </li>
-              <li className={/\d/.test(password) ? 'text-green-600' : ''}>
-                Al menos un número
-              </li>
-              <li className={/[@$!%?&]/.test(password) ? 'text-green-600' : ''}>
-                Al menos un carácter especial (@$!%?&)
-              </li>
-            </ul>
-          </div>
+          <PasswordRequirements password={password} />
           
           {error && error !== 'Las contraseñas no coinciden.' && (
             <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded">

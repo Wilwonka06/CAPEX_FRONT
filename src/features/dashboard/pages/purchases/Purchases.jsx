@@ -36,7 +36,7 @@ export default function Shopping() {
 
   // Cargar compras, proveedores y productos al montar
   useEffect(() => {
-    setTitle('Gestión de Compras');
+    setTitle('Módulo de Compras');
     loadPurchases();
     loadSuppliers();
     loadProducts();

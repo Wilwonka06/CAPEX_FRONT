@@ -1,22 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { HOURS_12, to24h, to12h } from '../../../../../shared/utils/timeFormat';
 
 const diasSemanaOptions = [
-  { value: 0, label: 'Domingo' },
   { value: 1, label: 'Lunes' },
   { value: 2, label: 'Martes' },
   { value: 3, label: 'Miércoles' },
   { value: 4, label: 'Jueves' },
   { value: 5, label: 'Viernes' },
-  { value: 6, label: 'Sábado' }
+  { value: 6, label: 'Sábado' },
+  { value: 0, label: 'Domingo' }
 ];
 
-const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, editing = null }) => {
+const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], editing = null }) => {
+  // Calcular fecha mínima (día siguiente)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split('T')[0];
+
   const [form, setForm] = useState({
-    hora_entrada: '08:00',
-    hora_salida: '18:00',
-    dias_semana: [],
-    fecha_inicio: new Date().toISOString().split('T')[0],
-    fecha_fin: '',
+    id_usuario: empleadoId || '',
+    bloques_horarios: [
+      { inicio: '09:00 AM', fin: '12:00 PM' },
+      { inicio: '01:00 PM', fin: '05:00 PM' }
+    ],
+    dias_semana: [1, 2, 3, 4, 5, 6], // Lunes a Sábado por defecto
+    fecha_inicio: minDate,
+    fecha_fin: '', // Vacío = indefinido
     estado: 'Activa',
     observaciones: ''
   });
@@ -25,16 +34,21 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, editing = null }
   useEffect(() => {
     if (editing) {
       setForm({
-        hora_entrada: editing.hora_entrada || '08:00',
-        hora_salida: editing.hora_salida || '18:00',
+        id_usuario: editing.id_usuario || empleadoId || '',
+        bloques_horarios: editing.bloques_horarios?.map(b => ({
+          inicio: to12h(b.inicio),
+          fin: to12h(b.fin)
+        })) || [{ inicio: '09:00 AM', fin: '05:00 PM' }],
         dias_semana: editing.dias_semana || [],
-        fecha_inicio: editing.fecha_inicio || new Date().toISOString().split('T')[0],
+        fecha_inicio: editing.fecha_inicio || minDate,
         fecha_fin: editing.fecha_fin || '',
         estado: editing.estado || 'Activa',
         observaciones: editing.observaciones || ''
       });
+    } else if (empleadoId) {
+      setForm(prev => ({ ...prev, id_usuario: empleadoId }));
     }
-  }, [editing]);
+  }, [editing, empleadoId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -46,7 +60,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, editing = null }
       if (checked) {
         setForm(prev => ({
           ...prev,
-          dias_semana: [...dias, diaValue]
+          dias_semana: [...dias, diaValue].sort()
         }));
       } else {
         setForm(prev => ({
@@ -71,36 +85,120 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, editing = null }
     }
   };
 
+  const handleBlockChange = (index, field, value) => {
+    const newBlocks = [...form.bloques_horarios];
+    newBlocks[index] = { ...newBlocks[index], [field]: value };
+    setForm(prev => ({ ...prev, bloques_horarios: newBlocks }));
+
+    // Limpiar errores de bloques
+    if (errors.bloques_horarios) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.bloques_horarios;
+        return newErrors;
+      });
+    }
+  };
+
+  const addBlock = () => {
+    setForm(prev => ({
+      ...prev,
+      bloques_horarios: [
+        ...prev.bloques_horarios,
+        { inicio: '01:00 PM', fin: '05:00 PM' }
+      ]
+    }));
+  };
+
+  const removeBlock = (index) => {
+    if (form.bloques_horarios.length <= 1) {
+      setErrors(prev => ({
+        ...prev,
+        bloques_horarios: 'Debe haber al menos un bloque horario'
+      }));
+      return;
+    }
+    
+    setForm(prev => ({
+      ...prev,
+      bloques_horarios: prev.bloques_horarios.filter((_, i) => i !== index)
+    }));
+  };
+
   const validate = () => {
     const newErrors = {};
 
-    if (!form.hora_entrada) {
-      newErrors.hora_entrada = 'La hora de entrada es requerida';
-    }
+    // Validar bloques
+    if (!form.bloques_horarios || form.bloques_horarios.length === 0) {
+      newErrors.bloques_horarios = 'Debe haber al menos un bloque horario';
+    } else {
+      // Validar cada bloque
+      for (let i = 0; i < form.bloques_horarios.length; i++) {
+        const bloque = form.bloques_horarios[i];
+        if (!bloque.inicio || !bloque.fin) {
+          newErrors.bloques_horarios = `El bloque ${i + 1} debe tener inicio y fin`;
+          break;
+        }
 
-    if (!form.hora_salida) {
-      newErrors.hora_salida = 'La hora de salida es requerida';
-    }
+        // Convertir a minutos para comparar
+        const inicioMin = to24h(bloque.inicio).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
+        const finMin = to24h(bloque.fin).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
 
-    if (form.hora_entrada && form.hora_salida) {
-      const entrada = new Date(`2000-01-01T${form.hora_entrada}`);
-      const salida = new Date(`2000-01-01T${form.hora_salida}`);
-      if (salida <= entrada) {
-        newErrors.hora_salida = 'La hora de salida debe ser mayor que la de entrada';
+        if (finMin <= inicioMin) {
+          newErrors.bloques_horarios = `En el bloque ${i + 1}, la hora fin debe ser mayor que la hora inicio`;
+          break;
+        }
+      }
+
+      // Validar que no se solapen
+      if (!newErrors.bloques_horarios) {
+        for (let i = 0; i < form.bloques_horarios.length; i++) {
+          for (let j = i + 1; j < form.bloques_horarios.length; j++) {
+            const b1 = form.bloques_horarios[i];
+            const b2 = form.bloques_horarios[j];
+
+            const b1Start = to24h(b1.inicio).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
+            const b1End = to24h(b1.fin).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
+            const b2Start = to24h(b2.inicio).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
+            const b2End = to24h(b2.fin).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
+
+            if (!(b1End <= b2Start || b2End <= b1Start)) {
+              newErrors.bloques_horarios = `Los bloques ${i + 1} y ${j + 1} se solapan`;
+              break;
+            }
+          }
+          if (newErrors.bloques_horarios) break;
+        }
       }
     }
 
+    // Validar empleado
+    if (!form.id_usuario) {
+      newErrors.id_usuario = 'Debes seleccionar un empleado';
+    }
+
+    // Validar días
     if (form.dias_semana.length === 0) {
       newErrors.dias_semana = 'Debes seleccionar al menos un día de la semana';
     }
 
+    // Validar fecha inicio
     if (!form.fecha_inicio) {
       newErrors.fecha_inicio = 'La fecha de inicio es requerida';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const inputDate = new Date(form.fecha_inicio + 'T00:00:00');
+      
+      if (inputDate <= today) {
+        newErrors.fecha_inicio = 'La fecha debe ser al menos el día siguiente';
+      }
     }
 
+    // Validar fecha fin (si existe)
     if (form.fecha_fin && form.fecha_inicio) {
-      const inicio = new Date(form.fecha_inicio);
-      const fin = new Date(form.fecha_fin);
+      const inicio = new Date(form.fecha_inicio + 'T00:00:00');
+      const fin = new Date(form.fecha_fin + 'T00:00:00');
       if (fin < inicio) {
         newErrors.fecha_fin = 'La fecha de fin debe ser mayor o igual a la de inicio';
       }
@@ -114,152 +212,267 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, editing = null }
     e.preventDefault();
     if (!validate()) return;
 
-    onSave({
+    // Convertir bloques a formato 24h para el backend
+    const bloquesBackend = form.bloques_horarios.map(b => ({
+      inicio: to24h(b.inicio),
+      fin: to24h(b.fin)
+    }));
+
+    const data = {
       ...form,
-      id_usuario: empleadoId
-    });
+      bloques_horarios: bloquesBackend,
+      id_usuario: form.id_usuario,
+      fecha_fin: form.fecha_fin || null // Convertir string vacío a null
+    };
+
+    onSave(data);
+  };
+
+  // Calcular horas totales por día
+  const calcularHorasTotales = () => {
+    let totalMinutos = 0;
+    for (const bloque of form.bloques_horarios) {
+      const inicioMin = to24h(bloque.inicio).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
+      const finMin = to24h(bloque.fin).split(':').reduce((h, m) => parseInt(h) * 60 + parseInt(m));
+      totalMinutos += (finMin - inicioMin);
+    }
+    const horas = Math.floor(totalMinutos / 60);
+    const minutos = totalMinutos % 60;
+    return `${horas}h ${minutos}m`;
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h4 className="font-semibold text-lg mb-4">
-        {editing ? 'Editar Programación Recurrente' : 'Nueva Programación Recurrente'}
-      </h4>
-
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Selección de Empleado (si no viene predefinido) */}
+      {!empleadoId && employees.length > 0 && (
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Hora de Entrada <span className="text-red-500">*</span>
+          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+            <i className="bi bi-person text-[#FACC15]"></i>
+            Empleado *
           </label>
-          <input
-            type="time"
-            name="hora_entrada"
-            value={form.hora_entrada}
+          <select
+            name="id_usuario"
+            value={form.id_usuario}
             onChange={handleChange}
-            className={`w-full border rounded px-3 py-2 ${errors.hora_entrada ? 'border-red-500' : ''}`}
-            required
-          />
-          {errors.hora_entrada && (
-            <p className="text-red-500 text-xs mt-1">{errors.hora_entrada}</p>
+            className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+              errors.id_usuario ? 'border-red-300 bg-red-50' : 'border-gray-200'
+            }`}
+          >
+            <option value="">Seleccione un empleado...</option>
+            {employees.map(emp => (
+              <option key={emp.id} value={emp.id}>
+                {emp.nombre} {emp.apellido} ({emp.documento})
+              </option>
+            ))}
+          </select>
+          {errors.id_usuario && (
+            <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+              <i className="bi bi-exclamation-triangle"></i>
+              {errors.id_usuario}
+            </p>
           )}
         </div>
+      )}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Hora de Salida <span className="text-red-500">*</span>
+      {/* Bloques Horarios */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+            <i className="bi bi-clock-history text-[#FACC15]"></i>
+            Bloques Horarios *
           </label>
-          <input
-            type="time"
-            name="hora_salida"
-            value={form.hora_salida}
-            onChange={handleChange}
-            className={`w-full border rounded px-3 py-2 ${errors.hora_salida ? 'border-red-500' : ''}`}
-            required
-          />
-          {errors.hora_salida && (
-            <p className="text-red-500 text-xs mt-1">{errors.hora_salida}</p>
-          )}
+          <span className="text-sm text-gray-600 font-mono bg-gray-100 px-3 py-1 rounded-lg">
+            Total: {calcularHorasTotales()}
+          </span>
         </div>
+
+        <div className="space-y-3">
+          {form.bloques_horarios.map((bloque, index) => (
+            <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-[#FACC15] transition-all">
+              <div className="flex items-center gap-2">
+                <i className="bi bi-clock text-[#FACC15]"></i>
+                <span className="text-sm font-medium text-gray-700">Bloque {index + 1}:</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <select
+                  value={bloque.inicio}
+                  onChange={(e) => handleBlockChange(index, 'inicio', e.target.value)}
+                  className="border-2 border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all"
+                >
+                  {HOURS_12.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+                
+                <i className="bi bi-arrow-right text-gray-400"></i>
+                
+                <select
+                  value={bloque.fin}
+                  onChange={(e) => handleBlockChange(index, 'fin', e.target.value)}
+                  className="border-2 border-gray-200 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all"
+                >
+                  {HOURS_12.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => removeBlock(index)}
+                className="ml-auto p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all"
+                title="Eliminar bloque"
+                disabled={form.bloques_horarios.length <= 1}
+              >
+                <i className="bi bi-trash text-lg"></i>
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={addBlock}
+          className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#FACC15] hover:bg-yellow-50 transition-all text-gray-600 hover:text-gray-800 font-medium flex items-center justify-center gap-2"
+        >
+          <i className="bi bi-plus-circle"></i>
+          Agregar Bloque Horario
+        </button>
+
+        {errors.bloques_horarios && (
+          <p className="text-red-500 text-sm flex items-center gap-1">
+            <i className="bi bi-exclamation-triangle"></i>
+            {errors.bloques_horarios}
+          </p>
+        )}
       </div>
 
+      {/* Días de la semana */}
       <div>
-        <label className="block text-sm font-medium mb-2">
-          Días de la Semana <span className="text-red-500">*</span>
+        <label className="block text-sm font-semibold text-gray-700 font-lato mb-3 flex items-center gap-2">
+          <i className="bi bi-calendar-week text-[#FACC15]"></i>
+          Días de la Semana *
         </label>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {diasSemanaOptions.map((dia) => (
-            <label key={dia.value} className="flex items-center space-x-2 cursor-pointer">
+            <label key={dia.value} className="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl hover:border-[#FACC15] hover:bg-yellow-50 transition-all cursor-pointer group">
               <input
                 type="checkbox"
                 value={dia.value}
                 checked={form.dias_semana.includes(dia.value)}
                 onChange={handleChange}
-                className="rounded"
+                className="w-5 h-5 text-[#FACC15] focus:ring-[#FACC15] border-2 border-gray-300 rounded focus:ring-2 transition-all"
               />
-              <span className="text-sm">{dia.label}</span>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-gray-800">{dia.label}</span>
             </label>
           ))}
         </div>
         {errors.dias_semana && (
-          <p className="text-red-500 text-xs mt-1">{errors.dias_semana}</p>
+          <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+            <i className="bi bi-exclamation-triangle"></i>
+            {errors.dias_semana}
+          </p>
         )}
       </div>
 
+      {/* Fechas */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Fecha de Inicio <span className="text-red-500">*</span>
+          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+            <i className="bi bi-calendar-day text-[#FACC15]"></i>
+            Fecha de Inicio *
           </label>
           <input
             type="date"
             name="fecha_inicio"
             value={form.fecha_inicio}
+            min={minDate}
             onChange={handleChange}
-            className={`w-full border rounded px-3 py-2 ${errors.fecha_inicio ? 'border-red-500' : ''}`}
+            className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+              errors.fecha_inicio ? 'border-red-300 bg-red-50' : 'border-gray-200'
+            }`}
             required
           />
           {errors.fecha_inicio && (
-            <p className="text-red-500 text-xs mt-1">{errors.fecha_inicio}</p>
+            <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+              <i className="bi bi-exclamation-triangle"></i>
+              {errors.fecha_inicio}
+            </p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+            <i className="bi bi-calendar-check text-[#FACC15]"></i>
             Fecha de Fin (Opcional)
           </label>
           <input
             type="date"
             name="fecha_fin"
             value={form.fecha_fin}
+            min={form.fecha_inicio || minDate}
             onChange={handleChange}
-            className={`w-full border rounded px-3 py-2 ${errors.fecha_fin ? 'border-red-500' : ''}`}
+            className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+              errors.fecha_fin ? 'border-red-300 bg-red-50' : 'border-gray-200'
+            }`}
           />
-          {errors.fecha_fin && (
-            <p className="text-red-500 text-xs mt-1">{errors.fecha_fin}</p>
-          )}
           <p className="text-xs text-gray-500 mt-1">
             Dejar vacío para programación indefinida
           </p>
+          {errors.fecha_fin && (
+            <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+              <i className="bi bi-exclamation-triangle"></i>
+              {errors.fecha_fin}
+            </p>
+          )}
         </div>
       </div>
 
+      {/* Estado */}
       <div>
-        <label className="block text-sm font-medium mb-1">Estado</label>
+        <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+          <i className="bi bi-toggle-on text-[#FACC15]"></i>
+          Estado
+        </label>
         <select
           name="estado"
           value={form.estado}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
+          className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all"
         >
           <option value="Activa">Activa</option>
           <option value="Inactiva">Inactiva</option>
         </select>
       </div>
 
+      {/* Observaciones */}
       <div>
-        <label className="block text-sm font-medium mb-1">Observaciones</label>
+        <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+          <i className="bi bi-chat-text text-[#FACC15]"></i>
+          Observaciones
+        </label>
         <textarea
           name="observaciones"
           value={form.observaciones}
           onChange={handleChange}
           rows="3"
-          className="w-full border rounded px-3 py-2"
+          className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all resize-none"
           placeholder="Notas adicionales sobre esta programación..."
         />
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
+      {/* Botones */}
+      <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
         <button
           type="button"
           onClick={onCancel}
-          className="border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded transition"
+          className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-semibold flex items-center gap-2"
         >
+          <i className="bi bi-x-lg"></i>
           Cancelar
         </button>
         <button
           type="submit"
-          className="bg-primary-dark hover:bg-primary text-white px-4 py-2 rounded transition"
+          className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl"
         >
+          <i className="bi bi-check-circle"></i>
           {editing ? 'Actualizar' : 'Crear'} Programación
         </button>
       </div>
@@ -268,9 +481,3 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, editing = null }
 };
 
 export default AddRecurringScheduling;
-
-
-
-
-
-

@@ -278,7 +278,7 @@ const Users = () => {
   };
 
   useEffect(() => {
-    setTitle('Gestión de Usuarios');
+    setTitle('Módulo de Usuarios');
     return () => setTitle('');
   }, [setTitle]);
 

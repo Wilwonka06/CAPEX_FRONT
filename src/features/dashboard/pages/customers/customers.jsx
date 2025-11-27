@@ -66,7 +66,7 @@ const CustomersPage = () => {
   }, []);
 
   useEffect(() => {
-    setTitle('Gestión de Clientes');
+    setTitle('Módulo de Clientes');
     return () => setTitle('');
   }, [setTitle]);
 
