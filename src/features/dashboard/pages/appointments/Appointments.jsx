@@ -19,7 +19,7 @@ const ESTADO_COLORES = {
   'Agendada': { bg: '#FACC15', text: '#7C5700' }, // amarillo
   'Confirmada': { bg: '#60A5FA', text: '#1E3A8A' }, // azul
   'Reprogramada': { bg: '#F59E42', text: '#7C3F00' }, // naranja
-  'En proceso': { bg: '#A78BFA', text: '#4B006E' }, // morado
+  'En ejecución': { bg: '#2196F3', text: '#FFFFFF' }, // azul (cambió de morado)
   'Finalizada': { bg: '#34D399', text: '#065F46' }, // verde
   'Pagada': { bg: '#22D3EE', text: '#0E7490' }, // cyan
   'Cancelada por el usuario': { bg: '#F87171', text: '#991B1B' }, // rojo
@@ -43,7 +43,7 @@ const Appointments = () => {
 
   const handleSaveAppointment = (savedCita) => {
     refreshAppointments();
-    if (savedCita && (savedCita.estado === 'En proceso' || savedCita.estado === 'En ejecucion')) {
+    if (savedCita && (savedCita.estado === 'En ejecución')) {
       navigate('/dashboard/ventas-servicios');
     }
   };

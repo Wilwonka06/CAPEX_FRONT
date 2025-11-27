@@ -37,8 +37,6 @@ export const appointmentsService = {
       return response;
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      
-      // No devolver datos mock, lanzar el error para que se maneje correctamente
       throw error;
     }
   },
@@ -131,7 +129,9 @@ export const appointmentsService = {
           hora_inicio: s.hora_inicio,
           cantidad: s.cantidad || 1,
           ...(s.observaciones && { observaciones: s.observaciones })
-        }))
+        })),
+        // Si hay datos de cliente para crear usuario nuevo
+        ...(appointmentData.cliente && { cliente: appointmentData.cliente })
       };
 
       console.log('API Service: Sending appointment data to backend:', JSON.stringify(cleanData, null, 2));
@@ -174,10 +174,10 @@ export const appointmentsService = {
       // Estructurar datos según lo esperado por el backend para actualización
       const cleanData = {
         cita: {
-          ...(appointmentData.fecha_servicio && { fecha_servicio: appointmentData.fecha_servicio }),
-          ...(appointmentData.estado && { estado: appointmentData.estado }),
-          ...(appointmentData.motivo !== undefined && { motivo: appointmentData.motivo?.trim() }),
-          ...(appointmentData.id_cliente && { id_cliente: appointmentData.id_cliente })
+          ...(appointmentData.cita?.fecha_servicio && { fecha_servicio: appointmentData.cita.fecha_servicio }),
+          ...(appointmentData.cita?.estado && { estado: appointmentData.cita.estado }),
+          ...(appointmentData.cita?.motivo !== undefined && { motivo: appointmentData.cita.motivo?.trim() }),
+          ...(appointmentData.cita?.id_cliente && { id_cliente: appointmentData.cita.id_cliente })
         },
         ...(appointmentData.servicios && {
           servicios: appointmentData.servicios.map(s => ({

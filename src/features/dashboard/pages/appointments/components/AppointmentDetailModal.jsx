@@ -14,7 +14,7 @@ const ESTADO_COLORES = {
   Agendada: { bg: "#FACC15", text: "#7C5700" },
   Confirmada: { bg: "#60A5FA", text: "#1E3A8A" },
   Reprogramada: { bg: "#F59E42", text: "#7C3F00" },
-  "En proceso": { bg: "#A78BFA", text: "#4B006E" },
+  "En ejecución": { bg: "#2196F3", text: "#FFFFFF" },
   Finalizada: { bg: "#34D399", text: "#065F46" },
   Pagada: { bg: "#22D3EE", text: "#0E7490" },
   "Cancelada por el usuario": { bg: "#F87171", text: "#991B1B" },
@@ -29,8 +29,8 @@ const getEstadoColor = (estado) => {
       return "text-blue-600";
     case "Reprogramada":
       return "text-orange-600";
-    case "En proceso":
-      return "text-purple-600";
+    case "En ejecución":
+      return "text-blue-600";
     case "Finalizada":
       return "text-green-600";
     case "Pagada":

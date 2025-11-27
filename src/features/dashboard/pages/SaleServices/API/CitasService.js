@@ -91,8 +91,8 @@ const getServiceDetailsByClient = async (idCliente, idCita) => {
         services = Array.isArray(response.data) ? response.data : [response.data];
       }
     } else {
-      // Si no hay cita, buscar todos los servicios del cliente en estado "En proceso"
-      const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/status/En proceso`);
+      // Si no hay cita, buscar todos los servicios del cliente en estado "En ejecución"
+      const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/status/En ejecución`);
       if (response.success && response.data) {
         services = Array.isArray(response.data) 
           ? response.data.filter(s => s.id_cliente === idCliente)
@@ -146,7 +146,7 @@ export const buscarCitas = async (termino) => {
 };
 
 /**
- * Inicia un servicio (cambia estado a "En proceso")
+ * Inicia un servicio (cambia estado a "En ejecución")
  */
 export const iniciarServicio = async (serviceDetailId) => {
   try {
@@ -167,7 +167,7 @@ export const actualizarEstadoCita = async (serviceDetailId, nuevoEstado) => {
     const estadoMap = {
       'Anulado': 'Cancelada por el usuario',
       'Pagado': 'Pagada',
-      'En ejecucion': 'En proceso'
+      'En ejecucion': 'En ejecución'  // Mapear estado interno del frontend al estado del backend
     };
     
     const estadoBackend = estadoMap[nuevoEstado] || nuevoEstado;
@@ -239,7 +239,8 @@ const transformarServiciosAVentaServicio = (grupo) => {
 
   // Determinar estado (usar el más común o el primero)
   const estados = servicios.map(s => s.estado);
-  const estado = estados.includes('En proceso') ? 'En ejecucion' : 
+  const estado = estados.includes('En ejecución') ? 'En ejecucion' :  // Estado interno del frontend
+                 estados.includes('En proceso') ? 'En ejecucion' :  // Compatibilidad con estado antiguo
                  estados.includes('Pagada') ? 'Pagado' :
                  estados.includes('Finalizada') ? 'Finalizada' :
                  estados[0] || 'En ejecucion';
@@ -247,7 +248,7 @@ const transformarServiciosAVentaServicio = (grupo) => {
   return {
     id: primerServicio.id_cita || primerServicio.id_detalle_servicio,
     clientName: grupo.cliente?.nombre || primerServicio.cliente?.nombre || primerServicio.usuario?.nombre || 'Cliente no especificado',
-    status: estado === 'En proceso' ? 'En ejecucion' : estado === 'Pagada' ? 'Pagado' : estado,
+    status: (estado === 'En ejecución' || estado === 'En proceso') ? 'En ejecucion' : estado === 'Pagada' ? 'Pagado' : estado,
     date: formatearFecha(fecha),
     time: formatearHora(hora),
     dineroProporcionado: 0, // Se calculará cuando se edite
