@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import PasswordEye from '../../../../../shared/components/PasswordEye';
-import { isValidEmail, isValidPhone, isValidNumber, isValidPassword, validateUserDocument, validateUserPhone } from '../../../../../shared/validations';
+import { isValidEmail, validateUserDocument } from '../../../../../shared/validations';
 import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -195,24 +194,30 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Crear usuario</h2>
-          <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose} aria-label="Cerrar">×</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className=" shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-person-plus text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Crear usuario</h2>
+          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <div className="overflow-y-auto p-8 flex-1">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
+          <form onSubmit={handleSubmit} id="create-user-form" className="space-y-6">
+            <div className="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-text-main mb-1">Foto de perfil</label>
+              <label className="block text-sm font-medium text-text-main mb-1">Foto de perfil</label>
               <div className="space-y-3">
                 <div
-                  className="relative w-full h-24 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                  className="relative w-full h-28 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
                   onClick={() => document.getElementById('create-user-avatar-input').click()}
                 >
                   {preview ? (
                     <div className="relative w-full h-full flex items-center justify-center">
-                      <img src={preview} alt="Vista previa" className="max-h-20 max-w-full object-contain rounded-lg mx-auto" />
+                      <img src={preview} alt="Vista previa" className="max-h-24 max-w-full object-contain rounded-lg mx-auto" />
                       <button type="button" onClick={e => { e.stopPropagation(); removeImage(); }} className="absolute top-1 right-1 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors">×</button>
                     </div>
                   ) : (
@@ -228,7 +233,7 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Tipo de documento <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-text-main mb-1">Tipo de documento <span className="text-red-500">*</span></label>
                 <select name="tipoDocumento" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.tipoDocumento} onChange={handleChange} onBlur={handleBlur} required>
                   <option value="">Seleccionar</option>
                   {DOC_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
@@ -236,17 +241,17 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 {error.tipoDocumento && <span className="text-red-500 text-xs">{error.tipoDocumento}</span>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Documento <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-text-main mb-1">Documento <span className="text-red-500">*</span></label>
                 <input type="text" name="documento" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.documento} onChange={handleChange} onBlur={handleBlur} required />
                 {error.documento && <span className="text-red-500 text-xs">{error.documento}</span>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Nombre <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-text-main mb-1">Nombre <span className="text-red-500">*</span></label>
                 <input type="text" name="nombre" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.nombre} onChange={handleChange} onBlur={handleBlur} required />
                 {error.nombre && <span className="text-red-500 text-xs">{error.nombre}</span>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
                 <PhoneInput
                   country={'co'}
                   value={numero}
@@ -266,12 +271,12 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 />
                 {error.telefono && <span className="text-red-500 text-xs mt-1 block">{error.telefono}</span>}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-md bg-gray-50">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                   {availableRoles.map(role => (
-                    <label 
-                      key={role.id_rol} 
+                    <label
+                      key={role.id_rol}
                       className="flex items-center gap-2 text-sm font-medium text-text-main cursor-pointer hover:text-primary transition-colors px-3 py-2 rounded-md hover:bg-white border border-transparent hover:border-gray-300"
                     >
                       <input
@@ -289,17 +294,21 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 </div>
                 {error.roles && <span className="text-red-500 text-xs mt-1 block">{error.roles}</span>}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Correo <span className="text-red-500">*</span></label>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-text-main mb-1">Correo <span className="text-red-500">*</span></label>
                 <input type="email" name="correo" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={form.correo} onChange={handleChange} onBlur={handleBlur} required />
                 {error.correo && <span className="text-red-500 text-xs">{error.correo}</span>}
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button type="button" className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition" onClick={onClose}>Cancelar</button>
-              <button type="submit" className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition">Crear</button>
             </div>
+          
           </form>
+        </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <>
+            <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+            <button type="submit" form="create-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Crear</button>
+          </>
         </div>
       </div>
     </div>

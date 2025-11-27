@@ -1,5 +1,6 @@
 // AddEmployee.jsx - Corregido para guardar programaciones correctamente
 import React, { useState, useEffect } from 'react';
+import { DOC_TYPES_CODES, DOC_TYPE_LABELS, toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 import toast from 'react-hot-toast';
 import AddScheduling from './AddScheduling';
 import { 
@@ -14,7 +15,7 @@ import {
 
 const initialForm = {
   nombre: '',
-  tipoDocumento: 'Cedula de ciudadania',
+  tipoDocumento: 'CC',
   documento: '',
   telefono: '',
   correo: '',
@@ -22,12 +23,7 @@ const initialForm = {
   estado: 'Activo',
 };
 
-const tiposDocumento = [
-  { value: 'Cedula de ciudadania', label: 'Cédula de Ciudadanía' },
-  { value: 'Tarjeta de identidad', label: 'Tarjeta de Identidad' },
-  { value: 'Cedula de extranjeria', label: 'Cédula de Extranjería' },
-  { value: 'Pasaporte', label: 'Pasaporte' },
-];
+// Tipos de documento estandarizados por códigos
 
 const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees = [] }) => {
   const [form, setForm] = useState(initialForm);
@@ -196,8 +192,8 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
           </svg>
         </div>
         <div>
-          <h2 className="text-3xl font-bold text-[#1E1E1E] font-nunito">Registro de Nuevo Empleado</h2>
-          <p className="text-gray-600 font-lato">Complete la información del empleado y configure su programación</p>
+          <h2 className="text-2xl font-bold text-[#1E1E1E] font-nunito">Registro de Nuevo Empleado</h2>
+          <p className="text-sm text-gray-600 font-lato">Complete la información del empleado y configure su programación</p>
         </div>
       </div>
 
@@ -238,8 +234,8 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
       {step === 1 && (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
           <div className="mb-6">
-            <h3 className="text-xl font-bold text-[#1E1E1E] font-nunito mb-2">Información Personal</h3>
-            <p className="text-gray-600 font-lato">Complete los datos básicos del nuevo empleado</p>
+            <h3 className="text-lg font-bold text-[#1E1E1E] font-nunito mb-2">Información Personal</h3>
+            <p className="text-sm text-gray-600 font-lato">Complete los datos básicos del nuevo empleado</p>
           </div>
 
           <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={e => e.preventDefault()}>
@@ -278,8 +274,8 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   onBlur={handleBlur}
                   className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] transition-all appearance-none bg-white font-lato"
                 >
-                  {tiposDocumento.map(tipo => (
-                    <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
+                  {DOC_TYPES_CODES.map(code => (
+                    <option key={code} value={code}>{`${code} - ${DOC_TYPE_LABELS[code]}`}</option>
                   ))}
                 </select>
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -432,7 +428,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2"
+                className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 text-xs"
               >
                 <i className="bi bi-x-lg"></i>
                 Cancelar
@@ -452,7 +448,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
 
                     const newEmployee = {
                       nombre: form.nombre,
-                      tipo_documento: form.tipoDocumento,
+                      tipo_documento: toBackendDocCode(form.tipoDocumento),
                       documento: form.documento,
                       telefono: telefonoFormateado,
                       correo: form.correo,
@@ -466,7 +462,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                     setErrors({});
                   }
                 }}
-                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                 disabled={!isFormValid()}
               >
                 <i className="bi bi-person-check"></i>
@@ -476,7 +472,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
               <button
                 type="button"
                 onClick={() => { if (validate()) setStep(2); }}
-                className="px-6 py-3 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                className="px-6 py-3 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl text-xs"
                 disabled={!isFormValid()}
               >
                 <i className="bi bi-calendar-plus"></i>
@@ -492,8 +488,8 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
           {/* Scheduling form */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-[#1E1E1E] font-nunito mb-2">Configurar Programación</h3>
-              <p className="text-gray-600 font-lato">Establece los horarios de trabajo del empleado</p>
+              <h3 className="text-lg font-bold text-[#1E1E1E] font-nunito mb-2">Configurar Programación</h3>
+              <p className="text-sm text-gray-600 font-lato">Establece los horarios de trabajo del empleado</p>
             </div>
 
             {editingScheduling ? (
@@ -512,7 +508,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-[#1E1E1E] font-nunito">Programaciones Agregadas ({schedulings.length})</h3>
+                <h3 className="text-lg font-bold text-[#1E1E1E] font-nunito">Programaciones Agregadas ({schedulings.length})</h3>
               </div>
 
               <div className="space-y-3">
@@ -586,21 +582,21 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
           <div className="flex flex-col sm:flex-row gap-3 justify-end pt-6">
             <button
               onClick={onCancel}
-              className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2"
+              className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 text-xs"
             >
               <i className="bi bi-x-lg"></i>
               Cancelar
             </button>
             <button
               onClick={() => setStep(1)}
-              className="px-6 py-3 border-2 border-[#FACC15] text-[#FACC15] rounded-xl hover:bg-[#FACC15] hover:text-[#1E1E1E] transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2"
+              className="px-6 py-3 border-2 border-[#FACC15] text-[#FACC15] rounded-xl hover:bg-[#FACC15] hover:text-[#1E1E1E] transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 text-xs"
             >
               <i className="bi bi-arrow-left"></i>
               Atrás
             </button>
             <button
               onClick={() => handleSubmit(new Event('submit'))}
-              className="px-6 py-3 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+              className="px-6 py-3 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 shadow-lg hover:shadow-xl text-xs"
             >
               <i className="bi bi-check-circle"></i>
               Guardar Empleado

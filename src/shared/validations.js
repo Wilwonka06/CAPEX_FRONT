@@ -81,9 +81,7 @@ export function validateSchedulingStartDate(fechaInicio) {
 export function validateSchedulingEndDate(fechaFin, fechaInicio) {
   const errors = {};
   
-  if (!fechaFin) {
-    errors.fechaFin = 'Fecha fin obligatoria';
-  } else if (fechaInicio && fechaFin < fechaInicio) {
+  if (fechaFin && fechaInicio && fechaFin < fechaInicio) {
     errors.fechaFin = 'La fecha fin no puede ser menor que la fecha inicio';
   }
   
@@ -230,7 +228,7 @@ export function validateEmployeePassword(contrasena) {
   if (!contrasena.trim()) {
     errors.contrasena = 'La contraseña es obligatoria';
   } else if (!isValidPassword(contrasena)) {
-    errors.contrasena = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número';
+    errors.contrasena = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (@$!%?&)';
   }
   
   return errors;
@@ -804,8 +802,8 @@ export function isValidCustomerName(name) {
 }
 
 export function isValidPassword(password) {
-  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%?&])[A-Za-z\d@$!%?&]{8,}$/;
+  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (incluye *)
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%?&*])[A-Za-z\d@$!%?&*]{8,}$/;
   return regex.test(password);
 }
 
@@ -918,9 +916,9 @@ export function isValidMoneyProvided(dineroProporcionado, totalGeneral) {
 export function validateServiceOrder(orderData, orders = [], totalGeneral = 0, status = '') {
   const errors = {};
 
-  // Validación del nombre del cliente
-  if (!isValidServiceOrderClientName(orderData.clientName)) {
-    errors.clientName = 'El nombre del cliente es requerido y debe tener al menos 2 caracteres';
+  // Validación de cliente: se requiere id_cliente
+  if (!orderData.id_cliente) {
+    errors.id_cliente = 'Debe seleccionar o crear un cliente válido';
   }
 
   // Validación de servicios (productos son opcionales)

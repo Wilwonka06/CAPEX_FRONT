@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import Search from '../../../../shared/Search'
 import UserTable from './components/UserTable';
-import CreateUserModal from './components/CreateUserModal';
-import EditUserModal from './components/EditUserModal';
-import UserDetailModal from './components/UserDetailModal';
+import CreateUser from './components/CreateUser';
+import EditUser from './components/EditUser';
+import UserDetail from './components/UserDetail';
 import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import usersService from './API/usersService';
@@ -18,9 +18,9 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -93,7 +93,7 @@ const Users = () => {
       const response = await usersService.create(newUser);
       if (response.success) {
         await loadUsers(); // Recargar lista
-        setShowCreateModal(false);
+        setShowCreate(false);
         return response.data;
       } else {
         throw new Error(response.message || 'Error al crear el usuario');
@@ -107,7 +107,12 @@ const Users = () => {
         success: 'Usuario creado exitosamente',
         error: (err) => {
           console.error('Error creating user:', err);
-          return err.response?.data?.message || err.message || 'Error al crear el usuario';
+          const backendMsg = err.response?.data?.message || err.message;
+          const validationErrors = err.response?.data?.errors;
+          if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
+            return validationErrors[0].message || backendMsg || 'Error al crear el usuario';
+          }
+          return backendMsg || 'Error al crear el usuario';
         },
       },
       {
@@ -126,7 +131,7 @@ const Users = () => {
     const userPromise = (async () => {
       const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
       if (response.success) {
-        setShowEditModal(false);
+        setShowEdit(false);
         setSelectedUser(null);
         await loadUsers(); // Recargar lista
         return response.data;
@@ -250,20 +255,20 @@ const Users = () => {
   };
 
   // Abrir modales
-  const openCreateModal = () => setShowCreateModal(true);
-  const openEditModal = (user) => {
+  const openCreate = () => setShowCreate(true);
+  const openEdit = (user) => {
     setSelectedUser(user);
-    setShowEditModal(true);
+    setShowEdit(true);
   };
-  const openDetailModal = (user) => {
+  const openDetail = (user) => {
     setSelectedUser(user);
-    setShowDetailModal(true);
+    setShowDetail(true);
   };
   // Cerrar modales
-  const closeModals = () => {
-    setShowCreateModal(false);
-    setShowEditModal(false);
-    setShowDetailModal(false);
+  const closes = () => {
+    setShowCreate(false);
+    setShowEdit(false);
+    setShowDetail(false);
     setSelectedUser(null);
   };
 
@@ -290,7 +295,7 @@ const Users = () => {
               <Search searchTerm={searchTerm} handleSearch={e => handleSearch(e.target.value)} placeholder="Buscar usuario..." />
               <button
                 className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                onClick={openCreateModal}
+                onClick={openCreate}
                 disabled={loading}
               >
                 <i className="bi bi-plus-circle mr-2"></i>
@@ -321,8 +326,8 @@ const Users = () => {
               ) : (
                 <UserTable
                   users={paginatedUsers}
-                  onView={openDetailModal}
-                  onEdit={openEditModal}
+                  onView={openDetail}
+                  onEdit={openEdit}
                   onDelete={handleDeleteUser}
                   onStatusChange={handleStatusChange}
                   loading={loading}
@@ -339,24 +344,24 @@ const Users = () => {
           </div>
         </div>
       </div>
-      {showCreateModal && (
-        <CreateUserModal
-          onClose={closeModals}
+      {showCreate && (
+        <CreateUser
+          onClose={closes}
           onCreate={handleCreateUser}
           users={users}
         />
       )}
-      {showEditModal && selectedUser && (
-        <EditUserModal
-          onClose={closeModals}
+      {showEdit && selectedUser && (
+        <EditUser
+          onClose={closes}
           onEdit={handleEditUser}
           user={selectedUser}
           users={users}
         />
       )}
-      {showDetailModal && selectedUser && (
-        <UserDetailModal
-          onClose={closeModals}
+      {showDetail && selectedUser && (
+        <UserDetail
+          onClose={closes}
           user={selectedUser}
         />
       )}

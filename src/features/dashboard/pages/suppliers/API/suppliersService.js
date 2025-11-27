@@ -31,7 +31,7 @@ const mapSupplierToBackend = (supplier) => {
   const cleanPhone = supplier.telefono?.replace(/[-\s]/g, '').trim();
 
   return {
-    nit: supplier.nit?.trim(),
+    nit: supplier.nit?.trim()?.replace(/\./g, ''),
     tipo_proveedor: supplier.tipo?.toUpperCase(),
     nombre: supplier.nombre?.trim(),
     contacto: supplier.contacto?.trim(),

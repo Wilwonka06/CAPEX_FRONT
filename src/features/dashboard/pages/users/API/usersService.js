@@ -97,18 +97,21 @@ export const usersService = {
       // Limpiar datos
       const normalizePhone = (t) => {
         if (!t) return t;
-        const digits = String(t).replace(/[^0-9]/g, '');
-        return `+${digits}`;
+        let digits = String(t).replace(/[^0-9]/g, '');
+        digits = digits.replace(/^0+/, '');
+        return digits ? `+${digits}` : undefined;
       };
       const cleanData = {
         nombre: userData.nombre.trim(),
-        correo: userData.correo.trim(),
+        correo: userData.correo.trim().toLowerCase(),
         tipo_documento: userData.tipo_documento,
         documento: userData.documento,
         telefono: normalizePhone(userData.telefono),
-        roleId: userData.roleId,
+        roleId: parseInt(userData.roleId) || 1,
+        estado: userData.estado || 'Activo',
         ...(userData.foto && { foto: userData.foto }),
         ...(userData.direccion && { direccion: userData.direccion }),
+        ...(userData.contrasena && { contrasena: userData.contrasena })
       };
 
       console.log('API Service: Sending data to backend:', cleanData);
@@ -116,6 +119,11 @@ export const usersService = {
       return response;
     } catch (error) {
       console.error('Error creating user:', error);
+      const backendMsg = error.response?.data?.message;
+      const validationErrors = error.response?.data?.errors;
+      if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
+        throw new Error(validationErrors[0].message || backendMsg || 'Error al crear el usuario');
+      }
       throw error;
     }
   },

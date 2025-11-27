@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import SearchProduct from '../../../../shared/Search';
-import CreatePurchaseModal from './components/CreatePurchaseModal';
-import PurchaseDetailModal from './components/PurchaseDetailModal';
+import CreatePurchaseModal from './components/CreatePurchase';
+import PurchaseDetailModal from './components/PurchaseDetail';
 import PurchasesTable from './components/PurchasesTable';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import { formatNumber } from '../../../../shared/utils/formatters';

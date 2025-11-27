@@ -9,16 +9,14 @@ import {
 } from '../../../../../shared/validations';
 import { isFutureTimeToday } from '../../../../../shared/utils/timeValidation';
 import { schedulingService } from '../API/employeesService';
+import { HOURS_12, to24h, to12h } from '../../../../../shared/utils/timeFormat';
 
-const horas = [
-  '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
-];
+const horas = HOURS_12;
 
 const initialProg = {
   fechaInicio: '',
-  horaInicio: '08:00',
-  horaFin: '09:00',
+  horaInicio: '08:00 AM',
+  horaFin: '09:00 AM',
 };
 
 const EditScheduling = ({ empleadoId, onClose }) => {
@@ -72,7 +70,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString + 'T00:00:00');
+    const safe = String(dateString || '').split('T')[0];
+    const date = new Date(safe + 'T00:00:00');
     return date.toLocaleDateString('es-ES', { 
       year: 'numeric',
       month: '2-digit',
@@ -82,8 +81,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
 
   const formatTime = (timeString) => {
     if (!timeString) return '';
-    const parts = timeString.split(':');
-    return `${parts[0]}:${parts[1]}`;
+    const base = String(timeString).slice(0,5);
+    return to12h(base);
   };
 
   const handleEditarProgramacion = (programacion) => {
@@ -127,15 +126,19 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     }
   };
 
+  const toMin = (t12) => {
+    const [h,m] = to24h(t12).split(':').map(Number);
+    return h*60+m;
+  };
   const availableStartHours = (() => {
     if (!prog.fechaInicio) return horas;
-    return horas.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+    return horas.filter(h => isFutureTimeToday(prog.fechaInicio, to24h(h)));
   })();
 
   const availableEndHours = (() => {
-    const base = horas.filter(h => (!prog.horaInicio || h > prog.horaInicio));
+    const base = horas.filter(h => (!prog.horaInicio || toMin(h) > toMin(prog.horaInicio)));
     if (!prog.fechaInicio) return base;
-    return base.filter(h => isFutureTimeToday(prog.fechaInicio, h));
+    return base.filter(h => isFutureTimeToday(prog.fechaInicio, to24h(h)));
   })();
 
   const handleBlur = (e) => {
@@ -196,8 +199,8 @@ const EditScheduling = ({ empleadoId, onClose }) => {
         const progToSave = {
           id_usuario: parseInt(editing.empleadoId),
           fecha_inicio: prog.fechaInicio,
-          hora_entrada: prog.horaInicio,
-          hora_salida: prog.horaFin,
+          hora_entrada: to24h(prog.horaInicio),
+          hora_salida: to24h(prog.horaFin),
         };
 
         await schedulingService.update(editing.id, progToSave);
@@ -224,8 +227,24 @@ const EditScheduling = ({ empleadoId, onClose }) => {
     setErrors({});
   };
 
-  const totalPages = programaciones.length;
-  const paginatedProgramaciones = programaciones.slice(currentPage - 1, currentPage);
+  const getProgDate = (p) => p.fechaInicio || p.fecha_inicio || p.fecha;
+  const groupedByMonth = (() => {
+    const groups = {};
+    for (const p of programaciones) {
+      const ds = getProgDate(p);
+      if (!ds) continue;
+      const d = new Date(ds + 'T00:00:00');
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      (groups[key] ||= []).push(p);
+    }
+    return groups;
+  })();
+  const monthKeys = Object.keys(groupedByMonth).sort();
+  const totalPages = monthKeys.length;
+  const currentMonthKey = monthKeys[currentPage - 1];
+  const paginatedProgramaciones = groupedByMonth[currentMonthKey] || [];
+  const currentMonthLabel = currentMonthKey ? new Date(currentMonthKey+'-01T00:00:00').toLocaleString('es-ES',{month:'long',year:'numeric'}) : '';
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -284,6 +303,12 @@ const EditScheduling = ({ empleadoId, onClose }) => {
             </div>
           ) : (
             <>
+              {currentMonthLabel && (
+                <div className="flex items-center gap-2 mb-3">
+                  <i className="bi bi-calendar2-week text-[#FACC15]"></i>
+                  <span className="text-sm font-semibold text-gray-700 font-lato">{currentMonthLabel}</span>
+                </div>
+              )}
               {paginatedProgramaciones.map((programacion) => (
                 <div key={programacion.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm">
                   <h4 className="text-lg font-bold text-gray-900 mb-4">Detalle de Programación</h4>

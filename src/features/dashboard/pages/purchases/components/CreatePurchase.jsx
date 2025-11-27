@@ -3,7 +3,7 @@ import productsService from "../../products/API/productsService";
 import suppliersService from "../../suppliers/API/suppliersService";
 import CreateSupplier from "../../suppliers/components/CreateSupplier";
 import CreateProduct from "../../products/components/CreateProduct";
-import { formatNumber, formatPercentage } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatPercentage, parseFormattedNumber } from "../../../../../shared/utils/formatters";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [productsList, setProductsList] = useState([]);
@@ -20,7 +20,6 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [fechaCompra, setFechaCompra] = useState(
     new Date().toISOString().slice(0, 10)
   );
-  const [fechaRegistro] = useState(new Date().toISOString().slice(0, 10));
 
   // Estado para agregar productos
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
@@ -129,7 +128,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
     // Calcular subtotal (sin IVA)
     const newSubtotal = itemsCompra.reduce(
-      (acc, item) => acc + (parseFormattedNumber(item.costo) || 0) * (parseInt(item.cantidad) || 0),
+      (acc, item) => acc + ((item.costo || 0) * (parseInt(item.cantidad) || 0)),
       0
     );
 
@@ -268,15 +267,23 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     }
 
     try {
+      const ivaRateDecimal = (parseFloat(ivaGeneral) || 0) > 1 ? (parseFloat(ivaGeneral) / 100) : (parseFloat(ivaGeneral) || 0);
+      const ivaAmount = itemsCompra.reduce((acc, item) => {
+        const precio = parseFloat(item.costo || 0);
+        const cantidad = parseInt(item.cantidad || 0);
+        return acc + (precio * cantidad * ivaRateDecimal);
+      }, 0);
+
       const purchaseData = {
         supplierId: Number(proveedorId),
         fechaCompra: fechaCompra,
-        ivaGeneral: ivaGeneral, // Enviar el IVA general de la compra
+        ivaGeneral: ivaGeneral,
+        iva: ivaAmount,
         detalles: itemsCompra.map((item) => ({
           productId: item.id,
           cantidad: item.cantidad,
-          precioUnitario: item.costo, // Costo de compra
-          precioVenta: item.precioVenta // Precio de venta a actualizar (opcional)
+          precioUnitario: parseFormattedNumber(item.costo),
+          precioVenta: parseFormattedNumber(item.precioVenta)
         })),
       };
 
@@ -327,48 +334,32 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">
-            Crear Nueva Compra
-          </h2>
-          <button
-            className="text-gray-400 hover:text-primary text-xl font-bold"
-            onClick={onClose}
-          >
-            ×
-          </button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-cart-plus text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Crear Nueva Compra</h2>
+          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1 space-y-8">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="purchase-form" onSubmit={handleSubmit} className="space-y-8">
             {/* Sección de Fechas */}
             <div className="p-4 border rounded-lg bg-gray-50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-sm font-medium text-text-main mb-1">
                     Fecha de Compra <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
-                    className="w-full px-3 py-2 border rounded-md text-xs"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
                     value={fechaCompra}
                     onChange={(e) => setFechaCompra(e.target.value)}
                     required
                     max={new Date().toISOString().slice(0, 10)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    Fecha de Registro
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-md bg-gray-200 text-xs"
-                    value={fechaRegistro}
-                    readOnly
                   />
                 </div>
               </div>
@@ -378,7 +369,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
             <div className="p-6 border rounded-lg bg-gray-50 mb-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-sm font-medium text-text-main mb-1">
                     Proveedor <span className="text-red-500">*</span>
                   </label>
                   <div className="flex items-center gap-2">
@@ -415,18 +406,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
-                    NIT
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
-                    value={nit}
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-sm font-medium text-text-main mb-1">
                     IVA General (%)
                   </label>
                   <input
@@ -479,7 +459,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   </button>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-sm font-medium text-text-main mb-1">
                     Cantidad <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -495,7 +475,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-sm font-medium text-text-main mb-1">
                     Costo <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -511,7 +491,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-sm font-medium text-text-main mb-1">
                     Precio Venta
                   </label>
                   <input
@@ -580,7 +560,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           </td>
                           <td className="py-2 px-3">{formatPercentage(item.iva || 0)}</td>
                           <td className="py-2 px-3">
-                        ${formatPrice((parseFormattedNumber(item.costo) || 0) * (item.cantidad || 0))}
+                        ${formatPrice(((item.costo || 0) * (item.cantidad || 0)))}
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
@@ -633,24 +613,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
             </div>
           </form>
         </div>
-
-        {/* Footer fijo */}
-        <div className="rounded-b-lg flex justify-end px-8 py-4 border-t">
-          <button
-            type="button"
-            className="px-4 py-2 rounded-md border text-sm"
-            onClick={onClose}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            form="purchase-form"
-            className="px-4 py-2 rounded-md bg-text-main text-white font-semibold text-sm ml-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={!proveedorId || itemsCompra.length === 0}
-          >
-            Guardar Compra
-          </button>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <>
+            <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+            <button type="submit" form="purchase-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!proveedorId || itemsCompra.length === 0}><i className="bi bi-check-circle"></i>Guardar Compra</button>
+          </>
         </div>
       </div>
     </div>

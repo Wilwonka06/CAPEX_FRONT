@@ -51,8 +51,8 @@ const AdminNavbar = ({ title }) => {
                   className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-200"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center">
-                  <i className="bi bi-person text-white text-sm"></i>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-text-main to-text-main flex items-center justify-center">
+                  <i className="bi bi-person text-yellow-500 text-sm"></i>
                 </div>
               )}
               <i className={`bi bi-chevron-${showProfileMenu ? 'up' : 'down'} text-gray-500 transition-transform duration-200`}></i>

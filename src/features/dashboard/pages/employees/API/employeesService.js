@@ -4,24 +4,46 @@ import apiRequest from '../../../../../shared/config/apiConfig';
  * Servicio API para gestión de empleados
  * Endpoints base: /api/empleados
  */
-
 const EMPLOYEES_ENDPOINT = '/empleados';
 
-/**
- * Servicio de empleados
- */
 export const employeesService = {
   /**
-   * Obtener todos los empleados
-   * @returns {Promise<Array>} Lista de empleados
+   * Obtener todos los empleados con paginación y filtros
+   * @param {Object} params - Parámetros de consulta
+   * @returns {Promise<Object>} Lista de empleados con metadatos
    */
-  getAll: async () => {
+  getAll: async (params = {}) => {
     try {
-      const response = await apiRequest.get(EMPLOYEES_ENDPOINT);
+      const queryParams = new URLSearchParams();
+      
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status) queryParams.append('status', params.status);
+
+      const url = queryParams.toString()
+        ? `${EMPLOYEES_ENDPOINT}?${queryParams.toString()}`
+        : EMPLOYEES_ENDPOINT;
+
+      const response = await apiRequest.get(url);
       const employeesData = response?.success ? response.data : response;
       return Array.isArray(employeesData) ? employeesData : [];
     } catch (error) {
       console.error('Error fetching employees:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener empleados activos
+   * @returns {Promise<Array>} Lista de empleados activos
+   */
+  getActive: async () => {
+    try {
+      const response = await apiRequest.get(`${EMPLOYEES_ENDPOINT}?status=Activo`);
+      return response;
+    } catch (error) {
+      console.error('Error fetching active employees:', error);
       throw error;
     }
   },
@@ -33,6 +55,10 @@ export const employeesService = {
    */
   getById: async (id) => {
     try {
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+
       const response = await apiRequest.get(`${EMPLOYEES_ENDPOINT}/${id}`);
       return response?.success ? response.data : response;
     } catch (error) {
@@ -43,12 +69,25 @@ export const employeesService = {
 
   /**
    * Crear un nuevo empleado
-   * @param {Object} data - Datos del empleado
+   * @param {Object} employeeData - Datos del empleado
    * @returns {Promise<Object>} Empleado creado
    */
-  create: async (data) => {
+  create: async (employeeData) => {
     try {
-      const response = await apiRequest.post(EMPLOYEES_ENDPOINT, data);
+      // Validaciones básicas
+      if (!employeeData.nombre || employeeData.nombre.trim() === '') {
+        throw new Error('El nombre del empleado es requerido');
+      }
+      if (!employeeData.documento) {
+        throw new Error('El documento es requerido');
+      }
+      if (!employeeData.correo) {
+        throw new Error('El correo es requerido');
+      }
+
+      console.log('API Service: Creating employee with data:', employeeData);
+      const response = await apiRequest.post(EMPLOYEES_ENDPOINT, employeeData);
+      console.log('API Service: Employee created:', response);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error creating employee:', error);
@@ -59,12 +98,18 @@ export const employeesService = {
   /**
    * Actualizar un empleado
    * @param {number|string} id - ID del empleado
-   * @param {Object} data - Datos a actualizar
+   * @param {Object} employeeData - Datos a actualizar
    * @returns {Promise<Object>} Empleado actualizado
    */
-  update: async (id, data) => {
+  update: async (id, employeeData) => {
     try {
-      const response = await apiRequest.put(`${EMPLOYEES_ENDPOINT}/${id}`, data);
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+
+      console.log('API Service: Updating employee', id, 'with data:', employeeData);
+      const response = await apiRequest.put(`${EMPLOYEES_ENDPOINT}/${id}`, employeeData);
+      console.log('API Service: Employee updated:', response);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error updating employee:', error);
@@ -80,7 +125,14 @@ export const employeesService = {
    */
   toggleStatus: async (id, estado) => {
     try {
-      // Usar el endpoint de actualización para cambiar el estado
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+      if (!['Activo', 'Inactivo'].includes(estado)) {
+        throw new Error('Estado debe ser "Activo" o "Inactivo"');
+      }
+
+      console.log('API Service: Toggling employee status', id, 'to', estado);
       const response = await apiRequest.put(`${EMPLOYEES_ENDPOINT}/${id}`, { estado });
       return response?.success ? response.data : response;
     } catch (error) {
@@ -96,12 +148,40 @@ export const employeesService = {
    */
   delete: async (id) => {
     try {
+      if (!id) {
+        throw new Error('ID del empleado es requerido');
+      }
+
       await apiRequest.delete(`${EMPLOYEES_ENDPOINT}/${id}`);
     } catch (error) {
       console.error('Error deleting employee:', error);
       throw error;
     }
-  }
+  },
+
+  /**
+   * Buscar empleados por término
+   * @param {string} searchTerm - Término de búsqueda
+   * @param {Object} filters - Filtros adicionales
+   * @returns {Promise<Object>} Resultados de búsqueda
+   */
+  search: async (searchTerm, filters = {}) => {
+    try {
+      if (!searchTerm || searchTerm.trim() === '') {
+        throw new Error('Término de búsqueda es requerido');
+      }
+
+      const params = {
+        search: searchTerm.trim(),
+        ...filters
+      };
+
+      return await employeesService.getAll(params);
+    } catch (error) {
+      console.error('Error searching employees:', error);
+      throw error;
+    }
+  },
 };
 
 /**
@@ -137,6 +217,10 @@ export const schedulingService = {
       const schedulingsData = response?.success ? response.data : response;
       return Array.isArray(schedulingsData) ? schedulingsData : [];
     } catch (error) {
+      if (error?.response?.status === 404) {
+        console.warn('No se encontraron programaciones para el usuario', idUsuario);
+        return [];
+      }
       console.error('Error fetching schedulings by user:', error);
       throw error;
     }
@@ -164,11 +248,24 @@ export const schedulingService = {
    */
   create: async (data) => {
     try {
-      const response = await apiRequest.post(SCHEDULING_ENDPOINT, data);
+      if (!data) throw new Error('Datos de programación requeridos');
+      const mapped = {
+        id_usuario: parseInt(data.empleadoId || data.id_usuario),
+        fecha_inicio: data.fechaInicio || data.fecha_inicio,
+        hora_entrada: data.horaInicio || data.hora_entrada,
+        hora_salida: data.horaFin || data.hora_salida,
+      };
+
+      if (!mapped.id_usuario || !mapped.fecha_inicio || !mapped.hora_entrada || !mapped.hora_salida) {
+        throw new Error('Campos obligatorios faltantes (empleado, fecha, hora inicio, hora fin)');
+      }
+
+      const response = await apiRequest.post(SCHEDULING_ENDPOINT, mapped);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error creating scheduling:', error);
-      throw error;
+      const msg = error?.response?.data?.message || error.message || 'Error al crear programación';
+      throw new Error(msg);
     }
   },
 
@@ -180,11 +277,20 @@ export const schedulingService = {
    */
   update: async (id, data) => {
     try {
-      const response = await apiRequest.put(`${SCHEDULING_ENDPOINT}/${id}`, data);
+      if (!id) throw new Error('ID de la programación requerido');
+      const mapped = {
+        id_usuario: data?.empleadoId || data?.id_usuario,
+        fecha_inicio: data?.fechaInicio || data?.fecha_inicio,
+        hora_entrada: data?.horaInicio || data?.hora_entrada,
+        hora_salida: data?.horaFin || data?.hora_salida,
+      };
+
+      const response = await apiRequest.put(`${SCHEDULING_ENDPOINT}/${id}`, mapped);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error updating scheduling:', error);
-      throw error;
+      const msg = error?.response?.data?.message || error.message || 'Error al actualizar programación';
+      throw new Error(msg);
     }
   },
 
@@ -416,3 +522,5 @@ export const novedadesService = {
     }
   }
 };
+
+export default employeesService;

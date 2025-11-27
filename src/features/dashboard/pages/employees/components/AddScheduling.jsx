@@ -7,11 +7,9 @@ import {
   validateSchedulingStartTime,
   validateSchedulingEndTime,
 } from '../../../../../shared/validations';
+import { HOURS_12, to24h } from '../../../../../shared/utils/timeFormat';
 
-const horas = [
-  '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
-];
+const horas = HOURS_12;
 
 const diasSemana = [
   'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado', 'Domingo'
@@ -21,8 +19,9 @@ const initialProg = {
   fechaInicio: '',
   fechaFin: '',
   dias: [],
-  horaInicio: '08:00',
-  horaFin: '09:00',
+  horaInicio: '08:00 AM',
+  horaFin: '09:00 AM',
+  bloques: [{ inicio: '08:00 AM', fin: '12:00 PM' }],
 };
 
 const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
@@ -54,6 +53,23 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const handleBlockChange = (index, field, value) => {
+    const newBlocks = [...(prog.bloques || [])];
+    newBlocks[index] = { ...newBlocks[index], [field]: value };
+    setProg({ ...prog, bloques: newBlocks });
+  };
+
+  const addBlock = () => {
+    const newBlocks = [...(prog.bloques || [])];
+    newBlocks.push({ inicio: '01:00 PM', fin: '05:00 PM' });
+    setProg({ ...prog, bloques: newBlocks });
+  };
+
+  const removeBlock = (index) => {
+    const newBlocks = (prog.bloques || []).filter((_, i) => i !== index);
+    setProg({ ...prog, bloques: newBlocks });
   };
 
   const handleBlur = (e) => {
@@ -107,6 +123,7 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
     const nuevaProg = {
       ...prog,
       dias: diasLimpios,
+      bloques: (prog.bloques && prog.bloques.length > 0) ? prog.bloques : [{ inicio: prog.horaInicio, fin: prog.horaFin }],
       empleadoId: empleado?.id || null,
       id: editing?.id || Date.now().toString(),
     };
@@ -192,52 +209,48 @@ const AddScheduling = ({ onAdd, editing, onCancelEdit, empleado }) => {
           {errors.dias && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.dias}</p>}
         </div>
 
-        <div className="space-y-4">
-          <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
-            <i className="bi bi-clock text-[#FACC15]"></i>
-            Horario de Trabajo *
-          </label>
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">Desde:</span>
-              <select
-                name="horaInicio"
-                value={prog.horaInicio}
-                onChange={handleProgChange}
-                onBlur={handleBlur}
-                className={`border-2 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
-                  errors.horaInicio ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                {horas.map(h => <option key={h} value={h}>{h}</option>)}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <i className="bi bi-arrow-right text-gray-400"></i>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">Hasta:</span>
-              <select
-                name="horaFin"
-                value={prog.horaFin}
-                onChange={handleProgChange}
-                onBlur={handleBlur}
-                className={`border-2 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
-                  errors.horaFin ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                {horas.map(h => <option key={h} value={h}>{h}</option>)}
-              </select>
+          <div className="space-y-4">
+            <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+              <i className="bi bi-clock text-[#FACC15]"></i>
+              Horarios de Trabajo *
+            </label>
+            <div className="space-y-3">
+              {(prog.bloques || []).map((b, idx) => (
+                <div key={idx} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-600">Desde:</span>
+                    <select
+                      value={b.inicio}
+                      onChange={(e) => handleBlockChange(idx, 'inicio', e.target.value)}
+                      className={`border-2 rounded px-2 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
+                    >
+                      {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <i className="bi bi-arrow-right text-gray-400"></i>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-600">Hasta:</span>
+                    <select
+                      value={b.fin}
+                      onChange={(e) => handleBlockChange(idx, 'fin', e.target.value)}
+                      className={`border-2 rounded px-2 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
+                    >
+                      {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <button type="button" className="ml-auto text-xs px-2 py-1 border rounded hover:bg-red-50" onClick={() => removeBlock(idx)}>
+                    <i className="bi bi-trash"></i>
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="text-xs px-3 py-1.5 border rounded hover:bg-gray-50" onClick={addBlock}>
+                <i className="bi bi-plus-circle"></i> Agregar bloque
+              </button>
             </div>
           </div>
-          <div className="flex gap-4">
-            {errors.horaInicio && <p className="text-red-500 text-sm flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.horaInicio}</p>}
-            {errors.horaFin && <p className="text-red-500 text-sm flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.horaFin}</p>}
-          </div>
-        </div>
-
+        
         <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
           {editing && (
             <button

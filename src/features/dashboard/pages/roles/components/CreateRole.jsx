@@ -4,13 +4,13 @@ import { validateRole } from '../../../../../shared/validations';
  
 
 const CreateRolesCard = ({ children, title, onClose }) => (
-  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+  <div className="w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
     <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-plus-circle text-lg"></i></div>
         <h2 className="text-xl font-bold m-0">{title}</h2>
       </div>
-      <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200" onClick={onClose} aria-label="Cerrar">×</button>
+      <button className="text-white/80 w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200" onClick={onClose} aria-label="Cerrar">×</button>
     </div>
     <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>{children}</div>
     <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
@@ -163,7 +163,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <CreateRolesCard title="Crear nuevo rol" onClose={handleClose}>
         <form onSubmit={handleSubmit} id="create-role-form" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

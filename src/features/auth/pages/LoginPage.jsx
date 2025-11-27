@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isValidEmail, isValidPassword } from '../../../shared/validations';
+import Swal from 'sweetalert2';
 import PasswordEye from '../../../shared/components/PasswordEye';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { apiRequest } from '../../../shared/config/apiConfig';
@@ -92,6 +93,45 @@ export default function LoginPage() {
 
         // Preparar datos del usuario para el contexto
         const userData = response.data.user;
+
+        // Forzar cambio de contraseña en primer acceso
+        if (userData.requirePasswordChange) {
+          const { value: formValues } = await Swal.fire({
+            title: 'Cambio de contraseña requerido',
+            html:
+              '<div class="text-left text-sm">' +
+              '<label class="block mb-1">Nueva contraseña</label>' +
+              '<input id="swal-new-pass" type="password" class="swal2-input" placeholder="Nueva contraseña" />' +
+              '<label class="block mb-1 mt-3">Confirmar contraseña</label>' +
+              '<input id="swal-confirm-pass" type="password" class="swal2-input" placeholder="Confirmar contraseña" />' +
+              '<div class="text-xs text-gray-600 mt-2">La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.</div>' +
+              '</div>',
+            focusConfirm: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            preConfirm: () => {
+              const pass = document.getElementById('swal-new-pass').value.trim();
+              const confirm = document.getElementById('swal-confirm-pass').value.trim();
+              const isValid = isValidPassword(pass);
+              if (!isValid) {
+                Swal.showValidationMessage('La contraseña no cumple los requisitos.');
+                return null;
+              }
+              if (pass !== confirm) {
+                Swal.showValidationMessage('Las contraseñas no coinciden.');
+                return null;
+              }
+              return { pass };
+            }
+          });
+
+          if (!formValues || !formValues.pass) {
+            throw new Error('Debe actualizar su contraseña para continuar');
+          }
+
+          await apiRequest.patch(`/usuarios/${userData.id_usuario}/password`, { newPassword: formValues.pass });
+          userData.requirePasswordChange = false;
+        }
 
         console.log('💾 Guardando datos del usuario:', userData);
         console.log('📍 Página anterior guardada:', previousPath);

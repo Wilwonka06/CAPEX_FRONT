@@ -18,14 +18,15 @@ class SalesService {
       const queryParams = new URLSearchParams();
 
       if (params.page) queryParams.append('page', params.page);
-      if (params.limit) queryParams.append('limit', params.limit);
+      const safeLimit = Math.min(Math.max(parseInt(params.limit || 50), 1), 100);
+      queryParams.append('limit', safeLimit);
       if (params.estado) queryParams.append('estado', params.estado);
 
       const url = queryParams.toString()
         ? `${SALES_ENDPOINT}?${queryParams.toString()}`
         : SALES_ENDPOINT;
 
-      const response = await apiRequest.get(url);
+      const response = await apiRequest.get(url, { skipGlobalErrorHandling: true });
       
       // Mapear respuesta del backend al formato del frontend
       if (response.success && response.data) {
@@ -56,6 +57,14 @@ class SalesService {
 
       return this._handleResponse(response);
     } catch (error) {
+      // Reintentos automáticos simples
+      for (let i = 1; i <= 2; i++) {
+        try {
+          await new Promise(r => setTimeout(r, 500 * i));
+          const retryParams = { ...params, limit: Math.min(Math.max(parseInt(params.limit || 50), 1), 50) };
+          return await this.getAll(retryParams);
+        } catch (_) {}
+      }
       return this._handleError('Error fetching sales', error);
     }
   }

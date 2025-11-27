@@ -1,6 +1,4 @@
-import React from "react";
 import PropTypes from "prop-types";
-import ChangeCustomerStatus from "./ChangeCustomerStatus";
 import TableSkeleton from "../../../../../shared/components/TableSkeleton";
 
 const CustomerTable = ({
@@ -10,6 +8,7 @@ const CustomerTable = ({
   onDelete,
   onToggleStatus,
   loading = false,
+  togglingId = null,
 }) => {
   if (loading) {
     return (
@@ -80,10 +79,34 @@ const CustomerTable = ({
               </td>
               <td className="py-2 px-3">{customer.phone}</td>
               <td className="py-2 px-3">
-                <ChangeCustomerStatus
-                  status={customer.status}
-                  onToggle={() => onToggleStatus(customer.id)}
-                />
+                {(() => {
+                  const isActive = customer.status === 'Activo';
+                  const isToggling = togglingId === customer.id;
+                  return (
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => onToggleStatus(customer.id)}
+                        disabled={isToggling}
+                        className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
+                          isActive ? 'bg-text-main' : 'bg-gray-300'
+                        } ${isToggling ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                            isActive ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <span
+                        className={`text-xs font-semibold rounded-full px-2 py-1 ${
+                          isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {isToggling ? 'Cambiando...' : (isActive ? 'Activo' : 'Inactivo')}
+                      </span>
+                    </div>
+                  );
+                })()}
               </td>
               <td className="py-2 px-3 text-center">
                 <div className="flex justify-center space-x-2">
@@ -124,6 +147,7 @@ CustomerTable.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onToggleStatus: PropTypes.func.isRequired,
+  togglingId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 export default CustomerTable;

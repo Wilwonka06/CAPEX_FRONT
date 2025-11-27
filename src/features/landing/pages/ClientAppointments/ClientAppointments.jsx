@@ -1020,10 +1020,11 @@ const ClientAppointments = () => {
                         }}
                       >
                         <option value="">Seleccionar</option>
-                        <option value="CC">Cédula de Ciudadanía</option>
-                        <option value="CE">Cédula de Extranjería</option>
-                        <option value="NIT">NIT</option>
-                        <option value="PAS">Pasaporte</option>
+                        {['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'].map(code => (
+                          <option key={code} value={code}>{`${code} - ${{
+                            RC:'Registro civil',TI:'Tarjeta de identidad',CC:'Cédula de ciudadanía',TE:'Tarjeta de extranjería',CE:'Cédula de extranjería',NIT:'Número de identificación tributaria',PP:'Pasaporte',PEP:'Permiso especial de permanencia',DIE:'Documento de identificación extranjero',NUIP:'NUIP',FOREIGN_NIT:'NIT de otro país'
+                          }[code]}`}</option>
+                        ))}
                       </select>
                       {errors.tipoDocumento && <p className="text-red-500 text-sm mt-2 font-lato">{errors.tipoDocumento}</p>}
                     </div>

@@ -18,13 +18,14 @@ class OrdersService {
       const queryParams = new URLSearchParams();
       
       if (params.page) queryParams.append('page', params.page);
-      if (params.limit) queryParams.append('limit', params.limit);
+      const safeLimit = Math.min(Math.max(parseInt(params.limit || 50), 1), 100);
+      queryParams.append('limit', safeLimit);
 
       const url = queryParams.toString()
         ? `${ORDERS_ENDPOINT}?${queryParams.toString()}`
         : ORDERS_ENDPOINT;
 
-      const response = await apiRequest.get(url);
+      const response = await apiRequest.get(url, { skipGlobalErrorHandling: true });
       
       // Mapear respuesta del backend al formato del frontend
       if (response.success && response.data) {
@@ -32,7 +33,7 @@ class OrdersService {
           id: pedido.id_pedido,
           numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
           fecha: pedido.fecha,
-          clienteId: pedido.id_cliente || null,
+          clienteId: pedido.id_usuario || pedido.id_cliente || null,
           valor: parseFloat(pedido.total || 0),
           estado: pedido.estado || 'Pendiente',
           productos: (pedido.detalles || []).map(det => ({
@@ -48,6 +49,14 @@ class OrdersService {
 
       return this._handleResponse(response);
     } catch (error) {
+      // Reintentos con backoff
+      for (let i = 1; i <= 2; i++) {
+        try {
+          await new Promise(r => setTimeout(r, 500 * i));
+          const retryParams = { ...params, limit: Math.min(Math.max(parseInt(params.limit || 25), 1), 50) };
+          return await this.getAll(retryParams);
+        } catch (_) {}
+      }
       return this._handleError('Error fetching orders', error);
     }
   }
