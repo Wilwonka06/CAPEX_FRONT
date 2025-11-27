@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import EditScheduling from './EditScheduling';
 import RecurringSchedulingManager from './RecurringSchedulingManager';
 import NovedadManager from './NovedadManager';
 import {
@@ -14,7 +13,7 @@ import { DOC_TYPES_CODES, DOC_TYPE_LABELS, codeFromLabel, toBackendDocCode } fro
 
 const tiposDocumento = DOC_TYPES_CODES.map(code => ({ value: code, label: `${code} - ${DOC_TYPE_LABELS[code]}` }));
 
-const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
+const EditEmployee = ({ employee, onCancel, onSave, employees = [], mode = 'edit' }) => {
   const [form, setForm] = useState({
     nombre: '',
     tipoDocumento: 'CC',
@@ -26,6 +25,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
   });
   const [errors, setErrors] = useState({});
   const [activeTab, setActiveTab] = useState('empleado');
+  const isReadOnly = mode === 'view';
 
   useEffect(() => {
     if (employee) {
@@ -194,18 +194,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
           <i className="bi bi-exclamation-triangle mr-2"></i>
           Novedades
         </button>
-        <button
-          className={`flex-1 min-w-[160px] text-sm font-semibold px-4 py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
-            activeTab === 'programacion'
-              ? 'bg-[#FACC15] text-gray-800 shadow-md'
-              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-          }`}
-          onClick={() => setActiveTab('programacion')}
-          type="button"
-        >
-          <i className="bi bi-calendar-event mr-2"></i>
-          Programación Legacy
-        </button>
+        
       </div>
 
       {activeTab === 'empleado' && (
@@ -236,6 +225,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
                     errors.nombre ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={isReadOnly}
                   required
                 />
                 {errors.nombre && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.nombre}</p>}
@@ -252,6 +242,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   value={form.tipoDocumento}
                   onChange={handleChange}
                   className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] transition-all appearance-none bg-white font-lato"
+                  disabled={isReadOnly}
                   required
                 >
                   {DOC_TYPES_CODES.map(code => (
@@ -278,6 +269,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato font-mono ${
                     errors.documento ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={isReadOnly}
                   required
                 />
                 {errors.documento && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.documento}</p>}
@@ -301,6 +293,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato font-mono ${
                     errors.telefono ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={isReadOnly}
                   required
                 />
                 {errors.telefono && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.telefono}</p>}
@@ -322,15 +315,14 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
                     errors.correo ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={isReadOnly}
                   required
                 />
                 {errors.correo && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.correo}</p>}
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="direccion" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
-                  <i className="bi bi-geo-alt text-[#FACC15]"></i>
-                  Dirección *
+                <label htmlFor="direccion" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">                  Dirección *
                 </label>
                 <input
                   type="text"
@@ -343,6 +335,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                   className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
                     errors.direccion ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={isReadOnly}
                   required
                 />
                 {errors.direccion && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.direccion}</p>}
@@ -350,7 +343,6 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
 
               <div className="space-y-2 md:col-span-2">
                 <label htmlFor="estado" className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
-                  <i className="bi bi-toggle-on text-[#FACC15]"></i>
                   Estado del Empleado
                 </label>
                 <div className="flex gap-4">
@@ -362,6 +354,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                       checked={form.estado === 'Activo'}
                       onChange={handleChange}
                       className="w-4 h-4 text-[#FACC15] focus:ring-[#FACC15] border-gray-300"
+                    disabled={isReadOnly}
                     />
                     <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -376,6 +369,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                       checked={form.estado === 'Inactivo'}
                       onChange={handleChange}
                       className="w-4 h-4 text-[#FACC15] focus:ring-[#FACC15] border-gray-300"
+                    disabled={isReadOnly}
                     />
                     <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -393,15 +387,17 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
                 className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-semibold font-lato flex items-center gap-2 text-xs"
               >
                 <i className="bi bi-x-lg"></i>
-                Cancelar
+                {isReadOnly ? 'Cerrar' : 'Cancelar'}
               </button>
-              <button
-                type="submit"
-                className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 font-semibold font-lato flex items-center gap-2 shadow-lg hover:shadow-xl text-xs"
-              >
-                <i className="bi bi-check-circle"></i>
-                Guardar Cambios
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 font-semibold font-lato flex items-center gap-2 shadow-lg hover:shadow-xl text-xs"
+                >
+                  <i className="bi bi-check-circle"></i>
+                  Guardar Cambios
+                </button>
+              )}
             </div>
           </form>
         </div>
@@ -433,21 +429,7 @@ const EditEmployee = ({ employee, onCancel, onSave, employees = [] }) => {
         </div>
       )}
 
-      {activeTab === 'programacion' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-800 font-nunito mb-2 flex items-center gap-2">
-              <i className="bi bi-calendar-event text-[#FACC15]"></i>
-              Programación Legacy
-            </h3>
-            <p className="text-sm text-gray-600 font-lato">Sistema de programación anterior</p>
-          </div>
-          <EditScheduling
-            empleadoId={employee?.id}
-            onClose={onCancel}
-          />
-        </div>
-      )}
+      
     </div>
   );
 };

@@ -41,7 +41,7 @@ const SalesProducts = () => {
 
   // ===== CARGAR DATOS INICIALES =====
   useEffect(() => {
-    setTitle('Venta de Productos');
+    setTitle('Módulo de Venta de Productos');
     loadSales();
     loadProducts();
     loadCustomers();

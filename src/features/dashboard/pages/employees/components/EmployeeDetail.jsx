@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import SeeScheduling from './SeeScheduling';
+import RecurringSchedulingManager from './RecurringSchedulingManager';
 import { labelFromAny } from '../../../../../shared/constants/documentTypes';
 
 const EmployeeDetail = ({ employee, isOpen, onClose }) => {
@@ -152,10 +152,7 @@ const EmployeeDetail = ({ employee, isOpen, onClose }) => {
 
           {activeTab === 'programacion' && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <SeeScheduling
-                empleadoId={employee.id || employee.id_usuario}
-                onClose={() => {}} // No cerramos el modal completo, solo cambiamos de tab
-              />
+              <RecurringSchedulingManager empleadoId={employee.id || employee.id_usuario} />
             </div>
           )}
         </div>

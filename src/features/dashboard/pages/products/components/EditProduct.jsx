@@ -32,8 +32,11 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
     precio: "",
     cantidad: "",
     categoryId: "",
+    costo: "",
+    iva: "",
     fotos: [],
   });
+  const [marginPct, setMarginPct] = useState(20);
   const [previews, setPreviews] = useState([]);
   const [especificaciones, setEspecificaciones] = useState([
     { concepto: "", valor: "", otroConcepto: "" }
@@ -61,6 +64,8 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
         precio: product.precio_venta?.toString() || product.precio?.toString() || "",
         cantidad: product.stock?.toString() || product.cantidad?.toString() || "",
         categoryId: product.id_categoria_producto?.toString() || product.categoryId?.toString() || "",
+        costo: product.costo?.toString() || "",
+        iva: product.iva?.toString() || "",
         fotos: fotosArray,
       });
 
@@ -158,11 +163,26 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
     }
 
     setError("");
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'costo') {
+        const c = parseFloat(value);
+        const m = parseFloat(marginPct) / 100;
+        if (isFinite(c) && c > 0 && isFinite(m)) {
+          next.precio = (c * (1 + m)).toFixed(2);
+        }
+      }
+      return next;
+    });
   };
+
+  useEffect(() => {
+    const c = parseFloat(formData.costo);
+    const m = parseFloat(marginPct) / 100;
+    if (isFinite(c) && c > 0 && isFinite(m)) {
+      setFormData(prev => ({ ...prev, precio: (c * (1 + m)).toFixed(2) }));
+    }
+  }, [marginPct]);
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
@@ -291,6 +311,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
     // Validaciones obligatorias
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
     if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
+    if (!formData.costo) errors.costo = "El costo es obligatorio";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
 
     if (Object.keys(errors).length > 0) {
@@ -314,6 +335,8 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
         precio_venta: parseFormattedNumber(formData.precio),
         stock: formData.cantidad ? parseFormattedNumber(formData.cantidad) : 0,
         id_categoria_producto: parseInt(formData.categoryId),
+        costo: formData.costo ? parseFormattedNumber(formData.costo) : undefined,
+        iva: formData.iva ? parseFormattedNumber(formData.iva) : undefined,
       };
 
       // SIEMPRE enviar el array de fotos, incluso si está vacío
@@ -563,10 +586,10 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                       {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
                     </div>
 
-                    {/* Precio */}
+                    {/* Precio (auto margen) */}
                     <div className="space-y-2">
                       <label className="block text-xs font-medium text-gray-700">
-                        Precio <span className="text-red-500">*</span>
+                        Precio (auto margen) <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
@@ -574,14 +597,53 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                           type="text"
                           name="precio"
                           value={formatNumber(formData.precio)}
-                          onChange={e => handleChange({ target: { name: 'precio', value: cleanNumber(e.target.value) } })}
+                          readOnly
+                          className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
+                          required
+                          placeholder="0"
+                        />
+                      </div>
+                      {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
+                      {formData.costo && formData.precio && (
+                        <p className="text-[10px] text-gray-500">Margen: ${formatNumber(parseFormattedNumber(formData.precio) - parseFormattedNumber(formData.costo))} ({(((parseFormattedNumber(formData.precio) - parseFormattedNumber(formData.costo)) / parseFormattedNumber(formData.costo)) * 100 || 0).toFixed(2)}%)</p>
+                      )}
+                    </div>
+
+                    {/* Margen (%) */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-gray-700">Margen (%)</label>
+                      <input
+                        type="text"
+                        name="marginPct"
+                        value={formatNumber(marginPct)}
+                        onChange={e => {
+                          const val = cleanNumber(e.target.value);
+                          if (val === "" || /^\d*\.?\d*$/.test(val)) setMarginPct(val);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
+                        placeholder="20"
+                      />
+                    </div>
+
+                    {/* Costo */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Costo <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                        <input
+                          type="text"
+                          name="costo"
+                          value={formatNumber(formData.costo)}
+                          onChange={e => handleChange({ target: { name: 'costo', value: cleanNumber(e.target.value) } })}
                           className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
                           required
                           onKeyDown={isNumberInputValid}
                           placeholder="0"
                         />
                       </div>
-                      {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
+                      {fieldErrors.costo && <p className="text-xs text-red-500 mt-1">{fieldErrors.costo}</p>}
                     </div>
 
                     {/* Cantidad en Stock */}

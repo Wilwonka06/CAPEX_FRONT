@@ -83,6 +83,7 @@ export default function ProductsTable({ products, onEdit, onDelete, loading = fa
               <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
               <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Stock</th>
               <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
+              <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Margen</th>
               <th className="py-2 px-3 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
             </tr>
           </thead>
@@ -137,6 +138,19 @@ export default function ProductsTable({ products, onEdit, onDelete, loading = fa
                 </td>
                 <td className="py-3 px-3 text-xs text-gray-600 font-semibold">
                   ${formatPrice(product.precio_venta || product.precio || 0)}
+                </td>
+                <td className="py-3 px-3 text-xs text-gray-600">
+                  {(() => {
+                    const costo = parseFloat(product.costo || 0);
+                    const precio = parseFloat(product.precio_venta || product.precio || 0);
+                    const margen = precio - costo;
+                    const pct = costo > 0 ? ((margen / costo) * 100).toFixed(2) : '0.00';
+                    return (
+                      <span className={`inline-block px-2 py-1 rounded-full ${margen >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                        ${formatPrice(margen)} ({pct}%)
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className="py-3 px-3 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">

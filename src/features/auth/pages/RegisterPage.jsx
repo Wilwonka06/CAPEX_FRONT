@@ -4,6 +4,7 @@ import { isValidEmail, isValidPassword, isValidCustomerName, validatePasswordCon
 import toast from 'react-hot-toast';
 import StepIndicator from '../components/StepIndicator';
 import FormField from '../components/FormField';
+import PasswordRequirements from '../../../shared/components/PasswordRequirements';
 import authService from '../services/authServices';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -27,6 +28,7 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingUniqueness, setCheckingUniqueness] = useState({ documento: false, correo: false });
   const [numero, setNumero] = useState('');
 
   const validate = (name, value) => {
@@ -59,12 +61,37 @@ const RegisterPage = () => {
     }
   };
 
+  const checkUniqueness = async (field, value) => {
+    if (!value || error[field]) return; // Si hay error de formato o vacío, no verificar
+    
+    setCheckingUniqueness(prev => ({ ...prev, [field]: true }));
+    try {
+      const isUnique = await authService.checkUniqueness(field, value);
+      if (!isUnique) {
+        setError(prev => ({ 
+          ...prev, 
+          [field]: `El ${field === 'documento' ? 'número de documento' : 'correo electrónico'} ya está registrado` 
+        }));
+      }
+    } catch (err) {
+      console.error('Error checking uniqueness:', err);
+    } finally {
+      setCheckingUniqueness(prev => ({ ...prev, [field]: false }));
+    }
+  };
+
   const step1Fields = ['nombre', 'tipoDocumento', 'documento'];
   const step2Fields = ['telefono', 'correo'];
   const step3Fields = ['password', 'confirmPassword'];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Restricción para documento: solo números si no es pasaporte
+    if (name === 'documento' && form.tipoDocumento !== 'Pasaporte') {
+      if (/[^0-9]/.test(value)) return; // Ignorar caracteres no numéricos
+    }
+
     const err = validate(name, value);
     setError(prev => ({ ...prev, [name]: err }));
     setForm(prev => ({ ...prev, [name]: value }));
@@ -74,6 +101,10 @@ const RegisterPage = () => {
     const { name, value } = e.target;
     const err = validate(name, value);
     setError(prev => ({ ...prev, [name]: err }));
+    
+    if (!err && (name === 'documento' || name === 'correo')) {
+      checkUniqueness(name, value);
+    }
   };
 
   const validateStep = () => {
@@ -385,6 +416,7 @@ const RegisterPage = () => {
                           showPassword={showPassword}
                           onTogglePassword={() => setShowPassword(v => !v)}
                         />
+                        <PasswordRequirements password={form.password} />
                         <FormField
                           label="Confirmar contraseña"
                           name="confirmPassword"

@@ -8,7 +8,7 @@ const AdminNavbar = ({ title }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
-  const { logout, currentUser: authUser } = useAuth();
+  const { logout, currentUser: authUser, setActiveRole } = useAuth();
   const profileRef = useRef();
 
   // Sincronizar con el contexto de autenticación
@@ -37,6 +37,38 @@ const AdminNavbar = ({ title }) => {
         )}
       </div>
       <div className="flex items-center gap-4" ref={profileRef}>
+        {/* Selector de rol activo */}
+        {currentUser?.roles?.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Rol:</span>
+            <select
+              className="border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              value={currentUser.activeRoleId || currentUser.rol?.id_rol}
+              onChange={async (e) => {
+                const idRol = parseInt(e.target.value, 10);
+                await setActiveRole(idRol);
+              }}
+              title="Seleccionar rol activo"
+            >
+              {/* Incluir rol directo si no está en lista */}
+              {currentUser.rol && !currentUser.roles.some(r => r.id_rol === currentUser.rol.id_rol) && (
+                <option value={currentUser.rol.id_rol}>{currentUser.rol.nombre}</option>
+              )}
+              {currentUser.roles.map(r => (
+                <option key={r.id_rol} value={r.id_rol}>{r.nombre}</option>
+              ))}
+            </select>
+            {/* Indicador visual del rol seleccionado */}
+            <span className="ml-2 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
+              <i className="bi bi-shield-lock"></i>
+              {(() => {
+                const activeId = currentUser.activeRoleId || currentUser.rol?.id_rol;
+                const activeName = (currentUser.roles || []).find(r => r.id_rol === activeId)?.nombre || currentUser.rol?.nombre;
+                return activeName || '—';
+              })()}
+            </span>
+          </div>
+        )}
         {currentUser && (
           <div className="relative">
             <button

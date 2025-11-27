@@ -31,7 +31,7 @@ const CatServices = () => {
   }, []);
 
   useEffect(() => {
-    setTitle("Categorías de Servicios");
+    setTitle("Módulo de Servicios");
     return () => setTitle("");
   }, [setTitle]);
 

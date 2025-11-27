@@ -5,6 +5,7 @@ import Paginator from '../../../../shared/Paginator';
 import CreateProduct from "./components/CreateProduct";
 import CharacteristicsManager from "./components/CharacteristicsManager";
 import productsService from "./API/productsService";
+import suppliersService from "../suppliers/API/suppliersService";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
@@ -28,6 +29,8 @@ const ProductsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCharacteristicsManagerOpen, setIsCharacteristicsManagerOpen] = useState(false);
   const { setTitle } = useOutletContext();
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedSupplier, setSelectedSupplier] = useState("");
 
   // Función para cargar productos
   const loadProducts = async (params = queryParams) => {
@@ -59,10 +62,21 @@ const ProductsPage = () => {
   // Cargar productos inicialmente
   useEffect(() => {
     loadProducts();
+    (async () => {
+      try {
+        const resp = await suppliersService.getActive();
+        if (resp.success) setSuppliers(resp.data || []);
+      } catch (e) {
+        try {
+          const resp2 = await suppliersService.getAll({ limit: 100 });
+          if (resp2.success) setSuppliers(resp2.data || []);
+        } catch {}
+      }
+    })();
   }, []);
 
   useEffect(() => {
-    setTitle('Gestión de Productos');
+    setTitle('Módulo de Productos');
     return () => setTitle('');
   }, [setTitle]);
 
@@ -81,6 +95,7 @@ const ProductsPage = () => {
 
   // Función para limpiar filtros
   const clearFilters = async () => {
+    setSelectedSupplier("");
     const newParams = { page: 1, limit: queryParams.limit };
     setQueryParams(newParams);
     await loadProducts(newParams);

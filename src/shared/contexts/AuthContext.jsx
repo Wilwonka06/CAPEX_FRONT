@@ -12,6 +12,7 @@ const defaultContextValue = {
   getRoleRedirect: () => '/landing',
   checkAuth: async () => null,
   verifyAuth: async () => false,
+  setActiveRole: async () => {},
   _isProviderActive: false, // Flag para identificar si el Provider está activo
 };
 
@@ -306,6 +307,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Cambiar rol activo del usuario
+  const setActiveRole = async (idRol) => {
+    try {
+      const response = await apiRequest.put('/auth/active-role', { idRol });
+      if (response.success && response.data) {
+        localStorage.setItem('currentUser', JSON.stringify(response.data));
+        setCurrentUser(response.data);
+        window.dispatchEvent(new Event('user-auth-changed'));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('❌ Error al cambiar rol activo:', error);
+      return false;
+    }
+  };
+
   // Verificar autenticación al cargar (solo una vez y no en rutas públicas)
   useEffect(() => {
     if (initialCheckDone.current) return;
@@ -345,6 +363,7 @@ export const AuthProvider = ({ children }) => {
     getRoleRedirect,
     checkAuth,
     verifyAuth,
+    setActiveRole,
     _isProviderActive: true, // Flag para indicar que el Provider está activo
   };
 

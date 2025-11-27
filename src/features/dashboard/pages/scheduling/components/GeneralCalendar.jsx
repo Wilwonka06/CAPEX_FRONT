@@ -4,16 +4,15 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import SeeScheduling from '../../scheduling/components/SeeScheduling';
-import AddScheduling from './AddScheduling';
-import EditScheduling from './EditScheduling';
+import AddRecurringScheduling from '../../employees/components/AddRecurringScheduling';
 import SchedulingDetailView from './SchedulingDetailView';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
-import { schedulingService } from '../API/schedulingService';
+import { recurringSchedulingService } from '../../employees/API/employeesService';
 import esLocale from '@fullcalendar/core/locales/es';
 import '../../../../../shared/styles/calendar.css';
 
-const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdateEvent, onDeleteEvent }) => {
+const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdateRecurring, onDeleteRecurring }) => {
   console.log("[GeneralCalendar] RENDER:");
   console.log("  - employees:", employees);
   console.log("  - employees.length:", employees?.length);
@@ -28,94 +27,82 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
   const [selectedDate, setSelectedDate] = useState(null);
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [editingData, setEditingData] = useState(null);
-  const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
+  
 
-  // Estado para los eventos del calendario
+  // Estado para los eventos del calendario y rango visible
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [viewRange, setViewRange] = useState({ start: null, end: null });
 
-  // Cargar eventos desde schedulings API
+  // Cargar eventos desde programaciones recurrentes
   const loadEvents = () => {
-    const schedulingsActuales = schedulings || [];
-    console.log("[GeneralCalendar] loadEvents - Programaciones recibidas:", schedulingsActuales);
-    console.log("[GeneralCalendar] loadEvents - Empleados disponibles:", employees);
+    const programaciones = Array.isArray(schedulings) ? schedulings : [];
+    const { start, end } = viewRange;
+    if (!start || !end) return;
 
-    const events = schedulingsActuales.map(scheduling => {
-      console.log("[GeneralCalendar] Procesando scheduling:", scheduling);
-      
-      // Buscar empleado por id_usuario
-      const empleadoId = scheduling.id_usuario || scheduling.empleadoId;
-      const employee = employees.find(emp => {
-        const match = String(emp.id) === String(empleadoId);
-        console.log(`[GeneralCalendar] Comparando emp.id=${emp.id} con empleadoId=${empleadoId}: ${match}`);
-        return match;
-      });
-      
-      console.log("[GeneralCalendar] Empleado encontrado para id_usuario", empleadoId, ":", employee);
+    const colors = [
+      { bg: '#3b82f6', border: '#2563eb' },
+      { bg: '#8b5cf6', border: '#7c3aed' },
+      { bg: '#10b981', border: '#059669' },
+      { bg: '#f59e0b', border: '#d97706' },
+      { bg: '#ef4444', border: '#dc2626' },
+      { bg: '#06b6d4', border: '#0891b2' },
+      { bg: '#6366f1', border: '#4f46e5' },
+      { bg: '#ec4899', border: '#db2777' },
+    ];
 
-      // Obtener la fecha correcta (puede venir como fecha_inicio, fechaInicio o fecha)
-      const fecha = scheduling.fecha_inicio || scheduling.fechaInicio || scheduling.fecha;
-      
-      // Obtener las horas
-      const horaEntrada = scheduling.hora_entrada || scheduling.horaInicio;
-      const horaSalida = scheduling.hora_salida || scheduling.horaFin;
+    const events = [];
 
-      console.log("[GeneralCalendar] Datos del evento:", {
-        fecha,
-        horaEntrada,
-        horaSalida,
-        empleadoNombre: employee?.nombre
-      });
-
-      // Colores para programaciones - usando colores del sidebar
-      // Variaciones sutiles de grises y azules para diferenciar empleados
-      const colors = [
-        { bg: '#3b82f6', border: '#2563eb' }, // Azul
-        { bg: '#8b5cf6', border: '#7c3aed' }, // Morado
-        { bg: '#10b981', border: '#059669' }, // Verde
-        { bg: '#f59e0b', border: '#d97706' }, // Naranja
-        { bg: '#ef4444', border: '#dc2626' }, // Rojo
-        { bg: '#06b6d4', border: '#0891b2' }, // Cyan
-        { bg: '#6366f1', border: '#4f46e5' }, // Índigo
-        { bg: '#ec4899', border: '#db2777' }, // Rosa
-      ];
-      
-      // Seleccionar color basado en el ID del empleado para consistencia
+    for (const prog of programaciones) {
+      const empleadoId = prog.id_usuario;
+      const employee = employees.find(emp => String(emp.id) === String(empleadoId));
       const colorIndex = empleadoId ? (empleadoId % colors.length) : 0;
       const selectedColor = colors[colorIndex];
-      
-      // Formatear horas
-      const horaEntradaFormato = horaEntrada ? horaEntrada.substring(0, 5) : '00:00';
-      const horaSalidaFormato = horaSalida ? horaSalida.substring(0, 5) : '00:00';
-      
-      return {
-        id: String(scheduling.id),
-        title: employee 
-          ? `${employee.nombre} (${horaEntradaFormato} - ${horaSalidaFormato})` 
-          : `Programación: ${horaEntradaFormato} - ${horaSalidaFormato}`,
-        start: fecha,
-        allDay: true,
-        backgroundColor: selectedColor.bg,
-        borderColor: selectedColor.border,
-        textColor: '#ffffff',
-        classNames: ['custom-event', 'scheduling-event'],
-        extendedProps: {
-          schedulingId: scheduling.id,
-          empleadoId: empleadoId,
-          empleadoNombre: employee?.nombre || 'Sin nombre',
-          hora_entrada: horaEntrada,
-          hora_salida: horaSalida,
-        }
-      };
-    });
 
-    console.log("[GeneralCalendar] Eventos finales para el calendario:", events);
+      const progStart = new Date((prog.fecha_inicio || start.toISOString().split('T')[0]) + 'T00:00:00');
+      const progEnd = new Date((prog.fecha_fin || end.toISOString().split('T')[0]) + 'T00:00:00');
+      const rangeStart = new Date(start);
+      const rangeEnd = new Date(end);
+      const iterStart = rangeStart > progStart ? rangeStart : progStart;
+      const iterEnd = rangeEnd < progEnd ? rangeEnd : progEnd;
+
+      const dias = Array.isArray(prog.dias_semana) ? prog.dias_semana : [];
+      const bloques = Array.isArray(prog.bloques_horarios) ? prog.bloques_horarios : [];
+
+      const cursor = new Date(iterStart);
+      while (cursor <= iterEnd) {
+        const diaSemana = cursor.getDay();
+        if (dias.includes(diaSemana)) {
+          for (const b of bloques) {
+            const horaEntradaFormato = String(b.inicio).substring(0,5);
+            const horaSalidaFormato = String(b.fin).substring(0,5);
+            events.push({
+              id: `${prog.id}-${cursor.toISOString().split('T')[0]}-${horaEntradaFormato}`,
+              title: employee ? `${employee.nombre} (${horaEntradaFormato} - ${horaSalidaFormato})` : `(${horaEntradaFormato} - ${horaSalidaFormato})`,
+              start: cursor.toISOString().split('T')[0],
+              allDay: true,
+              backgroundColor: selectedColor.bg,
+              borderColor: selectedColor.border,
+              textColor: '#ffffff',
+              classNames: ['custom-event','scheduling-event'],
+              extendedProps: {
+                programacionId: prog.id,
+                empleadoId: empleadoId,
+                empleadoNombre: employee?.nombre || 'Sin nombre',
+                bloque: b
+              }
+            });
+          }
+        }
+        cursor.setDate(cursor.getDate()+1);
+      }
+    }
+
     setCalendarEvents(events);
   };
 
   useEffect(() => {
-    console.log("[GeneralCalendar] useEffect triggered - reloading events");
     loadEvents();
-  }, [employees, schedulings]);
+  }, [employees, schedulings, viewRange]);
 
   const handleEventClick = (info) => {
     console.log("[GeneralCalendar] Evento clickeado:", info.event);
@@ -126,23 +113,14 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
   };
 
   const handleDateClick = (info) => {
-    console.log("[GeneralCalendar] handleDateClick - Opening add modal");
-    console.log("[GeneralCalendar] employees at modal open:", employees);
-    console.log("[GeneralCalendar] employees.length at modal open:", employees?.length);
-    setModalType('add');
-    setSelectedDate(info.dateStr);
-    setModalOpen(true);
+    if (onAddEvent) onAddEvent(null);
   };
 
   const handleDelete = async () => {
     if (!selectedEvent) return;
 
-    const schedulingId = selectedEvent.extendedProps?.schedulingId || selectedEvent.id;
-
-    if (!schedulingId) {
-      toast.error('No se pudo obtener el ID de la programación');
-      return;
-    }
+    const programacionId = selectedEvent.extendedProps?.programacionId;
+    if (!programacionId) return;
 
     const result = await Swal.fire({
       title: '¿Estás seguro de eliminar esta programación?',
@@ -158,10 +136,7 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
     if (!result.isConfirmed) return;
 
     const deletePromise = (async () => {
-      await schedulingService.delete(schedulingId);
-      if (onDeleteEvent) {
-        onDeleteEvent(schedulingId);
-      }
+      if (onDeleteRecurring) await onDeleteRecurring(programacionId);
       setModalOpen(false);
       return true;
     })();
@@ -186,8 +161,8 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
   const handleEdit = () => {
     if (!selectedEvent) return;
 
-    const schedulingId = selectedEvent.extendedProps?.schedulingId || selectedEvent.id;
-    const scheduling = schedulings.find(s => String(s.id) === String(schedulingId));
+    const programacionId = selectedEvent.extendedProps?.programacionId;
+    const scheduling = schedulings.find(s => String(s.id) === String(programacionId));
 
     console.log("[GeneralCalendar] handleEdit - schedulingId:", schedulingId);
     console.log("[GeneralCalendar] handleEdit - scheduling encontrado:", scheduling);
@@ -197,43 +172,13 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
       return;
     }
 
-    // Mapear los datos al formato que espera EditScheduling
-    setEditingData({
-      id: scheduling.id,
-      fechaInicio: scheduling.fecha_inicio || scheduling.fechaInicio || scheduling.fecha,
-      fechaFin: scheduling.fecha_inicio || scheduling.fechaInicio || scheduling.fecha,
-      horaInicio: scheduling.hora_entrada || scheduling.horaInicio,
-      horaFin: scheduling.hora_salida || scheduling.horaFin,
-      empleadoId: scheduling.id_usuario || scheduling.empleadoId,
-      dias: [],
-      repeticion: 'No se repite'
-    });
+    setEditingData(scheduling);
     setEditFormOpen(true);
   };
 
   const handleSaveEdit = async (prog) => {
-    if (!editingData) {
-      toast.error('Error: no hay datos de edición válidos');
-      return;
-    }
-
-    console.log("[GeneralCalendar] handleSaveEdit - prog:", prog);
-    console.log("[GeneralCalendar] handleSaveEdit - editingData:", editingData);
-
-    const schedulingData = {
-      id: editingData.id,
-      id_usuario: prog.empleadoId,
-      fecha_inicio: prog.fechaInicio,
-      hora_entrada: prog.horaInicio,
-      hora_salida: prog.horaFin,
-    };
-
-    console.log("[GeneralCalendar] handleSaveEdit - schedulingData a enviar:", schedulingData);
-
-    if (onUpdateEvent) {
-      onUpdateEvent(schedulingData);
-    }
-
+    if (!editingData) return;
+    if (onUpdateRecurring) await onUpdateRecurring(editingData.id, prog);
     setEditFormOpen(false);
     setModalOpen(false);
     setEditingData(null);
@@ -262,6 +207,9 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
         events={calendarEvents}
         eventClick={handleEventClick}
         dateClick={handleDateClick}
+        datesSet={(arg) => {
+          setViewRange({ start: arg.start, end: arg.end });
+        }}
         height="auto"
         buttonText={{
           today: 'Hoy',
@@ -310,10 +258,11 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
           }}
           title={'Editar programación'}
         >
-          <EditScheduling
+          <AddRecurringScheduling
             editing={editingData}
+            empleadoId={editingData?.id_usuario}
             onSave={handleSaveEdit}
-            onCancelEdit={() => {
+            onCancel={() => {
               setEditFormOpen(false);
               setEditingData(null);
             }}
@@ -321,25 +270,10 @@ const GeneralCalendar = ({ employees = [], schedulings = [], onAddEvent, onUpdat
         </SeeScheduling>
       )}
 
-      {modalType === 'add' && modalOpen && (
-        <SeeScheduling
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={'Agregar programación'}
-        >
-          {console.log("[GeneralCalendar] Rendering AddScheduling with employees:", employees)}
-          <AddScheduling
-            onAdd={handleAddEvent}
-            editing={null}
-            onCancelEdit={() => setModalOpen(false)}
-            employees={employees}
-          />
-        </SeeScheduling>
-      )}
+      {/* La creación de programaciones recurrentes se controla desde scheduling.jsx */}
       
     </div>
   );
 };
 
 export default GeneralCalendar;
-

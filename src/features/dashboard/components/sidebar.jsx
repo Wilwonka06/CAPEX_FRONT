@@ -23,7 +23,7 @@ const Sidebar = () => {
     const allMenuGroups = [
       {
         id: 'main',
-        name: 'Rendimiento',
+        name: 'Dashboard',
         title: 'Dashboard',
         name:  'Dashboard',
         icon: 'bi-speedometer2',

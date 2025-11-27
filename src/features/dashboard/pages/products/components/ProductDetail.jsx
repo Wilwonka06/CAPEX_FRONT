@@ -111,13 +111,26 @@ const ProductDetail = ({ product, isOpen, onClose }) => {
                     </span>
                   </div>
 
-                  {/* Precio */}
-                  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                    <span className="text-xs text-gray-600 font-medium">Precio</span>
-                    <span className="font-bold text-base text-[#FACC15]">
-                      ${formatPrice(product.precio_venta || product.precio || 0)}
-                    </span>
-                  </div>
+                {/* Precio */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                  <span className="text-xs text-gray-600 font-medium">Precio</span>
+                  <span className="font-bold text-base text-[#FACC15]">
+                    ${formatPrice(product.precio_venta || product.precio || 0)}
+                  </span>
+                </div>
+                {/* Margen */}
+                <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                  <span className="text-xs text-gray-600 font-medium">Margen</span>
+                  <span className="font-semibold text-gray-800 text-xs">
+                    {(() => {
+                      const costo = parseFloat(product.costo || 0);
+                      const precio = parseFloat(product.precio_venta || product.precio || 0);
+                      const margen = precio - costo;
+                      const pct = costo > 0 ? ((margen / costo) * 100).toFixed(2) : '0.00';
+                      return `$${formatNumber(margen)} (${pct}%)`;
+                    })()}
+                  </span>
+                </div>
 
                   {/* Stock */}
                   <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">

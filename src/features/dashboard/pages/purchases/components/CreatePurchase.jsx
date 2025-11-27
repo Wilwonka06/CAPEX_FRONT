@@ -117,6 +117,15 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     }
   }, [productoSeleccionado, productsSelect]);
 
+  useEffect(() => {
+    const c = parseFloat(costo);
+    if (isFinite(c) && c > 0) {
+      setPrecioVenta((c * 1.2).toFixed(2));
+    } else {
+      setPrecioVenta("");
+    }
+  }, [costo]);
+
   // ✅ Recalcular totales con IVA general aplicado a todos los productos
   useEffect(() => {
     if (itemsCompra.length === 0) {
@@ -283,7 +292,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
           productId: item.id,
           cantidad: item.cantidad,
           precioUnitario: parseFormattedNumber(item.costo),
-          precioVenta: parseFormattedNumber(item.precioVenta)
+          precio_venta: parseFormattedNumber(item.precioVenta)
         })),
       };
 
@@ -492,32 +501,28 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-main mb-1">
-                    Precio Venta
+                    Precio Venta (auto 20%)
                   </label>
                   <input
                     type="text"
                     value={precioVenta}
-                    onChange={(e) => handleNumberInput(e, setPrecioVenta)}
-                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100"
-                    disabled={!proveedorId}
+                    readOnly
+                    className="w-full px-3 py-2 border rounded-md text-sm bg-gray-100"
                     placeholder="0.00"
                   />
-                  {errores.precioVenta && (
-                    <span className="text-xs text-red-500">{errores.precioVenta}</span>
-                  )}
                 </div>
               </div>
-              <div className="text-right mt-6">
-                <button
-                  type="button"
-                  className="bg-text-main text-white text-sm px-4 py-2 rounded-md hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  onClick={handleAddProduct}
-                  disabled={!proveedorId}
-                >
-                  <i className="bi bi-plus-circle mr-2"></i>
-                  Agregar a la Lista
-                </button>
-              </div>
+                <div className="text-right mt-6">
+                  <button
+                    type="button"
+                    className="bg-text-main text-white text-sm px-4 py-2 rounded-md hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    onClick={handleAddProduct}
+                    disabled={!proveedorId}
+                  >
+                    <i className="bi bi-plus-circle mr-2"></i>
+                    Agregar a la Lista
+                  </button>
+                </div>
             </div>
 
             {/* Tabla de productos */}
@@ -532,6 +537,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">CÓDIGO</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">NOMBRE</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">COSTO</th>
+                      <th className="py-2 px-3 text-left font-semibold text-gray-700">PRECIO VENTA</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">CANTIDAD</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">IVA (%)</th>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">SUBTOTAL</th>
@@ -545,6 +551,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           <td className="py-2 px-3">{item.codigo}</td>
                           <td className="py-2 px-3">{item.nombre}</td>
                           <td className="py-2 px-3">${formatPrice(item.costo || 0)}</td>
+                          <td className="py-2 px-3">${formatPrice(item.precioVenta || 0)}</td>
                           <td className="py-2 px-3">
                             <input
                               type="text"

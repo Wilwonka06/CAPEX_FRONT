@@ -43,7 +43,7 @@ const RolesPage = () => {
   }
 
   useEffect(() => {
-    setTitle('Gestión de Roles');
+    setTitle('Módulo de Roles');
     return () => setTitle('');
   }, [setTitle]);
 

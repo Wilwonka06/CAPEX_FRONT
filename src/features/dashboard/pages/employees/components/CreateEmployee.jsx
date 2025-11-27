@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { DOC_TYPES_CODES, DOC_TYPE_LABELS, toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 import toast from 'react-hot-toast';
-import AddScheduling from './AddScheduling';
 import { 
   validateEmployeeForm,
   validateEmployeeName,
@@ -29,13 +28,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
   const [form, setForm] = useState(initialForm);
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
-  const [editingScheduling, setEditingScheduling] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const itemsPerPage = 3;
-  const totalPages = Math.ceil(schedulings.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const pageSchedulings = schedulings.slice(startIndex, startIndex + itemsPerPage);
 
   const isFormValid = () => {
     return form.nombre.trim() &&
@@ -118,34 +111,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
     }
   };
 
-  const handleAddScheduling = (prog) => {
-    console.log('[AddEmployee] handleAddScheduling - prog recibido:', prog);
-    const idBase = Date.now().toString();
-    const nuevaProg = { ...prog, idBase };
-    setSchedulings([...schedulings, nuevaProg]);
-    setEditingScheduling(null);
-    console.log('[AddEmployee] Programación agregada al estado local');
-  };
-
-  const handleEditScheduling = (prog) => {
-    setEditingScheduling(prog);
-  };
-
-  const handleSaveEditScheduling = (updatedProg) => {
-    const newProg = { ...updatedProg };
-    setSchedulings(schedulings.map(s => s.id === newProg.id ? newProg : s));
-    setEditingScheduling(null);
-  };
-
-  const handleDeleteScheduling = (id) => {
-    if (window.confirm('¿Seguro que deseas eliminar esta programación?')) {
-      setSchedulings(schedulings.filter(s => s.id !== id));
-    }
-  };
-
-  const handleCancelEditScheduling = () => {
-    setEditingScheduling(null);
-  };
+  
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -454,7 +420,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                       correo: form.correo,
                       direccion: form.direccion,
                       estado: form.estado,
-                      schedulings: []
                     };
 
                     onSave(newEmployee);
@@ -469,141 +434,13 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                 Guardar sin Programación
               </button>
 
-              <button
-                type="button"
-                onClick={() => { if (validate()) setStep(2); }}
-                className="px-6 py-3 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl text-xs"
-                disabled={!isFormValid()}
-              >
-                <i className="bi bi-calendar-plus"></i>
-                Agregar Programación
-              </button>
+              
             </div>
           </form>
         </div>
       )}
 
-      {step === 2 && (
-        <div className="space-y-6">
-          {/* Scheduling form */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-[#1E1E1E] font-nunito mb-2">Configurar Programación</h3>
-              <p className="text-sm text-gray-600 font-lato">Establece los horarios de trabajo del empleado</p>
-            </div>
-
-            {editingScheduling ? (
-              <AddScheduling editing={editingScheduling} onAdd={handleSaveEditScheduling} onCancelEdit={handleCancelEditScheduling} />
-            ) : (
-              <AddScheduling onAdd={handleAddScheduling} />
-            )}
-          </div>
-
-          {/* Added schedulings list */}
-          {schedulings.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 bg-[#FACC15] rounded-lg flex items-center justify-center">
-                  <svg className="w-4 h-4 text-[#1E1E1E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-bold text-[#1E1E1E] font-nunito">Programaciones Agregadas ({schedulings.length})</h3>
-              </div>
-
-              <div className="space-y-3">
-                {pageSchedulings.map((s, idx) => (
-                  <div key={s.id || idx} className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 text-sm text-gray-700 font-lato">
-                          <div className="flex items-center gap-2">
-                            <i className="bi bi-calendar-event text-[#FACC15]"></i>
-                            <span>{s.fechaInicio} - {s.fechaFin}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <i className="bi bi-clock text-[#FACC15]"></i>
-                            <span>{s.horaInicio} - {s.horaFin}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <i className="bi bi-calendar-week text-[#FACC15]"></i>
-                            <span>Días: {s.dias && s.dias.length > 0 ? s.dias.join(', ') : '-'}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditScheduling(s)}
-                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-lato text-sm flex items-center gap-1"
-                        >
-                          <i className="bi bi-pencil"></i>
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDeleteScheduling(s.id)}
-                          className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-lato text-sm flex items-center gap-1"
-                        >
-                          <i className="bi bi-trash"></i>
-                          Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-4 mt-6 pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex items-center justify-center transition-all"
-                  >
-                    <i className="bi bi-chevron-left text-lg"></i>
-                  </button>
-                  <span className="text-sm text-gray-600 font-lato px-4 py-2 bg-gray-100 rounded-lg">
-                    {currentPage} de {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="w-10 h-10 rounded-xl border-2 border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex items-center justify-center transition-all"
-                  >
-                    <i className="bi bi-chevron-right text-lg"></i>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-end pt-6">
-            <button
-              onClick={onCancel}
-              className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 text-xs"
-            >
-              <i className="bi bi-x-lg"></i>
-              Cancelar
-            </button>
-            <button
-              onClick={() => setStep(1)}
-              className="px-6 py-3 border-2 border-[#FACC15] text-[#FACC15] rounded-xl hover:bg-[#FACC15] hover:text-[#1E1E1E] transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 text-xs"
-            >
-              <i className="bi bi-arrow-left"></i>
-              Atrás
-            </button>
-            <button
-              onClick={() => handleSubmit(new Event('submit'))}
-              className="px-6 py-3 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 shadow-lg hover:shadow-xl text-xs"
-            >
-              <i className="bi bi-check-circle"></i>
-              Guardar Empleado
-            </button>
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 };
