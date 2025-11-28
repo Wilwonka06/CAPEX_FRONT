@@ -11,7 +11,6 @@ import EmployeesTable from "./components/EmployeesTable";
 import AddEmployee from "./components/CreateEmployee";
 import EditEmployee from "./components/EditEmployee";
 import EmployeeDetail from "./components/EmployeeDetail";
-import RecurringSchedulingManager from "./components/RecurringSchedulingManager";
 import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
 import { normalizeText } from '../../../../shared/validations';
@@ -362,8 +361,6 @@ const EmployeesPage = () => {
                   onCancel={() => setEditEmployee(null)}
                   onSave={handleEditSave}
                 />
-
-                <RecurringSchedulingManager empleadoId={editEmployee.id || editEmployee.id_usuario} />
               </div>
             )}
           </div>

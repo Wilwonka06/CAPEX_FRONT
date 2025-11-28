@@ -99,7 +99,7 @@ const CharacteristicsManager = ({ isOpen, onClose }) => {
                   <button
                     onClick={() => handleDelete(characteristic)}
                     disabled={deleting === characteristic.id_caracteristica}
-                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {deleting === characteristic.id_caracteristica ? (
                       <>
