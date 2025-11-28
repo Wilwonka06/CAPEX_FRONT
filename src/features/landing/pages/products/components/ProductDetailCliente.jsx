@@ -1,12 +1,102 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useCart } from '../../../components/CartContext';
 import { useNavigate } from 'react-router-dom';
 import CartToast from '../../../components/CartToast';
 import cartIcon from '../../../../../shared/images/cart.png';
 import { useCartToast } from '../../../components/CartToastContext';
+import { formatNumber } from '../../../../../shared/utils/formatters';
 
-const formatNumber = (num) => new Intl.NumberFormat('es-MX').format(num);
+// Componente para navegación de imágenes
+const ImageCarousel = ({ images, productName }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const goToImage = (index) => {
+    setCurrentImageIndex(index);
+  };
+
+  if (!images || images.length === 0) {
+    return (
+      <div className="w-full h-full bg-gray-100 flex items-center justify-center rounded-lg">
+        <img
+          src={getDefaultProductImage(productName)}
+          alt={productName}
+          className="w-full h-full object-cover rounded-lg"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Imagen principal */}
+      <img
+        src={images[currentImageIndex] || getDefaultProductImage(productName)}
+        alt={`${productName} - Imagen ${currentImageIndex + 1}`}
+        className="w-full h-full object-cover object-center rounded-lg"
+        onError={(e) => {
+          e.target.src = getDefaultProductImage(productName);
+        }}
+      />
+
+      {/* Controles de navegación */}
+      {images.length > 1 && (
+        <>
+          {/* Botones de navegación */}
+          <button
+            onClick={prevImage}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 hover:scale-110"
+            aria-label="Imagen anterior"
+          >
+            <i className="bi bi-chevron-left text-lg"></i>
+          </button>
+          <button
+            onClick={nextImage}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 hover:scale-110"
+            aria-label="Imagen siguiente"
+          >
+            <i className="bi bi-chevron-right text-lg"></i>
+          </button>
+
+          {/* Indicadores de imagen */}
+          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
+            {images.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToImage(index)}
+                className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                  index === currentImageIndex
+                    ? 'bg-white scale-125'
+                    : 'bg-white/50 hover:bg-white/75'
+                }`}
+                aria-label={`Ir a imagen ${index + 1}`}
+              />
+            ))}
+          </div>
+
+          {/* Contador de imágenes */}
+          <div className="absolute top-3 right-3 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium">
+            {currentImageIndex + 1} / {images.length}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// Imagen por defecto para productos sin imagen (similar a usuarios)
+const getDefaultProductImage = (productName = "Product") => {
+  const name = encodeURIComponent(productName || "Product");
+  return `https://ui-avatars.com/api/?name=${name}&background=9C5B2B&color=fff&size=256&bold=true`;
+};
 
 const ProductDetailCliente = ({ product, recommended = [] }) => {
   const [quantity, setQuantity] = useState(1);
@@ -16,18 +106,25 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastProduct, setToastProduct] = useState(null);
   const { showCartToast } = useCartToast();
+  const addingRecommendedRef = useRef(new Set()); // Para productos recomendados
 
   if (!product) return null;
 
   const handleAddToCart = () => {
+    // Prevenir múltiples clics
+    if (isAddingToCart) return;
+    
     setIsAddingToCart(true);
+    // Agregar al carrito inmediatamente
+    addToCart(product, product.tipoProducto === 'Extensiones' ? 1 : quantity);
+    setToastProduct(product);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+    
+    // Rehabilitar después de un breve delay para evitar spam
     setTimeout(() => {
-      addToCart(product, product.tipoProducto === 'Extensiones' ? 1 : quantity);
       setIsAddingToCart(false);
-      setToastProduct(product);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2500);
-    }, 400);
+    }, 1000);
   };
 
   return (
@@ -43,22 +140,21 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
           <span className="text-[#1E1E1E] font-semibold">{product.nombre}</span>
         </nav>
         <div className="flex flex-col md:flex-row gap-0 w-full">
-            {/* Imagen principal */}
+            {/* Carrusel de imágenes */}
           <div className="md:w-1/2 w-full flex items-center justify-center aspect-[4/3] md:aspect-auto p-6">
-              <img
-                src={product.fotos && product.fotos.length > 0 ? product.fotos[0] : product.foto}
-                alt={product.nombre}
-              className="w-full h-full object-cover object-center"
-              style={{ maxHeight: '50vh' }}
-              loading="lazy"
-            />
+            <div className="w-full h-full max-h-[60vh] relative">
+              <ImageCarousel
+                images={product.fotos && product.fotos.length > 0 ? product.fotos : [product.foto].filter(Boolean)}
+                productName={product.nombre}
+              />
+            </div>
           </div>
           {/* Info principal */}
           <div className="flex-1 flex flex-col gap-4 p-6">
             <h1 className="text-3xl font-bold text-[#1E1E1E] mb-2 font-montserrat">{product.nombre}</h1>
             <div className="flex items-center gap-4 mb-2">
-              <span className="text-2xl font-bold text-[#FACC15]">${formatNumber(product.precio?.toFixed(2))}</span>
-              <span className="text-xs text-gray-500">{product.cantidad} disponibles</span>
+              <span className="text-2xl font-bold text-[#FACC15]">${formatNumber(product.precio)}</span>
+              <span className="text-xs text-gray-500">{formatNumber(product.cantidad)} disponibles</span>
                 </div>
             {/* Selector de cantidad y botón agregar al carrito en la misma fila si NO es extensión */}
             {product.tipoProducto !== 'Extensiones' ? (
@@ -137,10 +233,17 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
                 >
                   <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
                     <img
-                      src={prod.fotos && prod.fotos.length > 0 ? prod.fotos[0] : prod.foto}
+                      src={
+                        (prod.fotos && prod.fotos.length > 0 && prod.fotos[0])
+                          ? prod.fotos[0]
+                          : (prod.foto || getDefaultProductImage(prod.nombre))
+                      }
                       alt={prod.nombre}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
+                      onError={(e) => {
+                        e.target.src = getDefaultProductImage(prod.nombre);
+                      }}
                     />
                   </div>
                   <div className="p-4 flex flex-col gap-2 flex-1 justify-between">
@@ -150,11 +253,21 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
                       <button
                         onClick={e => {
                           e.stopPropagation();
+                          // Prevenir múltiples clics
+                          if (addingRecommendedRef.current.has(prod.id)) {
+                            return;
+                          }
+                          addingRecommendedRef.current.add(prod.id);
                           addToCart(prod, 1);
                           showCartToast(prod);
+                          // Permitir agregar de nuevo después de 1 segundo
+                          setTimeout(() => {
+                            addingRecommendedRef.current.delete(prod.id);
+                          }, 1000);
                         }}
-                        className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center"
+                        className="ml-2 bg-[#FACC15] rounded-full p-2 shadow hover:bg-yellow-400 transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Agregar al carrito"
+                        disabled={addingRecommendedRef.current.has(prod.id)}
                       >
                         <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
                       </button>

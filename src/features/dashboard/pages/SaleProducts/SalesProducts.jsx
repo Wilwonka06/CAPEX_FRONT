@@ -1,63 +1,118 @@
+// src/features/dashboard/pages/SaleProducts/SalesProducts.jsx
 import { useState, useEffect } from 'react';
-import { useSales } from './context/SalesContext';
 import productsService from '../products/API/productsService';
+import salesService from './API/salesService';
+import usersService from '../users/API/usersService';
 import Search from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
+import LoadingTable from '../../../../shared/components/LoadingTable';
+import { formatNumber } from '../../../../shared/utils/formatters';
 import CreateSaleModal from './components/CreateSaleModal';
 import SaleDetailModal from './components/SaleDetailModal';
 import SalesTable from './components/SalesTable';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { generateProductInvoicePDF } from '../../../../shared/utils/invoicePdf';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
-// Mock de clientes (idéntico a customers)
-const customersMock = [
-  { id: 1, documentType: "CC", documentNumber: "1234567890", firstName: "Juan", lastName: "Pérez", email: "juan.perez@email.com", phone: "3101234567", address: "Calle 1 #2-3", status: "Activo" },
-  { id: 2, documentType: "CE", documentNumber: "0987654321", firstName: "María", lastName: "González", email: "maria.gonzalez@email.com", phone: "3157894561", address: "Carrera 4 #5-6", status: "Activo" },
-  { id: 3, documentType: "CC", documentNumber: "5678901234", firstName: "Carlos", lastName: "Rodríguez", email: "carlos.rodriguez@email.com", phone: "3203216547", address: "Av. 7 #8-9", status: "Inactivo" },
-  { id: 4, documentType: "TI", documentNumber: "4321098765", firstName: "Ana", lastName: "Martínez", email: "ana.martinez@email.com", phone: "3112345678", address: "Calle 10 #11-12", status: "Activo" },
-  { id: 5, documentType: "CC", documentNumber: "9876543210", firstName: "Pedro", lastName: "Sánchez", email: "pedro.sanchez@email.com", phone: "3145678901", address: "Carrera 13 #14-15", status: "Activo" },
-  { id: 6, documentType: "CE", documentNumber: "2345678901", firstName: "Laura", lastName: "López", email: "laura.lopez@email.com", phone: "3167890123", address: "Av. 16 #17-18", status: "Inactivo" },
-];
-
 const SalesProducts = () => {
-  const { sales, createSale, updateSale, deleteSale, loading } = useSales();
+  // ===== ESTADOS PRINCIPALES =====
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Estado para productos
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [customers, setCustomers] = useState([]);
 
+  // Los clientes ahora se buscan dinámicamente desde el backend
+
+  // Estados UI
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filteredSales, setFilteredSales] = useState([]);
+  
   const { setTitle } = useOutletContext();
-
-  // Cargar productos al montar
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setProductsLoading(true);
-        const response = await productsService.getAll({ limit: 100 });
-        if (response.success) {
-          setProducts(response.data || []);
-        }
-      } catch (error) {
-        console.error('Error loading products:', error);
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-
-    loadProducts();
-  }, []);
-
   const itemsPerPage = 5;
 
-  // Filtrar ventas por término de búsqueda
+  // ===== CARGAR DATOS INICIALES =====
+  useEffect(() => {
+    setTitle('Módulo de Venta de Productos');
+    loadSales();
+    loadProducts();
+    loadCustomers();
+    return () => setTitle('');
+  }, [setTitle]);
+
+  // Cargar ventas desde el backend
+  const loadSales = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await salesService.getAll({
+        page: 1,
+        limit: 100 // Cargar todas para filtrado local
+      });
+
+      if (response.success) {
+        setSales(response.data || []);
+      } else {
+        throw new Error(response.message || 'Error al cargar ventas');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading sales:', err);
+      toast.error(err.message || 'Error al cargar las ventas');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar productos
+  const loadProducts = async () => {
+    try {
+      setProductsLoading(true);
+      const response = await productsService.getAll({ limit: 100 });
+      if (response.success) {
+        setProducts(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Error al cargar productos');
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  // Cargar clientes
+  const loadCustomers = async () => {
+    try {
+      const response = await usersService.getAll({ limit: 100, roleId: 2 });
+      if (response.success) {
+        const list = Array.isArray(response.data) ? response.data : [];
+        const mapped = list.map(u => ({
+          id: u.id_usuario || u.id,
+          nombre: u.nombre || `${u.firstName || ''} ${u.lastName || ''}`.trim(),
+          documentNumber: u.documento || '',
+          email: u.correo || '',
+          phone: u.telefono || ''
+        }));
+        setCustomers(mapped);
+      } else {
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error loading customers:', error);
+      setCustomers([]);
+    }
+  };
+
+  // ===== FILTRAR VENTAS =====
   useEffect(() => {
     if (!searchTerm) {
       setFilteredSales(sales);
@@ -65,32 +120,27 @@ const SalesProducts = () => {
     }
     const lowerTerm = searchTerm.toLowerCase();
     setFilteredSales(
-      sales.filter(sale => {
-        const cliente = customersMock.find(c => c.id === sale.clienteId);
-        const clienteNombre = cliente ? `${cliente.firstName} ${cliente.lastName}`.toLowerCase() : '';
-        return (
-          (sale.id?.toString() || '').includes(lowerTerm) ||
-          ((sale.numeroVenta || '').toLowerCase().includes(lowerTerm)) ||
-          clienteNombre.includes(lowerTerm) ||
-          ((sale.status || sale.estado || '').toLowerCase().includes(lowerTerm)) ||
-          ((sale.date || sale.fecha || '').toLowerCase().includes(lowerTerm)) ||
-          (sale.total?.toString() || sale.valor?.toString() || '').includes(lowerTerm) ||
-          ((sale.metodoPago || '').toLowerCase().includes(lowerTerm))
-        );
-      })
+      sales.filter(sale =>
+        (sale.id?.toString() || '').includes(lowerTerm) ||
+        (sale.numeroVenta || '').toLowerCase().includes(lowerTerm) ||
+        (sale.estado || '').toLowerCase().includes(lowerTerm) ||
+        (sale.fecha || '').toLowerCase().includes(lowerTerm) ||
+        (sale.valor?.toString() || '').includes(lowerTerm) ||
+        (sale.metodoPago || '').toLowerCase().includes(lowerTerm)
+      )
     );
   }, [searchTerm, sales]);
 
-  // Paginación
+  // ===== PAGINACIÓN =====
   const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedSales = filteredSales.slice(startIndex, startIndex + itemsPerPage);
 
-  // Resetear página al cambiar el filtro
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  // ===== MANEJADORES =====
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
@@ -99,13 +149,48 @@ const SalesProducts = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handleCreateSale = (saleData) => {
+  const handleCreateSale = async (saleData) => {
+    setLoading(true);
+
+    const salePromise = (async () => {
+      // Transformar datos frontend al formato backend
+      const backendData = {
+        fecha: saleData.fecha,
+        id_usuario: saleData.clienteId,
+        productos: saleData.productos.map(p => ({
+          id_producto: p.id,
+          cantidad: p.cantidad,
+          precio_unitario: p.precio
+        }))
+      };
+
+      const response = await salesService.create(backendData);
+
+      if (response.success) {
+        setShowCreateModal(false);
+        await loadSales(); // Recargar lista
+        try { window.dispatchEvent(new Event('sales-updated')); } catch {}
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Error al crear la venta');
+      }
+    })();
+
+    toast.promise(salePromise, {
+      loading: 'Registrando venta...',
+      success: 'Venta registrada exitosamente',
+      error: (err) => {
+        console.error('Error creating sale:', err);
+        return err.response?.data?.message || err.message || 'Error al crear la venta';
+      },
+    });
+
     try {
-      createSale(saleData);
-      setShowCreateModal(false);
-      toast.success('Venta registrada exitosamente', { position: 'top-right' });
-    } catch {
-      toast.error('Error al registrar la venta', { position: 'top-right' });
+      await salePromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,49 +199,133 @@ const SalesProducts = () => {
     setShowDetailModal(true);
   };
 
-  const handleEditSale = async (saleId, saleData) => {
-    const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar la venta #${saleId}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        updateSale(saleId, saleData);
-        setShowDetailModal(false);
-        setSelectedSale(null);
-        toast.success('Venta actualizada exitosamente', { position: 'top-right' });
-      } catch {
-        toast.error('Error al actualizar la venta', { position: 'top-right' });
-      }
-    }
-  };
-
   const handleDeleteSale = async (saleId) => {
+    const sale = sales.find(s => s.id === saleId);
+    
     const result = await Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas anular la venta #${saleId}? Esta acción no se puede deshacer.`,
+      text: `¿Deseas cancelar la venta #${sale?.numeroVenta}? Esta acción no se puede deshacer.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, anular',
+      confirmButtonText: 'Sí, cancelar',
       cancelButtonText: 'Cancelar'
     });
 
     if (result.isConfirmed) {
+      setLoading(true);
+      
+      const salePromise = (async () => {
+        const response = await salesService.changeStatus(saleId, 'Cancelado');
+        
+        if (response.success) {
+          await loadSales(); // Recargar lista
+          return response.data;
+        } else {
+          throw new Error(response.message || 'Error al cancelar la venta');
+        }
+      })();
+
+      toast.promise(salePromise, {
+        loading: 'Cancelando venta...',
+        success: 'Venta cancelada exitosamente',
+        error: (err) => {
+          console.error('Error canceling sale:', err);
+          return err.response?.data?.message || err.message || 'Error al cancelar la venta';
+        },
+      });
+
       try {
-        updateSale(saleId, { estado: 'Cancelada' });
-        toast.success('Venta cancelada exitosamente', { position: 'top-right' });
-      } catch {
-        toast.error('Error al cancelar la venta', { position: 'top-right' });
+        await salePromise;
+      } catch (error) {
+        // Error ya manejado por toast.promise
+      } finally {
+        setLoading(false);
       }
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    try {
+      // Obtener los últimos 100 registros de ventas de productos
+      const response = await salesService.getAll({
+        page: 1,
+        limit: 100
+      });
+
+      if (!response.success) {
+        throw new Error('Error al obtener datos de ventas');
+      }
+
+      const sales = response.data || [];
+
+      // Crear el archivo Excel con estructura específica
+      const XLSX = await import('xlsx');
+
+      // Preparar datos para el Excel - Solo nombres de campos y registros
+      const worksheetData = [
+        ['ID Venta', 'Número Venta', 'Fecha', 'Cliente', 'Método Pago', 'Estado', 'Valor Total']
+      ];
+
+      // Agregar datos de ventas con todos los campos relevantes
+      sales.forEach(sale => {
+        worksheetData.push([
+          sale.id_venta_producto || sale.id || '',
+          `VEN-${(sale.id_venta_producto || sale.id || 0).toString().padStart(6, '0')}`,
+          sale.fecha || '',
+          sale.usuario?.nombre || `Usuario ${sale.id_usuario}` || '',
+          sale.metodoPago || 'No especificado',
+          sale.estado || '',
+          parseFloat(sale.total || 0)
+        ]);
+      });
+
+      // Crear libro de trabajo
+      const workbook = XLSX.utils.book_new();
+
+      // Crear hoja de trabajo
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+      // Estilos para el encabezado
+      const headerStyle = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: "FFFF00" } }, // Amarillo
+        alignment: { horizontal: "center" }
+      };
+
+      // Aplicar estilos al encabezado (primera fila)
+      worksheet['A1'] = { v: worksheetData[0][0], s: headerStyle };
+      worksheet['B1'] = { v: worksheetData[0][1], s: headerStyle };
+      worksheet['C1'] = { v: worksheetData[0][2], s: headerStyle };
+      worksheet['D1'] = { v: worksheetData[0][3], s: headerStyle };
+      worksheet['E1'] = { v: worksheetData[0][4], s: headerStyle };
+      worksheet['F1'] = { v: worksheetData[0][5], s: headerStyle };
+      worksheet['G1'] = { v: worksheetData[0][6], s: headerStyle };
+
+      // Agregar hoja al libro
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Ventas_Productos');
+
+      // Generar archivo
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      // Descargar archivo
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reporte_ventas_productos_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Reporte de ventas de productos generado exitosamente');
+    } catch (error) {
+      console.error('Error generating sales report:', error);
+      toast.error('Error al generar el reporte de ventas de productos');
     }
   };
 
@@ -166,83 +335,110 @@ const SalesProducts = () => {
     setSelectedSale(null);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Completada':
-        return 'bg-green-100 text-green-800';
-      case 'Cancelada':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  useEffect(() => {
-    setTitle('Venta de Productos');
-    return () => setTitle('');
-  }, [setTitle]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando ventas...</p>
-        </div>
-      </div>
-    );
-  }
+  // ===== RENDER =====
 
   return (
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            {/* El título ahora se muestra en el navbar */}
-          </div>
-          <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar ventas de productos" />
+              <Search
+                searchTerm={searchTerm}
+                handleSearch={handleSearch}
+                placeholder="Buscar ventas de productos"
+              />
               <button
                 className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
                 onClick={() => setShowCreateModal(true)}
               >
                 <i className="bi bi-plus-circle mr-2"></i> Nueva venta
               </button>
+              <button
+                className="bg-yellow-500 hover:bg-yellow-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                onClick={handleDownloadReport}
+              >
+                <i className="bi bi-file-earmark-excel mr-2"></i>
+              </button>
             </div>
 
             {/* Tabla de ventas */}
-            <SalesTable
-              sales={paginatedSales}
-              customers={customersMock}
-              onView={handleViewSale}
-              onAnnul={handleDeleteSale}
-              onDownload={() => {
-                // Función para descargar factura
-                toast.info('Función de descarga en desarrollo', { position: 'top-right' });
-              }}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="mt-6">
-                <Paginator
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {loading ? (
+                <SalesTable
+                  sales={[]}
+                  customers={[]}
+                  onView={() => {}}
+                  onAnnul={() => {}}
+                  onDownload={() => {}}
+                  currentPage={1}
+                  totalPages={1}
+                  onPageChange={() => {}}
+                  loading={true}
                 />
-              </div>
-            )}
+              ) : filteredSales.length === 0 ? (
+                <div className="text-center py-12">
+                  <i className="bi bi-inbox text-6xl text-gray-300"></i>
+                  <p className="mt-4 text-gray-500">
+                    {searchTerm
+                      ? 'No se encontraron ventas que coincidan con tu búsqueda'
+                      : 'No hay ventas registradas'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <SalesTable
+                    sales={paginatedSales}
+                    customers={customers}
+                    onView={handleViewSale}
+                    onAnnul={handleDeleteSale}
+                    onDownload={async (sale) => {
+                      try {
+                        const res = await salesService.getById(sale.id);
+                        if (!res.success || !res.data) throw new Error(res.message || 'No se pudo obtener la venta');
+                        const venta = res.data;
+                        await generateProductInvoicePDF({
+                          sale: venta,
+                          customer: {
+                            nombre: venta.customer?.nombre || 'Cliente',
+                            documentNumber: venta.customer?.documentNumber || '',
+                            email: venta.customer?.email || '',
+                            phone: venta.customer?.phone || ''
+                          },
+                          company: {
+                            name: 'CAPEX',
+                            email: 'info@capex.local',
+                            phone: '+57',
+                            address: 'Colombia'
+                          },
+                          theme: { primary: '#9C5B2B', accent: '#FACC15' },
+                          fileName: `factura_${venta.numeroVenta}.pdf`
+                        })
+                        toast.success('Factura PDF descargada')
+                      } catch (e) {
+                        console.error('Error al descargar factura:', e);
+                        toast.error(e.message || 'Error al descargar factura');
+                      }
+                    }}
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    loading={false}
+                  />
 
-            {/* Información de paginación */}
-            <div className="mt-4 text-center text-sm text-gray-600">
-{/*               Mostrando {Math.min(filteredSales.length, startIndex + 1)} a {Math.min(filteredSales.length, startIndex + itemsPerPage)} de {filteredSales.length} ventas.
- */}            </div>
+                {/* Paginación */}
+                {totalPages > 1 && (
+                  <div className="mt-6">
+                    <Paginator
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
+                  </div>
+                )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -252,26 +448,22 @@ const SalesProducts = () => {
         <CreateSaleModal
           onClose={closeModals}
           onCreate={handleCreateSale}
-          customers={customersMock}
           products={products}
           isOpen={showCreateModal}
         />
       )}
+      
       {showDetailModal && selectedSale && (
         <SaleDetailModal
           sale={selectedSale}
-          customer={customersMock.find(c => c.id === selectedSale.clienteId)}
+          customer={customers.find(c => c.id === selectedSale?.clienteId) || selectedSale?.customer || null}
           isOpen={showDetailModal}
           onClose={closeModals}
-          onEdit={handleEditSale}
-          onDelete={handleDeleteSale}
         />
       )}
-      <ToastContainer />
+      
     </div>
   );
 };
 
 export default SalesProducts;
-
-export { customersMock };

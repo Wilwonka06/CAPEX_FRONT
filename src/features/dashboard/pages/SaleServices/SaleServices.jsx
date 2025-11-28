@@ -5,13 +5,13 @@ import EditServiceOrder from "./components/EditServiceOrder";
 import AnularServiceOrder from "./components/AnularServiceOrder";
 import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
-import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./services/ServiceOrderService";
-import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./services/CitasService";
+import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./API/ServiceOrderService";
+import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./API/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
+import { formatNumber } from '../../../../shared/utils/formatters';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 
 const SaleServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,10 +39,16 @@ const SaleServices = () => {
     setInitialLoading(true);
     try {
       const citas = await getCitasEnEjecucion();
-      setServices(citas);
+      // Asegurar que citas sea un array
+      setServices(Array.isArray(citas) ? citas : []);
     } catch (error) {
       console.error('Error al cargar citas:', error);
-      toast.error('Error al cargar las citas en ejecución', { position: 'top-right' });
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      toast.error('Error al cargar las citas en ejecución. Verifica la conexión con el servidor.');
       // En caso de error, mantener array vacío
       setServices([]);
     } finally {
@@ -60,36 +66,36 @@ const SaleServices = () => {
     // Si el término de búsqueda es un número, verificar si coincide exactamente con el ID
     const term = normalizeText(searchTerm);
     const isNumericSearch = /^\d+$/.test(term);
-    
+
     if (isNumericSearch) {
       // Si el ID coincide exactamente, mostrar solo ese servicio
       if (parseInt(term, 10) === service.id) {
         return true;
       }
-      
+
       // Si la longitud del término coincide con la longitud del ID pero no es una coincidencia exacta,
       // no incluir este servicio en los resultados para evitar coincidencias parciales
       if (term.length === service.id.toString().length) {
         return false;
       }
     }
-    
+
     // Búsqueda general en todos los campos si no es una coincidencia exacta de ID
     const matchesSearch = Object.values(service).some((value) =>
       normalizeText(value).toLowerCase().includes(term.toLowerCase())
     );
-    
+
     // Filtrar por estado según el tab seleccionado
     const matchesTab = tab === "En ejecucion"
       ? normalizeText(service.status).toLowerCase() === "en ejecucion" || normalizeText(service.status).toLowerCase() === "anulado"
       : normalizeText(service.status).toLowerCase() === "pagado" || normalizeText(service.status).toLowerCase() === "anulado";
-    
+
     return matchesSearch && matchesTab;
   });
 
   // Cálculo de paginación basado en servicios filtrados
   const totalPages = Math.max(1, Math.ceil(filteredServices.length / itemsPerPage));
-  
+
   // Para paginar los servicios
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
@@ -139,17 +145,17 @@ const SaleServices = () => {
       try {
         // Actualizar estado en el backend
         await actualizarEstadoCita(orderId, 'Anulado');
-        
+
         // Actualizar estado local
-        setServices(prev => prev.map(service => 
-          service.id === orderId 
+        setServices(prev => prev.map(service =>
+          service.id === orderId
             ? { ...service, status: "Anulado" }
             : service
         ));
-        toast.success('Cita anulada exitosamente', { position: 'top-right' });
+        toast.success('Cita anulada exitosamente');
       } catch (error) {
         console.error('Error al anular cita:', error);
-        toast.error('Error al anular la cita', { position: 'top-right' });
+        toast.error('Error al anular la cita');
       } finally {
         setLoading(false);
       }
@@ -161,13 +167,24 @@ const SaleServices = () => {
   // Crear orden usando servicio
   const handleCreateOrder = async (orderData) => {
     setLoading(true);
-    try {
+
+    const orderPromise = (async () => {
       const newOrder = await createServiceOrder(orderData, services);
       setServices(prev => [...prev, newOrder]);
       setIsCreateModalOpen(false);
-      toast.success('Orden de servicio creada exitosamente', { position: 'top-right' });
+      return newOrder;
+    })();
+
+    toast.promise(orderPromise, {
+      loading: 'Creando orden de servicio...',
+      success: 'Orden de servicio creada exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al crear la orden de servicio',
+    });
+
+    try {
+      await orderPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al crear la orden de servicio', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -176,7 +193,8 @@ const SaleServices = () => {
   // Editar orden usando servicio
   const handleEditOrder = async (formData) => {
     setLoading(true);
-    try {
+
+    const orderPromise = (async () => {
       const updatedOrder = await editServiceOrder({
         id: selectedOrder.id,
         ...formData,
@@ -185,9 +203,19 @@ const SaleServices = () => {
       setServices(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
       setIsEditModalOpen(false);
       setSelectedOrder(null);
-      toast.success('Orden de servicio actualizada exitosamente', { position: 'top-right' });
+      return updatedOrder;
+    })();
+
+    toast.promise(orderPromise, {
+      loading: 'Actualizando orden de servicio...',
+      success: 'Orden de servicio actualizada exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al actualizar la orden de servicio',
+    });
+
+    try {
+      await orderPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al actualizar la orden de servicio', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -196,19 +224,30 @@ const SaleServices = () => {
   // Anular orden usando servicio
   const handleAnularOrder = async (orderId) => {
     setLoading(true);
-    try {
+
+    const orderPromise = (async () => {
       await anularServiceOrder(orderId);
       // Actualizar el estado local
-      setServices(prev => prev.map(service => 
-        service.id === orderId 
+      setServices(prev => prev.map(service =>
+        service.id === orderId
           ? { ...service, status: "Anulado" }
           : service
       ));
       setIsAnularModalOpen(false);
       setSelectedOrder(null);
-      toast.success('Orden de servicio anulada exitosamente', { position: 'top-right' });
+      return true;
+    })();
+
+    toast.promise(orderPromise, {
+      loading: 'Anulando orden de servicio...',
+      success: 'Orden de servicio anulada exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al anular la orden de servicio',
+    });
+
+    try {
+      await orderPromise;
     } catch (error) {
-      toast.error(error.message || 'Error al anular la orden de servicio', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
     }
@@ -218,7 +257,7 @@ const SaleServices = () => {
     const termino = e.target.value;
     setSearchTerm(termino);
     setCurrentPage(1);
-    
+
     // Si hay término de búsqueda, buscar en el backend
     if (termino.trim()) {
       setLoading(true);
@@ -227,7 +266,7 @@ const SaleServices = () => {
         setServices(resultados);
       } catch (error) {
         console.error('Error al buscar citas:', error);
-        toast.error('Error al buscar citas', { position: 'top-right' });
+        toast.error('Error al buscar citas');
       } finally {
         setLoading(false);
       }
@@ -242,28 +281,23 @@ const SaleServices = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
-            {/* El título ahora se muestra en el navbar */}
-          </div>
-          <div className="p-6">
             {/* Botones de filtrado por estado */}
             <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
               <button
-                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
-                  tab === "En ejecucion"
-                    ? "bg-white text-text-main shadow-sm border border-gray-200"
-                    : "text-gray-600 hover:text-text-main hover:bg-white/50"
-                }`}
+                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${tab === "En ejecucion"
+                  ? "bg-white text-text-main shadow-sm border border-gray-200"
+                  : "text-gray-600 hover:text-text-main hover:bg-white/50"
+                  }`}
                 onClick={() => setTab("En ejecucion")}
               >
                 <i className={`bi bi-play-circle text-xs ${tab === "En ejecucion" ? "text-yellow-600" : "text-gray-500"}`}></i>
                 En ejecución
               </button>
               <button
-                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
-                  tab === "Pagadas"
-                    ? "bg-white text-text-main shadow-sm border border-gray-200"
-                    : "text-gray-600 hover:text-text-main hover:bg-white/50"
-                }`}
+                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${tab === "Pagadas"
+                  ? "bg-white text-text-main shadow-sm border border-gray-200"
+                  : "text-gray-600 hover:text-text-main hover:bg-white/50"
+                  }`}
                 onClick={() => setTab("Pagadas")}
               >
                 <i className={`bi bi-check-circle text-xs ${tab === "Pagadas" ? "text-green-600" : "text-gray-500"}`}></i>
@@ -272,23 +306,13 @@ const SaleServices = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar citas en ejecución" />
-              <div className="flex gap-2">
-                <button
-                  className="bg-gray-500 hover:bg-gray-600 text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                  onClick={cargarCitas}
-                  disabled={loading || initialLoading}
-                >
-                  <i className="bi bi-arrow-clockwise mr-2"></i> 
-                  {loading ? 'Actualizando...' : 'Actualizar'}
-                </button>
-                <button
-                  className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
-                  <i className="bi bi-plus-circle mr-2"></i> Nueva orden
-                </button>
-              </div>
+              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar por ID, cliente, servicio, fecha u hora..." />
+              <button
+                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                <i className="bi bi-plus-circle mr-2"></i> Nueva orden
+              </button>
             </div>
 
             {/* Tabla de órdenes de servicio */}
@@ -296,12 +320,10 @@ const SaleServices = () => {
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">ID</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Cliente</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Servicios</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Hora</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Valor</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Total</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
                     <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
                   </tr>
@@ -327,20 +349,17 @@ const SaleServices = () => {
                     </tr>
                   ) : paginatedServices.length > 0 ? paginatedServices.map((service) => (
                     <tr key={service.id} className="hover:bg-gray-50">
-                      <td className="py-2 px-3">{service.id}</td>
                       <td className="py-2 px-3">{service.clientName}</td>
                       <td className="py-2 px-3">{(service.servicios || []).map(s => s.name).join(", ")}</td>
                       <td className="py-2 px-3">{service.date}</td>
-                      <td className="py-2 px-3">{service.time}</td>
-                      <td className="py-2 px-3">${service.totalGeneral?.toLocaleString() || 0}</td>
+                      <td className="py-2 px-3">${formatNumber(service.totalGeneral || 0)}</td>
                       <td className="py-2 px-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          service.status === "Pagado" 
-                            ? "bg-green-100 text-green-800" 
-                            : service.status === "Anulado"
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${service.status === "Pagado"
+                          ? "bg-green-100 text-green-800"
+                          : service.status === "Anulado"
                             ? "bg-red-100 text-red-800"
                             : "bg-yellow-100 text-yellow-800"
-                        }`}>{service.status}</span>
+                          }`}>{service.status}</span>
                       </td>
                       <td className="py-2 px-3 text-center">
                         <button className="text-primary hover:text-blue-700 mr-2 text-lg" title="Ver detalle" onClick={() => handleViewClick(service)}>
@@ -357,7 +376,7 @@ const SaleServices = () => {
                           </button>
                         )}
                         <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => {
-                          toast.info('Función de descarga en desarrollo', { position: 'top-right' });
+                          toast('Función de descarga en desarrollo');
                         }}>
                           <i className="bi bi-file-earmark-pdf"></i>
                         </button>
@@ -404,8 +423,10 @@ const SaleServices = () => {
         <CreateServiceOrder
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          onCreate={handleCreateOrder}
-          loading={loading}
+          onCreated={(newOrder) => {
+            setServices(prev => [...prev, newOrder]);
+            toast.success('Orden de servicio creada exitosamente');
+          }}
           services={services}
         />
       )}
@@ -414,8 +435,11 @@ const SaleServices = () => {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           order={selectedOrder}
-          onEdit={handleEditOrder}
-          loading={loading}
+          onEdited={(updatedOrder) => {
+            setServices(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
+            setSelectedOrder(null);
+            toast.success('Orden de servicio actualizada exitosamente');
+          }}
           services={services}
         />
       )}
@@ -434,7 +458,6 @@ const SaleServices = () => {
           onAnularSuccess={handleAnularOrder}
         />
       )}
-              <ToastContainer />
     </div>
   );
 };

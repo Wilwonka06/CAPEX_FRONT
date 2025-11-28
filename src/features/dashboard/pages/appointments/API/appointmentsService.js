@@ -10,13 +10,6 @@ const APPOINTMENTS_ENDPOINT = '/citas';
 export const appointmentsService = {
   /**
    * Obtener todas las citas con paginación y filtros
-   * @param {Object} params - Parámetros de consulta
-   * @param {number} params.page - Número de página (opcional)
-   * @param {number} params.limit - Límite de resultados por página (opcional)
-   * @param {string} params.fecha_servicio - Fecha del servicio (opcional)
-   * @param {string} params.estado - Estado de la cita (opcional)
-   * @param {number} params.id_cliente - ID del cliente (opcional)
-   * @returns {Promise<Object>} Lista de citas con metadatos de paginación
    */
   getAll: async (params = {}) => {
     try {
@@ -37,146 +30,12 @@ export const appointmentsService = {
       return response;
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      
-      // Si es error 500, devolver datos de ejemplo para desarrollo
-      if (error.response?.status === 500) {
-        console.warn('Backend error 500 detected. Returning mock data for development.');
-        
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const dayAfter = new Date(today);
-        dayAfter.setDate(dayAfter.getDate() + 2);
-        
-        return {
-          success: true,
-          message: 'Datos de ejemplo (backend con error)',
-          data: {
-            citas: [
-              {
-                id_cita: 1,
-                id_cliente: 1,
-                fecha_servicio: today.toISOString().split('T')[0],
-                hora_entrada: '09:00:00',
-                hora_salida: '10:00:00',
-                estado: 'Agendada',
-                valor_total: 50000,
-                motivo: 'Corte de cabello',
-                usuario: {
-                  id_usuario: 1,
-                  nombre: 'María González',
-                  telefono: '3001234567',
-                  correo: 'maria@ejemplo.com'
-                },
-                servicios: [
-                  {
-                    id_detalle_servicio: 1,
-                    id_empleado: 2,
-                    id_servicio: 1,
-                    precio_unitario: 50000,
-                    cantidad: 1,
-                    hora_inicio: '09:00:00',
-                    hora_finalizacion: '10:00:00',
-                    estado: 'Agendada',
-                    empleado: {
-                      id_usuario: 2,
-                      nombre: 'Carlos Estilista'
-                    },
-                    servicio: {
-                      id_servicio: 1,
-                      nombre: 'Corte de Cabello',
-                      descripcion: 'Corte y peinado profesional'
-                    }
-                  }
-                ]
-              },
-              {
-                id_cita: 2,
-                id_cliente: 2,
-                fecha_servicio: tomorrow.toISOString().split('T')[0],
-                hora_entrada: '14:00:00',
-                hora_salida: '15:30:00',
-                estado: 'Confirmada',
-                valor_total: 80000,
-                motivo: 'Tratamiento capilar',
-                usuario: {
-                  id_usuario: 2,
-                  nombre: 'Ana Rodríguez',
-                  telefono: '3009876543',
-                  correo: 'ana@ejemplo.com'
-                },
-                servicios: [
-                  {
-                    id_detalle_servicio: 2,
-                    id_empleado: 3,
-                    id_servicio: 2,
-                    precio_unitario: 80000,
-                    cantidad: 1,
-                    hora_inicio: '14:00:00',
-                    hora_finalizacion: '15:30:00',
-                    estado: 'Confirmada',
-                    empleado: {
-                      id_usuario: 3,
-                      nombre: 'Laura Especialista'
-                    },
-                    servicio: {
-                      id_servicio: 2,
-                      nombre: 'Tratamiento Capilar',
-                      descripcion: 'Hidratación y nutrición profunda'
-                    }
-                  }
-                ]
-              },
-              {
-                id_cita: 3,
-                id_cliente: 3,
-                fecha_servicio: dayAfter.toISOString().split('T')[0],
-                hora_entrada: '11:00:00',
-                hora_salida: '12:00:00',
-                estado: 'Agendada',
-                valor_total: 60000,
-                motivo: 'Manicure y pedicure',
-                usuario: {
-                  id_usuario: 3,
-                  nombre: 'Sofia Martínez',
-                  telefono: '3005555555',
-                  correo: 'sofia@ejemplo.com'
-                },
-                servicios: [
-                  {
-                    id_detalle_servicio: 3,
-                    id_empleado: 4,
-                    id_servicio: 3,
-                    precio_unitario: 60000,
-                    cantidad: 1,
-                    hora_inicio: '11:00:00',
-                    hora_finalizacion: '12:00:00',
-                    estado: 'Agendada',
-                    empleado: {
-                      id_usuario: 4,
-                      nombre: 'Carmen Manicurista'
-                    },
-                    servicio: {
-                      id_servicio: 3,
-                      nombre: 'Manicure y Pedicure',
-                      descripcion: 'Cuidado completo de uñas'
-                    }
-                  }
-                ]
-              }
-            ]
-          }
-        };
-      }
-      
       throw error;
     }
   },
 
   /**
    * Obtener una cita por ID
-   * @param {number|string} id - ID de la cita
-   * @returns {Promise<Object>} Datos de la cita
    */
   getById: async (id) => {
     try {
@@ -194,40 +53,51 @@ export const appointmentsService = {
 
   /**
    * Crear una nueva cita
-   * @param {Object} appointmentData - Datos de la cita
-   * @param {number} appointmentData.id_cliente - ID del cliente
-   * @param {string} appointmentData.fecha_servicio - Fecha del servicio (YYYY-MM-DD)
-   * @param {string} appointmentData.hora_entrada - Hora de entrada (HH:MM:SS)
-   * @param {string} appointmentData.hora_salida - Hora de salida (HH:MM:SS)
-   * @param {string} appointmentData.estado - Estado de la cita
-   * @param {number} appointmentData.valor_total - Valor total
-   * @param {string} appointmentData.motivo - Motivo (opcional)
-   * @param {Array} appointmentData.servicios - Array de servicios
-   * @returns {Promise<Object>} Cita creada
    */
   create: async (appointmentData) => {
     try {
       console.log('Validating appointment data:', appointmentData);
+
       // Validaciones básicas
-      if (!appointmentData.cita || !appointmentData.cita.id_cliente) {
-        console.error('Validation failed: cita or id_cliente missing', {
+      const hasIdCliente = appointmentData.cita?.id_cliente;
+      const hasClienteData = appointmentData.cliente && 
+                            appointmentData.cliente.nombre && 
+                            appointmentData.cliente.correo && 
+                            appointmentData.cliente.telefono;
+      
+      if (!appointmentData.cita) {
+        console.error('Validation failed: cita missing', appointmentData);
+        throw new Error('Los datos de la cita son requeridos');
+      }
+      
+      if (!hasIdCliente && !hasClienteData) {
+        console.error('Validation failed: id_cliente or cliente data missing', {
           hasCita: !!appointmentData.cita,
           cita: appointmentData.cita,
-          id_cliente: appointmentData.cita?.id_cliente
+          id_cliente: appointmentData.cita?.id_cliente,
+          cliente: appointmentData.cliente
         });
-        throw new Error('El ID del cliente es requerido');
+        throw new Error('El ID del cliente o los datos del cliente son requeridos');
       }
       if (!appointmentData.cita.fecha_servicio) {
         throw new Error('La fecha del servicio es requerida');
       }
-      if (!appointmentData.cita.hora_entrada) {
-        throw new Error('La hora de entrada es requerida');
-      }
-      if (!appointmentData.cita.hora_salida) {
-        throw new Error('La hora de salida es requerida');
-      }
       if (!appointmentData.servicios || !Array.isArray(appointmentData.servicios) || appointmentData.servicios.length === 0) {
         throw new Error('Al menos un servicio es requerido');
+      }
+
+      // Validar que todos los servicios tengan IDs válidos
+      const invalidServices = appointmentData.servicios.filter(s => !s.id_servicio || s.id_servicio <= 0);
+      if (invalidServices.length > 0) {
+        console.error('Invalid services found:', invalidServices);
+        throw new Error('Uno o más servicios no tienen ID válido');
+      }
+
+      // Validar que todos los empleados tengan IDs válidos
+      const invalidEmployees = appointmentData.servicios.filter(s => !s.id_empleado || s.id_empleado <= 0);
+      if (invalidEmployees.length > 0) {
+        console.error('Invalid employees found:', invalidEmployees);
+        throw new Error('Uno o más empleados no tienen ID válido');
       }
 
       // Estructurar datos según lo esperado por el backend
@@ -236,23 +106,24 @@ export const appointmentsService = {
           id_cliente: appointmentData.cita.id_cliente,
           fecha_servicio: appointmentData.cita.fecha_servicio,
           hora_entrada: appointmentData.cita.hora_entrada,
-          hora_salida: appointmentData.cita.hora_salida,
           estado: appointmentData.cita.estado || 'Agendada',
-          valor_total: parseFloat(appointmentData.cita.valor_total) || 0,
-          ...(appointmentData.cita.motivo && { motivo: appointmentData.cita.motivo.trim() })
+          // Solo enviar motivo si tiene contenido, de lo contrario no enviarlo (el backend lo manejará como null)
+          ...(appointmentData.cita.motivo && appointmentData.cita.motivo.trim() && { motivo: appointmentData.cita.motivo.trim() })
         },
         servicios: appointmentData.servicios.map(s => ({
           id_servicio: s.id_servicio,
           id_empleado: s.id_empleado,
           hora_inicio: s.hora_inicio,
-          precio_unitario: s.precio_unitario || s.precio,
           cantidad: s.cantidad || 1,
           ...(s.observaciones && { observaciones: s.observaciones })
-        }))
+        })),
+        // Si hay datos de cliente para crear usuario nuevo
+        ...(appointmentData.cliente && { cliente: appointmentData.cliente })
       };
 
-      console.log('API Service: Sending appointment data to backend:', cleanData);
+      console.log('API Service: Sending appointment data to backend:', JSON.stringify(cleanData, null, 2));
       const response = await apiRequest.post(APPOINTMENTS_ENDPOINT, cleanData);
+
       return response;
     } catch (error) {
       console.error('Error creating appointment:', error);
@@ -262,9 +133,6 @@ export const appointmentsService = {
 
   /**
    * Actualizar una cita existente
-   * @param {number|string} id - ID de la cita
-   * @param {Object} appointmentData - Datos actualizados de la cita
-   * @returns {Promise<Object>} Cita actualizada
    */
   update: async (id, appointmentData) => {
     try {
@@ -272,29 +140,41 @@ export const appointmentsService = {
         throw new Error('ID de la cita es requerido');
       }
 
+      // Validar que todos los servicios tengan IDs válidos si se incluyen
+      if (appointmentData.servicios && appointmentData.servicios.length > 0) {
+        const invalidServices = appointmentData.servicios.filter(s => !s.id_servicio || s.id_servicio <= 0);
+        if (invalidServices.length > 0) {
+          console.error('Invalid services found:', invalidServices);
+          throw new Error('Uno o más servicios no tienen ID válido');
+        }
+
+        const invalidEmployees = appointmentData.servicios.filter(s => !s.id_empleado || s.id_empleado <= 0);
+        if (invalidEmployees.length > 0) {
+          console.error('Invalid employees found:', invalidEmployees);
+          throw new Error('Uno o más empleados no tienen ID válido');
+        }
+      }
+
       // Estructurar datos según lo esperado por el backend para actualización
       const cleanData = {
         cita: {
-          ...(appointmentData.fecha_servicio && { fecha_servicio: appointmentData.fecha_servicio }),
-          ...(appointmentData.hora_entrada && { hora_entrada: appointmentData.hora_entrada }),
-          ...(appointmentData.hora_salida && { hora_salida: appointmentData.hora_salida }),
-          ...(appointmentData.estado && { estado: appointmentData.estado }),
-          ...(appointmentData.valor_total !== undefined && { valor_total: parseFloat(appointmentData.valor_total) }),
-          ...(appointmentData.motivo !== undefined && { motivo: appointmentData.motivo?.trim() }),
-          ...(appointmentData.id_cliente && { id_cliente: appointmentData.id_cliente })
+          ...(appointmentData.cita?.fecha_servicio && { fecha_servicio: appointmentData.cita.fecha_servicio }),
+          ...(appointmentData.cita?.estado && { estado: appointmentData.cita.estado }),
+          ...(appointmentData.cita?.motivo !== undefined && { motivo: appointmentData.cita.motivo?.trim() }),
+          ...(appointmentData.cita?.id_cliente && { id_cliente: appointmentData.cita.id_cliente })
         },
         ...(appointmentData.servicios && {
           servicios: appointmentData.servicios.map(s => ({
             id_servicio: s.id_servicio,
             id_empleado: s.id_empleado,
             hora_inicio: s.hora_inicio,
-            precio_unitario: s.precio_unitario || s.precio,
             cantidad: s.cantidad || 1,
             ...(s.observaciones && { observaciones: s.observaciones })
           }))
         })
       };
 
+      console.log('API Service: Updating appointment data:', JSON.stringify(cleanData, null, 2));
       const response = await apiRequest.put(`${APPOINTMENTS_ENDPOINT}/${id}`, cleanData);
       return response;
     } catch (error) {
@@ -305,9 +185,6 @@ export const appointmentsService = {
 
   /**
    * Cancelar una cita
-   * @param {number|string} id - ID de la cita
-   * @param {string} motivoCancelacion - Motivo de la cancelación (opcional)
-   * @returns {Promise<Object>} Cita cancelada
    */
   cancel: async (id, motivoCancelacion = null) => {
     try {
@@ -315,7 +192,7 @@ export const appointmentsService = {
         throw new Error('ID de la cita es requerido');
       }
 
-      const data = motivoCancelacion ? { motivo_cancelacion: motivoCancelacion } : {};
+      const data = motivoCancelacion ? { motivo: motivoCancelacion } : {};
       const response = await apiRequest.patch(`${APPOINTMENTS_ENDPOINT}/${id}/cancelar`, data);
       return response;
     } catch (error) {
@@ -326,9 +203,6 @@ export const appointmentsService = {
 
   /**
    * Agregar un servicio a una cita existente
-   * @param {number|string} appointmentId - ID de la cita
-   * @param {Object} serviceData - Datos del servicio
-   * @returns {Promise<Object>} Servicio agregado
    */
   addService: async (appointmentId, serviceData) => {
     try {
@@ -346,9 +220,6 @@ export const appointmentsService = {
 
   /**
    * Cancelar un servicio específico de una cita
-   * @param {number|string} appointmentId - ID de la cita
-   * @param {number|string} serviceDetailId - ID del detalle del servicio
-   * @returns {Promise<Object>} Servicio cancelado
    */
   cancelService: async (appointmentId, serviceDetailId) => {
     try {
@@ -366,9 +237,6 @@ export const appointmentsService = {
 
   /**
    * Buscar citas por término
-   * @param {string} searchTerm - Término de búsqueda
-   * @param {Object} filters - Filtros adicionales (opcional)
-   * @returns {Promise<Object>} Resultados de búsqueda
    */
   search: async (searchTerm, filters = {}) => {
     try {
@@ -390,9 +258,6 @@ export const appointmentsService = {
 
   /**
    * Obtener citas por empleado
-   * @param {number|string} employeeId - ID del empleado
-   * @param {Object} filters - Filtros adicionales (opcional)
-   * @returns {Promise<Object>} Citas del empleado
    */
   getByEmployee: async (employeeId, filters = {}) => {
     try {
@@ -400,7 +265,15 @@ export const appointmentsService = {
         throw new Error('ID del empleado es requerido');
       }
 
-      const response = await apiRequest.get(`${APPOINTMENTS_ENDPOINT}/empleado/${employeeId}`, { params: filters });
+      const queryParams = new URLSearchParams();
+      if (filters.page) queryParams.append('page', filters.page);
+      if (filters.limit) queryParams.append('limit', filters.limit);
+
+      const url = queryParams.toString()
+        ? `${APPOINTMENTS_ENDPOINT}/empleado/${employeeId}?${queryParams.toString()}`
+        : `${APPOINTMENTS_ENDPOINT}/empleado/${employeeId}`;
+
+      const response = await apiRequest.get(url);
       return response;
     } catch (error) {
       console.error(`Error fetching appointments for employee ${employeeId}:`, error);
@@ -410,9 +283,6 @@ export const appointmentsService = {
 
   /**
    * Obtener citas por usuario/cliente
-   * @param {number|string} userId - ID del usuario
-   * @param {Object} filters - Filtros adicionales (opcional)
-   * @returns {Promise<Object>} Citas del usuario
    */
   getByUser: async (userId, filters = {}) => {
     try {
@@ -420,7 +290,15 @@ export const appointmentsService = {
         throw new Error('ID del usuario es requerido');
       }
 
-      const response = await apiRequest.get(`${APPOINTMENTS_ENDPOINT}/usuario/${userId}`, { params: filters });
+      const queryParams = new URLSearchParams();
+      if (filters.page) queryParams.append('page', filters.page);
+      if (filters.limit) queryParams.append('limit', filters.limit);
+
+      const url = queryParams.toString()
+        ? `${APPOINTMENTS_ENDPOINT}/usuario/${userId}?${queryParams.toString()}`
+        : `${APPOINTMENTS_ENDPOINT}/usuario/${userId}`;
+
+      const response = await apiRequest.get(url);
       return response;
     } catch (error) {
       console.error(`Error fetching appointments for user ${userId}:`, error);
@@ -429,8 +307,50 @@ export const appointmentsService = {
   },
 
   /**
+   * Obtener empleados disponibles
+   */
+  getEmployees: async () => {
+    try {
+      const response = await apiRequest.get('/empleados');
+      return response;
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener servicios disponibles
+   */
+  getServices: async () => {
+    try {
+      const response = await apiRequest.get('/servicios');
+      return response;
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Obtener programación de un empleado por fecha
+   */
+  getEmployeeSchedule: async (employeeId, date) => {
+    try {
+      if (!employeeId || !date) {
+        throw new Error('ID del empleado y fecha son requeridos');
+      }
+
+      const response = await apiRequest.get(`/programaciones/usuario/${employeeId}?fecha=${date}`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching schedule for employee ${employeeId} on ${date}:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * Obtener estadísticas de citas
-   * @returns {Promise<Object>} Estadísticas de citas
    */
   getStats: async () => {
     try {
@@ -440,7 +360,8 @@ export const appointmentsService = {
       console.error('Error fetching appointment stats:', error);
       throw error;
     }
-  }
+  },
+
 };
 
 export default appointmentsService;

@@ -92,22 +92,26 @@ export const usersService = {
       if (!userData.correo || userData.correo.trim() === '') {
         throw new Error('El correo electrónico es requerido');
       }
-      if (!userData.contrasena || userData.contrasena.trim() === '') {
-        throw new Error('La contraseña es requerida');
-      }
+      // Contraseña opcional: si el backend tiene default/auto-generación, no exigir
 
       // Limpiar datos
+      const normalizePhone = (t) => {
+        if (!t) return t;
+        let digits = String(t).replace(/[^0-9]/g, '');
+        digits = digits.replace(/^0+/, '');
+        return digits ? `+${digits}` : undefined;
+      };
       const cleanData = {
         nombre: userData.nombre.trim(),
-        correo: userData.correo.trim(),
-        contrasena: userData.contrasena,
+        correo: userData.correo.trim().toLowerCase(),
         tipo_documento: userData.tipo_documento,
         documento: userData.documento,
-        telefono: userData.telefono,
-        roleId: userData.roleId,
-        estado: userData.estado,
+        telefono: normalizePhone(userData.telefono),
+        roleId: parseInt(userData.roleId) || 1,
+        estado: userData.estado || 'Activo',
         ...(userData.foto && { foto: userData.foto }),
         ...(userData.direccion && { direccion: userData.direccion }),
+        ...(userData.contrasena && { contrasena: userData.contrasena })
       };
 
       console.log('API Service: Sending data to backend:', cleanData);
@@ -115,6 +119,11 @@ export const usersService = {
       return response;
     } catch (error) {
       console.error('Error creating user:', error);
+      const backendMsg = error.response?.data?.message;
+      const validationErrors = error.response?.data?.errors;
+      if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
+        throw new Error(validationErrors[0].message || backendMsg || 'Error al crear el usuario');
+      }
       throw error;
     }
   },
@@ -141,12 +150,20 @@ export const usersService = {
 
       // Limpiar datos - excluir contraseña para evitar actualizaciones accidentales
       const { contrasena, ...dataWithoutPassword } = userData;
+      const normalizePhone = (t) => {
+        if (!t) return t;
+        const digits = String(t).replace(/[^0-9]/g, '');
+        return `+${digits}`;
+      };
       const cleanData = { ...dataWithoutPassword };
       if (cleanData.nombre) {
         cleanData.nombre = cleanData.nombre.trim();
       }
       if (cleanData.correo) {
         cleanData.correo = cleanData.correo.trim();
+      }
+      if (cleanData.telefono) {
+        cleanData.telefono = normalizePhone(cleanData.telefono);
       }
 
       const response = await apiRequest.put(`${USERS_ENDPOINT}/${id}`, cleanData);
@@ -179,20 +196,32 @@ export const usersService = {
   /**
    * Cambiar estado de un usuario
    * @param {number|string} id - ID del usuario
-   * @param {string} nuevoEstado - Nuevo estado ('Activo', 'Inactivo', 'Suspendido')
+   * @param {string} nuevoEstado - Nuevo estado ('Activo', 'Inactivo', etc.)
+   * @param {string} conceptoEstado - Concepto del estado (requerido si estado es Inactivo)
    * @returns {Promise<Object>} Usuario con estado actualizado
    */
-  changeStatus: async (id, nuevoEstado) => {
+  changeStatus: async (id, nuevoEstado, conceptoEstado = null) => {
     try {
-      console.log('Front-end: changeStatus called with id:', id, 'status:', nuevoEstado);
+      console.log('Front-end: changeStatus called with id:', id, 'status:', nuevoEstado, 'concepto:', conceptoEstado);
       if (!id) {
         throw new Error('ID del usuario es requerido');
       }
-      if (!['Activo', 'Inactivo', 'Suspendido'].includes(nuevoEstado)) {
-        throw new Error('Estado debe ser "Activo", "Inactivo" o "Suspendido"');
+      const estadosValidos = ['Activo', 'Inactivo', 'Vacaciones', 'Suspendido', 'Enfermo', 'Incapacitado', 'Luto', 'Fallecido'];
+      if (!estadosValidos.includes(nuevoEstado)) {
+        throw new Error('Estado no válido');
       }
 
-      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/cambiar-estado`, { nuevoEstado });
+      // Validar conceptoEstado si es requerido
+      if (nuevoEstado === 'Inactivo' && !conceptoEstado) {
+        throw new Error('El concepto de estado es obligatorio cuando el estado es Inactivo');
+      }
+
+      const requestData = { nuevoEstado };
+      if (conceptoEstado) {
+        requestData.conceptoEstado = conceptoEstado;
+      }
+
+      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/cambiar-estado`, requestData);
       console.log('Front-end: changeStatus response:', response);
       return response;
     } catch (error) {
@@ -268,7 +297,7 @@ export const usersService = {
         throw new Error('La nueva contraseña es requerida');
       }
 
-      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/contrasena`, { newPassword });
+      const response = await apiRequest.patch(`${USERS_ENDPOINT}/${id}/password`, { newPassword });
       return response;
     } catch (error) {
       console.error(`Error changing password for user ${id}:`, error);

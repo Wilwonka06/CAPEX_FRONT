@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidPassword } from '../../../shared/validations';
 
@@ -10,7 +10,6 @@ const EditProfile = () => {
   const user = JSON.parse(localStorage.getItem('currentUser')) || {};
   const [form, setForm] = useState({
     nombre: user.nombre || '',
-    apellido: user.apellido || '',
     tipoDocumento: user.tipoDocumento || tiposDocumento[0],
     documento: user.documento || '',
     fechaNacimiento: user.fechaNacimiento || '',
@@ -76,7 +75,6 @@ const EditProfile = () => {
     const updatedUser = {
       ...usuarios[idx],
       nombre: form.nombre,
-      apellido: form.apellido,
       tipoDocumento: form.tipoDocumento,
       documento: form.documento,
       fechaNacimiento: form.fechaNacimiento,

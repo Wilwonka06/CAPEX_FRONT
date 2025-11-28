@@ -1,7 +1,7 @@
 "use client"
-
 import { useState, useEffect } from "react"
-import { validateCustomer } from "../../../../../shared/validations.js"
+import customersService from "../API/customersService"
+import { validateCustomer, isNumberInputValid } from "../../../../../shared/validations.js"
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
@@ -9,16 +9,16 @@ import '../../users/components/phoneinput-search.css';
 const initialFormData = {
   documentType: "",
   documentNumber: "",
-  firstName: "",
-  lastName: "",
+  nombre: "",
   email: "",
   phone: "",
 };
 
-export default function CreateCustomer({ isOpen, onClose, onCreate, loading = false, setLoading, customers = [] }) {
+export default function CreateCustomer({ isOpen, onClose, onSuccess, customers = [] }) {
   const [formData, setFormData] = useState(initialFormData)
   const [touched, setTouched] = useState({})
   const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!isOpen) {
@@ -29,13 +29,34 @@ export default function CreateCustomer({ isOpen, onClose, onCreate, loading = fa
   }, [isOpen])
 
   useEffect(() => {
-    setErrors(validateCustomer(formData, customers, null, false));
-  }, [formData, customers]);
+    // Solo validar si el campo ha sido tocado
+    const validation = validateCustomer(formData, customers, null, false);
+    const newErrors = {};
+    Object.keys(validation.errors).forEach(key => {
+      if (touched[key]) {
+        newErrors[key] = validation.errors[key];
+      }
+    });
+    setErrors(newErrors);
+  }, [formData, customers, touched]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     setTouched((prev) => ({ ...prev, [name]: true }))
+    // Limpiar error si el campo tiene valor válido
+    if (errors[name]) {
+      // Validar inmediatamente si el campo es válido
+      const tempFormData = { ...formData, [name]: value };
+      const validation = validateCustomer(tempFormData, customers, null, false);
+      if (!validation.errors[name]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
+    }
   }
 
   const handleBlur = (e) => {
@@ -59,7 +80,9 @@ export default function CreateCustomer({ isOpen, onClose, onCreate, loading = fa
     if (validation.isValid) {
       try {
         setLoading(true);
-        await onCreate(formData);
+        await customersService.create(formData);
+        if (onSuccess) onSuccess();
+        if (onClose) onClose();
       } finally {
         setLoading(false);
       }
@@ -69,25 +92,21 @@ export default function CreateCustomer({ isOpen, onClose, onCreate, loading = fa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-            <div>
-            <h2 className="text-xl font-bold text-accent m-0">Registrar Nuevo Cliente</h2>
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-person-plus text-lg"></i>
             </div>
-          <button
-            className="text-gray-400 hover:text-black text-xl font-bold"
-            onClick={handleClose}
-            aria-label="Cerrar"
-            disabled={loading}
-          >
-            ×
-          </button>
+            <h2 className="text-xl font-bold m-0">Crear Nuevo Cliente</h2>
           </div>
+          <button className="text-white/80 hover:text-white hover:bg.white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200" onClick={handleClose} aria-label="Cerrar" disabled={loading}>×</button>
+        </div>
 
         {/* Contenido */}
-        <div className="p-8 bg-white overflow-y-auto flex-1">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="create-customer-form" onSubmit={handleSubmit} className="space-y-4">
             {/* Documento */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,8 +138,12 @@ export default function CreateCustomer({ isOpen, onClose, onCreate, loading = fa
                 type="text"
                 name="documentNumber"
                 value={formData.documentNumber}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  const onlyDigits = e.target.value.replace(/[^\d]/g, '')
+                  handleInputChange({ target: { name: 'documentNumber', value: onlyDigits } })
+                }}
                 onBlur={handleBlur}
+                onKeyDown={isNumberInputValid}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               />
                 {touched.documentNumber && errors.documentNumber && (
@@ -129,39 +152,23 @@ export default function CreateCustomer({ isOpen, onClose, onCreate, loading = fa
               </div>
             </div>
 
-            {/* Nombres */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Nombre <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+            {/* Nombre completo */}
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">
+                Nombre Completo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               />
-                {touched.firstName && errors.firstName && (
-                  <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Apellido <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                />
-                {touched.lastName && errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
+              {touched.nombre && errors.nombre && (
+                <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>
+              )}
             </div>
-          </div>
 
             {/* Email y Teléfono */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -199,32 +206,12 @@ export default function CreateCustomer({ isOpen, onClose, onCreate, loading = fa
           </div>
 
         {/* Footer */}
-        <div className="bg-white rounded-b-lg flex justify-end px-8 py-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleClose}
-            className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-black text-sm hover:bg-gray-200 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="create-customer-form"
-              className="px-4 py-2 rounded-md font-semibold transition ml-2 text-sm bg-black text-white hover:bg-gray-800 flex items-center"
-            >
-              {loading ? (
-                <>
-                  <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
-                Registrando...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-plus-circle mr-2"></i>
-                Registrar Cliente
-                </>
-              )}
-            </button>
-          </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" onClick={handleClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" disabled={loading}><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="create-customer-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" disabled={loading}>
+            {loading ? (<><i className="bi bi-arrow-clockwise animate-spin"></i>Creando...</>) : (<><i className="bi bi-plus-circle"></i>Crear</>)}
+          </button>
+        </div>
       </div>
     </div>
   )

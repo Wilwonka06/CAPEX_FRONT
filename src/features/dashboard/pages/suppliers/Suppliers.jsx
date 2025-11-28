@@ -5,14 +5,15 @@ import EditSupplier from "./components/EditSupplier";
 import SupplierDetail from "./components/SupplierDetail";
 import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
-import { useSuppliers } from "./hooks/useSuppliers";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import LoadingTable from "../../../../shared/components/LoadingTable";
+import suppliersService from "./API/suppliersService";
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 const SuppliersPage = () => {
-  const { suppliers, addSupplier, editSupplier, deleteSupplier, toggleSupplierStatus } = useSuppliers();
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
@@ -22,9 +23,26 @@ const SuppliersPage = () => {
   const { setTitle } = useOutletContext();
 
   useEffect(() => {
-    setTitle('Gestión de Proveedores');
+    setTitle('Módulo de Proveedores');
     return () => setTitle('');
   }, [setTitle]);
+
+  // Cargar proveedores al montar el componente
+  useEffect(() => {
+    loadSuppliers();
+  }, []);
+
+  const loadSuppliers = async () => {
+    try {
+      setLoading(true);
+      const data = await suppliersService.getAll();
+      setSuppliers(data);
+    } catch (error) {
+      toast.error(error.message || 'Error al cargar los proveedores');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filtrar proveedores por término de búsqueda
   useEffect(() => {
@@ -58,7 +76,6 @@ const SuppliersPage = () => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  // Cambio de página
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
@@ -67,29 +84,59 @@ const SuppliersPage = () => {
     setSearchTerm(e.target.value);
   };
 
-  // Crear
-  const handleCreateSupplier = (newSupplier) => {
+  // Crear proveedor
+  const handleCreateSupplier = async (newSupplier) => {
+    const supplierPromise = (async () => {
+      // Limpiar el teléfono para que solo tenga + y números
+      const cleanedSupplier = {
+        ...newSupplier,
+        telefono: newSupplier.telefono.replace(/-/g, '')
+      };
+      const createdSupplier = await suppliersService.create(cleanedSupplier);
+      setSuppliers(prev => [...prev, createdSupplier]);
+      return createdSupplier;
+    })();
+
+    toast.promise(supplierPromise, {
+      loading: 'Creando proveedor...',
+      success: 'Proveedor creado exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al crear el proveedor',
+    });
+
     try {
-      addSupplier(newSupplier);
-      toast.success('Proveedor creado exitosamente', { position: 'top-right' });
-    } catch {
-      toast.error('Error al crear el proveedor', { position: 'top-right' });
+      await supplierPromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
-  // Editar sin confirmación (la confirmación ahora está en el modal)
-  const handleEditSupplier = (updatedSupplier) => {
-    try {
-      editSupplier(updatedSupplier);
+  // Editar proveedor
+  const handleEditSupplier = async (updatedSupplier) => {
+    const supplierPromise = (async () => {
+      const updated = await suppliersService.update(updatedSupplier.id, updatedSupplier);
+      setSuppliers(prev => 
+        prev.map(s => s.id === updated.id ? updated : s)
+      );
+      // Cerrar el modal y limpiar el estado
       setShowEditModal(false);
       setSelectedSupplier(null);
-      toast.success('Proveedor actualizado exitosamente', { position: 'top-right' });
-    } catch {
-      toast.error('Error al actualizar el proveedor', { position: 'top-right' });
+      return updated;
+    })();
+
+    toast.promise(supplierPromise, {
+      loading: 'Actualizando proveedor...',
+      success: 'Proveedor actualizado exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al actualizar el proveedor',
+    });
+
+    try {
+      await supplierPromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
-  // Eliminar con confirmación
+  // Eliminar proveedor
   const handleDeleteSupplier = async (supplierId) => {
     const supplier = suppliers.find(s => s.id === supplierId);
     const result = await Swal.fire({
@@ -104,23 +151,34 @@ const SuppliersPage = () => {
     });
 
     if (result.isConfirmed) {
+      const supplierPromise = (async () => {
+        await suppliersService.delete(supplierId);
+        setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+        return true;
+      })();
+
+      toast.promise(supplierPromise, {
+        loading: 'Eliminando proveedor...',
+        success: 'Proveedor eliminado exitosamente',
+        error: (err) => err.response?.data?.message || err.message || 'Error al eliminar el proveedor',
+      });
+
       try {
-        deleteSupplier(supplierId);
-        toast.success('Proveedor eliminado exitosamente', { position: 'top-right' });
-      } catch {
-        toast.error('Error al eliminar el proveedor', { position: 'top-right' });
+        await supplierPromise;
+      } catch (error) {
+        // Error ya manejado por toast.promise
       }
     }
   };
 
-  // Cambiar estado con confirmación
+  // Cambiar estado del proveedor
   const handleStatusChange = async (supplierId) => {
     const supplier = suppliers.find(s => s.id === supplierId);
-    const newStatus = supplier.isActive ? 'Inactivo' : 'Activo';
+    const newStatus = !supplier.isActive;
     
     const result = await Swal.fire({
       title: '¿Confirmar cambio de estado?',
-      text: `¿Estás seguro de que deseas cambiar el estado de "${supplier?.nombre}" a ${newStatus}?`,
+      text: `¿Estás seguro de que deseas cambiar el estado de "${supplier?.nombre}" a ${newStatus ? 'Activo' : 'Inactivo'}?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -130,12 +188,25 @@ const SuppliersPage = () => {
     });
 
     if (result.isConfirmed) {
-      try {
-        toggleSupplierStatus(supplierId);
+      const supplierPromise = (async () => {
+        const updated = await suppliersService.toggleStatus(supplierId, newStatus);
+        setSuppliers(prev => 
+          prev.map(s => s.id === updated.id ? updated : s)
+        );
         setSelectedSupplier(null);
-        toast.success(`Estado cambiado a ${newStatus}`, { position: 'top-right' });
-      } catch {
-        toast.error('Error al cambiar el estado', { position: 'top-right' });
+        return updated;
+      })();
+
+      toast.promise(supplierPromise, {
+        loading: 'Cambiando estado...',
+        success: `Estado cambiado a ${newStatus ? 'Activo' : 'Inactivo'}`,
+        error: (err) => err.response?.data?.message || err.message || 'Error al cambiar el estado',
+      });
+
+      try {
+        await supplierPromise;
+      } catch (error) {
+        // Error ya manejado por toast.promise
       }
     }
   };
@@ -146,29 +217,54 @@ const SuppliersPage = () => {
     setSelectedSupplier(null);
   };
 
+  // Estado de carga inicial
+  const isInitialLoading = loading;
+
   return (
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar proveedores..." />
-              <CreateSupplier onCreate={handleCreateSupplier} suppliers={suppliers} />
+              <Search 
+                searchTerm={searchTerm} 
+                handleSearch={handleSearch} 
+                placeholder="Buscar proveedores..." 
+              />
+              <CreateSupplier 
+                onCreate={handleCreateSupplier} 
+                suppliers={suppliers} 
+              />
             </div>
-            <SuppliersTable
-              suppliers={paginatedSuppliers}
-              onEdit={(supplier) => {
-                setSelectedSupplier(supplier);
-                setShowEditModal(true);
-              }}
-              onDelete={handleDeleteSupplier}
-              onView={(supplier) => {
-                setSelectedSupplier(supplier);
-                setShowDetailModal(true);
-              }}
-              onStatusChange={handleStatusChange}
-            />
-            {totalPages > 1 && (
+            
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {filteredSuppliers.length === 0 && !isInitialLoading ? (
+                <div className="text-center py-12">
+                  <i className="bi bi-inbox text-6xl text-gray-300"></i>
+                  <p className="mt-4 text-gray-500">
+                    {searchTerm
+                      ? 'No se encontraron proveedores que coincidan con tu búsqueda'
+                      : 'No hay proveedores registrados'}
+                  </p>
+                </div>
+              ) : (
+                <SuppliersTable
+                  suppliers={paginatedSuppliers}
+                  onEdit={(supplier) => {
+                    setSelectedSupplier(supplier);
+                    setShowEditModal(true);
+                  }}
+                  onDelete={handleDeleteSupplier}
+                  onView={(supplier) => {
+                    setSelectedSupplier(supplier);
+                    setShowDetailModal(true);
+                  }}
+                  onStatusChange={handleStatusChange}
+                  loading={isInitialLoading}
+                />
+              )}
+            </div>
+            {totalPages > 1 && !isInitialLoading && (
               <Paginator
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -195,8 +291,6 @@ const SuppliersPage = () => {
           onClose={closeModals}
         />
       )}
-
-      <ToastContainer />
     </div>
   );
 };

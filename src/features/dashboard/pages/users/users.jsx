@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Search from '../../../../shared/Search'
 import UserTable from './components/UserTable';
-import CreateUserModal from './components/CreateUserModal';
-import EditUserModal from './components/EditUserModal';
-import UserDetailModal from './components/UserDetailModal';
+import CreateUser from './components/CreateUser';
+import EditUser from './components/EditUser';
+import UserDetail from './components/UserDetail';
 import Paginator from '../../../../shared/Paginator';
+import LoadingTable from '../../../../shared/components/LoadingTable';
 import usersService from './API/usersService';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -18,9 +18,9 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,48 +89,76 @@ const Users = () => {
 
   // Acciones CRUD
   const handleCreateUser = async (newUser) => {
-    try {
+    const userPromise = (async () => {
       const response = await usersService.create(newUser);
       if (response.success) {
-        toast.success('Usuario creado exitosamente', { position: 'top-right' });
         await loadUsers(); // Recargar lista
-        setShowCreateModal(false);
+        setShowCreate(false);
+        return response.data;
       } else {
         throw new Error(response.message || 'Error al crear el usuario');
       }
+    })();
+
+    toast.promise(
+      userPromise,
+      {
+        loading: 'Creando usuario...',
+        success: 'Usuario creado exitosamente',
+        error: (err) => {
+          console.error('Error creating user:', err);
+          const backendMsg = err.response?.data?.message || err.message;
+          const validationErrors = err.response?.data?.errors;
+          if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
+            return validationErrors[0].message || backendMsg || 'Error al crear el usuario';
+          }
+          return backendMsg || 'Error al crear el usuario';
+        },
+      },
+      {
+        id: 'create-user',
+      }
+    );
+
+    try {
+      await userPromise;
     } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error(error.message || 'Error al crear el usuario', { position: 'top-right' });
+      // Error ya manejado por toast.promise
     }
   };
 
   const handleEditUser = async (updatedUser) => {
-    const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar al usuario "${updatedUser.nombre || updatedUser.name}"?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
-        if (response.success) {
-          setShowEditModal(false);
-          setSelectedUser(null);
-          toast.success('Usuario actualizado exitosamente', { position: 'top-right' });
-          await loadUsers(); // Recargar lista
-        } else {
-          throw new Error(response.message || 'Error al actualizar el usuario');
-        }
-      } catch (error) {
-        console.error('Error updating user:', error);
-        toast.error(error.message || 'Error al actualizar el usuario', { position: 'top-right' });
+    const userPromise = (async () => {
+      const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
+      if (response.success) {
+        setShowEdit(false);
+        setSelectedUser(null);
+        await loadUsers(); // Recargar lista
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Error al actualizar el usuario');
       }
+    })();
+
+    toast.promise(
+      userPromise,
+      {
+        loading: 'Actualizando usuario...',
+        success: 'Usuario actualizado exitosamente',
+        error: (err) => {
+          console.error('Error updating user:', err);
+          return err.response?.data?.message || err.message || 'Error al actualizar el usuario';
+        },
+      },
+      {
+        id: `update-user-${updatedUser.id_usuario || updatedUser.id}`,
+      }
+    );
+
+    try {
+      await userPromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -149,37 +177,98 @@ const Users = () => {
       });
 
       if (result.isConfirmed) {
-        try {
+        const userPromise = (async () => {
           const response = await usersService.delete(userId);
           if (response.success) {
-            toast.success('Usuario eliminado exitosamente', { position: 'top-right' });
             await loadUsers(); // Recargar lista
+            return response.data;
           } else {
             throw new Error(response.message || 'Error al eliminar el usuario');
           }
+        })();
+
+        toast.promise(
+          userPromise,
+          {
+            loading: 'Eliminando usuario...',
+            success: 'Usuario eliminado exitosamente',
+            error: (err) => {
+              console.error('Error deleting user:', err);
+              return err.response?.data?.message || err.message || 'Error al eliminar el usuario';
+            },
+          },
+          {
+            id: `delete-user-${userId}`,
+          }
+        );
+
+        try {
+          await userPromise;
         } catch (error) {
-          console.error('Error deleting user:', error);
-          toast.error(error.message || 'Error al eliminar el usuario', { position: 'top-right' });
+          // Error ya manejado por toast.promise
+        }
+      }
+    }
+  };
+
+  const handleStatusChange = async (userId, newStatus, conceptoEstado = null) => {
+    const user = users.find(u => (u.id_usuario || u.id) === userId);
+    if (user) {
+      const result = await Swal.fire({
+        title: '¿Confirmar cambio de estado?',
+        text: `¿Estás seguro de que deseas cambiar el estado de "${user.nombre}" a ${newStatus}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, cambiar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        const userPromise = (async () => {
+          const response = await usersService.changeStatus(userId, newStatus, conceptoEstado);
+          if (response.success) {
+            await loadUsers(); // Recargar lista
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al cambiar el estado');
+          }
+        })();
+
+        toast.promise(userPromise, {
+          loading: 'Cambiando estado...',
+          success: `Estado cambiado a ${newStatus}`,
+          error: (err) => {
+            console.error('Error changing user status:', err);
+            return err.response?.data?.message || err.message || 'Error al cambiar el estado';
+          },
+        });
+
+        try {
+          await userPromise;
+        } catch (error) {
+          // Error ya manejado por toast.promise
         }
       }
     }
   };
 
   // Abrir modales
-  const openCreateModal = () => setShowCreateModal(true);
-  const openEditModal = (user) => {
+  const openCreate = () => setShowCreate(true);
+  const openEdit = (user) => {
     setSelectedUser(user);
-    setShowEditModal(true);
+    setShowEdit(true);
   };
-  const openDetailModal = (user) => {
+  const openDetail = (user) => {
     setSelectedUser(user);
-    setShowDetailModal(true);
+    setShowDetail(true);
   };
   // Cerrar modales
-  const closeModals = () => {
-    setShowCreateModal(false);
-    setShowEditModal(false);
-    setShowDetailModal(false);
+  const closes = () => {
+    setShowCreate(false);
+    setShowEdit(false);
+    setShowDetail(false);
     setSelectedUser(null);
   };
 
@@ -189,38 +278,13 @@ const Users = () => {
   };
 
   useEffect(() => {
-    setTitle('Gestión de Usuarios');
+    setTitle('Módulo de Usuarios');
     return () => setTitle('');
   }, [setTitle]);
 
-  if (loading && !isLoaded) {
-    return (
-      <div className="min-h-screen font-inter flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-text-main mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando usuarios...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen font-inter flex items-center justify-center">
-        <div className="text-center">
-          <i className="bi bi-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error al cargar usuarios</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadUsers}
-            className="bg-text-main hover:bg-primary-dark text-white px-4 py-2 rounded-lg"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Estado de carga inicial
+  const isInitialLoading = loading && !isLoaded;
+  const hasError = error && !isLoaded;
 
   return (
     <div className="min-h-screen font-inter">
@@ -231,20 +295,45 @@ const Users = () => {
               <Search searchTerm={searchTerm} handleSearch={e => handleSearch(e.target.value)} placeholder="Buscar usuario..." />
               <button
                 className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                onClick={openCreateModal}
+                onClick={openCreate}
                 disabled={loading}
               >
                 <i className="bi bi-plus-circle mr-2"></i>
                 Crear usuario
               </button>
             </div>
-            <UserTable
-              users={paginatedUsers}
-              onView={openDetailModal}
-              onEdit={openEditModal}
-              onDelete={handleDeleteUser}
-              loading={loading}
-            />
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {isInitialLoading ? (
+                <LoadingTable message="Cargando usuarios..." />
+              ) : hasError ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <i className="bi bi-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error al cargar usuarios</h3>
+                      <p className="text-sm text-red-700 mt-1">{error}</p>
+                      <button
+                        onClick={loadUsers}
+                        className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <UserTable
+                  users={paginatedUsers}
+                  onView={openDetail}
+                  onEdit={openEdit}
+                  onDelete={handleDeleteUser}
+                  onStatusChange={handleStatusChange}
+                  loading={loading}
+                />
+              )}
+            </div>
             {filteredUsers.length > USERS_PER_PAGE && (
               <Paginator
                 currentPage={currentPage}
@@ -255,28 +344,27 @@ const Users = () => {
           </div>
         </div>
       </div>
-      {showCreateModal && (
-        <CreateUserModal
-          onClose={closeModals}
+      {showCreate && (
+        <CreateUser
+          onClose={closes}
           onCreate={handleCreateUser}
           users={users}
         />
       )}
-      {showEditModal && selectedUser && (
-        <EditUserModal
-          onClose={closeModals}
+      {showEdit && selectedUser && (
+        <EditUser
+          onClose={closes}
           onEdit={handleEditUser}
           user={selectedUser}
           users={users}
         />
       )}
-      {showDetailModal && selectedUser && (
-        <UserDetailModal
-          onClose={closeModals}
+      {showDetail && selectedUser && (
+        <UserDetail
+          onClose={closes}
           user={selectedUser}
         />
       )}
-      <ToastContainer />
     </div>
   );
 };

@@ -1,124 +1,37 @@
 import React, { useState, useEffect } from "react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import {
-  getServices,
-  createService,
-  updateService,
-  deleteService,
-  toggleServiceStatus,
-} from "./api/servicesApi";
-import { getServiceCategories } from "../CatServices/api/serviceCategoriesApi";
-import AddServices from './components/AddServices';
-import EditServices from "./components/EditServices";
-import SeeServices from './components/SeeServices';
-import Paginator from "../../../../shared/Paginator";
-import SearchProduct from '../../../../shared/Search';
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
-import PropTypes from "prop-types";
 
-const SERVICES_PER_PAGE = 5;
+// Importar el nuevo servicio API
+import servicesService from './API/ServicesService';
 
-// Componente para la tabla de servicios
-const ServicesTable = ({ services, onToggleStatus, onSee, onEdit, onDelete }) => (
-  <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
-    <table className="min-w-full">
-      <thead>
-        <tr className="bg-gray-50 hover:bg-gray-100">
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">NOMBRE</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CATEGORÍA</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DURACIÓN</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PRECIO</th>
-          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ESTADO</th>
-          <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">ACCIONES</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-200">
-        {services.map((service) => {
-          const isActive = service.estado === "Activo";
-          return (
-            <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
-              <td className="py-4 px-4 text-xs font-medium text-gray-900">{service.id}</td>
-              <td className="py-4 px-4 text-xs font-medium text-gray-900 max-w-[180px] truncate">{service.nombre}</td>
-              <td className="py-4 px-4 text-xs text-gray-600 max-w-[180px] truncate">
-                {service.categoria?.nombre || service.categoria || 'Sin categoría'}
-              </td>
-              <td className="py-4 px-4 text-xs text-gray-600">{service.duracion} min</td>
-              <td className="py-4 px-4 text-xs text-gray-600">${service.precio?.toLocaleString()}</td>
-              <td className="py-4 px-4 text-xs">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => onToggleStatus(service.id)}
-                    className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
-                      isActive ? 'bg-text-main' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        isActive ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      isActive ? ' text-gray-800' : ' text-gray-600'
-                    }`}
-                  >
-                    {isActive ? "Activo" : "Inactivo"}
-                  </span>
-                </div>
-              </td>
-              <td className="py-4 px-4 text-sm font-medium text-right">
-                <div className="flex justify-end space-x-2">
-                  <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onSee(service)}
-                    title="Ver detalles"
-                  >
-                    <i className="bi bi-eye text-primary text-lg"></i>
-                  </button>
-                  <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onEdit(service)}
-                    title="Editar"
-                  >
-                    <i className="bi bi-pencil-square text-amber-500 text-lg"></i>
-                  </button>
-                  <button
-                    className="h-8 w-8 p-0 flex items-center justify-center"
-                    onClick={() => onDelete(service)}
-                    title="Eliminar"
-                  >
-                    <i className="bi bi-trash text-red-500 text-lg"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+// Importar servicio de categorías (necesitamos mantener esta importación)
+import { getServiceCategories } from "../CatServices/API/serviceCategoriesService";
 
-ServicesTable.propTypes = {
-  services: PropTypes.array.isRequired,
-  onToggleStatus: PropTypes.func.isRequired,
-  onSee: PropTypes.func.isRequired,
-  onEdit: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-};
+// Importar componentes
+import ServicesTable from './components/ServicesTable';
+import AddServices from './components/CreateService';
+import EditServices from "./components/EditServices";
+import ServiceDetail from './components/ServiceDetail';
+import Paginator from "../../../../shared/Paginator";
+import SearchProduct from '../../../../shared/Search';
+
+const SERVICES_PER_PAGE = 10;
 
 const Services = () => {
   const { setTitle } = useOutletContext();
+  
+  // Estados
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [togglingId, setTogglingId] = useState(null);
+  
+  // Estados para modales
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -129,18 +42,23 @@ const Services = () => {
     setLoading(true);
     setError("");
     try {
-      const [servicesData, categoriesData] = await Promise.all([
-        getServices(),
+      const [servicesResponse, categoriesData] = await Promise.all([
+        servicesService.getAll(),
         getServiceCategories().catch(() => [])
       ]);
 
-      console.log("[DEBUG] Servicios cargados:", servicesData);
+      console.log("[DEBUG] Servicios cargados:", servicesResponse);
       console.log("[DEBUG] Categorías cargadas:", categoriesData);
 
-      setServices(Array.isArray(servicesData) ? servicesData : []);
+      // Procesar servicios
+      const servicesData = servicesResponse.success 
+        ? servicesResponse.data 
+        : (Array.isArray(servicesResponse) ? servicesResponse : []);
+
+      setServices(servicesData);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
 
-      // Enriquecer servicios con nombres de categorías si no vienen del backend
+      // Enriquecer servicios con nombres de categorías si es necesario
       if (servicesData.length && categoriesData.length) {
         const enrichedServices = servicesData.map(service => {
           if (service.categoria?.nombre || typeof service.categoria === 'string') {
@@ -171,11 +89,11 @@ const Services = () => {
   }, []);
 
   useEffect(() => {
-    setTitle("Gestión de Servicios");
+    setTitle("Módulo de Servicios");
     return () => setTitle("");
   }, [setTitle]);
 
-  // Filtrar servicios por término de búsqueda
+  // Filtrar servicios
   const filteredServices = services.filter((service) =>
     (service.id?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (service.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -195,63 +113,72 @@ const Services = () => {
     setCurrentPage(1);
   }, [searchTerm, services]);
 
-  // CRUD handlers
+  // Handler para crear servicio
   const handleAddService = async (newServiceData) => {
-    try {
-      const createdService = await createService(newServiceData);
-      
-      // Enriquecer con categoría si es necesario
-      const category = categories.find(
-        cat => (cat.id_categoria_servicio || cat.id) == newServiceData.id_categoria_servicio
-      );
-      const enrichedService = category && !createdService.categoria
-        ? { ...createdService, categoria: { nombre: category.nombre } }
-        : createdService;
-
-      setServices(prev => [...prev, enrichedService]);
+    const servicePromise = (async () => {
+      const response = await servicesService.create(newServiceData);
+      await loadData();
       setShowAddModal(false);
-      toast.success("Servicio agregado exitosamente");
-    } catch (error) {
-      console.error("Error agregando servicio:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al agregar servicio");
-    }
-  };
+      return response;
+    })();
 
-  const handleEditService = async (editedServiceData) => {
-    const result = await Swal.fire({
-      title: "¿Confirmar edición?",
-      text: `¿Editar el servicio "${editedServiceData.nombre}"?`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Sí, editar",
-      cancelButtonText: "Cancelar",
-    });
-    
-    if (result.isConfirmed) {
-      try {
-        const updatedService = await updateService(editedServiceData.id, editedServiceData);
-        
-        // Enriquecer con categoría si es necesario
-        const category = categories.find(
-          cat => (cat.id_categoria_servicio || cat.id) == editedServiceData.id_categoria_servicio
-        );
-        const enrichedService = category && !updatedService.categoria
-          ? { ...updatedService, categoria: { nombre: category.nombre } }
-          : updatedService;
-
-        setServices(prev => prev.map(s => s.id === enrichedService.id ? enrichedService : s));
-        setShowEditModal(false);
-        setSelectedService(null);
-        toast.success("Servicio actualizado exitosamente");
-      } catch (error) {
-        console.error("Error actualizando servicio:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al actualizar servicio");
+    toast.promise(
+      servicePromise,
+      {
+        loading: 'Creando servicio...',
+        success: 'Servicio creado exitosamente',
+        error: (err) => {
+          console.error("Error creando servicio:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al crear servicio";
+        },
+      },
+      {
+        id: 'create-service',
       }
+    );
+
+    try {
+      await servicePromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
+  // Handler para editar servicio
+  const handleEditService = async (editedServiceData) => {
+    const servicePromise = (async () => {
+      const response = await servicesService.update(editedServiceData.id, editedServiceData);
+      await loadData();
+      setShowEditModal(false);
+      setSelectedService(null);
+      return response;
+    })();
+
+    toast.promise(
+      servicePromise,
+      {
+        loading: 'Actualizando servicio...',
+        success: 'Servicio actualizado exitosamente',
+        error: (err) => {
+          console.error("Error actualizando servicio:", err);
+          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+          return backendMsg || "Error al actualizar servicio";
+        },
+      },
+      {
+        id: `update-service-${editedServiceData.id}`,
+      }
+    );
+
+    try {
+      await servicePromise;
+    } catch (error) {
+      // Error ya manejado por toast.promise
+    }
+  };
+
+  // Handler para eliminar servicio
   const handleDeleteService = async (service) => {
     const result = await Swal.fire({
       title: "¿Estás seguro?",
@@ -260,21 +187,42 @@ const Services = () => {
       showCancelButton: true,
       confirmButtonText: "Sí, eliminar",
       cancelButtonText: "Cancelar",
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
     });
     
     if (result.isConfirmed) {
+      const servicePromise = (async () => {
+        await servicesService.delete(service.id);
+        await loadData();
+        return true;
+      })();
+
+      toast.promise(
+        servicePromise,
+        {
+          loading: 'Eliminando servicio...',
+          success: 'Servicio eliminado exitosamente',
+          error: (err) => {
+            console.error("Error eliminando servicio:", err);
+            const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
+            return backendMsg || "Error al eliminar servicio";
+          },
+        },
+        {
+          id: `delete-service-${service.id}`,
+        }
+      );
+
       try {
-        await deleteService(service.id);
-        setServices(prev => prev.filter(s => s.id !== service.id));
-        toast.success("Servicio eliminado exitosamente");
+        await servicePromise;
       } catch (error) {
-        console.error("Error eliminando servicio:", error);
-        const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-        toast.error(backendMsg || "Error al eliminar servicio");
+        // Error ya manejado por toast.promise
       }
     }
   };
 
+  // Handler para cambiar estado
   const handleToggleStatus = async (serviceId) => {
     const current = services.find(s => s.id === serviceId);
     if (!current) {
@@ -282,41 +230,27 @@ const Services = () => {
       return;
     }
 
+    setTogglingId(serviceId);
     const nextEstado = current.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    const updatedService = { ...current, estado: nextEstado };
-
-    // Optimista: aplicar cambio local y revertir si falla
-    const prevServices = services;
-    setServices(prevList => prevList.map(s =>
-      s.id === serviceId
-        ? { ...s, estado: nextEstado }
-        : s
-    ));
 
     try {
-      const updated = await toggleServiceStatus(updatedService);
-      // Sincronizar con respuesta del backend si viene completa
-      if (updated && updated.id) {
-        // Mantener categoría enriquecida
-        const currentService = services.find(s => s.id === serviceId);
-        const enriched = {
-          ...updated,
-          categoria: currentService?.categoria || updated.categoria
-        };
-        setServices(prevList => prevList.map(s => s.id === updated.id ? enriched : s));
-      }
+      await servicesService.changeStatus(serviceId, nextEstado);
+      await loadData();
       toast.success(`Estado cambiado a ${nextEstado}`);
     } catch (error) {
-      setServices(prevServices); // revertir
       console.error("Error cambiando estado:", error);
       const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
       toast.error(backendMsg || "Error al cambiar estado");
+    } finally {
+      setTogglingId(null);
     }
   };
 
+  // Handlers de paginación y búsqueda
   const handlePageChange = (page) => setCurrentPage(page);
   const handleSearch = (e) => setSearchTerm(e.target.value);
   
+  // Handler para cerrar modales
   const closeModals = () => {
     setShowAddModal(false);
     setShowEditModal(false);
@@ -324,18 +258,8 @@ const Services = () => {
     setSelectedService(null);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando servicios...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
+  // Render de error
+  if (error && !loading) {
     return (
       <div className="min-h-screen p-6 flex items-center justify-center">
         <div className="text-center">
@@ -368,38 +292,34 @@ const Services = () => {
                 onClick={() => setShowAddModal(true)}
               >
                 <i className="bi bi-plus-circle mr-2"></i>
-                Nuevo Servicio
+                Crear Servicio
               </button>
             </div>
 
             {/* Tabla de servicios */}
-            {services.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">No hay servicios registrados.</p>
-            ) : (
-              <>
-                <ServicesTable
-                  services={paginatedServices}
-                  onToggleStatus={handleToggleStatus}
-                  onSee={(service) => {
-                    setSelectedService(service);
-                    setShowDetailModal(true);
-                  }}
-                  onEdit={(service) => {
-                    setSelectedService(service);
-                    setShowEditModal(true);
-                  }}
-                  onDelete={handleDeleteService}
-                />
-                
-                {/* Paginación */}
-                {totalPages > 1 && (
-                  <Paginator
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                )}
-              </>
+            <ServicesTable
+              services={paginatedServices}
+              onToggleStatus={handleToggleStatus}
+              togglingId={togglingId}
+              onView={(service) => {
+                setSelectedService(service);
+                setShowDetailModal(true);
+              }}
+              onEdit={(service) => {
+                setSelectedService(service);
+                setShowEditModal(true);
+              }}
+              onDelete={handleDeleteService}
+              loading={loading}
+            />
+            
+            {/* Paginación */}
+            {totalPages > 1 && !loading && (
+              <Paginator
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             )}
           </div>
         </div>
@@ -426,13 +346,12 @@ const Services = () => {
       )}
 
       {showDetailModal && selectedService && (
-        <SeeServices
-          onClose={closeModals}
+        <ServiceDetail
           service={selectedService}
+          isOpen={showDetailModal}
+          onClose={closeModals}
         />
       )}
-
-      <ToastContainer position="top-right" />
     </div>
   );
 };

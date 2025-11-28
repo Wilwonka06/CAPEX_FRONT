@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import productsService from "../../products/API/productsService";
+import usersService from "../../users/API/usersService";
+import { formatNumber, formatNumberInput, parseFormattedNumber } from "../../../../../shared/utils/formatters";
+import toast from "react-hot-toast";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import '../../users/components/phoneinput-search.css';
 
 const paymentMethods = ["Efectivo", "Transferencia bancaria"];
 
@@ -11,7 +17,7 @@ export default function CreateSaleModal({
   customers,
   products,
 }) {
-  // Estado del formulario principal
+  // Estado del formulario principal  
   const [numeroVenta] = useState(
     `VEN-${new Date()
       .toISOString()
@@ -23,13 +29,25 @@ export default function CreateSaleModal({
   );
   const [clienteDoc, setClienteDoc] = useState("");
   const [cliente, setCliente] = useState({
+    id: null,
     documentType: "",
     documentNumber: "",
+    nombre: "",
+    // Mantener firstName y lastName para retrocompatibilidad
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
   });
+  const [clienteNuevo, setClienteNuevo] = useState({
+    nombre: "",
+    correo: "",
+    telefono: "",
+    documento: "",
+  });
+  const [numero, setNumero] = useState("");
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
+  const [clienteEncontrado, setClienteEncontrado] = useState(false);
   const [metodoPago, setMetodoPago] = useState(paymentMethods[0]);
 
   // Estado para agregar productos a la lista
@@ -38,36 +56,132 @@ export default function CreateSaleModal({
   const [itemsVenta, setItemsVenta] = useState([]);
   const [errores, setErrores] = useState({});
 
-  // Buscar cliente por documento
+  // Buscar cliente por documento en el backend
   useEffect(() => {
-    const found = customers.find((c) => c.documentNumber === clienteDoc);
-    if (found) {
-      setCliente({ ...found });
-    } else {
-      setCliente({
-        documentType: "",
-        documentNumber: clienteDoc,
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-      });
-    }
-  }, [clienteDoc, customers]);
+    const buscarCliente = async () => {
+      if (!clienteDoc || clienteDoc.trim().length < 8) {
+        setClienteEncontrado(false);
+        setCliente({
+          id: null,
+          documentType: "",
+          documentNumber: clienteDoc,
+          nombre: "",
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+        });
+        setClienteNuevo({
+          nombre: "",
+          correo: "",
+          telefono: "",
+          documento: clienteDoc,
+        });
+        return;
+      }
+
+      setBuscandoCliente(true);
+      try {
+        const response = await usersService.getAll({
+          documento: clienteDoc.trim()
+        });
+
+        if (response.success && response.data && response.data.length > 0) {
+          const usuarioEncontrado = response.data.find(user => {
+            const userDoc = user.documento?.toString().trim() || '';
+            return userDoc === clienteDoc.trim();
+          });
+
+          if (usuarioEncontrado) {
+            setCliente({
+              id: usuarioEncontrado.id_usuario || usuarioEncontrado.id,
+              documentType: usuarioEncontrado.tipo_documento || 'Cedula de ciudadania',
+              documentNumber: usuarioEncontrado.documento || '',
+              nombre: usuarioEncontrado.nombre || '',
+              // Mantener firstName y lastName para retrocompatibilidad
+              firstName: usuarioEncontrado.nombre ? usuarioEncontrado.nombre.split(' ')[0] : '',
+              lastName: usuarioEncontrado.nombre ? usuarioEncontrado.nombre.split(' ').slice(1).join(' ') : '',
+              email: usuarioEncontrado.correo || '',
+              phone: usuarioEncontrado.telefono || '',
+            });
+            setClienteEncontrado(true);
+          } else {
+            setClienteEncontrado(false);
+            setCliente({
+              id: null,
+              documentType: "",
+              documentNumber: clienteDoc,
+              firstName: "",
+              lastName: "",
+              email: "",
+              phone: "",
+            });
+            setClienteNuevo({
+              nombre: "",
+              correo: "",
+              telefono: "",
+              documento: clienteDoc,
+            });
+          }
+        } else {
+          setClienteEncontrado(false);
+          setCliente({
+            id: null,
+            documentType: "",
+            documentNumber: clienteDoc,
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+          });
+          setClienteNuevo({
+            nombre: "",
+            correo: "",
+            telefono: "",
+            documento: clienteDoc,
+          });
+          setNumero("");
+        }
+      } catch (error) {
+        console.error('Error buscando cliente:', error);
+        setClienteEncontrado(false);
+        setCliente({
+          id: null,
+          documentType: "",
+          documentNumber: clienteDoc,
+          nombre: "",
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+        });
+        setClienteNuevo({
+          nombre: "",
+          correo: "",
+          telefono: "",
+          documento: clienteDoc,
+        });
+      } finally {
+        setBuscandoCliente(false);
+      }
+    };
+
+    // Debounce para evitar búsquedas excesivas
+    const timeoutId = setTimeout(buscarCliente, 500);
+    return () => clearTimeout(timeoutId);
+  }, [clienteDoc]);
 
   // Calcular total
   const total = itemsVenta.reduce(
-    (acc, item) => acc + item.precio * item.cantidad,
+    (acc, item) => acc + (parseFormattedNumber(item.precio) || 0) * (item.cantidad || 0),
     0
   );
 
-  const formatNumber = (num) => {
-    if (num === '' || num === undefined || num === null) return '';
-    const parts = num.toString().split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
+  // Usar cleanNumber del formatters (reemplaza puntos y otros caracteres)
+  const cleanNumber = (str) => {
+    if (!str) return '';
+    return str.toString().replace(/[^0-9]/g, '');
   };
-  const cleanNumber = (str) => str.replace(/,/g, '');
 
   const handleAddProduct = () => {
     let nuevosErrores = {};
@@ -106,7 +220,7 @@ export default function CreateSaleModal({
 
     setItemsVenta((prev) => [
       ...prev,
-      { ...producto, cantidad: Number(cantidad) },
+      { ...producto, cantidad: Number(cantidad), precio: formatNumberInput(String(producto.precio || producto.precio_venta || 0)) },
     ]);
     setProductoSeleccionado("");
     setCantidad(1);
@@ -116,72 +230,129 @@ export default function CreateSaleModal({
     setItemsVenta((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     let nuevosErrores = {};
-    if (!clienteDoc || !cliente.firstName) {
-      nuevosErrores.cliente = "Debe ingresar un cliente válido.";
+
+    // Validar cliente
+    if (!clienteDoc || clienteDoc.trim().length < 8) {
+      nuevosErrores.cliente = "Debe ingresar un número de documento válido (mínimo 8 dígitos).";
     }
+
+    // Si no se encontró cliente, validar datos para crear uno nuevo
+    if (!clienteEncontrado && clienteDoc) {
+      if (!clienteNuevo.nombre || clienteNuevo.nombre.trim() === '') {
+        nuevosErrores.nombre = "El nombre del cliente es requerido.";
+      }
+      if (!clienteNuevo.correo || clienteNuevo.correo.trim() === '') {
+        nuevosErrores.correo = "El correo electrónico es requerido.";
+      } else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(clienteNuevo.correo)) {
+          nuevosErrores.correo = "El correo electrónico no es válido.";
+        }
+      }
+      if (!numero || numero.trim() === '') {
+        nuevosErrores.telefono = "El teléfono es requerido.";
+      } else if (numero.length < 7 || numero.length > 15) {
+        nuevosErrores.telefono = "El teléfono debe tener entre 7 y 15 dígitos.";
+      }
+    }
+
     if (itemsVenta.length === 0) {
       nuevosErrores.items = "Debe agregar al menos un producto.";
     }
+
     if (Object.keys(nuevosErrores).length > 0) {
       setErrores(nuevosErrores);
       return;
     }
     setErrores({});
 
-    // Actualizar la cantidad de los productos (decrementar stock)
-    itemsVenta.forEach(async (item) => {
-      const productoOriginal = products.find(p => p.id === item.id);
-      if (productoOriginal) {
-        try {
-          await productsService.updateStock(
-            item.id,
-            productoOriginal.stock - item.cantidad,
-            'set'
-          );
-        } catch (error) {
-          console.error('Error updating product stock:', error);
+    try {
+      let clienteId = cliente.id;
+
+      // Si no se encontró cliente, crear uno nuevo
+      if (!clienteEncontrado) {
+        toast.loading('Creando cliente...', { id: 'creating-client' });
+        
+        // Generar contraseña temporal
+        const generateTempPassword = () => {
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+          let password = '';
+          password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+          password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+          password += '0123456789'[Math.floor(Math.random() * 10)];
+          password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+          for (let i = password.length; i < 12; i++) {
+            password += chars[Math.floor(Math.random() * chars.length)];
+          }
+          return password.split('').sort(() => Math.random() - 0.5).join('');
+        };
+
+        const tempPassword = generateTempPassword();
+
+        const newUserData = {
+          nombre: clienteNuevo.nombre.trim(),
+          telefono: '+' + numero,
+          correo: clienteNuevo.correo.trim(),
+          contrasena: tempPassword,
+          tipo_documento: 'CC',
+          documento: clienteNuevo.documento.trim(),
+          roleId: 2, // Rol de cliente
+          estado: 'Activo',
+          sendEmail: true,
+          tempPassword: tempPassword
+        };
+
+        const createResponse = await usersService.create(newUserData);
+        
+        if (createResponse.success && createResponse.data) {
+          clienteId = createResponse.data.id_usuario || createResponse.data.id;
+          toast.success('Cliente creado exitosamente', { id: 'creating-client' });
+        } else {
+          throw new Error('No se pudo crear el cliente');
         }
       }
-    });
 
-    const nuevaVenta = {
-      id: Date.now(),
-      numeroVenta,
-      fecha: fechaVenta,
-      clienteId:
-        customers.find((c) => c.documentNumber === clienteDoc)?.id ||
-        Date.now(),
-      valor: total,
-      estado: "Completado",
-      productos: itemsVenta,
-      metodoPago,
-    };
-    if (onCreate) onCreate(nuevaVenta);
-    onClose();
+      if (!clienteId) {
+        throw new Error('No se pudo obtener el ID del cliente');
+      }
+
+      // Crear la venta
+      const nuevaVenta = {
+        fecha: fechaVenta,
+        clienteId: clienteId,
+        valor: total,
+        estado: "Completado",
+        productos: itemsVenta.map(item => ({
+          id: item.id,
+          cantidad: item.cantidad,
+          precio: parseFormattedNumber(item.precio)
+        })),
+        metodoPago,
+      };
+
+      if (onCreate) {
+        await onCreate(nuevaVenta);
+      }
+      onClose();
+    } catch (error) {
+      console.error('Error en handleSubmit:', error);
+      toast.error(error.message || 'Error al procesar la venta');
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-[#9C5B2B] m-0">
-            Registrar Nueva Venta
-          </h2>
-          <button
-            className="text-gray-400 hover:text-primary text-xl font-bold"
-            onClick={onClose}
-          >
-            ×
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-bag-plus text-lg"></i></div><h2 className="text-xl font-bold m-0">Crear Nueva Venta</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1 space-y-8">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="sale-form" onSubmit={handleSubmit} className="space-y-8">
             {/* Sección de Venta */}
             <div>
@@ -243,13 +414,30 @@ export default function CreateSaleModal({
                     <label className="block text-xs font-medium text-text-main mb-1">
                       Documento Cliente <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border rounded-md text-sm"
-                      value={clienteDoc}
-                      onChange={(e) => setClienteDoc(e.target.value)}
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                        value={clienteDoc}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setClienteDoc(val);
+                        }}
+                        maxLength={15}
+                        placeholder="Número de documento"
+                        required
+                      />
+                      {buscandoCliente && (
+                        <div className="absolute right-2 top-2">
+                          <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
+                        </div>
+                      )}
+                      {!buscandoCliente && clienteEncontrado && (
+                        <div className="absolute right-2 top-2 text-green-500">
+                          <i className="bi bi-check-circle"></i>
+                        </div>
+                      )}
+                    </div>
                     {errores.cliente && (
                       <span className="text-xs text-red-500">
                         {errores.cliente}
@@ -263,7 +451,7 @@ export default function CreateSaleModal({
                     <input
                       type="text"
                       className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
-                      value={cliente.documentType}
+                      value={cliente.documentType || 'Cedula de ciudadania'}
                       readOnly
                     />
                 </div>
@@ -271,37 +459,103 @@ export default function CreateSaleModal({
                     <label className="block text-xs font-medium text-text-main mb-1">
                       Nombre Completo
                     </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
-                      value={`${cliente.firstName} ${cliente.lastName}`.trim()}
-                      readOnly
-                    />
+                    {clienteEncontrado ? (
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                        value={cliente.nombre || `${cliente.firstName} ${cliente.lastName}`.trim() || ''}
+                        readOnly
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        className={`w-full px-3 py-2 border rounded-md text-sm ${errores.nombre ? 'border-red-500' : ''}`}
+                        value={clienteNuevo.nombre}
+                        onChange={(e) => setClienteNuevo({ ...clienteNuevo, nombre: e.target.value })}
+                        placeholder="Nombre completo del cliente"
+                        required={!clienteEncontrado}
+                      />
+                    )}
+                    {errores.nombre && (
+                      <span className="text-xs text-red-500">{errores.nombre}</span>
+                    )}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div>
                     <label className="block text-xs font-medium text-text-main mb-1">
-                      Correo
+                      Correo <span className="text-red-500">{!clienteEncontrado ? '*' : ''}</span>
                     </label>
-                    <input
-                      type="email"
-                      className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
-                      value={cliente.email}
-                      readOnly
-                    />
+                    {clienteEncontrado ? (
+                      <input
+                        type="email"
+                        className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                        value={cliente.email}
+                        readOnly
+                      />
+                    ) : (
+                      <input
+                        type="email"
+                        className={`w-full px-3 py-2 border rounded-md text-sm ${errores.correo ? 'border-red-500' : ''}`}
+                        value={clienteNuevo.correo}
+                        onChange={(e) => setClienteNuevo({ ...clienteNuevo, correo: e.target.value })}
+                        placeholder="correo@ejemplo.com"
+                        required={!clienteEncontrado}
+                      />
+                    )}
+                    {errores.correo && (
+                      <span className="text-xs text-red-500">{errores.correo}</span>
+                    )}
                 </div>
                 <div>
                     <label className="block text-xs font-medium text-text-main mb-1">
-                      Teléfono
+                      Teléfono <span className="text-red-500">{!clienteEncontrado ? '*' : ''}</span>
                     </label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
-                      value={cliente.phone}
-                      readOnly
-                    />
+                    {clienteEncontrado ? (
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                        value={cliente.phone}
+                        readOnly
+                      />
+                    ) : (
+                      <PhoneInput
+                        country={'co'}
+                        value={numero}
+                        onChange={(value) => {
+                          setNumero(value);
+                          if (errores.telefono) {
+                            setErrores(prev => {
+                              const newErrores = { ...prev };
+                              if (value && value.length >= 7 && value.length <= 15) {
+                                delete newErrores.telefono;
+                              }
+                              return newErrores;
+                            });
+                          }
+                        }}
+                        inputClass={`w-full px-3 py-2 border rounded-md text-sm ${errores.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                        containerClass="w-full"
+                        inputProps={{
+                          name: 'telefono',
+                          required: !clienteEncontrado,
+                          placeholder: 'Ej: 3001234567',
+                        }}
+                        specialLabel=""
+                      />
+                    )}
+                    {errores.telefono && (
+                      <span className="text-xs text-red-500">{errores.telefono}</span>
+                    )}
                   </div>
+                  {!clienteEncontrado && (
+                    <div className="flex items-end">
+                      <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded text-xs">
+                        <i className="bi bi-info-circle mr-1"></i>
+                        Cliente no encontrado. Se creará automáticamente.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -321,10 +575,10 @@ export default function CreateSaleModal({
                       value={productoSeleccionado}
                       onChange={(e) => setProductoSeleccionado(e.target.value)}
                     >
-                    <option value="">Seleccionar producto</option>
+                        <option value="">Seleccionar producto</option>
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.nombre} - Stock: {p.cantidad}
+                          {p.nombre} - Stock: {formatNumber(p.cantidad || 0)}
                         </option>
                       ))}
                   </select>
@@ -408,13 +662,13 @@ export default function CreateSaleModal({
                           <td className="py-2 px-3">{item.codigo}</td>
                           <td className="py-2 px-3">{item.nombre}</td>
                           <td className="py-2 px-3 text-right">
-                            {item.cantidad}
+                            {formatNumber(item.cantidad)}
                           </td>
                           <td className="py-2 px-3 text-right">
-                            ${item.precio.toLocaleString()}
+                            ${formatNumber(item.precio || 0)}
                           </td>
                           <td className="py-2 px-3 text-right">
-                            ${(item.precio * item.cantidad).toLocaleString()}
+                            ${formatNumber((item.precio || 0) * (item.cantidad || 0))}
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
@@ -455,22 +709,10 @@ export default function CreateSaleModal({
               </div>
             </div>
           </form>
-          <div className=" flex justify-end px-8 py-4">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-md border text-sm"
-              onClick={onClose}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="sale-form"
-              className="px-4 py-2 rounded-md bg-text-main text-white font-semibold text-sm ml-2"
-            >
-              Guardar Venta
-            </button>
         </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="sale-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar Venta</button>
         </div>
       </div>
     </div>
@@ -481,6 +723,5 @@ CreateSaleModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   onCreate: PropTypes.func.isRequired,
-  customers: PropTypes.array.isRequired,
   products: PropTypes.array.isRequired,
-}; 
+};

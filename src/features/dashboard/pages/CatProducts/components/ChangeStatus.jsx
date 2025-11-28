@@ -18,12 +18,12 @@ const ChangeStatus = ({ category, isOpen, onClose, onStatusChange }) => {
   if (!isOpen || !category) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in">
         <div className="p-6">
           <h2 className="text-xl font-bold text-primary mb-4">Cambiar Estado</h2>
           <p className="text-gray-600 mb-6">
-            ¿Estás seguro de que deseas cambiar el estado de la categoría "{category.name}" a {category.isActive ? 'Inactivo' : 'Activo'}?
+            ¿Estás seguro de que deseas cambiar el estado de la categoría {category.name} a {category.isActive ? 'Inactivo' : 'Activo'}?
           </p>
           <div className="flex justify-end space-x-3">
             <button

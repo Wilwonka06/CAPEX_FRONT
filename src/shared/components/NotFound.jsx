@@ -1,5 +1,3 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const NotFound = () => {
@@ -9,7 +7,7 @@ const NotFound = () => {
     if (currentUser) {
       window.location.href = getRoleRedirect(currentUser.rol);
     } else {
-      window.location.href = '/login';
+      window.location.href = '/iniciar-sesion';
     }
   };
 

@@ -3,9 +3,10 @@ import ProductsTable from "./components/ProductsTable";
 import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import CreateProduct from "./components/CreateProduct";
+import CharacteristicsManager from "./components/CharacteristicsManager";
 import productsService from "./API/productsService";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import suppliersService from "../suppliers/API/suppliersService";
+import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -26,7 +27,10 @@ const ProductsPage = () => {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [isCharacteristicsManagerOpen, setIsCharacteristicsManagerOpen] = useState(false);
   const { setTitle } = useOutletContext();
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedSupplier, setSelectedSupplier] = useState("");
 
   // Función para cargar productos
   const loadProducts = async (params = queryParams) => {
@@ -58,10 +62,21 @@ const ProductsPage = () => {
   // Cargar productos inicialmente
   useEffect(() => {
     loadProducts();
+    (async () => {
+      try {
+        const resp = await suppliersService.getActive();
+        if (resp.success) setSuppliers(resp.data || []);
+      } catch (e) {
+        try {
+          const resp2 = await suppliersService.getAll({ limit: 100 });
+          if (resp2.success) setSuppliers(resp2.data || []);
+        } catch {}
+      }
+    })();
   }, []);
 
   useEffect(() => {
-    setTitle('Gestión de Productos');
+    setTitle('Módulo de Productos');
     return () => setTitle('');
   }, [setTitle]);
 
@@ -80,53 +95,126 @@ const ProductsPage = () => {
 
   // Función para limpiar filtros
   const clearFilters = async () => {
+    setSelectedSupplier("");
     const newParams = { page: 1, limit: queryParams.limit };
     setQueryParams(newParams);
     await loadProducts(newParams);
   };
 
-  // Función para crear producto
+  // En products.jsx, reemplaza las funciones createProduct, updateProduct (líneas 83-129)
+
+  // Función para crear producto - CORREGIDA
   const createProduct = async (productData) => {
     setLoading(true);
     setError(null);
 
-    try {
+    const productPromise = (async () => {
+      console.log('ProductsPage: Creating product with data:', productData);
       const response = await productsService.create(productData);
 
       if (response.success) {
-        toast.success('Producto creado exitosamente');
-        await loadProducts(); // Recargar lista
+        // Resetear a primera página y limpiar búsqueda para que el nuevo producto sea visible
+        // Si hay filtros activos, el nuevo producto podría no aparecer
+        const refreshParams = {
+          page: 1,
+          limit: queryParams.limit || 10,
+          // No incluir 'search' para mostrar todos los productos y que el nuevo sea visible
+        };
+        setQueryParams(refreshParams);
+        await loadProducts(refreshParams);
         return response.data;
       } else {
         throw new Error(response.message || 'Error al crear producto');
       }
+    })();
+
+    // Descartar cualquier toast duplicado antes de mostrar el nuevo
+    toast.dismiss('create-product');
+    
+    // Crear toast de loading con ID único
+    const loadingToastId = toast.loading('Creando producto...', { id: 'create-product' });
+    
+    productPromise
+      .then(() => {
+        toast.dismiss(loadingToastId);
+        toast.success('Producto creado exitosamente', { id: 'create-product' });
+      })
+      .catch((err) => {
+        toast.dismiss(loadingToastId);
+        // Manejar errores de validación del backend
+        const errorMessage = err.response?.data?.message || err.message || 'Error al crear el producto';
+        const validationErrors = err.response?.data?.errors;
+
+        setError(errorMessage);
+        console.error('Error creating product:', err);
+        console.error('Validation errors:', validationErrors);
+
+        // Mostrar mensaje de error apropiado
+        let finalErrorMessage = errorMessage;
+        if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
+          finalErrorMessage = validationErrors[0].message || validationErrors[0] || errorMessage;
+        }
+        toast.error(finalErrorMessage, { id: 'create-product' });
+      });
+
+    try {
+      return await productPromise;
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      setLoading(false);
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para actualizar producto
+  // Función para actualizar producto - CORREGIDA
   const updateProduct = async (id, productData) => {
     setLoading(true);
     setError(null);
 
-    try {
+    const productPromise = (async () => {
+      console.log('ProductsPage: Updating product', id, 'with data:', productData);
       const response = await productsService.update(id, productData);
 
       if (response.success) {
-        toast.success('Producto actualizado exitosamente');
-        await loadProducts(); // Recargar lista
+        // Recargar la lista ANTES de mostrar el toast para asegurar que los datos estén actualizados
+        await loadProducts(queryParams);
         return response.data;
       } else {
         throw new Error(response.message || 'Error al actualizar producto');
       }
+    })();
+
+    const updateToastId = `update-product-${id}`;
+    toast.dismiss(updateToastId);
+    
+    const loadingToastId = toast.loading('Actualizando producto...', { id: updateToastId });
+    
+    productPromise
+      .then(() => {
+        toast.dismiss(loadingToastId);
+        toast.success('Producto actualizado exitosamente', { id: updateToastId });
+      })
+      .catch((err) => {
+        toast.dismiss(loadingToastId);
+        const errorMessage = err.response?.data?.message || err.message || 'Error al actualizar el producto';
+        const validationErrors = err.response?.data?.errors;
+
+        setError(errorMessage);
+        console.error('Error updating product:', err);
+        console.error('Validation errors:', validationErrors);
+
+        let finalErrorMessage = errorMessage;
+        if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
+          finalErrorMessage = validationErrors[0].message || validationErrors[0] || errorMessage;
+        }
+        toast.error(finalErrorMessage, { id: updateToastId });
+      });
+
+    try {
+      return await productPromise;
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      setLoading(false);
       throw err;
     } finally {
       setLoading(false);
@@ -138,19 +226,38 @@ const ProductsPage = () => {
     setLoading(true);
     setError(null);
 
-    try {
+    const productPromise = (async () => {
       const response = await productsService.delete(id);
 
       if (response.success) {
-        toast.success('Producto eliminado exitosamente');
         await loadProducts(); // Recargar lista
         return true;
       } else {
         throw new Error(response.message || 'Error al eliminar producto');
       }
+    })();
+
+    const deleteToastId = `delete-product-${id}`;
+    toast.dismiss(deleteToastId);
+    
+    const loadingToastId = toast.loading('Eliminando producto...', { id: deleteToastId });
+    
+    productPromise
+      .then(() => {
+        toast.dismiss(loadingToastId);
+        toast.success('Producto eliminado exitosamente', { id: deleteToastId });
+      })
+      .catch((err) => {
+        toast.dismiss(loadingToastId);
+        const errorMessage = err.response?.data?.message || err.message || 'Error al eliminar producto';
+        setError(errorMessage);
+        toast.error(errorMessage, { id: deleteToastId });
+      });
+
+    try {
+      return await productPromise;
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      setLoading(false);
       throw err;
     } finally {
       setLoading(false);
@@ -179,32 +286,25 @@ const ProductsPage = () => {
   const handleCreateProduct = async (newProduct) => {
     try {
       await createProduct(newProduct);
+      // La lista se recarga automáticamente en createProduct
     } catch (error) {
-      // El error ya se maneja en la función
+      // El error ya se maneja en la función createProduct
       console.error('Error creating product:', error);
+      // Re-lanzar el error para que CreateProduct pueda manejarlo si es necesario
+      throw error;
     }
   };
 
-  // Función para editar un producto con confirmación
-  const handleEditProduct = async (updatedProduct) => {
-    const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar el producto "${updatedProduct.nombre}"?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await updateProduct(updatedProduct.id, updatedProduct);
-      } catch (error) {
-        // El error ya se maneja en la función
-        console.error('Error updating product:', error);
-      }
+  // Función para editar un producto (sin confirmación, para usar desde EditProduct)
+  const handleEditProduct = async (id, productData) => {
+    try {
+      await updateProduct(id, productData);
+      // La lista se recarga automáticamente en updateProduct
+    } catch (error) {
+      // El error ya se maneja en la función updateProduct
+      console.error('Error updating product:', error);
+      // Re-lanzar el error para que EditProduct pueda manejarlo si es necesario
+      throw error;
     }
   };
 
@@ -237,70 +337,58 @@ const ProductsPage = () => {
     changePage(page);
   };
 
-  // Renderizar estado de carga
-  if (loading && products.length === 0) {
-    return (
-      <div className="min-h-screen font-inter">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">Cargando productos...</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Renderizar error
-  if (error && products.length === 0) {
-    return (
-      <div className="min-h-screen font-inter">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <i className="bi bi-exclamation-triangle text-red-400"></i>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Error al cargar productos</h3>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
-                  >
-                    Reintentar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Estado de carga inicial
+  const isInitialLoading = loading && products.length === 0;
+  const hasError = error && products.length === 0;
 
   return (
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           {/* Header con gradiente */}
-          {/* El título ahora se muestra en el navbar */}
           <div className="p-6">
-            {/* Barra de búsqueda y botón de crear */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} />
-              <CreateProduct onCreate={handleCreateProduct} products={products} />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsCharacteristicsManagerOpen(true)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center"
+                  title="Gestionar características técnicas"
+                >
+                  <i className="bi bi-gear mr-2"></i>
+                  Características
+                </button>
+                <CreateProduct onCreate={handleCreateProduct} products={products} />
+              </div>
             </div>
-
-            {/* Tabla de productos */}
-            <ProductsTable
-              products={products}
-              onEdit={handleEditProduct}
-              onDelete={handleDeleteProduct}
-            />
+            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+              {hasError && !isInitialLoading ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <i className="bi bi-exclamation-triangle text-red-400"></i>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Error al cargar productos</h3>
+                      <p className="text-sm text-red-700 mt-1">{error}</p>
+                      <button
+                        onClick={() => loadProducts()}
+                        className="mt-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded"
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <ProductsTable
+                  products={products}
+                  onEdit={handleEditProduct}
+                  onDelete={handleDeleteProduct}
+                  loading={isInitialLoading}
+                />
+              )}
+            </div>
 
             {/* Paginación */}
             {pagination.totalPages > 1 && (
@@ -311,26 +399,13 @@ const ProductsPage = () => {
               />
             )}
 
-            {/* Mostrar información de paginación */}
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Mostrando {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} a{' '}
-                {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} de{' '}
-                {pagination.totalItems} productos.
-              </p>
-            </div>
           </div>
         </div>
       </div>
-      <ToastContainer />
-
-      {/* Indicador de carga durante operaciones */}
-      {loading && products.length > 0 && (
-        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          <span>Procesando...</span>
-        </div>
-      )}
+      <CharacteristicsManager 
+        isOpen={isCharacteristicsManagerOpen} 
+        onClose={() => setIsCharacteristicsManagerOpen(false)} 
+      />
     </div>
   );
 };

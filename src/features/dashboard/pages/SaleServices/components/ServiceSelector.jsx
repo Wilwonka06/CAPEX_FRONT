@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { API_CONFIG, getAuthHeaders } from '../../../../../shared/config/api.js';
+import { apiRequest } from '../../../../../shared/config/apiConfig';
+import { formatNumber } from '../../../../../shared/utils/formatters';
 
 const ServiceSelector = ({ selectedServices, onServicesChange }) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedServiceForQuantity, setSelectedServiceForQuantity] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -11,96 +11,56 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [availableServices, setAvailableServices] = useState([]);
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [retrying, setRetrying] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Cargar servicios y empleados desde el backend
   useEffect(() => {
+    let cancelled = false;
+    const fetchWithRetry = async (fn, label, attempts = 3, delayMs = 1000) => {
+      let lastErr;
+      for (let i = 1; i <= attempts; i++) {
+        try {
+          const res = await fn();
+          return res;
+        } catch (err) {
+          lastErr = err;
+          console.warn(`⚠️ Fallo al cargar ${label} (intento ${i}/${attempts})`, err);
+          if (i < attempts) await new Promise(r => setTimeout(r, delayMs * i));
+        }
+      }
+      throw lastErr;
+    };
+
     const cargarDatos = async () => {
       setLoading(true);
+      setErrorMsg('');
       try {
-        // Cargar servicios
-        const serviciosResponse = await fetch(`${API_CONFIG.BASE_URL}/servicios`, {
-          method: 'GET',
-          headers: getAuthHeaders(),
-        });
+        const servicios = await fetchWithRetry(() => apiRequest.get('/servicios', { skipGlobalErrorHandling: true }), 'servicios');
+        let serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || servicios.results || []);
+        if (!Array.isArray(serviciosArray)) serviciosArray = [];
+        if (!cancelled) setAvailableServices(serviciosArray);
 
-        if (serviciosResponse.ok) {
-          const servicios = await serviciosResponse.json();
-          console.log('🔍 Servicios recibidos del backend:', servicios);
-          
-          // Manejar diferentes estructuras de respuesta
-          let serviciosArray = [];
-          if (Array.isArray(servicios)) {
-            serviciosArray = servicios;
-          } else if (servicios && typeof servicios === 'object') {
-            // Si es un objeto, intentar extraer un array
-            if (servicios.data && Array.isArray(servicios.data)) {
-              serviciosArray = servicios.data;
-            } else if (servicios.servicios && Array.isArray(servicios.servicios)) {
-              serviciosArray = servicios.servicios;
-            } else if (servicios.results && Array.isArray(servicios.results)) {
-              serviciosArray = servicios.results;
-            } else {
-              // Si es un objeto con propiedades que parecen servicios
-              serviciosArray = Object.values(servicios).filter(item => 
-                item && typeof item === 'object' && (item.id || item.nombre || item.name)
-              );
-            }
-          }
-          
-          console.log('🔧 Servicios procesados:', serviciosArray);
-          setAvailableServices(serviciosArray);
-        } else {
-          console.error('Error al cargar servicios:', serviciosResponse.status);
+        const empleados = await fetchWithRetry(() => apiRequest.get('/empleados', { skipGlobalErrorHandling: true }), 'empleados');
+        let empleadosArray = Array.isArray(empleados) ? empleados : (empleados.data || empleados.empleados || empleados.results || []);
+        if (!Array.isArray(empleadosArray)) empleadosArray = [];
+        if (!cancelled) setAvailableEmployees(empleadosArray);
+      } catch (error) {
+        console.error('❌ Error al cargar datos de venta de servicios:', error);
+        if (!cancelled) setErrorMsg('No se pudieron cargar servicios o empleados. Verifica conexión y reintenta.');
+        if (!cancelled) {
           setAvailableServices([]);
-        }
-
-        // Cargar empleados
-        const empleadosResponse = await fetch(`${API_CONFIG.BASE_URL}/empleados`, {
-          method: 'GET',
-          headers: getAuthHeaders(),
-        });
-
-        if (empleadosResponse.ok) {
-          const empleados = await empleadosResponse.json();
-          console.log('🔍 Empleados recibidos del backend:', empleados);
-          
-          // Manejar diferentes estructuras de respuesta
-          let empleadosArray = [];
-          if (Array.isArray(empleados)) {
-            empleadosArray = empleados;
-          } else if (empleados && typeof empleados === 'object') {
-            // Si es un objeto, intentar extraer un array
-            if (empleados.data && Array.isArray(empleados.data)) {
-              empleadosArray = empleados.data;
-            } else if (empleados.empleados && Array.isArray(empleados.empleados)) {
-              empleadosArray = empleados.empleados;
-            } else if (empleados.results && Array.isArray(empleados.results)) {
-              empleadosArray = empleados.results;
-            } else {
-              // Si es un objeto con propiedades que parecen empleados
-              empleadosArray = Object.values(empleados).filter(item => 
-                item && typeof item === 'object' && (item.id || item.nombre || item.name)
-              );
-            }
-          }
-          
-          console.log('🔧 Empleados procesados:', empleadosArray);
-          setAvailableEmployees(empleadosArray);
-        } else {
-          console.error('Error al cargar empleados:', empleadosResponse.status);
           setAvailableEmployees([]);
         }
-      } catch (error) {
-        console.error('Error al cargar datos:', error);
-        setAvailableServices([]);
-        setAvailableEmployees([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     cargarDatos();
+    return () => { cancelled = true; };
   }, []);
 
   // Cleanup del timeout al desmontar el componente
@@ -112,52 +72,19 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     };
   }, [searchTimeout]);
 
-  // Función para buscar servicios usando el endpoint de búsqueda
-  const buscarServicios = async (termino) => {
-    if (!termino.trim()) {
-      // Si no hay término, cargar todos los servicios
-      const response = await fetch(`${API_CONFIG.BASE_URL}/servicios`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      
-      if (response.ok) {
-        const servicios = await response.json();
-        setAvailableServices(Array.isArray(servicios) ? servicios : []);
-      }
-      return;
-    }
-
+  // Cargar todos los servicios (select simple)
+  const cargarServicios = async () => {
+    setRetrying(true);
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/servicios/search?q=${encodeURIComponent(termino)}`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-
-      if (response.ok) {
-        const servicios = await response.json();
-        setAvailableServices(Array.isArray(servicios) ? servicios : []);
-      } else {
-        console.error('Error al buscar servicios:', response.status);
-        // Fallback a filtrado local
-        const todosLosServicios = availableServices;
-        const filtrados = Array.isArray(todosLosServicios) 
-          ? todosLosServicios.filter(service =>
-              (service.nombre || service.name || '').toLowerCase().includes(termino.toLowerCase())
-            )
-          : [];
-        setAvailableServices(filtrados);
-      }
+      const servicios = await apiRequest.get('/servicios', { skipGlobalErrorHandling: true });
+      const serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || []);
+      setAvailableServices(Array.isArray(serviciosArray) ? serviciosArray : []);
+      setErrorMsg('');
     } catch (error) {
-      console.error('Error al buscar servicios:', error);
-      // Fallback a filtrado local
-      const todosLosServicios = availableServices;
-      const filtrados = Array.isArray(todosLosServicios) 
-        ? todosLosServicios.filter(service =>
-            (service.nombre || service.name || '').toLowerCase().includes(termino.toLowerCase())
-          )
-        : [];
-      setAvailableServices(filtrados);
+      console.error('Error al cargar servicios:', error);
+      setErrorMsg('No se pudieron cargar los servicios. Intenta nuevamente.');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -193,8 +120,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
       setSelectedEmployeeForService("");
       setShowQuantityModal(true);
     }
-    setSearchTerm("");
-    setIsOpen(false);
+    setSelectedServiceId("");
   };
 
   const confirmServiceSelection = () => {
@@ -233,39 +159,17 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     onServicesChange(selectedServices.filter(s => s.uniqueId !== uniqueId));
   };
 
-  const isFormValid = selectedEmployeeForService && quantity > 0;
+  const isFormValid = selectedEmployeeForService && quantity > 0 && availableServices.length > 0 && availableEmployees.length > 0;
   const totalServices = selectedServices.reduce((total, service) => total + service.subtotal, 0);
 
   // Funciones simples para evitar problemas de hooks
-  const handleSearchChange = (e) => {
-    const termino = e.target.value;
-    setSearchTerm(termino);
-    setIsOpen(true);
-    
-    // Limpiar timeout anterior
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
+  const handleSelectChange = (e) => {
+    const val = e.target.value;
+    setSelectedServiceId(val);
+    const servicio = filteredServices.find(s => String(s.id) === String(val));
+    if (servicio) {
+      handleServiceSelect(servicio);
     }
-    
-    // Crear nuevo timeout para debounce
-    const newTimeout = setTimeout(async () => {
-      if (termino.trim()) {
-        setLoading(true);
-        await buscarServicios(termino);
-        setLoading(false);
-      } else {
-        // Si no hay término, cargar todos los servicios
-        setLoading(true);
-        await buscarServicios('');
-        setLoading(false);
-      }
-    }, 300); // 300ms de debounce
-    
-    setSearchTimeout(newTimeout);
-  };
-
-  const handleSearchFocus = () => {
-    setIsOpen(true);
   };
 
   const handleQuantityChange = (e) => {
@@ -278,55 +182,36 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
   return (
     <div className="relative">
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            onFocus={handleSearchFocus}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-            placeholder="Buscar servicios..."
-          />
-          <i className="bi bi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+      {errorMsg && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-sm flex items-center justify-between">
+          <span className="text-red-700">{errorMsg}</span>
+          <button onClick={cargarServicios} disabled={retrying} className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 disabled:opacity-50">
+            {retrying ? 'Reintentando...' : 'Reintentar'}
+          </button>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+        <div>
+          <label className="block text-xs font-medium text-black mb-1">Servicio</label>
+          <select
+            value={selectedServiceId}
+            onChange={handleSelectChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            onFocus={cargarServicios}
+          >
+            <option value="">Seleccionar servicio</option>
+            {filteredServices.map(service => (
+              <option key={service.id} value={service.id}>
+                {service.nombre} - ${service.precio}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Dropdown de servicios */}
-      {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg">
-          {loading ? (
-            <div className="px-3 py-2 text-gray-500 text-sm flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-              Cargando servicios...
-            </div>
-          ) : (
-            <>
-          {filteredServices.map(service => (
-            <div
-              key={service.id}
-              onClick={() => handleServiceSelect(service)}
-              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
-            >
-              <div className="flex justify-between">
-                    <span>{service.nombre || service.name}</span>
-                    <span className="text-gray-600">${service.precio || service.price || 0}</span>
-              </div>
-            </div>
-          ))}
-              {filteredServices.length === 0 && !loading && (
-            <div className="px-3 py-2 text-gray-500 text-sm">
-              No se encontraron servicios
-            </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
       {/* Modal para cantidad, empleado y detalles del servicio */}
       {showQuantityModal && selectedServiceForQuantity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in flex flex-col border border-gray-200">
             {/* Header */}
             <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -352,12 +237,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                   </div>
                 </div>
                 
-                <div>
-                  <label className="block text-xs font-medium text-black mb-1">Categoría</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    {selectedServiceForQuantity.categoria || selectedServiceForQuantity.category || 'Sin categoría'}
-                  </div>
-                </div>
+                
                 
                 <div>
                   <label className="block text-xs font-medium text-black mb-1">Duración</label>
@@ -424,7 +304,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-blue-600">
-                    ${((selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0) * quantity).toLocaleString()}
+                    ${formatNumber(((selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0) * quantity))}
                   </div>
                 </div>
               </div>
@@ -456,7 +336,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
           <table className="w-full text-xs">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Categoría Servicio</th>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Servicio</th>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Empleado</th>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
@@ -475,11 +354,10 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               ) : (
                 selectedServices.map((service) => (
                   <tr key={service.uniqueId} className="border-t hover:bg-gray-50">
-                    <td className="px-2 py-2 border-r">{service.category}</td>
                     <td className="px-2 py-2 border-r">{service.name}</td>
                     <td className="px-2 py-2 border-r">{service.employee?.name}</td>
-                    <td className="px-2 py-2 border-r text-center">{service.quantity}</td>
-                    <td className="px-2 py-2 border-r">${service.subtotal?.toLocaleString()}</td>
+                    <td className="px-2 py-2 border-r text-center">{formatNumber(service.quantity)}</td>
+                    <td className="px-2 py-2 border-r">${formatNumber(service.subtotal || 0)}</td>
                     <td className="px-2 py-2 border-r">{service.duration}</td>
                     <td className="px-2 py-2 text-center">
                       <button
@@ -501,7 +379,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         <div className="mt-2 text-sm bg-blue-50 p-2 rounded-md border border-blue-100">
           <span className="font-medium">TOTAL DE SERVICIOS: </span>
           <span className="font-bold text-blue-600">
-            ${totalServices.toLocaleString()}
+            ${formatNumber(totalServices)}
           </span>
         </div>
       </div>

@@ -17,12 +17,12 @@ class RolesValidationService {
       return { isValid: false, error: 'El nombre no puede estar vacío' };
     }
 
-    if (trimmedName.length < 2) {
-      return { isValid: false, error: 'El nombre debe tener al menos 2 caracteres' };
+    if (trimmedName.length < 3) {
+      return { isValid: false, error: 'El nombre debe tener al menos 3 caracteres' };
     }
 
-    if (trimmedName.length > 50) {
-      return { isValid: false, error: 'El nombre no puede exceder 50 caracteres' };
+    if (trimmedName.length > 16) {
+      return { isValid: false, error: 'El nombre no puede exceder 16 caracteres' };
     }
 
     // Verificar duplicados
@@ -39,23 +39,23 @@ class RolesValidationService {
     return { isValid: true };
   }
 
-  // Validar descripción de rol
+  // Validar descripción de rol (opcional)
   static validateRoleDescription(description) {
+    // Si no hay descripción, es válido (opcional)
     if (!description || typeof description !== 'string') {
-      return { isValid: false, error: 'La descripción es requerida' };
+      return { isValid: true };
     }
 
     const trimmedDescription = description.trim();
+    
+    // Si está vacía después de trim, es válido (opcional)
     if (trimmedDescription.length === 0) {
-      return { isValid: false, error: 'La descripción no puede estar vacía' };
+      return { isValid: true };
     }
 
-    if (trimmedDescription.length < 5) {
-      return { isValid: false, error: 'La descripción debe tener al menos 5 caracteres' };
-    }
-
-    if (trimmedDescription.length > 200) {
-      return { isValid: false, error: 'La descripción no puede exceder 200 caracteres' };
+    // Si tiene contenido, validar longitud máxima (sin mínimo)
+    if (trimmedDescription.length > 100) {
+      return { isValid: false, error: 'La descripción no puede exceder 100 caracteres' };
     }
 
     return { isValid: true };
@@ -96,6 +96,25 @@ class RolesValidationService {
     if (!validStatuses.includes(status)) {
       return { isValid: false, error: 'Estado inválido' };
     }
+    return { isValid: true };
+  }
+
+  // Validar si un rol se puede eliminar
+  static validateRoleDeletion(role) {
+    const systemRoles = ['Administrador', 'Empleado', 'Cliente'];
+    const roleName = role.name || role.nombre || '';
+    
+    const isSystemRole = systemRoles.some(systemRole => 
+      roleName.toLowerCase() === systemRole.toLowerCase()
+    );
+
+    if (isSystemRole) {
+      return { 
+        isValid: false, 
+        error: `No se puede eliminar el rol "${roleName}" porque es un rol del sistema.` 
+      };
+    }
+
     return { isValid: true };
   }
 

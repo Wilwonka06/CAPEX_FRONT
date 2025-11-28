@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import Swal from 'sweetalert2';
-import { isDuplicateSupplierEmail, isValidEmail, isValidNIT, isValidPhone, isValidSupplierType } from "../../../../../shared/validations";
+import { isDuplicateSupplierEmail, isValidEmail, isValidNIT, isValidPhone, isValidSupplierType, isValidColombianNIT, isValidDocumentNumber, formatNIT } from "../../../../../shared/validations";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
@@ -9,6 +9,7 @@ import '../../users/components/phoneinput-search.css';
 const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   const [formData, setFormData] = useState({
     nit: "",
+    numeroDocumento: "",
     nombre: "",
     contacto: "",
     direccion: "",
@@ -19,28 +20,31 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   const [originalCorreo, setOriginalCorreo] = useState("");
   const [errors, setErrors] = useState({});
   const [isEmailValid, setIsEmailValid] = useState(true);
+  const [numero, setNumero] = useState('');
 
-  const parseTelefono = (telefono) => {
-    if (!telefono) return { countryCode: 'co', dialCode: '+57', number: '' };
-    const match = telefono.match(/^(\+\d+)-(\d{4,15})$/);
-    if (match) {
-      return {
-        countryCode: 'co',
-        dialCode: match[1],
-        number: match[2]
-      };
-    }
-    return { countryCode: 'co', dialCode: '+57', number: '' };
+  // Función para limpiar y parsear el teléfono desde el backend
+  const parsePhoneFromBackend = (telefono) => {
+    if (!telefono) return '';
+    
+    // Remover el símbolo + si existe y retornar solo números
+    // El componente PhoneInput manejará el formato
+    return telefono.replace(/[^0-9]/g, '');
   };
-
-  const initialTelefono = supplier && supplier.telefono ? supplier.telefono : '';
-  const [country, setCountry] = useState({ countryCode: parseTelefono(initialTelefono).countryCode, dialCode: parseTelefono(initialTelefono).dialCode });
-  const [numero, setNumero] = useState(parseTelefono(initialTelefono).number);
 
   useEffect(() => {
     if (supplier) {
+      // Parsear el teléfono correctamente
+      const phoneNumber = parsePhoneFromBackend(supplier.telefono);
+      
+      // Formatear NIT si existe y el tipo es Jurídico
+      let formattedNit = supplier.nit || "";
+      if (formattedNit && supplier.tipo === "J") {
+        formattedNit = formatNIT(formattedNit);
+      }
+      
       setFormData({
-        nit: supplier.nit || "",
+        nit: formattedNit,
+        numeroDocumento: supplier.numeroDocumento || "",
         nombre: supplier.nombre || "",
         contacto: supplier.contacto || "",
         direccion: supplier.direccion || "",
@@ -51,8 +55,7 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
       setOriginalCorreo(supplier.correo || "");
       setErrors({});
       setIsEmailValid(true);
-      setCountry({ countryCode: parseTelefono(supplier.telefono || '').countryCode, dialCode: parseTelefono(supplier.telefono || '').dialCode });
-      setNumero(parseTelefono(supplier.telefono || '').number);
+      setNumero(phoneNumber); // Establecer el número limpio
     }
   }, [supplier]);
 
@@ -60,7 +63,27 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
     switch (name) {
       case 'nit':
         if (!value.trim()) return 'El NIT es requerido';
-        if (!isValidNIT(value)) return 'El NIT debe comenzar con una letra seguida de números';
+        if (!isValidColombianNIT(value))
+          return 'El NIT debe tener entre 9 y 14 dígitos con dígito de verificación (ej: 123456789-0)';
+        // Verificar duplicados usando el valor limpio (sin formato)
+        const cleanNit = value.replace(/[.-]/g, '');
+        if (suppliers.some((s) => {
+          const supplierNit = s.nit ? s.nit.replace(/[.-]/g, '') : '';
+          return supplierNit === cleanNit && s.id !== supplier.id;
+        }))
+          return 'Ya existe un proveedor con ese NIT';
+        return '';
+      case 'numeroDocumento':
+        if (!value.trim()) return 'El número de documento es requerido';
+        if (!isValidDocumentNumber(value))
+          return 'El número de documento debe tener entre 8 y 15 dígitos';
+        // Verificar duplicados
+        const cleanDoc = value.replace(/\s/g, '');
+        if (suppliers.some((s) => {
+          const supplierDoc = s.numeroDocumento ? s.numeroDocumento.replace(/\s/g, '') : '';
+          return supplierDoc === cleanDoc && s.id !== supplier.id;
+        }))
+          return 'Ya existe un proveedor con ese número de documento';
         return '';
       case 'nombre':
         if (!value.trim()) return 'El nombre es requerido';
@@ -91,9 +114,31 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    const error = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: error }));
+    
+    // Si cambia el tipo, limpiar el campo de identificación
+    if (name === "tipo") {
+      setFormData((prev) => ({ 
+        ...prev, 
+        [name]: value,
+        nit: "",
+        numeroDocumento: ""
+      }));
+      setErrors((prev) => ({ 
+        ...prev, 
+        nit: "",
+        numeroDocumento: ""
+      }));
+    } else if (name === "nit") {
+      // Formatear NIT mientras se escribe
+      const formatted = formatNIT(value);
+      setFormData((prev) => ({ ...prev, [name]: formatted }));
+      const error = validateField(name, formatted);
+      setErrors(prev => ({ ...prev, [name]: error }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      const error = validateField(name, value);
+      setErrors(prev => ({ ...prev, [name]: error }));
+    }
   };
 
   const handleBlur = (e) => {
@@ -102,52 +147,68 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
     setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const handlePhoneChange = (value, countryData) => {
+  const handlePhoneChange = (value) => {
+    // PhoneInput ya incluye el código del país en 'value'
     setNumero(value);
-    setCountry({ countryCode: countryData.countryCode, dialCode: '+' + countryData.dialCode });
     const error = validateField('telefono', value);
     setErrors(prev => ({ ...prev, telefono: error }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Detener la propagación del evento
+    
     // Validar todos los campos
     const newErrors = {};
     Object.keys(formData).forEach(key => {
-      newErrors[key] = validateField(key, formData[key]);
+      if (key !== 'telefono') {
+        // Solo validar el campo de identificación correspondiente al tipo
+        if (key === "nit" && formData.tipo !== "J") {
+          // No validar NIT si el tipo no es Jurídico
+          return;
+        }
+        if (key === "numeroDocumento" && formData.tipo !== "N") {
+          // No validar número de documento si el tipo no es Natural
+          return;
+        }
+        newErrors[key] = validateField(key, formData[key]);
+      }
     });
     newErrors.telefono = validateField('telefono', numero);
+    
+    // Validar que el campo de identificación correspondiente esté lleno
+    if (formData.tipo === "J" && !formData.nit.trim()) {
+      newErrors.nit = "El NIT es requerido";
+    }
+    if (formData.tipo === "N" && !formData.numeroDocumento.trim()) {
+      newErrors.numeroDocumento = "El número de documento es requerido";
+    }
+    
     if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       return;
     }
-    // Confirmación SweetAlert
-    const result = await Swal.fire({
-      title: '¿Confirmar edición?',
-      text: `¿Estás seguro de que deseas editar el proveedor "${formData.nombre}"?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, editar',
-      cancelButtonText: 'Cancelar'
-    });
-    if (result.isConfirmed) {
-      const updatedSupplier = {
-        ...supplier,
-        ...formData,
-        telefono: country.dialCode + '-' + numero,
-        tipo: formData.tipo.toUpperCase(),
-      };
-      if (onSave) onSave(updatedSupplier);
-      handleClose();
-    }
+    
+    // Limpiar el formato del NIT antes de guardar (solo números y guión)
+    const cleanNit = formData.nit ? formData.nit.replace(/\./g, '') : '';
+    const cleanDocumento = formData.numeroDocumento ? formData.numeroDocumento.replace(/\s/g, '') : '';
+    
+    const updatedSupplier = {
+      ...supplier,
+      ...formData,
+      nit: formData.tipo === "J" ? cleanNit : "",
+      numeroDocumento: formData.tipo === "N" ? cleanDocumento : "",
+      telefono: '+' + numero,
+      tipo: formData.tipo.toUpperCase(),
+    };
+    if (onSave) onSave(updatedSupplier);
   };
 
   const handleClose = () => {
     onClose();
     setFormData({
       nit: "",
+      numeroDocumento: "",
       nombre: "",
       contacto: "",
       direccion: "",
@@ -158,30 +219,47 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
     setOriginalCorreo("");
     setErrors({});
     setIsEmailValid(true);
+    setNumero(''); // Limpiar el número
   };
 
   if (!isOpen || !supplier) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
-        {/* Header fijo */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Editar proveedor</h2>
-          <button
-            className="text-gray-400 hover:text-primary text-xl font-bold"
-            onClick={handleClose}
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-pencil-square text-lg"></i></div><h2 className="text-xl font-bold m-0">Editar proveedor</h2></div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={handleClose} aria-label="Cerrar">×</button>
         </div>
-        {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-8 flex-1">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="edit-supplier-form" onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Campo Tipo - Primero */}
+            <div>
+              <label className="block text-xs font-medium text-text-main mb-1">
+                Tipo de Proveedor <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="tipo"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.tipo ? 'border-red-500' : 'border-gray-300'}`}
+                value={formData.tipo}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                required
+              >
+                <option value="">Seleccionar tipo</option>
+                <option value="N">Natural (N)</option>
+                <option value="J">Jurídico (J)</option>
+              </select>
+              {errors.tipo && <p className="text-red-500 text-xs mt-1">{errors.tipo}</p>}
+            </div>
+
+            {/* Campo condicional: NIT o Número de Documento */}
+            {formData.tipo === "J" && (
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">NIT <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-medium text-text-main mb-1">
+                  NIT (Número de Identificación Tributaria) – dígito de verificación incluido{" "}
+                  <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="nit"
@@ -189,28 +267,39 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
                   value={formData.nit}
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  placeholder="Ej: 123456789-0 o 800123456-5"
+                  maxLength={17}
                   required
-                  disabled
                 />
                 {errors.nit && <p className="text-red-500 text-xs mt-1">{errors.nit}</p>}
+                <p className="text-xs text-gray-500 mt-1">
+                  Formato: números con separadores opcionales (puntos) y dígito de verificación con guión
+                </p>
               </div>
+            )}
+
+            {formData.tipo === "N" && (
               <div>
-                <label className="block text-xs font-medium text-text-main mb-1">Tipo <span className="text-red-500">*</span></label>
-                <select
-                  name="tipo"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.tipo ? 'border-red-500' : 'border-gray-300'}`}
-                  value={formData.tipo}
+                <label className="block text-xs font-medium text-text-main mb-1">
+                  Número de Documento <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="numeroDocumento"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.numeroDocumento ? 'border-red-500' : 'border-gray-300'}`}
+                  value={formData.numeroDocumento}
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  placeholder="Ej: 1234567890"
+                  maxLength={15}
                   required
-                >
-                  <option value="">Seleccionar tipo</option>
-                  <option value="N">Natural (N)</option>
-                  <option value="J">Jurídico (J)</option>
-                </select>
-                {errors.tipo && <p className="text-red-500 text-xs mt-1">{errors.tipo}</p>}
+                />
+                {errors.numeroDocumento && <p className="text-red-500 text-xs mt-1">{errors.numeroDocumento}</p>}
+                <p className="text-xs text-gray-500 mt-1">
+                  Debe tener entre 8 y 15 dígitos
+                </p>
               </div>
-            </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Nombre <span className="text-red-500">*</span></label>
@@ -255,21 +344,18 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-text-main mb-1">Teléfono <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  name="telefono"
-                  className="hidden"
-                  value={formData.telefono}
-                  readOnly
-                />
                 <PhoneInput
-                  country={country.countryCode}
+                  country={'co'}
                   value={numero}
                   onChange={handlePhoneChange}
-                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
-                  inputProps={{ name: 'telefono', required: true }}
+                  inputClass={`w-full py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  containerClass="w-full"
+                  inputProps={{ 
+                    name: 'telefono', 
+                    required: true,
+                    placeholder: 'Ej: 3001234567'
+                  }}
                   specialLabel=""
-                  placeholder="Ej: 3001234567"
                 />
                 {errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
               </div>
@@ -289,27 +375,9 @@ const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
             </div>
           </form>
         </div>
-        {/* Footer fijo */}
-        <div className="sticky bottom-0 rounded-b-lg flex justify-end px-8 py-4">
-          <button
-            type="button"
-            className="px-4 py-2 rounded-md border border-gray-300 bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition"
-            onClick={handleClose}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            form="edit-supplier-form"
-            disabled={!isEmailValid}
-            className={`px-4 py-2 rounded-md font-semibold transition ml-2 text-sm ${
-              isEmailValid 
-                ? 'bg-text-main text-white hover:bg-primary-dark' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            Guardar Cambios
-          </button>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition" onClick={handleClose}>Cancelar</button>
+          <button type="submit" form="edit-supplier-form" disabled={!isEmailValid} className={`px-4 py-2 rounded-lg ml-2 text-xs font-semibold ${isEmailValid ? 'bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 hover:from-yellow-400 hover:to-yellow-500' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>Guardar Cambios</button>
         </div>
       </div>
     </div>
@@ -333,4 +401,4 @@ EditSupplier.propTypes = {
   suppliers: PropTypes.array.isRequired,
 };
 
-export default EditSupplier; 
+export default EditSupplier;

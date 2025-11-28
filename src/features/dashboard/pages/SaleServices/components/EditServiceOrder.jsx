@@ -3,8 +3,10 @@ import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder } from "../../../../../shared/validations";
+import { editServiceOrder } from "../API/ServiceOrderService";
+import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
 
-const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services }) => {
+const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   const [formData, setFormData] = useState({
     clientName: "",
     dineroProporcionado: "",
@@ -16,6 +18,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showErrors, setShowErrors] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
@@ -71,7 +74,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
     }
   }, [isOpen]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
     setTouched({
@@ -85,22 +88,29 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
 
     const orderData = {
       ...formData,
+      id: order.id,
       servicios: selectedServices,
       productos: selectedProducts,
       totalServices,
       totalProducts,
-      totalGeneral
+      totalGeneral,
+      dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
     };
 
-    onEdit(orderData);
+    try {
+      setLoading(true);
+      const updatedOrder = await editServiceOrder(orderData, services);
+      if (onEdited) onEdited(updatedOrder);
+      if (onClose) onClose();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const newVal = name === 'dineroProporcionado' ? formatNumberInput(value) : value;
+    setFormData(prev => ({ ...prev, [name]: newVal }));
     // Solo marcar como tocado, no validar en tiempo real
     setTouched(prev => ({ ...prev, [name]: true }));
   }, []);
@@ -120,7 +130,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
   if (!isOpen || !order) return null;
 
   const EditOrderCard = ({ children }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -219,19 +229,19 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Servicios:</span>
-                <span className="text-blue-600 font-bold">${totalServices.toLocaleString()}</span>
+                <span className="text-blue-600 font-bold">${formatNumber(totalServices)}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Productos:</span>
-                <span className="text-green-600 font-bold">${totalProducts.toLocaleString()}</span>
+                <span className="text-green-600 font-bold">${formatNumber(totalProducts)}</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total General:</span>
-                <span className="text-primary font-bold">${totalGeneral.toLocaleString()}</span>
+                <span className="text-primary font-bold">${formatNumber(totalGeneral)}</span>
               </div>
 
               <div>
@@ -258,7 +268,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdit, order, loading, services })
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
                   ${formData.dineroProporcionado && !isNaN(parseFloat(formData.dineroProporcionado)) 
-                    ? Math.max(0, parseFloat(formData.dineroProporcionado) - totalGeneral).toLocaleString() 
+                    ? formatNumber(Math.max(0, parseFloat(formData.dineroProporcionado) - totalGeneral))
                     : '0'}
                 </div>
               </div>

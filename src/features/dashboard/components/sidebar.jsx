@@ -2,67 +2,54 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 import logo from '../../../shared/images/Logo.png';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
-  // Inicializa expandedGroups vacío y actualízalo en useEffect
   const [expandedGroups, setExpandedGroups] = useState({});
-  const [loadingData] = useState(false); // Añadido para evitar error
+  const [loadingData] = useState(false);
   const location = useLocation();
+  const { hasPrivilege, currentUser } = useAuth();
 
-  // Función para verificar si el usuario tiene permisos para un módulo
+  // ✅ CORREGIDO: Usar el contexto de autenticación para verificar privilegios
+  // Esto asegura que los Administradores tengan acceso a todos los módulos
   const hasPermission = (module, action = 'Visualizar') => {
-    // Esto es una simulación. En un caso real, deberías cargar los permisos del usuario logueado.
-    const user = JSON.parse(localStorage.getItem('currentUser'));
-    if (!user || !user.privileges) {
-      // Si no hay usuario o privilegios, por defecto no tiene permiso para nada excepto Dashboard
-      if (module === 'Dashboard') return true; // Dashboard es siempre visible
-      return false;
-    }
-    // Verificar si el módulo existe y si la acción específica es true
-    return user.privileges[module] && user.privileges[module][action];
+    return hasPrivilege(module, action);
   };
 
-  // Función para filtrar los menús según los permisos del usuario
+  // ✅ CORREGIDO: Usuarios ahora está en Configuración
   const getFilteredMenuGroups = () => {
-    // Define TODOS los grupos y sus ítems con su 'module' asociado
     const allMenuGroups = [
       {
         id: 'main',
         name: 'Dashboard',
+        title: 'Dashboard',
+        name:  'Dashboard',
         icon: 'bi-speedometer2',
-        path: '/dashboard', // Asegura la consistencia con las rutas de Dashboard
-        module: 'Dashboard' // Módulo asociado para permisos
+        path: '/dashboard',
+        module: 'Dashboard'
       },
       {
         id: 'config',
         title: 'Configuración',
         icon: 'bi-gear-fill',
-        module: 'Gestión de Usuarios', // O un módulo específico para configuración si lo tienes
-        items: [
-          { name: 'Roles', icon: 'bi-shield-check', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
-        ]
-      },
-      {
-        id: 'users',
-        title: 'Gestión de Usuarios',
-        icon: 'bi-people-fill',
         module: 'Gestión de Usuarios',
         items: [
-          { name: 'Usuarios', icon: 'bi-person-fill', path: '/dashboard/usuarios', module: 'Gestión de Usuarios' },
+          { name: 'Roles', icon: 'bi-shield', path: '/dashboard/roles', module: 'Gestión de Usuarios' },
+          { name: 'Usuarios', icon: 'bi-person', path: '/dashboard/usuarios', module: 'Gestión de Usuarios' }
         ]
       },
       {
-        id: 'shoppings',
+        id: 'purchases',
         title: 'Gestión de Compras',
         icon: 'bi-cart-check-fill',
         module: 'Gestión de Compras',
         items: [
-          { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/dashboard/categorias-productos', module: 'Gestión de Compras' },
-          { name: 'Productos', icon: 'bi-box-seam-fill', path: '/dashboard/productos', module: 'Gestión de Compras' },
-          { name: 'Proveedores', icon: 'bi-truck', path: '/dashboard/proveedores', module: 'Gestión de Compras' },
-          { name: 'Compras', icon: 'bi-cart-plus-fill', path: '/dashboard/compras', module: 'Gestión de Compras' }
+          { name: 'Categorías de Productos', icon: 'bi-tags-fill', path: '/dashboard/categorias-productos', module: 'Categorías de Productos' },
+          { name: 'Productos', icon: 'bi-box-seam-fill', path: '/dashboard/productos', module: 'Productos' },
+          { name: 'Proveedores', icon: 'bi-truck-front-fill', path: '/dashboard/proveedores', module: 'Proveedores' },
+          { name: 'Compras', icon: 'bi-receipt-cutoff', path: '/dashboard/compras', module: 'Compras' }
         ]
       },
       {
@@ -71,41 +58,36 @@ const Sidebar = () => {
         icon: 'bi-tools',
         module: 'Gestión de Servicios',
         items: [
-          { name: 'Categorías de Servicios', icon: 'bi-collection-fill', path: '/dashboard/categorias-servicios', module: 'Gestión de Servicios' },
-          { name: 'Servicios', icon: 'bi-scissors', path: '/dashboard/servicios', module: 'Gestión de Servicios' },
-          { name: 'Empleados', icon: 'bi-person-badge-fill', path: '/dashboard/empleados', module: 'Gestión de Servicios' },
-          { name: 'Agendamiento General', icon: 'bi-calendar-range-fill', path: '/dashboard/programacion', module: 'Gestión de Servicios' }
+          { name: 'Categorías de Servicios', icon: 'bi-collection', path: '/dashboard/categorias-servicios', module: 'Categorías de Servicios' },
+          { name: 'Servicios', icon: 'bi-scissors', path: '/dashboard/servicios', module: 'Servicios' },
+          { name: 'Empleados', icon: 'bi-person-badge', path: '/dashboard/empleados', module: 'Empleados' },
+          { name: 'Programación de Empleados', icon: 'bi-calendar-week', path: '/dashboard/programacion', module: 'Programación' }
         ]
       },
       {
         id: 'sales',
-        title: 'Ventas',
+        title: 'Gestión de Ventas',
         icon: 'bi-graph-up-arrow',
         module: 'Ventas',
         items: [
-          { name: 'Clientes', icon: 'bi-person-fill', path: '/dashboard/clientes', module: 'Ventas' },
-          { name: 'Agendamiento de Citas', icon: 'bi-calendar-event-fill', path: '/dashboard/citas', module: 'Ventas' },
-          { name: 'Pedidos de Productos', icon: 'bi-clipboard-check-fill', path: '/dashboard/pedidos', module: 'Ventas' },
-          { name: 'Venta de Productos', icon: 'bi-bag-check-fill', path: '/dashboard/ventas-productos', module: 'Ventas' },
-          { name: 'Venta de Servicios', icon: 'bi-bag-check-fill', path: '/dashboard/ventas-servicios', module: 'Ventas' }
+          { name: 'Clientes', icon: 'bi-person', path: '/dashboard/clientes', module: 'Clientes' },
+          { name: 'Agendamiento de Citas', icon: 'bi-calendar-event', path: '/dashboard/citas', module: 'Citas' },
+          { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/dashboard/pedidos', module: 'Pedidos' },
+          { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/dashboard/ventas-productos', module: 'Venta de Productos' },
+          { name: 'Venta de Servicios', icon: 'bi-bag-check', path: '/dashboard/ventas-servicios', module: 'Ventas' }
         ]
       }
     ];
 
-    // Filtrar grupos y sus ítems si el usuario no tiene privilegios de Admin
     return allMenuGroups.filter(group => {
-      // Si el grupo es Dashboard, siempre es visible
       if (group.id === 'main') return true;
 
-      // Si el grupo tiene sub-items, verificar si al menos uno de sus items tiene permisos
       if (group.items) {
         const hasAnyItemPermission = group.items.some(item => hasPermission(item.module, 'Visualizar'));
         return hasAnyItemPermission;
       }
-      // Si es un grupo sin sub-items (como Dashboard, pero ya lo manejamos), verificar permisos directos
       return hasPermission(group.module, 'Visualizar');
     }).map(group => {
-      // Si el grupo tiene items, filtrar solo los que tienen permisos de Visualizar
       if (group.items) {
         return {
           ...group,
@@ -116,10 +98,9 @@ const Sidebar = () => {
     });
   };
 
-  // Usar memoización o useCallback si getFilteredMenuGroups es costoso
-  const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, localStorage.getItem('currentUser')]); // Re-calcular si la ubicación o el usuario cambian
+  // ✅ CORREGIDO: Actualizar cuando cambien los privilegios del usuario
+  const menuGroups = React.useMemo(() => getFilteredMenuGroups(), [location.pathname, currentUser?.privileges, currentUser?.rol]);
 
-  // useEffect para abrir el grupo correspondiente a la ruta actual al montar o cuando cambian location o menuGroups
   useEffect(() => {
     const expanded = {};
     menuGroups.forEach(group => {
@@ -128,16 +109,11 @@ const Sidebar = () => {
       }
     });
     setExpandedGroups(expanded);
-    // eslint-disable-next-line
   }, [location.pathname, menuGroups.length]);
 
-  // Elimina onMouseEnter y onMouseLeave del contenedor principal
-  // Elimina las funciones handleMouseEnter y handleMouseLeave (ya no se usan)
-
-  // Función para encontrar el ID del grupo padre de una ruta
   const getGroupIdByPath = (pathname) => {
     for (const group of menuGroups) {
-      if (group.path === pathname) return group.id; // Si es un link directo
+      if (group.path === pathname) return group.id;
       if (group.items) {
         for (const item of group.items) {
           if (item.path === pathname) return group.id;
@@ -147,18 +123,13 @@ const Sidebar = () => {
     return null;
   };
 
-  // Efecto para expandir el grupo de la ruta actual al cargar o cambiar de ruta
   useEffect(() => {
     const currentGroup = getGroupIdByPath(location.pathname);
-    if (currentGroup) {
-      // Solo expandir si se permite la expansión automática
-      if (isExpanded) { // Si está expandido por hover, mantener/abrir grupo activo
-         setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
-      }
+    if (currentGroup && isExpanded) {
+      setExpandedGroups(prev => ({ ...prev, [currentGroup]: true }));
     }
-  }, [location.pathname, isExpanded]); // Depende de location, isExpanded
+  }, [location.pathname, isExpanded]);
 
-  // Cambia toggleGroup para abrir/cerrar solo el grupo seleccionado, sin cerrar los demás
   const toggleGroup = (groupId) => {
     setExpandedGroups(prev => ({
       ...prev,
@@ -166,12 +137,8 @@ const Sidebar = () => {
     }));
   };
 
-
   const isActiveRoute = (path) => {
-    // Ajustar para que si la ruta es '/' y el sidebar no está expandido/bloqueado, no se marque
-    // Esto es para que el icono del dashboard no se vea "activo" cuando el sidebar está minimizado
-    // y no hay una ruta activa específica dentro de él.
-    if (path === '/dashboard' && location.pathname === '/') return true; // Dashboard es el index del layout
+    if (path === '/dashboard' && location.pathname === '/') return true;
     return location.pathname === path;
   };
 
@@ -179,29 +146,31 @@ const Sidebar = () => {
     <div
       className={`bg-text-main shadow-lg transition-all duration-300 ease-in-out font-inter text-white ${
         isExpanded ? 'w-64' : 'w-16'
-      } flex flex-col h-full`}
+      } flex flex-col h-full cursor-pointer`}
+      onClick={() => !isExpanded && setIsExpanded(true)}
     >
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center">
           {(isExpanded) ? (
-            <span className="ml-3 font-semibold text-background text-3xl whitespace-nowrap flex items-center justify-center">
-              <img src={logo} alt="Logo" className=" w-30 h-30 object-contain" />
+            <span className="font-semibold flex items-center justify-center">
+              <img src={logo} alt="Logo" className="w-16 h-16 object-contain" />
             </span>
           ) : (
-            // Logo circular para el estado colapsado
-            <span className=" w-10 h-10 flex items-center justify-center">
+            <span className="w-10 h-10 flex items-center justify-center">
               <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
             </span>
           )}
         </div>
-        {/* En el header, elimina el botón de candado y deja solo el botón de flechas */}
-        <button
-          onClick={() => setIsExpanded(prev => !prev)}
-          className="p-1 rounded transition-colors text-background/80 hover:text-background focus:outline-none"
-          title={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
-        >
-        </button>
+        {isExpanded && (
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="p-2 rounded-lg transition-colors text-background/80 hover:text-background hover:bg-background/10 focus:outline-none"
+            title="Colapsar menú"
+          >
+            <i className="bi bi-chevron-left text-lg"></i>
+          </button>
+        )}
       </div>
 
       {/* Menu con scroll */}
@@ -218,20 +187,20 @@ const Sidebar = () => {
         ) : (
           menuGroups.map((group) => (
             <div key={group.id} className="mb-2">
-              {/* Group Header o Link directo */}
               {group.items ? (
                 <div
-                  className={`flex items-center px-4 py-2 cursor-pointer transition-colors rounded-lg relative ${
+                  className={`flex items-center px-4 py-3 cursor-pointer transition-colors rounded-lg relative ${
                     (isExpanded) ? 'justify-between' : 'justify-center'
                   } ${
-                    group.items.some(item => isActiveRoute(item.path))
-                      ? ' bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm' // Grupo activo
+                    expandedGroups[group.id]
+                      ? 'bg-yellow-500/10 text-yellow-500 rounded-lg font-bold shadow-sm'
                       : 'text-background/80 hover:bg-background/10 hover:text-background'
                   }`}
                   onClick={() => (isExpanded) && toggleGroup(group.id)}
+                  title={!(isExpanded) ? group.title : ''}
                 >
                   <div className="flex items-center">
-                    <i className={`${group.icon} text-lg`}></i>
+                    <i className={`${group.icon} text-sm`}></i>
                     {(isExpanded) && (
                       <span className="ml-3 text-sm font-medium whitespace-nowrap">
                         {group.title}
@@ -245,16 +214,16 @@ const Sidebar = () => {
               ) : (
                 <Link
                   to={group.path}
-                  className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline ${
+                  className={`flex items-center px-4 py-3 cursor-pointer transition-colors no-underline ${
                     (isExpanded) ? '' : 'justify-center'
                   } ${
                     isActiveRoute(group.path)
-                      ? 'border-l-4  bg-background/10'
+                      ? 'border-l-4 border-yellow-500 bg-yellow-500/10 text-yellow-500 font-semibold'
                       : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                   }`}
                   title={!(isExpanded) ? group.name : ''}
                 >
-                  <i className={`${group.icon} text-base`}></i>
+                  <i className={`${group.icon} text-sm`}></i>
                   {(isExpanded) && (
                     <span className="ml-3 text-sm whitespace-nowrap ">
                       {group.name}
@@ -263,10 +232,9 @@ const Sidebar = () => {
                 </Link>
               )}
 
-              {/* Group Items - Solo mostrar si el sidebar está expandido o bloqueado */}
               {(group.items && (isExpanded)) && (
                 <div
-                  className={`ml-4 overflow-hidden transition-all duration-300 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  className={`ml-4 overflow-hidden transition-all duration-500 ease-in-out ${expandedGroups[group.id] ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                   style={{ willChange: 'max-height, opacity' }}
                 >
                   {Array.isArray(group.items) && group.items.map((item, index) => (
@@ -274,14 +242,14 @@ const Sidebar = () => {
                       <Link
                         key={index}
                         to={item.path}
-                        className={`flex items-center px-4 py-2 cursor-pointer transition-colors no-underline relative ${
+                        className={`flex items-center px-4 py-3 cursor-pointer transition-colors no-underline relative ${
                           isActiveRoute(item.path)
-                            ? 'text-yellow-500 bg-background/20 font-semibold rounded-lg shadow' // Amarillo fuerte y arqueado
+                            ? 'text-yellow-500 bg-yellow-500/10 font-semibold rounded-lg shadow border-l-2 border-yellow-500'
                             : 'text-background/90 hover:bg-background/10 hover:text-background rounded-xl'
                         }`}
                         title={item.name}
                       >
-                        <i className={`${item.icon} text-base`}></i>
+                        <i className={`${item.icon} text-sm`}></i>
                         <span className="ml-3 text-sm whitespace-nowrap">
                           {item.name}
                         </span>
@@ -290,20 +258,11 @@ const Sidebar = () => {
                   ))}
                 </div>
               )}
+
             </div>
           ))
         )}
       </nav>
-      {/* Botón de flechas para expandir/colapsar el menú */}
-      <div className="ml-2">
-        <button
-          onClick={() => setIsExpanded(prev => !prev)}
-          className="p-1 rounded transition-colors text-background/80 hover:text-background focus:outline-none"
-          title={isExpanded ? 'Colapsar menú' : 'Expandir menú'}
-        >
-          <i className={`bi ${isExpanded ? 'bi-chevron-left' : 'bi-chevron-right'} text-2xl`}></i>
-        </button>
-      </div>
     </div>
   );
 };

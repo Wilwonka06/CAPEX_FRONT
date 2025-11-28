@@ -1,49 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../components/CartContext';
-import ordersService from '../../../../shared/services/OrdersService';
-import CustomerService from '../../../../shared/services/CustomerService';
+import ordersService from '../../pages/orders/API/OrdersService';
+import { useAuth } from '../../../../shared/contexts/AuthContext';
+import OrderProgressIndicator from './components/OrderProgressIndicator';
+import { formatNumber } from '../../../../shared/utils/formatters';
+import { isNumberInputValid } from '../../../../shared/validations';
 
 const empresasEnvio = [
   { nombre: 'INTER rapidísimo', precio: { 'Bogotá': 13500, 'Medellín': 15000, 'default': 18000 } },
   { nombre: 'CO-ORDINADORA', precio: { 'Bogotá': 20500, 'Medellín': 22000, 'default': 25000 } },
 ];
 
-const formatNumber = (num) => new Intl.NumberFormat('es-CO').format(num);
-
 const Checkout = () => {
   const { cart, clearCart } = useCart();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const user = currentUser;
 
   const [form, setForm] = useState({
     documentType: 'CC',
-    documento: '', nombre: '', apellidos: '', telefono: '', email: '',
+    documento: '', nombre: '', telefono: '', email: '',
     empresa: '', direccion: '', apto: '', ciudad: '', pais: 'Colombia',
   });
+
+  // Estados para edición de información del cliente
+  const [isEditing, setIsEditing] = useState(false);
   const [envio, setEnvio] = useState('CO-ORDINADORA');
   const [error, setError] = useState('');
-  const [clienteExistente, setClienteExistente] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
-  // Autocompletar si documento existe en tiempo real
-  const handleDocumentoChange = (e) => {
-    const value = e.target.value;
-    setForm(f => ({ ...f, documento: value }));
-    if (!value) return;
-    const cliente = CustomerService.findByDocument(value);
-    if (cliente) {
+  // Autocompletar con datos del usuario autenticado
+  useEffect(() => {
+    if (user) {
+      console.log('Usuario en checkout:', user);
       setForm(f => ({
         ...f,
-        documentType: cliente.documentType || 'CC',
-        nombre: cliente.firstName,
-        apellidos: cliente.lastName,
-        telefono: cliente.phone,
-        email: cliente.email,
-        direccion: cliente.address || '',
-        ciudad: cliente.city || '',
-        pais: cliente.country || 'Colombia',
+        documentType: user.tipo_documento || 'CC',
+        documento: user.numero_documento || user.documento || '',
+        nombre: user.nombre || '',
+        telefono: user.telefono || '',
+        email: user.correo || '',
+        direccion: user.direccion || '',
+        ciudad: '',
+        pais: 'Colombia',
       }));
+    } else {
+      console.log('No hay usuario en checkout');
     }
-  };
+  }, [user]);
 
   // Calcular precio de envío
   const envioSeleccionado = empresasEnvio.find(e => e.nombre === envio);
@@ -55,75 +61,199 @@ const Checkout = () => {
   const subtotal = cart.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
   const total = subtotal + precioEnvio;
 
-  // Guardar pedido y redirigir
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.documento || !form.nombre || !form.apellidos || !form.telefono || !form.direccion || !form.ciudad) {
+  
+    // ✅ Validación mejorada del usuario
+    if (!user || !user.id_usuario) {
+      setError('Debes iniciar sesión para realizar un pedido.');
+      console.error('❌ Usuario no autenticado o sin ID:', user);
+      return;
+    }
+  
+    if (!form.direccion || !form.ciudad) {
       setError('Por favor completa todos los campos obligatorios.');
       return;
     }
-    // Guardar cliente si es nuevo o actualizar si existe
-    let cliente = CustomerService.findByDocument(form.documento);
-    if (!cliente) {
-      cliente = CustomerService.add({
-        documentType: form.documentType,
-        documentNumber: form.documento,
-        firstName: form.nombre,
-        lastName: form.apellidos,
-        phone: form.telefono,
-        email: form.email,
-        address: form.direccion,
-        city: form.ciudad,
-        country: form.pais,
-      });
-    } else {
-      cliente = CustomerService.update(form.documento, {
-        documentType: form.documentType,
-        firstName: form.nombre,
-        lastName: form.apellidos,
-        phone: form.telefono,
-        email: form.email,
-        address: form.direccion,
-        city: form.ciudad,
-        country: form.pais,
-      });
+  
+    if (cart.length === 0) {
+      setError('El carrito está vacío.');
+      return;
     }
-    // Guardar pedido en "mis pedidos"
-    ordersService.createOrder({
-      clienteId: cliente.id,
-      direccion: form.direccion,
-      ciudad: form.ciudad,
-      pais: form.pais,
-      productos: cart.map(p => ({
-        id: p.id,
-        nombre: p.nombre,
-        cantidad: p.cantidad,
-        precio: p.precio,
-        color: p.color || '',
-        imagen: p.fotos && p.fotos.length > 0 ? p.fotos[0] : (p.foto || p.imagen || ''),
-      })),
-      subtotal,
-      envio: precioEnvio,
-      valor: total,
-      medioPago: envio,
-      estado: 'Pendiente',
-    });
-    clearCart();
-    navigate('/landing/gracias');
-  };
+  
+    setLoading(true);
+    setError('');
+    setCurrentStep(1);
+  
+    try {
+      // Paso 1: Validando datos
+      setCurrentStep(1);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      // Paso 2: Creando pedido
+      setCurrentStep(2);
+      
+      const orderData = {
+        id_usuario: user.id_usuario,
+        fecha: new Date().toISOString().split('T')[0],
+        pais: form.pais,
+        ciudad: form.ciudad,
+        direccion_entrega: form.direccion,
+        apto: form.apto,
+        productos: cart.map(p => ({
+          id_producto: p.id,
+          cantidad: p.cantidad,
+          precio_unitario: p.precio
+        }))
+      };
+  
+      console.log('📦 Datos del pedido:', orderData);
+  
+      const response = await ordersService.create(orderData);
+  
+      // Paso 3: Procesando pago
+      setCurrentStep(3);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      // Verificar que la respuesta sea exitosa
+      if (!response || !response.success) {
+        const errorMsg = response?.message || 'Error al crear el pedido';
+        console.error('❌ Error en respuesta del servidor:', response);
+        throw new Error(errorMsg);
+      }
 
+      // Verificar que haya datos del pedido
+      if (!response.data) {
+        console.error('❌ No se recibieron datos del pedido:', response);
+        throw new Error('No se recibieron datos del pedido creado');
+      }
+
+      setCurrentStep(4);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      clearCart();
+      
+      // ✅ Pasar el pedido creado a través del state de navegación
+      console.log('✅ Navegando a página de agradecimiento con pedido:', response.data);
+      navigate('/landing/gracias', {
+        state: {
+          order: response.data,
+          justCreated: true
+        },
+        replace: true // Usar replace para evitar que el usuario vuelva atrás
+      });
+    } catch (error) {
+      console.error('❌ Error creating order:', error);
+      setError(error.message || 'Error al procesar el pedido. Inténtalo de nuevo.');
+      setCurrentStep(1);
+      // NO redirigir al home en caso de error, dejar que el usuario vea el error
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 py-10 px-2 flex flex-col items-center">
       <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8">
         {/* Formulario */}
         <form className="flex-1 bg-white rounded-2xl shadow-lg p-8" onSubmit={handleSubmit}>
-          <h2 className="text-2xl font-bold mb-6 text-[#1E1E1E]">Información del cliente</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-[#1E1E1E]">Información del cliente</h2>
+            <button
+              type="button"
+              onClick={() => setIsEditing(!isEditing)}
+              className="px-4 py-2 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-lg font-medium transition-colors"
+            >
+              {isEditing ? 'Cancelar edición' : 'Editar información'}
+            </button>
+          </div>
+
+          {isEditing ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Modo edición:</strong> Puedes actualizar tu información personal.
+                Los cambios se guardarán automáticamente al procesar el pedido.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>Nota:</strong> Los datos se cargan automáticamente desde tu cuenta.
+                Si necesitas actualizar tu información, haz clic en "Editar información".
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Número identificación*" value={form.documento} onChange={handleDocumentoChange} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Nombre*" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Apellidos*" value={form.apellidos} onChange={e => setForm(f => ({ ...f, apellidos: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Teléfono*" value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 md:col-span-2 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Dirección de correo" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de documento</label>
+              <select
+                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
+                value={form.documentType}
+                onChange={e => setForm(f => ({ ...f, documentType: e.target.value }))}
+                disabled={!isEditing}
+              >
+                <option value="CC">Cédula de Ciudadanía</option>
+                <option value="CE">Cédula de Extranjería</option>
+                <option value="TI">Tarjeta de Identidad</option>
+                <option value="NIT">NIT</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Número de documento*</label>
+              <input
+                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
+                placeholder="Número identificación*"
+                value={form.documento}
+                onChange={e => {
+                  const raw = e.target.value
+                  const isPassport = form.documentType === 'PP' || form.documentType === 'Pasaporte'
+                  const sanitized = isPassport ? raw.replace(/[^A-Za-z0-9]/g, '') : raw.replace(/[^\d]/g, '')
+                  setForm(f => ({ ...f, documento: sanitized }))
+                }}
+                onKeyDown={isNumberInputValid}
+                readOnly={!isEditing}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo*</label>
+              <input
+                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
+                placeholder="Nombre*"
+                value={form.nombre}
+                onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                readOnly={!isEditing}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono*</label>
+              <input
+                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
+                placeholder="Teléfono*"
+                value={form.telefono}
+                onChange={e => {
+                  const onlyDigits = e.target.value.replace(/[^\d]/g, '')
+                  setForm(f => ({ ...f, telefono: onlyDigits }))
+                }}
+                onKeyDown={isNumberInputValid}
+                readOnly={!isEditing}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección de correo*</label>
+              <input
+                type="email"
+                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
+                placeholder="Dirección de correo*"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                readOnly={!isEditing}
+                required
+              />
+            </div>
           </div>
           <h2 className="text-xl font-bold mb-4 text-[#1E1E1E] mt-6">Dirección de Entrega</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -142,9 +272,24 @@ const Checkout = () => {
               </label>
             ))}
           </div>
+          
           {error && <div className="text-red-600 mb-4">{error}</div>}
-          <button type="submit" className="w-full bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] font-bold py-3 rounded-full text-lg transition mt-4 shadow-lg">Continuar con el pago</button>
+          
+          {loading && (
+            <div className="mb-6">
+              <OrderProgressIndicator currentStep={currentStep} />
+            </div>
+          )}
+          
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#FACC15] hover:bg-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed text-[#1E1E1E] font-bold py-3 rounded-full text-lg transition mt-4 shadow-lg"
+          >
+            {loading ? 'Procesando pedido...' : 'Continuar con el pago'}
+          </button>
         </form>
+        
         {/* Resumen */}
         <div className="w-full md:w-80 bg-white rounded-2xl shadow-lg p-6 h-fit">
           <h2 className="text-lg font-bold mb-4 text-[#1E1E1E]">Monto a pagar</h2>
@@ -175,4 +320,4 @@ const Checkout = () => {
   );
 };
 
-export default Checkout; 
+export default Checkout;
