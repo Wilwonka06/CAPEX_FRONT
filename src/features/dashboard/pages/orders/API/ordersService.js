@@ -27,24 +27,43 @@ class OrdersService {
 
       const response = await apiRequest.get(url, { skipGlobalErrorHandling: true });
       
+      // Manejar advertencias del backend
+      if (response.warnings) {
+        console.warn('⚠️ Backend:', response.warnings);
+      }
+      
       // Mapear respuesta del backend al formato del frontend
       if (response.success && response.data) {
-        response.data = response.data.map(pedido => ({
-          id: pedido.id_pedido,
-          numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
-          fecha: pedido.fecha,
-          clienteId: pedido.id_cliente || null,
-          valor: parseFloat(pedido.total || 0),
-          estado: pedido.estado || 'Pendiente',
-          productos: (pedido.detalles || []).map(det => ({
-            id: det.id_producto,
-            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad,
-            precio: parseFloat(det.precio_unitario || 0),
-            subtotal: parseFloat(det.subtotal || 0)
-          }))
-        }));
+        response.data = response.data.map(pedido => {
+          // Validar datos del cliente
+          const clienteValido = pedido.usuario || pedido.cliente;
+          const clienteNombreValido = pedido.usuario?.nombre || pedido.cliente?.nombre;
+          
+          // Si no hay datos de cliente, log para debugging
+          if (!clienteValido) {
+            console.warn(`Pedido ${pedido.id_pedido} no tiene datos de cliente asociados`);
+          }
+          
+          return {
+            id: pedido.id_pedido,
+            numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
+            fecha: pedido.fecha,
+            clienteId: pedido.id_usuario || pedido.id_cliente || null,
+            clienteNombre: clienteNombreValido || 'Cliente sin nombre',
+            usuario: clienteValido || null,
+            valor: parseFloat(pedido.total || 0),
+            estado: pedido.estado || 'En proceso',
+            direccion_entrega: pedido.direccion_entrega || null,
+            productos: (pedido.detalles || []).map(det => ({
+              id: det.id_producto,
+              codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+              nombre: det.producto?.nombre || 'N/A',
+              cantidad: det.cantidad,
+              precio: parseFloat(det.precio_unitario || 0),
+              subtotal: parseFloat(det.subtotal || 0)
+            }))
+          };
+        });
       }
 
       return this._handleResponse(response);
@@ -75,13 +94,28 @@ class OrdersService {
       // Mapear respuesta
       if (response.success && response.data) {
         const pedido = response.data;
+        
+        // Validar datos del cliente
+        const clienteValido = pedido.usuario || pedido.cliente;
+        const clienteNombreValido = pedido.usuario?.nombre || pedido.cliente?.nombre;
+        
+        // Si no hay datos de cliente, log para debugging
+        if (!clienteValido) {
+          console.warn(`Pedido ${pedido.id_pedido} no tiene datos de cliente asociados`);
+        }
+        
         response.data = {
           id: pedido.id_pedido,
           numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
           fecha: pedido.fecha,
-          clienteId: pedido.id_cliente || null,
+          clienteId: pedido.id_usuario || pedido.id_cliente || null,
+          clienteNombre: clienteNombreValido || 'Cliente sin nombre',
+          usuario: clienteValido || null,
           valor: parseFloat(pedido.total || 0),
-          estado: pedido.estado || 'Pendiente',
+          estado: pedido.estado || 'En proceso',
+          direccion_entrega: pedido.direccion_entrega || null,
+          pais: pedido.pais || null,
+          ciudad: pedido.ciudad || null,
           productos: (pedido.detalles || []).map(det => ({
             id: det.id_producto,
             codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
@@ -130,8 +164,14 @@ class OrdersService {
           id: pedido.id_pedido,
           numeroOrden: `ORD-${pedido.id_pedido.toString().padStart(5, '0')}`,
           fecha: pedido.fecha,
+          clienteId: pedido.id_usuario || pedido.id_cliente || null,
+          clienteNombre: pedido.usuario?.nombre || pedido.cliente?.nombre || null,
+          usuario: pedido.usuario || pedido.cliente || null,
           valor: parseFloat(pedido.total || 0),
           estado: pedido.estado || 'Pendiente',
+          direccion_entrega: pedido.direccion_entrega || null,
+          pais: pedido.pais || null,
+          ciudad: pedido.ciudad || null,
           productos: (pedido.detalles || []).map(det => ({
             id: det.id_producto,
             codigo: `P${det.id_producto.toString().padStart(3, '0')}`,

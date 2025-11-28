@@ -14,6 +14,8 @@ export const productsService = {
       if (params.limit) queryParams.append('limit', params.limit);
       if (params.search) queryParams.append('search', params.search);
       if (params.categoryId) queryParams.append('categoryId', params.categoryId);
+      if (params.supplierId) queryParams.append('supplierId', params.supplierId);
+      if (params.stock_min) queryParams.append('stock_min', params.stock_min);
       if (params.status) queryParams.append('status', params.status);
 
       const url = queryParams.toString()
@@ -339,6 +341,25 @@ export const productsService = {
       return response;
     } catch (error) {
       console.error(`Error updating product stock ${id}:`, error);
+      throw error;
+    }
+  },
+  getLowStock: async (limit = 10) => {
+    try {
+      const response = await apiRequest.get(`${PRODUCTS_ENDPOINT}/bajo-stock/list?limite=${limit}`);
+      if (response.success) {
+        const mappedProducts = (response.data || []).map(product => ({
+          id: product.id_producto,
+          nombre: product.nombre,
+          stock: parseInt(product.stock) || 0,
+          precio_venta: parseFloat(product.precio_venta) || 0,
+          costo: parseFloat(product.costo) || 0
+        }));
+        return { success: true, data: mappedProducts };
+      }
+      return response;
+    } catch (error) {
+      console.error('Error fetching low stock products:', error);
       throw error;
     }
   }

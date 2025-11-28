@@ -130,7 +130,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   if (!isOpen || !order) return null;
 
   const EditOrderCard = ({ children }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">

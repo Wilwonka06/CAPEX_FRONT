@@ -4,8 +4,9 @@
 
 /* Ajustar posición del selector de país para que no se superponga con el icono de teléfono */
 .register-page-container .phone-input-register .iti__flag-container {
-  left: 3rem !important;
+  /* left: 0 !important;  Por defecto es 0 */
   z-index: 5;
+  border-radius: 5px;
 }
 
 /* Estilizar el botón del selector de país */
@@ -127,7 +128,7 @@
   padding-top: 0.75rem !important;
   padding-bottom: 0.75rem !important;
   padding-right: 1rem !important;
-  padding-left: 0.75rem !important; /* Padding normal, el código de país ya está dentro del contenedor */
+  padding-left: 2.5rem !important; /* Espacio suficiente para la bandera y el código de país */
   
   /* Ancho: igual que los otros inputs */
   width: 100% !important;

@@ -76,6 +76,25 @@ export const authService = {
   },
 
   /**
+   * Verificar unicidad de campo
+   * @param {string} field - Campo a verificar (correo, documento)
+   * @param {string} value - Valor a verificar
+   * @returns {Promise<boolean>} True si es único, False si existe
+   */
+  async checkUniqueness(field, value) {
+    try {
+      const response = await apiRequest.post('/auth/check-uniqueness', {
+        field,
+        value
+      });
+      return response.isUnique;
+    } catch (error) {
+      console.error(`❌ Auth Service: Error checking uniqueness for ${field}:`, error);
+      return false; // Asumir que no es único en caso de error para evitar duplicados
+    }
+  },
+
+  /**
    * Verificar token
    * @param {string} token - Token JWT
    * @returns {Promise<Object>} Información del usuario

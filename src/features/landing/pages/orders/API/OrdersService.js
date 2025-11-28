@@ -377,7 +377,7 @@ export const ordersService = {
       id: order.id_pedido,
       numero: order.id_pedido,
       fecha: ordersService.formatDate(order.fecha || order.fecha_creacion),
-      estado: order.estado || 'Pendiente',
+      estado: order.estado || 'En proceso',
       total: ordersService.formatPrice(order.total),
       subtotal: ordersService.formatPrice(ordersService.calculateSubtotal(order)),
       envio: ordersService.formatPrice(ordersService.calculateShipping(order)),
@@ -484,18 +484,20 @@ export const ordersService = {
 
       return {
         total: orders.length,
-        pendientes: orders.filter(o => o.estado.toLowerCase() === 'pendiente').length,
         enProceso: orders.filter(o => o.estado.toLowerCase() === 'en proceso').length,
+        enviados: orders.filter(o => o.estado.toLowerCase() === 'enviado').length,
         entregados: orders.filter(o => o.estado.toLowerCase() === 'entregado').length,
+        devoluciones: orders.filter(o => o.estado.toLowerCase() === 'devolución').length,
         cancelados: orders.filter(o => o.estado.toLowerCase() === 'cancelado').length
       };
     } catch (error) {
       console.error('Error getting user order stats:', error);
       return {
         total: 0,
-        pendientes: 0,
         enProceso: 0,
+        enviados: 0,
         entregados: 0,
+        devoluciones: 0,
         cancelados: 0
       };
     }

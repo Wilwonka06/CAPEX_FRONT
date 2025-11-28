@@ -12,7 +12,7 @@ import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 // Estados posibles según el backend unificado
-const estados = ["Pendiente", "En proceso", "Enviado", "Entregado", "Cancelado"];
+const estados = ["En proceso", "Enviado", "Entregado", "Devolución", "Cancelado"];
 
 function OrdersTable({ orders, onView, onEdit, loading = false }) {
   if (loading) {
@@ -94,7 +94,7 @@ export default function OrdersPage() {
 
   // ===== CARGAR DATOS INICIALES =====
   useEffect(() => {
-    setTitle('Gestión de Pedidos');
+    setTitle('Pedidos de productos');
     loadOrders();
     return () => setTitle('');
   }, [setTitle]);
@@ -255,6 +255,22 @@ export default function OrdersPage() {
         isOpen={!!detailOrder}
         onClose={() => setDetailOrder(null)}
       />
+
+      {/* Mensaje de error para datos de cliente faltantes */}
+      {orders.some(order => !order.usuario && !order.clienteNombre) && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <i className="bi bi-exclamation-triangle text-yellow-400"></i>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                Algunos pedidos no tienen datos de cliente asociados. Por favor, verifique la conexión con la base de datos.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de edición */}
       <EditOrderModal

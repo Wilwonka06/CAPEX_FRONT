@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import PasswordEye from '../../../../../shared/components/PasswordEye';
-import ModalShell from '../../../../../shared/components/ModalShell';
 import { isValidEmail, validateUserDocument } from '../../../../../shared/validations';
 import usersService from '../API/usersService';
 import PhoneInput from 'react-phone-input-2';
@@ -196,18 +194,18 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <ModalShell
-        iconClass="bi bi-person-plus"
-        title="Crear usuario"
-        onClose={onClose}
-        footer={(
-          <>
-            <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
-            <button type="submit" form="create-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Crear</button>
-          </>
-        )}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className=" shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-person-plus text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Crear usuario</h2>
+          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
+        </div>
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form onSubmit={handleSubmit} id="create-user-form" className="space-y-6">
             <div className="bg-white rounded-lg shadow border border-gray-200 p-4 space-y-4">
             <div>
@@ -277,8 +275,8 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
                 <label className="block text-sm font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
                 <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                   {availableRoles.map(role => (
-                    <label 
-                      key={role.id_rol} 
+                    <label
+                      key={role.id_rol}
                       className="flex items-center gap-2 text-sm font-medium text-text-main cursor-pointer hover:text-primary transition-colors px-3 py-2 rounded-md hover:bg-white border border-transparent hover:border-gray-300"
                     >
                       <input
@@ -305,7 +303,14 @@ const CreateUserModal = ({ onClose, onCreate, users }) => {
             </div>
           
           </form>
-      </ModalShell>
+        </div>
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+          <>
+            <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+            <button type="submit" form="create-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Crear</button>
+          </>
+        </div>
+      </div>
     </div>
   );
 };

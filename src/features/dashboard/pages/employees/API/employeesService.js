@@ -248,11 +248,24 @@ export const schedulingService = {
    */
   create: async (data) => {
     try {
-      const response = await apiRequest.post(SCHEDULING_ENDPOINT, data);
+      if (!data) throw new Error('Datos de programación requeridos');
+      const mapped = {
+        id_usuario: parseInt(data.empleadoId || data.id_usuario),
+        fecha_inicio: data.fechaInicio || data.fecha_inicio,
+        hora_entrada: data.horaInicio || data.hora_entrada,
+        hora_salida: data.horaFin || data.hora_salida,
+      };
+
+      if (!mapped.id_usuario || !mapped.fecha_inicio || !mapped.hora_entrada || !mapped.hora_salida) {
+        throw new Error('Campos obligatorios faltantes (empleado, fecha, hora inicio, hora fin)');
+      }
+
+      const response = await apiRequest.post(SCHEDULING_ENDPOINT, mapped);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error creating scheduling:', error);
-      throw error;
+      const msg = error?.response?.data?.message || error.message || 'Error al crear programación';
+      throw new Error(msg);
     }
   },
 
@@ -264,11 +277,20 @@ export const schedulingService = {
    */
   update: async (id, data) => {
     try {
-      const response = await apiRequest.put(`${SCHEDULING_ENDPOINT}/${id}`, data);
+      if (!id) throw new Error('ID de la programación requerido');
+      const mapped = {
+        id_usuario: data?.empleadoId || data?.id_usuario,
+        fecha_inicio: data?.fechaInicio || data?.fecha_inicio,
+        hora_entrada: data?.horaInicio || data?.hora_entrada,
+        hora_salida: data?.horaFin || data?.hora_salida,
+      };
+
+      const response = await apiRequest.put(`${SCHEDULING_ENDPOINT}/${id}`, mapped);
       return response?.success ? response.data : response;
     } catch (error) {
       console.error('Error updating scheduling:', error);
-      throw error;
+      const msg = error?.response?.data?.message || error.message || 'Error al actualizar programación';
+      throw new Error(msg);
     }
   },
 
@@ -304,6 +326,10 @@ export const recurringSchedulingService = {
       const schedulingsData = response?.success ? response.data : response;
       return Array.isArray(schedulingsData) ? schedulingsData : [];
     } catch (error) {
+      if (error?.response?.status === 404) {
+        console.warn('Programaciones recurrentes no disponibles (404). Retornando lista vacía.');
+        return [];
+      }
       console.error('Error fetching recurring schedulings:', error);
       throw error;
     }
@@ -320,6 +346,10 @@ export const recurringSchedulingService = {
       const schedulingsData = response?.success ? response.data : response;
       return Array.isArray(schedulingsData) ? schedulingsData : [];
     } catch (error) {
+      if (error?.response?.status === 404) {
+        console.warn('Programaciones recurrentes por usuario no disponibles (404). Retornando lista vacía.');
+        return [];
+      }
       console.error('Error fetching recurring schedulings by user:', error);
       throw error;
     }
@@ -496,6 +526,27 @@ export const novedadesService = {
       await apiRequest.delete(`${NOVEDADES_ENDPOINT}/${id}`);
     } catch (error) {
       console.error('Error deleting novedad:', error);
+      throw error;
+    }
+  }
+};
+
+/**
+ * Servicio de disponibilidad por programación recurrente
+ * Endpoint: /api/programaciones-recurrentes/disponibilidad
+ */
+export const availabilityService = {
+  check: async (idUsuario, fecha, inicio, fin) => {
+    try {
+      if (!idUsuario || !fecha || !inicio || !fin) {
+        throw new Error('Parámetros de disponibilidad incompletos');
+      }
+      const url = `/programaciones-recurrentes/disponibilidad?id_usuario=${idUsuario}&fecha=${fecha}&inicio=${inicio}&fin=${fin}`;
+      const response = await apiRequest.get(url);
+      const data = response?.success ? response.data : response;
+      return Boolean(data?.disponible ?? data?.disponible === true);
+    } catch (error) {
+      console.error('Error checking availability:', error);
       throw error;
     }
   }

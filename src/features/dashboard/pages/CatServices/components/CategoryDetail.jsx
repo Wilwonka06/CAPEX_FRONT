@@ -4,8 +4,8 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
   if (!isOpen || !category) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3">
@@ -27,7 +27,7 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
         
         {/* Contenido con scroll */}
         <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Nombre de la categoría */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
@@ -40,19 +40,6 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
                     {category.nombre}
                   </h3>
                 </div>
-              </div>
-            </div>
-
-            {/* Descripción */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
-                  <i className="bi bi-file-text text-white text-xl"></i>
-                </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Descripción</span>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[80px]">
-                {category.descripcion || 'Sin descripción disponible'}
               </div>
             </div>
 
@@ -78,9 +65,22 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
               </span>
             </div>
 
+            {/* Descripción - ocupa ambas columnas */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 md:col-span-2">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
+                  <i className="bi bi-file-text text-white text-xl"></i>
+                </div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Descripción</span>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[80px]">
+                {category.descripcion || 'Sin descripción disponible'}
+              </div>
+            </div>
+
             {/* Información adicional */}
-            {(category.createdAt || category.updatedAt || category.id_categoria_servicio) && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            {(category.createdAt || category.updatedAt) && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 md:col-span-2">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
                     <i className="bi bi-info-square text-white text-xl"></i>
@@ -89,13 +89,7 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
                     Información del Sistema
                   </span>
                 </div>
-                <div className="space-y-2 text-sm">
-                  {category.id_categoria_servicio && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">ID:</span>
-                      <span className="font-semibold text-gray-800">{category.id_categoria_servicio}</span>
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   {category.createdAt && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Creada:</span>

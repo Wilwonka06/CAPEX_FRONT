@@ -17,6 +17,7 @@ import Clientes from "../features/dashboard/pages/customers/customers";
 import Compras from "../features/dashboard/pages/purchases/Purchases";
 import Dashboard from "../features/dashboard/components/Dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
+import EmployeeDetailPage from "../features/dashboard/pages/employees/components/EmployeeDetailPage";
 import Pedidos from "../features/dashboard/pages/orders/Orders";
 import Productos from "../features/dashboard/pages/products/products";
 import Proveedores from "../features/dashboard/pages/Suppliers/Suppliers";
@@ -214,6 +215,14 @@ const router = createBrowserRouter([
             element: (
               <RequirePrivilege module="Empleados" action="Visualizar">
                 <Empleados />
+              </RequirePrivilege>
+            ),
+          },
+          {
+            path: "empleados/:id",
+            element: (
+              <RequirePrivilege module="Empleados" action="Visualizar">
+                <EmployeeDetailPage />
               </RequirePrivilege>
             ),
           },

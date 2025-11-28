@@ -242,7 +242,7 @@ const CatProductsPage = () => {
   };
 
   useEffect(() => {
-    setTitle('Gestión de Categorías de Productos');
+    setTitle('Módulo de Categorías de Productos');
     return () => setTitle('');
   }, [setTitle]);
 

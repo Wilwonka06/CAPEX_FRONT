@@ -24,12 +24,12 @@ export default function SalesTable({ sales, customers = [], onView, onAnnul, onD
         </thead>
         <tbody className="divide-y divide-gray-200">
           {sales.length > 0 ? sales.map((sale) => {
-            const cliente = customers && customers.length > 0 ? customers.find(c => c.id === sale.clienteId) : null;
+            const cliente = (customers && customers.length > 0 ? customers.find(c => c.id === sale.clienteId) : null) || sale.customer || null;
             return (
               <tr key={sale.id}>
                 <td className="py-2 px-3">{sale.fecha}</td>
                 <td className="py-2 px-3">{sale.numeroVenta}</td>
-                <td className="py-2 px-3">{cliente ? `${cliente.firstName} ${cliente.lastName}` : "-"}</td>
+                <td className="py-2 px-3">{cliente ? (cliente.nombre || `${cliente.firstName || ''} ${cliente.lastName || ''}`.trim() || '-') : "-"}</td>
                 <td className="py-2 px-3">{formatPrice(sale.valor)}</td>
                 <td className="py-2 px-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${sale.estado === 'Completado' ? ' text-green-800' : ' text-red-500'}`}>{sale.estado}</span>

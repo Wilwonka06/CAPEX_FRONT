@@ -6,7 +6,7 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
   if (!isOpen || !order) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
@@ -27,7 +27,7 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
                   <div className="flex items-center">
                     <i className="bi bi-person text-primary mr-2"></i>
                     <span className="font-medium">Nombre:</span>
-                    <span className="ml-2">{order.clientName}</span>
+                    <span className="ml-2">{order.customer?.nombre || order.clientName}</span>
                   </div>
                   <div className="flex items-center">
                     <i className="bi bi-calendar text-primary mr-2"></i>

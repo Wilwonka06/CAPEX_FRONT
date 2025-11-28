@@ -89,7 +89,7 @@ const Services = () => {
   }, []);
 
   useEffect(() => {
-    setTitle("Gestión de Servicios");
+    setTitle("Módulo de Servicios");
     return () => setTitle("");
   }, [setTitle]);
 

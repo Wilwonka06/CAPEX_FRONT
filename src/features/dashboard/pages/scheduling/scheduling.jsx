@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import GeneralCalendar from './components/GeneralCalendar';
+import SeeScheduling from './components/SeeScheduling';
 import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
 import { useOutletContext } from 'react-router-dom';
-import { schedulingService } from './API/schedulingService';
+import { recurringSchedulingService } from '../employees/API/employeesService';
+import AddRecurringScheduling from '../employees/components/AddRecurringScheduling';
 import { employeesService } from '../employees/API/employeesService';
 
 // Función para normalizar texto (remover tildes)
@@ -19,6 +21,7 @@ const Scheduling = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
 
   // LOG TEMPORAL PARA DEBUG
   useEffect(() => {
@@ -38,9 +41,9 @@ const Scheduling = () => {
       const employeesData = await employeesService.getAll();
       console.log("[DEBUG] Empleados cargados:", employeesData);
 
-      console.log("[DEBUG] Intentando cargar programaciones...");
-      const schedulingsData = await schedulingService.getAll();
-      console.log("[DEBUG] Programaciones cargadas:", schedulingsData);
+      console.log("[DEBUG] Intentando cargar programaciones recurrentes...");
+      const schedulingsData = await recurringSchedulingService.getAll();
+      console.log("[DEBUG] Programaciones recurrentes cargadas:", schedulingsData);
 
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
       setSchedulings(Array.isArray(schedulingsData) ? schedulingsData : []);
@@ -61,7 +64,7 @@ const Scheduling = () => {
   }, []);
 
   useEffect(() => {
-    setTitle('Programación de Empleados');
+    setTitle('Módulo de Programación de Empleados');
     return () => setTitle('');
   }, [setTitle]);
 
@@ -77,173 +80,74 @@ const Scheduling = () => {
       )
     : employees;
 
-  // Función para calcular las fechas específicas basadas en días seleccionados
-  // Reemplaza SOLO la función calculateSpecificDates en scheduling.jsx (línea ~88)
-
-// Función para calcular las fechas específicas basadas en días seleccionados
-const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
-  const fechas = [];
-  
-  // Agregar 'T00:00:00' para evitar problemas de zona horaria
-  const startDate = new Date(fechaInicio + 'T00:00:00');
-  const endDate = new Date(fechaFin + 'T00:00:00');
-
-  console.log('[calculateSpecificDates] Rango:', fechaInicio, 'a', fechaFin);
-  console.log('[calculateSpecificDates] Días seleccionados:', diasSeleccionados);
-
-  // Mapear nombres de días a números (0 = Domingo, 1 = Lunes, etc.)
-  const diasMap = {
-    'Domingo': 0,
-    'Lunes': 1,
-    'Martes': 2,
-    'Miercoles': 3,
-    'Jueves': 4,
-    'Viernes': 5,
-    'Sabado': 6
+  // Abrir modal para crear programación recurrente
+  const openAddRecurringModal = (empleadoId) => {
+    setSelectedEmployeeForModal(empleadoId || null);
+    setIsAddModalOpen(true);
   };
 
-  const diasNumeros = diasSeleccionados.map(dia => diasMap[dia]).filter(dia => dia !== undefined);
-  console.log('[calculateSpecificDates] Días números:', diasNumeros);
-
-  // Iterar por cada día en el rango usando while
-  const currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
-    const diaSemana = currentDate.getDay();
-    
-    console.log('[calculateSpecificDates] Verificando fecha:', currentDate.toISOString().split('T')[0], 'día:', diaSemana);
-
-    // Si el día de la semana está en los días seleccionados, agregarlo
-    if (diasNumeros.includes(diaSemana)) {
-      fechas.push(new Date(currentDate));
-      console.log('[calculateSpecificDates] ✓ Fecha agregada:', currentDate.toISOString().split('T')[0]);
-    }
-
-    // Avanzar al siguiente día
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  console.log('[calculateSpecificDates] Total fechas calculadas:', fechas.length);
-  return fechas;
-};
-
   // Handler para agregar programación
-  const handleAddEvent = async (prog) => {
-    // Validar que los datos requeridos estén presentes
-    if (!prog.empleadoId || !prog.fechaInicio || !prog.horaInicio || !prog.horaFin) {
-      toast.error("Faltan datos obligatorios para crear la programación");
-      console.error("[DEBUG] Missing required fields:", {
-        empleadoId: prog.empleadoId,
-        fechaInicio: prog.fechaInicio,
-        horaInicio: prog.horaInicio,
-        horaFin: prog.horaFin
-      });
-      return;
-    }
-
-    // Calcular las fechas específicas basadas en días seleccionados
-    const fechasEspecificas = calculateSpecificDates(prog.fechaInicio, prog.fechaFin, prog.dias);
-    console.log("[DEBUG] Calculated specific dates:", fechasEspecificas.map(d => d.toISOString().split('T')[0]));
-
-    if (fechasEspecificas.length === 0) {
-      toast.error("No se encontraron fechas válidas para los días seleccionados");
-      return;
-    }
-
-    const schedulingPromise = (async () => {
-      console.log("[DEBUG] handleAddEvent received prog:", JSON.stringify(prog, null, 2));
-
-      const createdSchedulings = [];
-
-      // Crear una programación por cada fecha específica
-      for (const fecha of fechasEspecificas) {
-        const fechaStr = fecha.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-        
-        // Solo enviar los 4 campos que el backend requiere según el modelo Sequelize
-        const apiData = {
-          id_usuario: parseInt(prog.empleadoId),
-          fecha_inicio: fechaStr,
-          hora_entrada: prog.horaInicio,
-          hora_salida: prog.horaFin,
-        };
-
-        console.log("[DEBUG] API data to send for date", fechaStr, ":", JSON.stringify(apiData, null, 2));
-
-        const createdScheduling = await schedulingService.create(apiData);
-        console.log("[DEBUG] Created scheduling response:", JSON.stringify(createdScheduling, null, 2));
-
-        createdSchedulings.push(createdScheduling);
-      }
-
-      // Agregar todas las programaciones creadas al estado
-      setSchedulings(prev => [...prev, ...createdSchedulings]);
-      return createdSchedulings;
+  const handleAddRecurring = async (data) => {
+    const createPromise = (async () => {
+      const created = await recurringSchedulingService.create(data);
+      setSchedulings(prev => [created, ...prev]);
+      return created;
     })();
 
-    toast.promise(schedulingPromise, {
-      loading: 'Creando programación(es)...',
-      success: (schedulings) => `${schedulings.length} programación(es) creada(s) exitosamente`,
+    toast.promise(createPromise, {
+      loading: 'Creando programación recurrente...',
+      success: 'Programación recurrente creada exitosamente',
       error: (err) => {
-        console.error("Error creando programación:", err);
-        console.error("Error details:", {
-          status: err?.response?.status,
-          data: err?.response?.data,
-          message: err?.message
-        });
-        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
-        return backendMsg || "Error al crear programación";
+        const backendMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
+        return backendMsg || 'Error al crear programación recurrente';
       },
     });
 
     try {
-      await schedulingPromise;
-    } catch (error) {
-      // Error ya manejado por toast.promise
-    }
+      await createPromise;
+      setIsAddModalOpen(false);
+      setSelectedEmployeeForModal(null);
+    } catch (_) {}
   };
 
   // Handler para actualizar programación
-  const handleUpdateEvent = async (prog) => {
-    const schedulingPromise = (async () => {
-      console.log("[DEBUG] Actualizando programación:", prog);
-
-      // Convertir el formato del frontend al formato de la API (solo los 4 campos del modelo)
-      const apiData = {
-        id_usuario: parseInt(prog.id_usuario || prog.empleadoId),
-        fecha_inicio: prog.fecha || prog.fechaInicio || prog.fecha_inicio,
-        hora_entrada: prog.hora_entrada || prog.horaInicio,
-        hora_salida: prog.hora_salida || prog.horaFin,
-      };
-
-      console.log("[DEBUG] API data to send:", JSON.stringify(apiData, null, 2));
-
-      const updatedScheduling = await schedulingService.update(prog.id, apiData);
-      setSchedulings(prev => prev.map(s =>
-        s.id === updatedScheduling.id ? updatedScheduling : s
-      ));
-      return updatedScheduling;
+  const handleUpdateRecurring = async (id, data) => {
+    const updatePromise = (async () => {
+      const updated = await recurringSchedulingService.update(id, data);
+      setSchedulings(prev => prev.map(p => (String(p.id) === String(id) ? updated : p)));
+      return updated;
     })();
 
-    toast.promise(schedulingPromise, {
-      loading: 'Actualizando programación...',
-      success: 'Programación actualizada exitosamente',
+    toast.promise(updatePromise, {
+      loading: 'Actualizando programación recurrente...',
+      success: 'Programación recurrente actualizada',
       error: (err) => {
-        console.error("Error actualizando programación:", err);
-        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
-        return backendMsg || "Error al actualizar programación";
+        const backendMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
+        return backendMsg || 'Error al actualizar programación recurrente';
       },
     });
 
-    try {
-      await schedulingPromise;
-    } catch (error) {
-      // Error ya manejado por toast.promise
-    }
+    try { await updatePromise; } catch (_) {}
   };
 
   // Handler para eliminar programación
-  const handleDeleteEvent = (schedulingId) => {
-    console.log("[DEBUG] Eliminando programación del estado:", schedulingId);
-    setSchedulings(prev => prev.filter(s => s.id !== schedulingId));
+  const handleDeleteRecurring = async (id) => {
+    const deletePromise = (async () => {
+      await recurringSchedulingService.delete(id);
+      setSchedulings(prev => prev.filter(p => String(p.id) !== String(id)));
+      return true;
+    })();
+
+    toast.promise(deletePromise, {
+      loading: 'Eliminando programación recurrente...',
+      success: 'Programación recurrente eliminada',
+      error: (err) => {
+        const backendMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
+        return backendMsg || 'Error al eliminar programación recurrente';
+      },
+    });
+
+    try { await deletePromise; } catch (_) {}
   };
 
   if (error) {
@@ -289,10 +193,23 @@ const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
               <GeneralCalendar
                 employees={filteredEmployees}
                 schedulings={schedulings}
-                onAddEvent={handleAddEvent}
-                onUpdateEvent={handleUpdateEvent}
-                onDeleteEvent={handleDeleteEvent}
+                onAddEvent={openAddRecurringModal}
+                onUpdateRecurring={handleUpdateRecurring}
+                onDeleteRecurring={handleDeleteRecurring}
               />
+              {isAddModalOpen && (
+                <SeeScheduling
+                  isOpen={isAddModalOpen}
+                  onClose={() => { setIsAddModalOpen(false); setSelectedEmployeeForModal(null); }}
+                  title={'Agregar programación recurrente'}
+                >
+                  <AddRecurringScheduling
+                    empleadoId={selectedEmployeeForModal}
+                    onSave={handleAddRecurring}
+                    onCancel={() => { setIsAddModalOpen(false); setSelectedEmployeeForModal(null); }}
+                  />
+                </SeeScheduling>
+              )}
             </>
           )}
         </div>

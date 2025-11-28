@@ -200,24 +200,18 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
   if (!isOpen) return null;
 
   const CreateOrderCard = ({ children }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-accent m-0">Crear Orden de Servicio</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-receipt text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Crear Orden de Servicio</h2>
           </div>
-          <button
-            onClick={handleClose}
-            disabled={loading}
-            className="text-gray-400 hover:text-black text-xl font-bold"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={handleClose} aria-label="Cerrar" disabled={loading}>×</button>
         </div>
-        {/* Contenido */}
-        <div className="p-8 bg-white overflow-y-auto flex-1">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           {children}
         </div>
       </div>

@@ -172,7 +172,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
       {/* Modal para cantidad y detalles del producto */}
       {showQuantityModal && selectedProductForQuantity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in flex flex-col border border-gray-200">
             {/* Header */}
             <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">

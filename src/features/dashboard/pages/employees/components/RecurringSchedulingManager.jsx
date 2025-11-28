@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { recurringSchedulingService } from '../API/employeesService';
 import AddRecurringScheduling from './AddRecurringScheduling';
+import { to12h } from '../../../../../shared/utils/timeFormat';
 
 const diasSemanaMap = {
-  0: 'Domingo',
-  1: 'Lunes',
-  2: 'Martes',
-  3: 'Miércoles',
-  4: 'Jueves',
-  5: 'Viernes',
-  6: 'Sábado'
+  0: 'Dom', 1: 'Lun', 2: 'Mar', 3: 'Mié',
+  4: 'Jue', 5: 'Vie', 6: 'Sáb'
 };
 
 const RecurringSchedulingManager = ({ empleadoId }) => {
@@ -40,11 +36,7 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
 
   const handleAdd = async (data) => {
     try {
-      const nuevaProgramacion = {
-        ...data,
-        id_usuario: empleadoId
-      };
-      await recurringSchedulingService.create(nuevaProgramacion);
+      await recurringSchedulingService.create(data);
       toast.success('Programación recurrente creada exitosamente');
       setShowAddForm(false);
       loadProgramaciones();
@@ -83,7 +75,34 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
 
   const formatDiasSemana = (dias) => {
     if (!Array.isArray(dias) || dias.length === 0) return 'Ninguno';
-    return dias.map(d => diasSemanaMap[d] || d).join(', ');
+    return dias.sort((a, b) => a - b).map(d => diasSemanaMap[d] || d).join(', ');
+  };
+
+  const formatBloques = (bloques) => {
+    if (!Array.isArray(bloques) || bloques.length === 0) return 'Sin horarios';
+    
+    return bloques.map((bloque, index) => (
+      <div key={index} className="flex items-center gap-2 text-sm">
+        <i className="bi bi-clock text-[#FACC15]"></i>
+        <span className="font-mono font-bold">
+          {to12h(bloque.inicio)} - {to12h(bloque.fin)}
+        </span>
+      </div>
+    ));
+  };
+
+  const calcularHorasTotales = (bloques) => {
+    if (!Array.isArray(bloques)) return '0h 0m';
+    
+    let totalMinutos = 0;
+    for (const bloque of bloques) {
+      const [hI, mI] = bloque.inicio.split(':').map(Number);
+      const [hF, mF] = bloque.fin.split(':').map(Number);
+      totalMinutos += ((hF * 60 + mF) - (hI * 60 + mI));
+    }
+    const horas = Math.floor(totalMinutos / 60);
+    const minutos = totalMinutos % 60;
+    return `${horas}h ${minutos}m`;
   };
 
   if (loading) {
@@ -99,7 +118,7 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h3 className="text-xl font-bold text-gray-800 font-nunito">Programaciones Recurrentes</h3>
           <p className="text-gray-600 font-lato text-sm">Horarios semanales fijos del empleado</p>
@@ -154,7 +173,10 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
             <i className="bi bi-calendar-week text-3xl text-gray-500"></i>
           </div>
           <h4 className="text-xl font-bold text-gray-700 mb-2 font-nunito">Sin Programaciones Recurrentes</h4>
-          <p className="text-gray-600 font-lato max-w-md mx-auto">Este empleado no tiene programaciones semanales fijas asignadas. Crea una nueva para establecer horarios recurrentes.</p>
+          <p className="text-gray-600 font-lato max-w-md mx-auto">
+            Este empleado no tiene programaciones semanales fijas asignadas. 
+            Crea una nueva para establecer horarios recurrentes con bloques horarios y pausas.
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -176,22 +198,32 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                           <i className={`bi mr-1 ${prog.estado === 'Activa' ? 'bi-check-circle' : 'bi-pause-circle'}`}></i>
                           {prog.estado}
                         </span>
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border-2 border-blue-200">
+                          <i className="bi bi-clock-history mr-1"></i>
+                          {calcularHorasTotales(prog.bloques_horarios)} / día
+                        </span>
                       </div>
                       <h5 className="text-lg font-bold text-gray-800 font-nunito">Programación Recurrente</h5>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* Bloques Horarios */}
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-3">
                         <div className="w-6 h-6 bg-[#FACC15] rounded-lg flex items-center justify-center">
-                          <i className="bi bi-clock text-white text-xs"></i>
+                          <i className="bi bi-clock-history text-white text-xs"></i>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">Horario</span>
+                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">
+                          Bloques Horarios ({(prog.bloques_horarios || []).length})
+                        </span>
                       </div>
-                      <p className="text-gray-800 font-bold font-mono text-lg">{prog.hora_entrada} - {prog.hora_salida}</p>
+                      <div className="space-y-2">
+                        {formatBloques(prog.bloques_horarios)}
+                      </div>
                     </div>
 
+                    {/* Días de la semana */}
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-6 h-6 bg-[#FACC15] rounded-lg flex items-center justify-center">
@@ -202,6 +234,7 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                       <p className="text-gray-800 font-medium">{formatDiasSemana(prog.dias_semana)}</p>
                     </div>
 
+                    {/* Fecha Inicio */}
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-6 h-6 bg-[#FACC15] rounded-lg flex items-center justify-center">
@@ -209,9 +242,12 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                         </div>
                         <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">Fecha Inicio</span>
                       </div>
-                      <p className="text-gray-800 font-bold font-mono">{new Date(prog.fecha_inicio).toLocaleDateString('es-ES')}</p>
+                      <p className="text-gray-800 font-bold font-mono">
+                        {new Date(prog.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES')}
+                      </p>
                     </div>
 
+                    {/* Fecha Fin */}
                     <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-6 h-6 bg-[#FACC15] rounded-lg flex items-center justify-center">
@@ -219,10 +255,10 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                         </div>
                         <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">Fecha Fin</span>
                       </div>
-                      <p className="text-gray-800 font-bold font-mono">
+                      <p className={`font-bold font-mono ${prog.fecha_fin ? 'text-gray-800' : 'text-blue-600'}`}>
                         {prog.fecha_fin
-                          ? new Date(prog.fecha_fin).toLocaleDateString('es-ES')
-                          : 'Indefinido'}
+                          ? new Date(prog.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES')
+                          : '♾️ Indefinido'}
                       </p>
                     </div>
                   </div>
@@ -266,4 +302,3 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
 };
 
 export default RecurringSchedulingManager;
-
