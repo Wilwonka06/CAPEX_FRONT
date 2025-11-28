@@ -66,14 +66,34 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   if (!cita) return null;
-  const fechaStr = cita.fecha_servicio
-    ? new Date(cita.fecha_servicio).toLocaleDateString("es-CO", {
+  
+  // Formatear fecha sin problemas de zona horaria
+  const formatearFecha = (fechaString) => {
+    if (!fechaString) return "";
+    
+    // Si la fecha viene como string YYYY-MM-DD, parsearla directamente sin zona horaria
+    if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}/.test(fechaString)) {
+      const [year, month, day] = fechaString.split('T')[0].split('-');
+      const fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      return fecha.toLocaleDateString("es-CO", {
         weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
-      })
-    : "";
+      });
+    }
+    
+    // Si ya es un objeto Date o otro formato, usar directamente
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleDateString("es-CO", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+  
+  const fechaStr = formatearFecha(cita.fecha_servicio);
   // Usar horas del backend
   let horaInicio = cita.hora_entrada || "08:00:00",
     horaFin = cita.hora_salida || "09:00:00",

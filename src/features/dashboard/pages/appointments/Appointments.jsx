@@ -49,26 +49,6 @@ const Appointments = () => {
     }
   };
 
-  // TEMPORAL: Función para activar todas las citas canceladas
-  const handleActivateCanceledAppointments = async () => {
-    try {
-      const result = await toast.promise(
-        appointmentsService.activateCanceledAppointments(),
-        {
-          loading: 'Activando citas canceladas...',
-          success: (response) => {
-            refreshAppointments();
-            return response?.message || 'Citas canceladas activadas exitosamente';
-          },
-          error: (err) => {
-            return err?.response?.data?.message || 'Error al activar citas canceladas';
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Error al activar citas canceladas:', error);
-    }
-  };
 
   // Cargar citas al iniciar
   useEffect(() => {
@@ -248,24 +228,13 @@ const Appointments = () => {
             handleSearch={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar citas por cliente, fecha, estado o servicio..."
           />
-          <div className="flex gap-2">
-            {/* TEMPORAL: Botón para activar citas canceladas */}
-            <button
-              className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
-              onClick={handleActivateCanceledAppointments}
-              title="TEMPORAL: Activar todas las citas canceladas"
-            >
-              <i className="bi bi-arrow-clockwise text-sm"></i>
-              Activar Canceladas
-            </button>
-            <button
-              className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <i className="bi bi-calendar-plus text-sm"></i>
-              Crear cita
-            </button>
-          </div>
+          <button
+            className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <i className="bi bi-calendar-plus text-sm"></i>
+            Crear cita
+          </button>
         </div>
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 overflow-x-auto">
           {loading ? (

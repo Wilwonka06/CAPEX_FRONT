@@ -362,18 +362,6 @@ export const appointmentsService = {
     }
   },
 
-  /**
-   * TEMPORAL: Activar todas las citas canceladas y ponerlas en estado "En ejecución"
-   */
-  activateCanceledAppointments: async () => {
-    try {
-      const response = await apiRequest.post(`${APPOINTMENTS_ENDPOINT}/activar-canceladas`);
-      return response;
-    } catch (error) {
-      console.error('Error activating canceled appointments:', error);
-      throw error;
-    }
-  }
 };
 
 export default appointmentsService;
