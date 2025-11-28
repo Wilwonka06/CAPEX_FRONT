@@ -107,7 +107,8 @@ export const appointmentsService = {
           fecha_servicio: appointmentData.cita.fecha_servicio,
           hora_entrada: appointmentData.cita.hora_entrada,
           estado: appointmentData.cita.estado || 'Agendada',
-          ...(appointmentData.cita.motivo && { motivo: appointmentData.cita.motivo.trim() })
+          // Solo enviar motivo si tiene contenido, de lo contrario no enviarlo (el backend lo manejará como null)
+          ...(appointmentData.cita.motivo && appointmentData.cita.motivo.trim() && { motivo: appointmentData.cita.motivo.trim() })
         },
         servicios: appointmentData.servicios.map(s => ({
           id_servicio: s.id_servicio,
@@ -157,10 +158,10 @@ export const appointmentsService = {
       // Estructurar datos según lo esperado por el backend para actualización
       const cleanData = {
         cita: {
-          ...(appointmentData.fecha_servicio && { fecha_servicio: appointmentData.fecha_servicio }),
-          ...(appointmentData.estado && { estado: appointmentData.estado }),
-          ...(appointmentData.motivo !== undefined && { motivo: appointmentData.motivo?.trim() }),
-          ...(appointmentData.id_cliente && { id_cliente: appointmentData.id_cliente })
+          ...(appointmentData.cita?.fecha_servicio && { fecha_servicio: appointmentData.cita.fecha_servicio }),
+          ...(appointmentData.cita?.estado && { estado: appointmentData.cita.estado }),
+          ...(appointmentData.cita?.motivo !== undefined && { motivo: appointmentData.cita.motivo?.trim() }),
+          ...(appointmentData.cita?.id_cliente && { id_cliente: appointmentData.cita.id_cliente })
         },
         ...(appointmentData.servicios && {
           servicios: appointmentData.servicios.map(s => ({
@@ -359,7 +360,8 @@ export const appointmentsService = {
       console.error('Error fetching appointment stats:', error);
       throw error;
     }
-  }
+  },
+
 };
 
 export default appointmentsService;

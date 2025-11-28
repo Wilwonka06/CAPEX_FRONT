@@ -79,13 +79,6 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
         [accion]: checked
       };
 
-      // Si se selecciona cualquier privilegio que NO sea "Visualizar", 
-      // automáticamente activar "Visualizar" también
-      if (checked && accion !== 'Visualizar') {
-        newModulePrivileges['Visualizar'] = true;
-        console.log(`✅ Activando Visualizar automáticamente para ${modulo}`);
-      }
-
       // Si se deselecciona "Visualizar", deseleccionar todos los demás privilegios
       if (!checked && accion === 'Visualizar') {
         // Limpiar todos los privilegios del módulo
@@ -179,6 +172,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
                 value={formData.name}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={16}
               />
               {touched.name && errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
             </div>
@@ -191,6 +185,7 @@ const EditRole = ({ isOpen, onClose, role, onEdit, loading, roles = [] }) => {
                 value={formData.description}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={100}
               />
             </div>
           </div>
