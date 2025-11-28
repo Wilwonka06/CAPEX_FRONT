@@ -5,6 +5,7 @@ import Paginator from '../../../../shared/Paginator';
 import CreateCustomer from "./components/CreateCustomer";
 import EditCustomer from "./components/EditCustomer";
 import CustomerDetail from "./components/CustomerDetail";
+import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import customersService from "./API/customersService";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -28,6 +29,8 @@ const CustomersPage = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -314,17 +317,32 @@ const CustomersPage = () => {
     }
   };
 
-  // Función para cambiar estado del cliente
-  const handleToggleStatus = async (customerId) => {
+  // Función para cambiar estado del cliente - muestra modal primero
+  const handleToggleStatus = (customerId) => {
+    const current = customers.find(c => c.id === customerId);
+    if (!current) {
+      toast.error("Cliente no encontrado");
+      return;
+    }
+    setPendingStatusChange({ customerId, current });
+    setShowStatusModal(true);
+  };
+
+  // Función para confirmar cambio de estado
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    const { customerId, current } = pendingStatusChange;
+    const nextStatus = current?.status === 'Activo' ? 'Inactivo' : 'Activo';
+    
     try {
-      const current = customers.find(c => c.id === customerId);
-      const nextStatus = current?.status === 'Activo' ? 'Inactivo' : 'Activo';
-      
       const response = await customersService.changeStatus(customerId, nextStatus);
       
       if (response.success) {
         await loadCustomers(queryParams);
         toast.success(`Estado cambiado a ${nextStatus}`);
+        setShowStatusModal(false);
+        setPendingStatusChange(null);
       }
     } catch (error) {
       console.error('Error changing customer status:', error);
@@ -447,6 +465,21 @@ const CustomersPage = () => {
           }}
           customer={selectedCustomer}
           customers={customers}
+        />
+      )}
+
+      {/* Modal de confirmación de cambio de estado */}
+      {showStatusModal && pendingStatusChange && (
+        <ConfirmStatusChangeModal
+          isOpen={showStatusModal}
+          onClose={() => {
+            setShowStatusModal(false);
+            setPendingStatusChange(null);
+          }}
+          onConfirm={handleConfirmStatusChange}
+          isActivating={pendingStatusChange.current.status === 'Inactivo'}
+          itemName={pendingStatusChange.current.nombre || pendingStatusChange.current.firstName || 'este cliente'}
+          loading={false}
         />
       )}
     </div>

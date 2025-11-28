@@ -18,7 +18,7 @@ const CustomerTable = ({
 
   if (!loading && (!customers || customers.length === 0)) {
     return (
-      <div className="overflow-x-auto rounded-lg shadow font-inter">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <div className="py-12 text-center">
           <i className="bi bi-people text-6xl text-gray-300"></i>
           <p className="mt-4 text-gray-500 text-sm">
@@ -33,26 +33,26 @@ const CustomerTable = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg shadow font-inter">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
       <table className="min-w-full text-xs">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">
+        <thead>
+          <tr className="bg-gray-50 hover:bg-gray-100">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">
               Foto
             </th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">
               N° Documento
             </th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">
               Nombre Completo
             </th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">
               Teléfono
             </th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">
               Estado
             </th>
-            <th className="py-2 px-3 text-center font-semibold text-gray-700">
+            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">
               Acciones
             </th>
           </tr>
@@ -63,7 +63,7 @@ const CustomerTable = ({
               key={customer.id}
               className="hover:bg-gray-50 transition-colors duration-150"
             >
-              <td className="py-2 px-3">
+              <td className="py-4 px-4">
                 <img
                   src={
                     customer.foto ||
@@ -73,12 +73,12 @@ const CustomerTable = ({
                   className="w-10 h-10 rounded-full object-cover border"
                 />
               </td>
-              <td className="py-2 px-3">{customer.documentNumber}</td>
-              <td className="py-2 px-3">
+              <td className="py-4 px-4 text-xs text-gray-600">{customer.documentNumber}</td>
+              <td className="py-4 px-4 text-xs font-medium text-gray-900">
                 {customer.nombre || customer.firstName || ""}
               </td>
-              <td className="py-2 px-3">{customer.phone}</td>
-              <td className="py-2 px-3">
+              <td className="py-4 px-4 text-xs text-gray-600">{customer.phone}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">
                 {(() => {
                   const isActive = customer.status === 'Activo';
                   const isToggling = togglingId === customer.id;
@@ -108,8 +108,8 @@ const CustomerTable = ({
                   );
                 })()}
               </td>
-              <td className="py-2 px-3 text-center">
-                <div className="flex justify-center space-x-2">
+              <td className="py-4 px-4 text-xs font-medium text-right">
+                <div className="flex justify-end space-x-2">
                   <button
                     title="Ver"
                     onClick={() => onView(customer)}

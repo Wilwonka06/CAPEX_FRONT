@@ -16,6 +16,7 @@ import EditServices from "./components/EditServices";
 import ServiceDetail from './components/ServiceDetail';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
+import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 
 const SERVICES_PER_PAGE = 10;
 
@@ -36,6 +37,8 @@ const Services = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
 
   // Cargar servicios y categorías
   const loadData = async () => {
@@ -222,14 +225,23 @@ const Services = () => {
     }
   };
 
-  // Handler para cambiar estado
-  const handleToggleStatus = async (serviceId) => {
+  // Handler para cambiar estado - muestra modal primero
+  const handleToggleStatus = (serviceId) => {
     const current = services.find(s => s.id === serviceId);
     if (!current) {
       toast.error("Servicio no encontrado");
       return;
     }
 
+    setPendingStatusChange({ serviceId, current });
+    setShowStatusModal(true);
+  };
+
+  // Handler para confirmar cambio de estado
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    const { serviceId, current } = pendingStatusChange;
     setTogglingId(serviceId);
     const nextEstado = current.estado === 'Activo' ? 'Inactivo' : 'Activo';
 
@@ -237,6 +249,8 @@ const Services = () => {
       await servicesService.changeStatus(serviceId, nextEstado);
       await loadData();
       toast.success(`Estado cambiado a ${nextEstado}`);
+      setShowStatusModal(false);
+      setPendingStatusChange(null);
     } catch (error) {
       console.error("Error cambiando estado:", error);
       const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
@@ -350,6 +364,23 @@ const Services = () => {
           service={selectedService}
           isOpen={showDetailModal}
           onClose={closeModals}
+        />
+      )}
+
+      {/* Modal de confirmación de cambio de estado */}
+      {showStatusModal && pendingStatusChange && (
+        <ConfirmStatusChangeModal
+          isOpen={showStatusModal}
+          onClose={() => {
+            if (!togglingId) {
+              setShowStatusModal(false);
+              setPendingStatusChange(null);
+            }
+          }}
+          onConfirm={handleConfirmStatusChange}
+          isActivating={pendingStatusChange.current.estado === 'Inactivo'}
+          itemName={pendingStatusChange.current.nombre}
+          loading={togglingId === pendingStatusChange.serviceId}
         />
       )}
     </div>

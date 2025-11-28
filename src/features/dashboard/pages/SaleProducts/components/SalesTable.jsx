@@ -10,42 +10,42 @@ export default function SalesTable({ sales, customers = [], onView, onAnnul, onD
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
       <table className="min-w-full text-xs">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Orden</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Cliente</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Valor</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
-            <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
+        <thead>
+          <tr className="bg-gray-50 hover:bg-gray-100">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Fecha</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Orden</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Cliente</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Valor</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
           {sales.length > 0 ? sales.map((sale) => {
             const cliente = (customers && customers.length > 0 ? customers.find(c => c.id === sale.clienteId) : null) || sale.customer || null;
             return (
-              <tr key={sale.id}>
-                <td className="py-2 px-3">{sale.fecha}</td>
-                <td className="py-2 px-3">{sale.numeroVenta}</td>
-                <td className="py-2 px-3">{cliente ? (cliente.nombre || `${cliente.firstName || ''} ${cliente.lastName || ''}`.trim() || '-') : "-"}</td>
-                <td className="py-2 px-3">{formatPrice(sale.valor)}</td>
-                <td className="py-2 px-3">
+              <tr key={sale.id} className="hover:bg-gray-50 transition-colors duration-150">
+                <td className="py-4 px-4 text-xs text-gray-600">{sale.fecha}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{sale.numeroVenta}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">{cliente ? (cliente.nombre || `${cliente.firstName || ''} ${cliente.lastName || ''}`.trim() || '-') : "-"}</td>
+                <td className="py-4 px-4 text-xs text-gray-600 font-semibold">{formatPrice(sale.valor)}</td>
+                <td className="py-4 px-4 text-xs text-gray-600">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${sale.estado === 'Completado' ? ' text-green-800' : ' text-red-500'}`}>{sale.estado}</span>
                 </td>
-                <td className="py-4 px-4 text-sm font-medium text-center">
-                  <div className="py-2 px-3 text-center">
-                    <button className="text-primary hover:text-blue-700 mr-2 text-lg" title="Ver detalle" onClick={() => onView(sale)}>
-                      <i className="bi bi-eye"></i>
+                <td className="py-4 px-4 text-xs font-medium text-right">
+                  <div className="flex justify-end space-x-2">
+                    <button className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors" title="Ver detalle" onClick={() => onView(sale)}>
+                      <i className="bi bi-eye text-primary text-[18px]"></i>
                     </button>
                     {sale.estado !== 'Cancelada' && (
-                      <button className="text-red-600 hover:text-red-800 mr-2 text-lg" title="Cancelar" onClick={() => onAnnul(sale.id)}>
-                        <i className="bi bi-x-octagon"></i>
+                      <button className="h-8 w-8 p-0 hover:bg-red-50 rounded-md flex items-center justify-center transition-colors" title="Cancelar" onClick={() => onAnnul(sale.id)}>
+                        <i className="bi bi-x-octagon text-red-500 text-[18px]"></i>
                       </button>
                     )}
-                    <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => onDownload(sale)}>
-                      <i className="bi bi-file-earmark-pdf"></i>
+                    <button className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors" title="Descargar factura" onClick={() => onDownload(sale)}>
+                      <i className="bi bi-file-earmark-pdf text-red-500 text-[18px]"></i>
                     </button>
                   </div>
                 </td>
