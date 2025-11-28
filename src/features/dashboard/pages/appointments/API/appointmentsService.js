@@ -107,7 +107,8 @@ export const appointmentsService = {
           fecha_servicio: appointmentData.cita.fecha_servicio,
           hora_entrada: appointmentData.cita.hora_entrada,
           estado: appointmentData.cita.estado || 'Agendada',
-          ...(appointmentData.cita.motivo && { motivo: appointmentData.cita.motivo.trim() })
+          // Solo enviar motivo si tiene contenido, de lo contrario no enviarlo (el backend lo manejará como null)
+          ...(appointmentData.cita.motivo && appointmentData.cita.motivo.trim() && { motivo: appointmentData.cita.motivo.trim() })
         },
         servicios: appointmentData.servicios.map(s => ({
           id_servicio: s.id_servicio,

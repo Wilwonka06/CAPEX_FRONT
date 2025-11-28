@@ -9,6 +9,7 @@ import esLocale from '@fullcalendar/core/locales/es';
 
 import AppointmentDetailModal from './components/AppointmentDetailModal';
 import AppointmentEditModal from './components/AppointmentEditModal';
+import AppointmentCreateModal from './components/AppointmentCreateModal';
 import toast from 'react-hot-toast';
 import Search from '../../../../shared/Search';
 import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
@@ -274,7 +275,7 @@ const Appointments = () => {
           />
         )}
         {showCreateModal && (
-          <AppointmentEditModal
+          <AppointmentCreateModal
             fecha={selectedDate}
             onClose={() => setShowCreateModal(false)}
             onSave={handleSaveAppointment}

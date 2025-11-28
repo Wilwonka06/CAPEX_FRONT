@@ -116,6 +116,18 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   const esCancelada =
     cita.estado === "Cancelada por el usuario" || cita.estado === "No asistio";
 
+  // Determinar si la cita puede ser editada (no cancelada, finalizada o pagada)
+  const puedeEditar = !esCancelada && 
+    cita.estado !== "Finalizada" && 
+    cita.estado !== "Pagada";
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(cita);
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm select-none font-inter">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
@@ -220,11 +232,32 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
         {errorCancel && (
           <span className="text-xs text-red-500 ml-2">{errorCancel}</span>
         )}
-        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
-          {!esCancelada && (
-            <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 font-semibold" onClick={handleCancelar} disabled={loadingCancel}>{loadingCancel ? "Cancelando..." : "Cancelar cita"}</button>
+        <div className="rounded-b-2xl flex justify-end gap-2 px-6 py-3 bg-gray-50 border-t border-gray-200">
+          {puedeEditar && (
+            <button 
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex items-center gap-2 shadow-sm" 
+              onClick={handleEdit}
+            >
+              <i className="bi bi-pencil-square"></i>
+              Editar
+            </button>
           )}
-          <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" onClick={onClose}><i className="bi bi-check-circle"></i>Cerrar</button>
+          {!esCancelada && (
+            <button 
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 font-semibold text-xs" 
+              onClick={handleCancelar} 
+              disabled={loadingCancel}
+            >
+              {loadingCancel ? "Cancelando..." : "Cancelar cita"}
+            </button>
+          )}
+          <button 
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm" 
+            onClick={onClose}
+          >
+            <i className="bi bi-check-circle"></i>
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
