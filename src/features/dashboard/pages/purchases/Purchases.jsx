@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import SearchProduct from '../../../../shared/Search';
-import CreatePurchaseModal from './components/CreatePurchaseModal';
-import PurchaseDetailModal from './components/PurchaseDetailModal';
+import CreatePurchaseModal from './components/CreatePurchase';
+import PurchaseDetailModal from './components/PurchaseDetail';
 import PurchasesTable from './components/PurchasesTable';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import { formatNumber } from '../../../../shared/utils/formatters';
@@ -36,7 +36,7 @@ export default function Shopping() {
 
   // Cargar compras, proveedores y productos al montar
   useEffect(() => {
-    setTitle('Gestión de Compras');
+    setTitle('Módulo de Compras');
     loadPurchases();
     loadSuppliers();
     loadProducts();

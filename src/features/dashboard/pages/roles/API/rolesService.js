@@ -1,14 +1,150 @@
 import apiRequest from '../../../../../shared/config/apiConfig';
-import DataMapper from '../services/DataMapper';
 
 /**
  * Servicio API para gestión de roles
  * Endpoints base: /api/roles
+ * Incluye DataMapper integrado para transformación de datos
  */
 
 const ROLES_ENDPOINT = '/roles';
 
-// Función helper para obtener permisos y privilegios y actualizar mapeos
+// ==========================================
+// DATAMAPPER - Transformación de datos
+// ==========================================
+class DataMapper {
+  static moduleMap = new Map();
+  static privilegeMap = new Map();
+  
+  static initializeMaps(permissions = [], privileges = []) {
+    this.moduleMap.clear();
+    this.privilegeMap.clear();
+    
+    permissions.forEach(perm => {
+      if (perm.id_permiso && perm.nombre) {
+        this.moduleMap.set(perm.nombre, perm.id_permiso);
+      }
+    });
+    
+    privileges.forEach(priv => {
+      if (priv.id_privilegio && priv.nombre) {
+        this.privilegeMap.set(priv.nombre, priv.id_privilegio);
+      }
+    });
+  }
+  
+  static getPermissionId(moduleName) {
+    return this.moduleMap.get(moduleName);
+  }
+  
+  static getPrivilegeId(privilegeName) {
+    return this.privilegeMap.get(privilegeName);
+  }
+
+  static mapPermissionsFromBackend(backendPermissions) {
+    const frontendPermissions = {};
+    
+    if (!backendPermissions || !Array.isArray(backendPermissions) || backendPermissions.length === 0) {
+      return frontendPermissions;
+    }
+    
+    backendPermissions.forEach(permiso => {
+      const moduleName = permiso.nombre;
+      
+      if (!frontendPermissions[moduleName]) {
+        frontendPermissions[moduleName] = {};
+      }
+      
+      if (Array.isArray(permiso.privilegios) && permiso.privilegios.length > 0) {
+        permiso.privilegios.forEach(privilegio => {
+          if (privilegio.nombre) {
+            frontendPermissions[moduleName][privilegio.nombre] = true;
+          }
+        });
+      }
+    });
+    
+    return frontendPermissions;
+  }
+
+  static mapRoleFromBackend(role) {
+    if (!role) return null;
+
+    return {
+      id: role.id_rol || role.id,
+      nombre: role.nombre,
+      name: role.nombre,
+      descripcion: role.descripcion || '',
+      description: role.descripcion || '',
+      estado: role.estado === true || role.estado === 'activo' ? 'Activo' : 'Inactivo',
+      privileges: this.mapPermissionsFromBackend(role.permisos || []),
+      permisos: role.permisos || [],
+      privilegios: role.privilegios || []
+    };
+  }
+
+  static mapRolesFromBackend(roles) {
+    if (!Array.isArray(roles)) return [];
+    return roles.map(role => this.mapRoleFromBackend(role));
+  }
+
+  static mapRoleToBackend(roleData) {
+    const descripcion = (roleData.description || roleData.descripcion || '').trim();
+    
+    return {
+      nombre: (roleData.name || roleData.nombre || '').trim(),
+      descripcion: descripcion || null,
+      estado: roleData.estado === 'Activo' ? true : false,
+      permisos_privilegios: this.convertPrivilegesToBackendFormat(roleData.privileges || {})
+    };
+  }
+
+  static convertPrivilegesToBackendFormat(frontendPrivileges) {
+    const backendFormat = [];
+    
+    if (!frontendPrivileges || typeof frontendPrivileges !== 'object') {
+      return [];
+    }
+
+    Object.keys(frontendPrivileges).forEach(modulo => {
+      const permisos = frontendPrivileges[modulo];
+      const privilegios = [];
+
+      const moduleId = this.getPermissionId(modulo);
+      if (!moduleId) {
+        return;
+      }
+
+      if (permisos && typeof permisos === 'object') {
+        Object.keys(permisos).forEach(accion => {
+          const valor = permisos[accion];
+          if (valor === true) {
+            const privilegeId = this.getPrivilegeId(accion);
+            if (privilegeId) {
+              privilegios.push({
+                id_privilegio: privilegeId,
+                nombre: accion
+              });
+            }
+          }
+        });
+      }
+
+      if (privilegios.length > 0) {
+        backendFormat.push({
+          id_permiso: moduleId,
+          nombre: modulo,
+          privilegios: privilegios
+        });
+      }
+    });
+
+    return backendFormat;
+  }
+}
+
+// ==========================================
+// FUNCIONES HELPER
+// ==========================================
 const initializeMaps = async () => {
   try {
     const [permissionsData, privilegesData] = await Promise.all([
@@ -31,14 +167,15 @@ const initializeMaps = async () => {
   }
 };
 
+// ==========================================
+// SERVICIO PRINCIPAL
+// ==========================================
 export const rolesService = {
   /**
    * Obtener todos los roles
-   * @returns {Promise<Array>} Lista de roles
    */
   getAll: async () => {
     try {
-      // Inicializar mapeos en paralelo con obtener roles
       const [rolesPromise, mapsData] = await Promise.all([
         apiRequest.get(ROLES_ENDPOINT),
         initializeMaps()
@@ -47,7 +184,7 @@ export const rolesService = {
       const rolesData = rolesPromise?.success ? rolesPromise.data : rolesPromise;
       
       if (Array.isArray(rolesData)) {
-        return DataMapper.mapRolesFromBackend(rolesData, mapsData.permissions);
+        return DataMapper.mapRolesFromBackend(rolesData);
       }
       
       throw new Error(rolesData?.message || 'Error al obtener los roles');
@@ -59,8 +196,6 @@ export const rolesService = {
 
   /**
    * Obtener un rol por ID
-   * @param {number|string} id - ID del rol
-   * @returns {Promise<Object>} Datos del rol
    */
   getById: async (id) => {
     try {
@@ -72,7 +207,7 @@ export const rolesService = {
       const role = roleData?.success ? roleData.data : roleData;
       
       if (role) {
-        return DataMapper.mapRoleFromBackend(role, mapsData.permissions);
+        return DataMapper.mapRoleFromBackend(role);
       }
       
       throw new Error(roleData?.message || 'Error al obtener el rol');
@@ -84,21 +219,17 @@ export const rolesService = {
 
   /**
    * Crear un nuevo rol
-   * @param {Object} roleData - Datos del rol
-   * @returns {Promise<Object>} Rol creado
    */
   create: async (roleData) => {
     try {
-      // Asegurar que los mapeos estén inicializados
       const mapsData = await initializeMaps();
-      
       const formattedRole = DataMapper.mapRoleToBackend(roleData);
       
       const response = await apiRequest.post(ROLES_ENDPOINT, formattedRole);
       const data = response?.success ? response.data : response;
 
       if (data) {
-        return DataMapper.mapRoleFromBackend(data, mapsData.permissions);
+        return DataMapper.mapRoleFromBackend(data);
       }
       
       throw new Error(response?.message || 'Error al crear el rol');
@@ -110,22 +241,17 @@ export const rolesService = {
 
   /**
    * Actualizar un rol existente
-   * @param {number|string} id - ID del rol
-   * @param {Object} roleData - Datos actualizados del rol
-   * @returns {Promise<Object>} Rol actualizado
    */
   update: async (id, roleData) => {
     try {
-      // Asegurar que los mapeos estén inicializados
       const mapsData = await initializeMaps();
-      
       const formattedRole = DataMapper.mapRoleToBackend(roleData);
 
       const response = await apiRequest.put(`${ROLES_ENDPOINT}/${id}`, formattedRole);
       const data = response?.success ? response.data : response;
 
       if (data) {
-        return DataMapper.mapRoleFromBackend(data, mapsData.permissions);
+        return DataMapper.mapRoleFromBackend(data);
       }
 
       throw new Error(response?.message || 'Error al actualizar el rol');
@@ -137,8 +263,6 @@ export const rolesService = {
 
   /**
    * Eliminar un rol
-   * @param {number|string} id - ID del rol
-   * @returns {Promise<Object>} Resultado de la eliminación
    */
   delete: async (id) => {
     try {
@@ -158,9 +282,6 @@ export const rolesService = {
 
   /**
    * Cambiar el estado de un rol
-   * @param {number|string} id - ID del rol
-   * @param {string} status - Nuevo estado ('Activo' o 'Inactivo')
-   * @returns {Promise<Object>} Rol actualizado
    */
   changeStatus: async (id, status) => {
     try {
@@ -169,13 +290,11 @@ export const rolesService = {
       };
       
       const response = await apiRequest.patch(`${ROLES_ENDPOINT}/${id}/status`, statusData);
-      
-      // Obtener permisos disponibles para mapear correctamente
       const mapsData = await initializeMaps();
       const data = response?.success ? response.data : response;
       
       if (data) {
-        return DataMapper.mapRoleFromBackend(data, mapsData.permissions);
+        return DataMapper.mapRoleFromBackend(data);
       }
       
       throw new Error(response?.message || 'Error al cambiar el estado del rol');
@@ -187,7 +306,6 @@ export const rolesService = {
 
   /**
    * Obtener todos los permisos disponibles
-   * @returns {Promise<Array>} Lista de permisos
    */
   getAvailablePermissions: async () => {
     try {
@@ -207,7 +325,6 @@ export const rolesService = {
 
   /**
    * Obtener todos los privilegios disponibles
-   * @returns {Promise<Array>} Lista de privilegios
    */
   getAvailablePrivileges: async () => {
     try {
@@ -226,18 +343,4 @@ export const rolesService = {
   },
 };
 
-// Alias para compatibilidad con código existente
-export const getAllRoles = rolesService.getAll;
-export const getRoleById = rolesService.getById;
-export const createRole = rolesService.create;
-export const updateRole = rolesService.update;
-export const deleteRole = rolesService.delete;
-export const changeRoleStatus = rolesService.changeStatus;
-export const getAvailablePermissions = rolesService.getAvailablePermissions;
-export const getAvailablePrivileges = rolesService.getAvailablePrivileges;
-
-
-
-
-
-
+export default rolesService;

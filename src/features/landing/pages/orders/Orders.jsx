@@ -13,33 +13,21 @@ const Orders = () => {
   const [filterStatus, setFilterStatus] = useState("todos");
   const [stats, setStats] = useState({
     total: 0,
-    pendientes: 0,
     enProceso: 0,
+    enviados: 0,
     entregados: 0,
+    devoluciones: 0,
+    cancelados: 0,
   });
 
   const { currentUser, loading: authLoading } = useAuth();
   const customerId = currentUser?.id_usuario;
 
-  console.log("🔍 Orders component - Auth state:", {
-    currentUser,
-    customerId,
-    authLoading,
-  });
-
   useEffect(() => {
-    console.log("🔄 Orders useEffect triggered:", { customerId, authLoading });
-
-    if (authLoading) {
-      console.log("Auth still loading, waiting...");
-      return;
-    }
-
+    if (authLoading) return;
     if (customerId) {
-      console.log("User authenticated, loading orders for customerId:", customerId);
       loadOrders();
     } else {
-      console.log("No customerId found, setting auth error");
       if (!authLoading) {
         setError("Debes iniciar sesión para ver tus pedidos");
         setLoading(false);
@@ -48,23 +36,15 @@ const Orders = () => {
   }, [customerId, authLoading]);
 
   const loadOrders = async () => {
-    if (!customerId) {
-      console.warn("No hay customerId, abortando carga");
-      return;
-    }
+    if (!customerId) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log("Cargando pedidos para usuario:", customerId);
-
       const response = await ordersService.getByUsuario(customerId);
 
-      console.log("Respuesta del servicio:", response);
-
       if (response.success && response.data) {
-        // Mapear con validaciones y CORRECCIÓN de cálculos
         const formattedOrders = (response.data || [])
           .filter((pedido) => {
             if (!pedido) return false;
@@ -77,8 +57,8 @@ const Orders = () => {
             const subtotal = parseFloat(pedido.subtotal || 0);
             const envio = parseFloat(pedido.costo_envio || 0);
             const total = parseFloat(pedido.total || 0);
-            
-            const estado = pedido.estado || "Pendiente";
+            const estado = pedido.estado || "En proceso";
+
             const productos = (pedido.detalles || [])
               .filter((det) => det && det.id_producto)
               .map((det) => {
@@ -109,7 +89,7 @@ const Orders = () => {
               numero: id,
               fecha: typeof fecha === "string" ? fecha.split("T")[0] : fecha,
               estado,
-              subtotal, 
+              subtotal,
               envio,
               total,
               medioPago: "No especificado",
@@ -118,20 +98,21 @@ const Orders = () => {
             };
           });
 
-        console.log("✅ Pedidos formateados:", formattedOrders.length);
         setOrders(formattedOrders);
 
-        // Calcular estadísticas
         const orderStats = {
           total: formattedOrders.length,
-          pendientes: formattedOrders.filter(
-            (o) => o.estado?.toLowerCase() === "pendiente"
-          ).length,
           enProceso: formattedOrders.filter(
             (o) => o.estado?.toLowerCase() === "en proceso"
           ).length,
+          enviados: formattedOrders.filter(
+            (o) => o.estado?.toLowerCase() === "enviado"
+          ).length,
           entregados: formattedOrders.filter(
             (o) => o.estado?.toLowerCase() === "entregado"
+          ).length,
+          devoluciones: formattedOrders.filter(
+            (o) => o.estado?.toLowerCase() === "devolución"
           ).length,
           cancelados: formattedOrders.filter(
             (o) => o.estado?.toLowerCase() === "cancelado"
@@ -139,13 +120,10 @@ const Orders = () => {
         };
 
         setStats(orderStats);
-        console.log("Estadísticas:", orderStats);
       } else {
         throw new Error(response.message || "Error al cargar pedidos");
       }
     } catch (err) {
-      console.error("Error cargando pedidos:", err);
-
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
@@ -155,9 +133,10 @@ const Orders = () => {
       setOrders([]);
       setStats({
         total: 0,
-        pendientes: 0,
         enProceso: 0,
+        enviados: 0,
         entregados: 0,
+        devoluciones: 0,
         cancelados: 0,
       });
     } finally {
@@ -165,12 +144,8 @@ const Orders = () => {
     }
   };
 
-  // Manejar cambio de estado de pedido
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      console.log(`Cambiando estado de pedido ${orderId} a: ${newStatus}`);
-      
-      // Actualizar estado local inmediatamente (optimistic update)
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId 
@@ -178,19 +153,12 @@ const Orders = () => {
             : order
         )
       );
-
-      // Recargar pedidos del servidor
       await loadOrders();
-      
-      console.log("Estado actualizado exitosamente");
     } catch (error) {
-      console.error("Error al cambiar estado:", error);
-      // Revertir cambio optimista
       await loadOrders();
     }
   };
 
-  // Filtrar pedidos localmente
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.numero.toString().includes(searchTerm) ||
@@ -203,19 +171,17 @@ const Orders = () => {
 
   const statusOptions = [
     { value: "todos", label: "Todos los estados" },
-    { value: "pendiente", label: "Pendiente" },
     { value: "en proceso", label: "En proceso" },
     { value: "enviado", label: "Enviado" },
     { value: "entregado", label: "Entregado" },
+    { value: "devolución", label: "Devolución" },
     { value: "cancelado", label: "Cancelado" },
   ];
 
-  // Estado de carga
   if (loading) {
     return <LoadingSpinner message="Cargando pedidos..." subMessage="Estamos preparando tus pedidos" />;
   }
 
-  // Estado de error
   if (error) {
     return (
       <div className="min-h-screen bg-background py-10 px-2">
@@ -243,7 +209,6 @@ const Orders = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
-      {/* Migas de pan */}
       <nav className="max-w-6xl mx-auto text-xs text-gray-500 mb-6 flex items-center gap-2">
         <span
           className="hover:underline cursor-pointer"
@@ -255,8 +220,7 @@ const Orders = () => {
         <span className="text-gray-700 font-semibold">Mis pedidos</span>
       </nav>
 
-      <div className="max-w-6xl mx-auto">
-        {/* Header con título y botón de actualizar */}
+      <div className="max-w-6xl mx_auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 font-montserrat mb-2">
@@ -275,7 +239,6 @@ const Orders = () => {
           </button>
         </div>
 
-        {/* Filtros y búsqueda */}
         <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8 mb-6 border border-gray-100">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
@@ -352,7 +315,6 @@ const Orders = () => {
           </div>
         </div>
 
-        {/* Estadísticas rápidas */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 text-center border border-gray-100 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-center mb-2">
@@ -393,16 +355,16 @@ const Orders = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
                   />
                 </svg>
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-yellow-600 mb-1">
-              {stats.pendientes}
+            <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">
+              {stats.enProceso}
             </div>
             <div className="text-xs sm:text-sm text-gray-600 font-medium">
-              Pendientes
+              En Proceso
             </div>
           </div>
 
@@ -424,17 +386,17 @@ const Orders = () => {
                 </svg>
               </div>
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">
-              {stats.enProceso}
+            <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1">
+              {stats.enviados}
             </div>
             <div className="text-xs sm:text-sm text-gray-600 font-medium">
-              En Proceso
+              Enviados
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 text-center border border-gray-100 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center justify-center mb-2">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items_center justify_center">
                 <svg
                   className="w-4 h-4 text-green-600"
                   fill="none"
@@ -457,17 +419,42 @@ const Orders = () => {
               Entregados
             </div>
           </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 text-center border border-gray-100 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify_center mb-2">
+              <div className="w-8 h-8 bg-orange-100 rounded-full flex items_center justify_center">
+                <svg
+                  className="w-4 h-4 text-orange-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold text-orange-600 mb-1">
+              {stats.devoluciones}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-600 font-medium">
+              Devoluciones
+            </div>
+          </div>
         </div>
 
-        {/* Lista de pedidos */}
         {filteredOrders.length > 0 ? (
           <div className="space-y-4">
             <OrderList orders={filteredOrders} onStatusChange={handleStatusChange} />
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-12 text-center border border-gray-100">
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center">
+            <div className="flex justify_center mb-6">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items_center justify_center">
                 <svg
                   className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400"
                   fill="none"
@@ -483,7 +470,7 @@ const Orders = () => {
                 </svg>
               </div>
             </div>
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">
+            <h3 className="text-xl sm:text-2xl font-bold text_gray-800 mb-3">
               {searchTerm || filterStatus !== "todos"
                 ? "No se encontraron pedidos"
                 : "No tienes pedidos aún"}
@@ -522,3 +509,4 @@ const Orders = () => {
 };
 
 export default Orders;
+

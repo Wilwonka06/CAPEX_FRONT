@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isValidEmail, isValidPassword } from '../../../shared/validations';
+import Swal from 'sweetalert2';
 import PasswordEye from '../../../shared/components/PasswordEye';
+import PasswordRequirements from '../../../shared/components/PasswordRequirements';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 import { apiRequest } from '../../../shared/config/apiConfig';
 import toast from 'react-hot-toast';
@@ -18,6 +20,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Estados para cambio de contraseña
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [tempUser, setTempUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -93,6 +105,13 @@ export default function LoginPage() {
         // Preparar datos del usuario para el contexto
         const userData = response.data.user;
 
+        // Forzar cambio de contraseña en primer acceso
+        if (userData.requirePasswordChange) {
+          setTempUser(userData);
+          setShowChangePasswordModal(true);
+          return { requireChange: true };
+        }
+
         console.log('💾 Guardando datos del usuario:', userData);
         console.log('📍 Página anterior guardada:', previousPath);
 
@@ -112,7 +131,10 @@ export default function LoginPage() {
       loginPromise,
       {
         loading: 'Iniciando sesión...',
-        success: '¡Bienvenido!',
+        success: (data) => {
+          if (data?.requireChange) return 'Por favor actualiza tu contraseña para continuar';
+          return '¡Bienvenido!';
+        },
         error: (err) => {
           console.error('❌ Error en login:', err);
 
@@ -143,6 +165,43 @@ export default function LoginPage() {
       // Error ya manejado por toast.promise
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordChangeSubmit = async (e) => {
+    e.preventDefault();
+    setChangePasswordError('');
+    setChangingPassword(true);
+
+    if (!isValidPassword(newPassword)) {
+      setChangePasswordError('La contraseña no cumple con los requisitos mínimos.');
+      setChangingPassword(false);
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setChangePasswordError('Las contraseñas no coinciden.');
+      setChangingPassword(false);
+      return;
+    }
+
+    try {
+      await apiRequest.patch(`/usuarios/${tempUser.id_usuario}/password`, { newPassword });
+      
+      // Update local user data
+      const updatedUser = { ...tempUser, requirePasswordChange: false };
+      
+      // Login
+      const redirectPath = await login(updatedUser, previousPath);
+      
+      toast.success('Contraseña actualizada exitosamente');
+      setShowChangePasswordModal(false);
+      navigate(redirectPath, { replace: true });
+    } catch (err) {
+      console.error('Error updating password:', err);
+      setChangePasswordError(err.response?.data?.message || 'Error al actualizar la contraseña');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -324,6 +383,79 @@ export default function LoginPage() {
         </div>
       </div>
 
+
+      {/* Modal de cambio de contraseña */}
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-fade-in">
+            <div className="bg-gradient-to-r from-[#a0522d] to-[#7a3a1d] p-6 text-white">
+              <h3 className="text-xl font-bold mb-2">Cambio de contraseña requerido</h3>
+              <p className="text-white/80 text-sm">Por seguridad, debes actualizar tu contraseña antes de continuar.</p>
+            </div>
+            
+            <form onSubmit={handlePasswordChangeSubmit} className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-[#6d3b3b]">Nueva contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    className="w-full pl-4 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#ffb76b] transition-colors"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                    <PasswordEye visible={showNewPassword} onToggle={() => setShowNewPassword(v => !v)} />
+                  </div>
+                </div>
+                <PasswordRequirements password={newPassword} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-[#6d3b3b]">Confirmar contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmNewPassword ? 'text' : 'password'}
+                    className="w-full pl-4 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#ffb76b] transition-colors"
+                    value={confirmNewPassword}
+                    onChange={e => setConfirmNewPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                    <PasswordEye visible={showConfirmNewPassword} onToggle={() => setShowConfirmNewPassword(v => !v)} />
+                  </div>
+                </div>
+                {newPassword && confirmNewPassword && newPassword !== confirmNewPassword && (
+                   <p className="text-red-500 text-xs mt-1">Las contraseñas no coinciden</p>
+                )}
+              </div>
+
+              {changePasswordError && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+                  {changePasswordError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={changingPassword}
+                className="w-full bg-[#a0522d] text-white py-3 rounded-xl font-semibold hover:bg-[#8b4513] transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+              >
+                {changingPassword ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Actualizando...
+                  </>
+                ) : (
+                  'Actualizar contraseña y continuar'
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Estilos CSS personalizados */}
       <style>{`

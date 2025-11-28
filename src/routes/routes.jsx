@@ -13,14 +13,15 @@ import Landing from "../features/landing/landing";
 import CategoriasProductos from "../features/dashboard/pages/CatProducts/CatProducts";
 import CategoriasServicios from "../features/dashboard/pages/CatServices/CatServices";
 import Appointments from "../features/dashboard/pages/appointments/Appointments";
-import Clientes from "../features/dashboard/pages/customers/customer";
+import Clientes from "../features/dashboard/pages/customers/customers";
 import Compras from "../features/dashboard/pages/purchases/Purchases";
 import Dashboard from "../features/dashboard/components/Dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
+import EmployeeDetailPage from "../features/dashboard/pages/employees/components/EmployeeDetailPage";
 import Pedidos from "../features/dashboard/pages/orders/Orders";
 import Productos from "../features/dashboard/pages/products/products";
 import Proveedores from "../features/dashboard/pages/Suppliers/Suppliers";
-import RolesPage from "../features/dashboard/pages/roles/RolesPage";
+import RolesPage from "../features/dashboard/pages/roles/Roles";
 import SaleServices from "../features/dashboard/pages/SaleServices/SaleServices";
 import Servicios from "../features/dashboard/pages/Services/Services";
 import Users from "../features/dashboard/pages/users/Users";
@@ -214,6 +215,14 @@ const router = createBrowserRouter([
             element: (
               <RequirePrivilege module="Empleados" action="Visualizar">
                 <Empleados />
+              </RequirePrivilege>
+            ),
+          },
+          {
+            path: "empleados/:id",
+            element: (
+              <RequirePrivilege module="Empleados" action="Visualizar">
+                <EmployeeDetailPage />
               </RequirePrivilege>
             ),
           },

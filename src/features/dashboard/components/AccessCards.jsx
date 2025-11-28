@@ -6,20 +6,20 @@ const AccessCards = () => {
 
   // Mapeo de módulos con sus rutas e iconos
   const moduleMap = {
-    'Clientes': { path: '/dashboard/clientes', icon: 'bi-person-lines', color: 'bg-blue-500' },
-    'Citas': { path: '/dashboard/citas', icon: 'bi-calendar-event', color: 'bg-green-500' },
-    'Pedidos': { path: '/dashboard/pedidos', icon: 'bi-clipboard-check', color: 'bg-yellow-500' },
-    'Ventas': { path: '/dashboard/ventas-servicios', icon: 'bi-bag-check', color: 'bg-indigo-500' }, // Venta de servicios (también incluye productos)
-    'Venta de Productos': { path: '/dashboard/ventas-productos', icon: 'bi-bag-check', color: 'bg-purple-500' }, // Venta de productos únicamente
-    'Productos': { path: '/dashboard/productos', icon: 'bi-box-seam', color: 'bg-red-500' },
-    'Compras': { path: '/dashboard/compras', icon: 'bi-cart-plus', color: 'bg-orange-500' },
-    'Proveedores': { path: '/dashboard/proveedores', icon: 'bi-truck', color: 'bg-teal-500' },
-    'Categorías de Productos': { path: '/dashboard/categorias-productos', icon: 'bi-collection', color: 'bg-pink-500' },
-    'Categorías de Servicios': { path: '/dashboard/categorias-servicios', icon: 'bi-collection', color: 'bg-cyan-500' },
-    'Servicios': { path: '/dashboard/servicios', icon: 'bi-scissors', color: 'bg-lime-500' },
-    'Empleados': { path: '/dashboard/empleados', icon: 'bi-person-badge', color: 'bg-amber-500' },
-    'Programación': { path: '/dashboard/programacion', icon: 'bi-calendar-week', color: 'bg-rose-500' },
-    'Gestión de Usuarios': { path: '/dashboard/usuarios', icon: 'bi-people', color: 'bg-violet-500' }
+    'Clientes': { path: '/dashboard/clientes', icon: 'bi-person', color: 'bg-text-main' },
+    'Citas': { path: '/dashboard/citas', icon: 'bi-calendar-event', color: 'bg-text-main' },
+    'Pedidos': { path: '/dashboard/pedidos', icon: 'bi-clipboard-check', color: 'bg-text-main' },
+    'Ventas': { path: '/dashboard/ventas-servicios', icon: 'bi-bag-check', color: 'bg-text-main' }, // Venta de servicios (también incluye productos)
+    'Venta de Productos': { path: '/dashboard/ventas-productos', icon: 'bi-bag-check', color: 'bg-text-main' }, // Venta de productos únicamente
+    'Productos': { path: '/dashboard/productos', icon: 'bi-box-seam', color: 'bg-text-main' },
+    'Compras': { path: '/dashboard/compras', icon: 'bi-cart-plus', color: 'bg-text-main' },
+    'Proveedores': { path: '/dashboard/proveedores', icon: 'bi-truck', color: 'bg-text-main' },
+    'Categorías de Productos': { path: '/dashboard/categorias-productos', icon: 'bi-collection', color: 'bg-text-main' },
+    'Categorías de Servicios': { path: '/dashboard/categorias-servicios', icon: 'bi-collection', color: 'bg-text-main' },
+    'Servicios': { path: '/dashboard/servicios', icon: 'bi-scissors', color: 'bg-text-main' },
+    'Empleados': { path: '/dashboard/empleados', icon: 'bi-person-badge', color: 'bg-text-main' },
+    'Programación': { path: '/dashboard/programacion', icon: 'bi-calendar-week', color: 'bg-text-main' },
+    'Usuarios': { path: '/dashboard/usuarios', icon: 'bi-people', color: 'bg-text-main' }
   };
 
   // Obtener módulos a los que el usuario tiene acceso
@@ -81,7 +81,7 @@ const AccessCards = () => {
             >
               <div className="flex flex-col items-center text-center">
                 <div className={`${module.color} w-16 h-16 rounded-full flex items-center justify-center mb-4`}>
-                  <i className={`${module.icon} text-white text-2xl`}></i>
+                  <i className={`${module.icon} text-yellow-500 text-2xl`}></i>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">
                   {module.name}

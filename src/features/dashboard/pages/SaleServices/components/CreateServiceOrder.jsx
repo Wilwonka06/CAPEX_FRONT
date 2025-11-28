@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder } from "../../../../../shared/validations";
+import { createServiceOrder } from "../API/ServiceOrderService";
 import usersService from "../../users/API/usersService";
 import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
 
-const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) => {
+const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
   const [formData, setFormData] = useState({
     id_cliente: null,
     dineroProporcionado: "",
@@ -25,6 +26,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showErrors, setShowErrors] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
@@ -72,6 +74,53 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const buscarCliente = async () => {
+      if (!clienteDoc || clienteDoc.trim().length < 8) {
+        setClienteEncontrado(false);
+        setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+        setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+        return;
+      }
+      setBuscandoCliente(true);
+      try {
+        const response = await usersService.getAll({ documento: clienteDoc.trim() });
+        if (response.success && Array.isArray(response.data)) {
+          const usuarioEncontrado = response.data.find(u => (u.documento || '').toString().trim() === clienteDoc.trim());
+          if (usuarioEncontrado) {
+            const idc = usuarioEncontrado.id_usuario || usuarioEncontrado.id;
+            setCliente({
+              id: idc,
+              documentType: usuarioEncontrado.tipo_documento || 'Cedula de ciudadania',
+              documentNumber: usuarioEncontrado.documento || '',
+              nombre: usuarioEncontrado.nombre || '',
+              email: usuarioEncontrado.correo || '',
+              phone: usuarioEncontrado.telefono || '',
+            });
+            setClienteEncontrado(true);
+            setFormData(prev => ({ ...prev, id_cliente: idc }));
+          } else {
+            setClienteEncontrado(false);
+            setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+            setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+          }
+        } else {
+          setClienteEncontrado(false);
+          setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+          setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+        }
+      } catch (error) {
+        setClienteEncontrado(false);
+        setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
+        setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
+      } finally {
+        setBuscandoCliente(false);
+      }
+    };
+    const timeoutId = setTimeout(buscarCliente, 500);
+    return () => clearTimeout(timeoutId);
+  }, [clienteDoc]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
@@ -85,6 +134,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
     }
 
     try {
+      setLoading(true);
       let clienteId = formData.id_cliente;
       if (!clienteId) {
         if (!clienteEncontrado) {
@@ -117,9 +167,13 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
         dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
       };
 
-      onCreate(orderData);
+      const newOrder = await createServiceOrder(orderData, services);
+      if (onCreated) onCreated(newOrder);
+      if (onClose) onClose();
     } catch (err) {
       // Silenciar, validación visual se maneja en la UI de página
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -146,24 +200,18 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreate, loading, services }) =>
   if (!isOpen) return null;
 
   const CreateOrderCard = ({ children }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-accent m-0">Crear Orden de Servicio</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-receipt text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Crear Orden de Servicio</h2>
           </div>
-          <button
-            onClick={handleClose}
-            disabled={loading}
-            className="text-gray-400 hover:text-black text-xl font-bold"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={handleClose} aria-label="Cerrar" disabled={loading}>×</button>
         </div>
-        {/* Contenido */}
-        <div className="p-8 bg-white overflow-y-auto flex-1">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           {children}
         </div>
       </div>

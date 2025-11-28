@@ -23,7 +23,7 @@ const SuppliersPage = () => {
   const { setTitle } = useOutletContext();
 
   useEffect(() => {
-    setTitle('Gestión de Proveedores');
+    setTitle('Módulo de Proveedores');
     return () => setTitle('');
   }, [setTitle]);
 

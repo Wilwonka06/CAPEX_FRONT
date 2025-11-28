@@ -4,14 +4,7 @@ const OrderStatusBadge = ({ status }) => {
   const getStatusConfig = (status) => {
     const statusLower = status.toLowerCase();
     
-    switch (statusLower) {
-      case 'pendiente':
-        return {
-          bgColor: 'bg-yellow-100',
-          textColor: 'text-yellow-800',
-          borderColor: 'border-yellow-200',
-          icon: '⏳'
-        };
+  switch (statusLower) {
       case 'en proceso':
         return {
           bgColor: 'bg-blue-100',
@@ -24,7 +17,7 @@ const OrderStatusBadge = ({ status }) => {
           bgColor: 'bg-purple-100',
           textColor: 'text-purple-800',
           borderColor: 'border-purple-200',
-          icon: '📦'
+          icon: '�'
         };
       case 'entregado':
         return {
@@ -39,6 +32,13 @@ const OrderStatusBadge = ({ status }) => {
           textColor: 'text-red-800',
           borderColor: 'border-red-200',
           icon: '❌'
+        };
+      case 'devolución':
+        return {
+          bgColor: 'bg-orange-100',
+          textColor: 'text-orange-800',
+          borderColor: 'border-orange-200',
+          icon: '↩️'
         };
       default:
         return {

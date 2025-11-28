@@ -31,8 +31,11 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     precio: "",
     cantidad: "",
     categoryId: "",
+    costo: "",
+    iva: "",
     fotos: [],
   });
+  const [marginPct, setMarginPct] = useState(20);
   const [previews, setPreviews] = useState([]);
   const [especificaciones, setEspecificaciones] = useState([
     { concepto: "", valor: "", otroConcepto: "" }
@@ -120,11 +123,28 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     }
 
     setError("");
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'costo') {
+        const c = parseFloat(value);
+        const m = parseFloat(marginPct) / 100;
+        if (isFinite(c) && c > 0 && isFinite(m)) {
+          next.precio = (c * (1 + m)).toFixed(2);
+        } else {
+          next.precio = "";
+        }
+      }
+      return next;
+    });
   };
+
+  useEffect(() => {
+    const c = parseFloat(formData.costo);
+    const m = parseFloat(marginPct) / 100;
+    if (isFinite(c) && c > 0 && isFinite(m)) {
+      setFormData(prev => ({ ...prev, precio: (c * (1 + m)).toFixed(2) }));
+    }
+  }, [marginPct]);
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
@@ -253,6 +273,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     // Validaciones obligatorias
     if (!formData.nombre.trim()) errors.nombre = "El nombre es obligatorio";
     if (!formData.categoryId) errors.categoryId = "La categoría es obligatoria";
+    if (!formData.costo) errors.costo = "El costo es obligatorio";
     if (!formData.precio) errors.precio = "El precio es obligatorio";
 
     if (Object.keys(errors).length > 0) {
@@ -274,6 +295,8 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
         id_categoria_producto: parseInt(formData.categoryId),
         precio_venta: parseFormattedNumber(formData.precio),
         stock: formData.cantidad ? parseFormattedNumber(formData.cantidad) : 0,
+        costo: formData.costo ? parseFormattedNumber(formData.costo) : undefined,
+        iva: formData.iva ? parseFormattedNumber(formData.iva) : 0,
       };
 
       if (formData.fotos.length > 0) {
@@ -386,8 +409,8 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
         </button>
       )}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[95vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
             {/* Header fijo */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
               <div className="flex items-center gap-3">
@@ -476,7 +499,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                     <i className="bi bi-info-circle text-[#FACC15]"></i>
                     Información del Producto
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Nombre */}
                     <div className="space-y-2">
                       <label className="block text-xs font-medium text-gray-700">
@@ -517,10 +540,31 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                       {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
                     </div>
 
-                    {/* Precio */}
+                    {/* Costo */}
                     <div className="space-y-2">
                       <label className="block text-xs font-medium text-gray-700">
-                        Precio <span className="text-red-500">*</span>
+                        Costo <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                        <input
+                          type="text"
+                          name="costo"
+                          value={formatNumber(formData.costo)}
+                          onChange={e => handleChange({ target: { name: 'costo', value: cleanNumber(e.target.value) } })}
+                          className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
+                          required
+                          onKeyDown={isNumberInputValid}
+                          placeholder="0"
+                        />
+                      </div>
+                      {fieldErrors.costo && <p className="text-xs text-red-500 mt-1">{fieldErrors.costo}</p>}
+                    </div>
+
+                    {/* Precio (auto margen) */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Precio (auto margen) <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
@@ -528,14 +572,32 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                           type="text"
                           name="precio"
                           value={formatNumber(formData.precio)}
-                          onChange={e => handleChange({ target: { name: 'precio', value: cleanNumber(e.target.value) } })}
+                          readOnly
                           className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
                           required
-                          onKeyDown={isNumberInputValid}
                           placeholder="0"
                         />
                       </div>
                       {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
+                      {formData.costo && formData.precio && (
+                        <p className="text-[10px] text-gray-500">Margen: ${formatNumber(parseFormattedNumber(formData.precio) - parseFormattedNumber(formData.costo))} ({(((parseFormattedNumber(formData.precio) - parseFormattedNumber(formData.costo)) / parseFormattedNumber(formData.costo)) * 100 || 0).toFixed(2)}%)</p>
+                      )}
+                    </div>
+
+                    {/* Margen (%) */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-gray-700">Margen (%)</label>
+                      <input
+                        type="text"
+                        name="marginPct"
+                        value={formatNumber(marginPct)}
+                        onChange={e => {
+                          const val = cleanNumber(e.target.value);
+                          if (val === "" || /^\d*\.?\d*$/.test(val)) setMarginPct(val);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
+                        placeholder="20"
+                      />
                     </div>
 
                     {/* Cantidad en Stock */}

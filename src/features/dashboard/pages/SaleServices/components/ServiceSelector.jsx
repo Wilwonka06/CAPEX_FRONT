@@ -11,86 +11,56 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [availableServices, setAvailableServices] = useState([]);
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [retrying, setRetrying] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Cargar servicios y empleados desde el backend
   useEffect(() => {
+    let cancelled = false;
+    const fetchWithRetry = async (fn, label, attempts = 3, delayMs = 1000) => {
+      let lastErr;
+      for (let i = 1; i <= attempts; i++) {
+        try {
+          const res = await fn();
+          return res;
+        } catch (err) {
+          lastErr = err;
+          console.warn(`⚠️ Fallo al cargar ${label} (intento ${i}/${attempts})`, err);
+          if (i < attempts) await new Promise(r => setTimeout(r, delayMs * i));
+        }
+      }
+      throw lastErr;
+    };
+
     const cargarDatos = async () => {
       setLoading(true);
+      setErrorMsg('');
       try {
-        // Cargar servicios
-        try {
-          const servicios = await apiRequest.get('/servicios');
-          console.log('🔍 Servicios recibidos del backend:', servicios);
-          
-          // Manejar diferentes estructuras de respuesta
-          let serviciosArray = [];
-          if (Array.isArray(servicios)) {
-            serviciosArray = servicios;
-          } else if (servicios && typeof servicios === 'object') {
-            // Si es un objeto, intentar extraer un array
-            if (servicios.data && Array.isArray(servicios.data)) {
-              serviciosArray = servicios.data;
-            } else if (servicios.servicios && Array.isArray(servicios.servicios)) {
-              serviciosArray = servicios.servicios;
-            } else if (servicios.results && Array.isArray(servicios.results)) {
-              serviciosArray = servicios.results;
-            } else {
-              // Si es un objeto con propiedades que parecen servicios
-              serviciosArray = Object.values(servicios).filter(item => 
-                item && typeof item === 'object' && (item.id || item.nombre || item.name)
-              );
-            }
-          }
-          
-          console.log('🔧 Servicios procesados:', serviciosArray);
-          setAvailableServices(serviciosArray);
-        } catch (error) {
-          console.error('Error al cargar servicios:', error);
-          setAvailableServices([]);
-        }
+        const servicios = await fetchWithRetry(() => apiRequest.get('/servicios', { skipGlobalErrorHandling: true }), 'servicios');
+        let serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || servicios.results || []);
+        if (!Array.isArray(serviciosArray)) serviciosArray = [];
+        if (!cancelled) setAvailableServices(serviciosArray);
 
-        // Cargar empleados
-        try {
-          const empleados = await apiRequest.get('/empleados');
-          console.log('🔍 Empleados recibidos del backend:', empleados);
-          
-          // Manejar diferentes estructuras de respuesta
-          let empleadosArray = [];
-          if (Array.isArray(empleados)) {
-            empleadosArray = empleados;
-          } else if (empleados && typeof empleados === 'object') {
-            // Si es un objeto, intentar extraer un array
-            if (empleados.data && Array.isArray(empleados.data)) {
-              empleadosArray = empleados.data;
-            } else if (empleados.empleados && Array.isArray(empleados.empleados)) {
-              empleadosArray = empleados.empleados;
-            } else if (empleados.results && Array.isArray(empleados.results)) {
-              empleadosArray = empleados.results;
-            } else {
-              // Si es un objeto con propiedades que parecen empleados
-              empleadosArray = Object.values(empleados).filter(item => 
-                item && typeof item === 'object' && (item.id || item.nombre || item.name)
-              );
-            }
-          }
-          
-          console.log('🔧 Empleados procesados:', empleadosArray);
-          setAvailableEmployees(empleadosArray);
-        } catch (error) {
-          console.error('Error al cargar empleados:', error);
+        const empleados = await fetchWithRetry(() => apiRequest.get('/empleados', { skipGlobalErrorHandling: true }), 'empleados');
+        let empleadosArray = Array.isArray(empleados) ? empleados : (empleados.data || empleados.empleados || empleados.results || []);
+        if (!Array.isArray(empleadosArray)) empleadosArray = [];
+        if (!cancelled) setAvailableEmployees(empleadosArray);
+      } catch (error) {
+        console.error('❌ Error al cargar datos de venta de servicios:', error);
+        if (!cancelled) setErrorMsg('No se pudieron cargar servicios o empleados. Verifica conexión y reintenta.');
+        if (!cancelled) {
+          setAvailableServices([]);
           setAvailableEmployees([]);
         }
-      } catch (error) {
-        console.error('Error al cargar datos:', error);
-        setAvailableServices([]);
-        setAvailableEmployees([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     cargarDatos();
+    return () => { cancelled = true; };
   }, []);
 
   // Cleanup del timeout al desmontar el componente
@@ -104,13 +74,17 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
   // Cargar todos los servicios (select simple)
   const cargarServicios = async () => {
+    setRetrying(true);
     try {
-      const servicios = await apiRequest.get('/servicios');
+      const servicios = await apiRequest.get('/servicios', { skipGlobalErrorHandling: true });
       const serviciosArray = Array.isArray(servicios) ? servicios : (servicios.data || servicios.servicios || []);
-      setAvailableServices(serviciosArray);
+      setAvailableServices(Array.isArray(serviciosArray) ? serviciosArray : []);
+      setErrorMsg('');
     } catch (error) {
       console.error('Error al cargar servicios:', error);
-      setAvailableServices([]);
+      setErrorMsg('No se pudieron cargar los servicios. Intenta nuevamente.');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -185,7 +159,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     onServicesChange(selectedServices.filter(s => s.uniqueId !== uniqueId));
   };
 
-  const isFormValid = selectedEmployeeForService && quantity > 0;
+  const isFormValid = selectedEmployeeForService && quantity > 0 && availableServices.length > 0 && availableEmployees.length > 0;
   const totalServices = selectedServices.reduce((total, service) => total + service.subtotal, 0);
 
   // Funciones simples para evitar problemas de hooks
@@ -208,6 +182,14 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
   return (
     <div className="relative">
+      {errorMsg && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-sm flex items-center justify-between">
+          <span className="text-red-700">{errorMsg}</span>
+          <button onClick={cargarServicios} disabled={retrying} className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 disabled:opacity-50">
+            {retrying ? 'Reintentando...' : 'Reintentar'}
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
         <div>
           <label className="block text-xs font-medium text-black mb-1">Servicio</label>
@@ -229,7 +211,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
       {/* Modal para cantidad, empleado y detalles del servicio */}
       {showQuantityModal && selectedServiceForQuantity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in flex flex-col border border-gray-200">
             {/* Header */}
             <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">

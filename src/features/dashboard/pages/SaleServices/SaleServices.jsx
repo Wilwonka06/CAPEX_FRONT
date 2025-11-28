@@ -335,8 +335,7 @@ const SaleServices = () => {
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Cliente</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Servicios</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Hora</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Valor</th>
+                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Total</th>
                     <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
                     <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
                   </tr>
@@ -365,7 +364,6 @@ const SaleServices = () => {
                       <td className="py-2 px-3">{service.clientName}</td>
                       <td className="py-2 px-3">{(service.servicios || []).map(s => s.name).join(", ")}</td>
                       <td className="py-2 px-3">{service.date}</td>
-                      <td className="py-2 px-3">{service.time}</td>
                       <td className="py-2 px-3">${formatNumber(service.totalGeneral || 0)}</td>
                       <td className="py-2 px-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
