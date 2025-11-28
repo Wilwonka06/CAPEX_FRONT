@@ -49,6 +49,27 @@ const Appointments = () => {
     }
   };
 
+  // TEMPORAL: Función para activar todas las citas canceladas
+  const handleActivateCanceledAppointments = async () => {
+    try {
+      const result = await toast.promise(
+        appointmentsService.activateCanceledAppointments(),
+        {
+          loading: 'Activando citas canceladas...',
+          success: (response) => {
+            refreshAppointments();
+            return response?.message || 'Citas canceladas activadas exitosamente';
+          },
+          error: (err) => {
+            return err?.response?.data?.message || 'Error al activar citas canceladas';
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Error al activar citas canceladas:', error);
+    }
+  };
+
   // Cargar citas al iniciar
   useEffect(() => {
     loadAppointments();
@@ -156,15 +177,35 @@ const Appointments = () => {
     // Servicios
     const serviciosTexto = cita.servicios?.map(s => s.servicio?.nombre || s.nombre_servicio).join(', ') || 'Sin servicios';
 
-    // Formatear hora para mostrar
-    const horaInicioFormato = horaInicio.substring(0, 5);
-    const horaFinFormato = horaFin.substring(0, 5);
+    // Función para convertir hora de 24h a 12h (AM/PM)
+    const convertirHoraA12Horas = (hora24) => {
+      if (!hora24) return '';
+      const horaStr = hora24.toString().substring(0, 5);
+      const [horas, minutos] = horaStr.split(':').map(Number);
+      if (isNaN(horas) || isNaN(minutos)) return hora24;
+      const periodo = horas >= 12 ? 'PM' : 'AM';
+      const horas12 = horas === 0 ? 12 : horas > 12 ? horas - 12 : horas;
+      return `${horas12}:${minutos.toString().padStart(2, '0')} ${periodo}`;
+    };
+
+    // Formatear hora para mostrar en formato 12 horas
+    const horaInicioFormato = convertirHoraA12Horas(horaInicio);
+    const horaFinFormato = convertirHoraA12Horas(horaFin);
+
+    // Asegurar que las horas se interpreten en hora local (sin zona horaria)
+    // Si la hora viene sin segundos, agregarlos
+    const horaInicioCompleta = horaInicio.includes(':') && horaInicio.split(':').length === 2 
+      ? `${horaInicio}:00` 
+      : horaInicio;
+    const horaFinCompleta = horaFin.includes(':') && horaFin.split(':').length === 2 
+      ? `${horaFin}:00` 
+      : horaFin;
 
     return {
       id: cita.id_cita,
       title: `${horaInicioFormato} - ${clienteNombre}: ${serviciosTexto}`,
-      start: `${cita.fecha_servicio}T${horaInicio}`,
-      end: `${cita.fecha_servicio}T${horaFin}`,
+      start: `${cita.fecha_servicio}T${horaInicioCompleta}`,
+      end: `${cita.fecha_servicio}T${horaFinCompleta}`,
       ...cita,
       backgroundColor: estadoColor.bg,
       borderColor: estadoColor.bg,
@@ -207,13 +248,24 @@ const Appointments = () => {
             handleSearch={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar citas por cliente, fecha, estado o servicio..."
           />
-          <button
-            className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <i className="bi bi-calendar-plus text-sm"></i>
-            Crear cita
-          </button>
+          <div className="flex gap-2">
+            {/* TEMPORAL: Botón para activar citas canceladas */}
+            <button
+              className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
+              onClick={handleActivateCanceledAppointments}
+              title="TEMPORAL: Activar todas las citas canceladas"
+            >
+              <i className="bi bi-arrow-clockwise text-sm"></i>
+              Activar Canceladas
+            </button>
+            <button
+              className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-2 font-semibold transition"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <i className="bi bi-calendar-plus text-sm"></i>
+              Crear cita
+            </button>
+          </div>
         </div>
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 overflow-x-auto">
           {loading ? (
@@ -247,7 +299,8 @@ const Appointments = () => {
               handleWindowResize={true}
               dayMaxEventRows={3}
               moreLinkClick="popover"
-              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: true }}
+              timeZone="local"
               dayCellClassNames="hover:bg-gray-50 transition-colors"
               slotLabelClassNames="text-gray-600 font-medium"
               allDayText="Todo el día"

@@ -4,12 +4,12 @@ import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import { isValidDocumentByType } from '@/shared/validations';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
-import { getAllServices } from '@/features/landing/pages/ServicesPage/api/servicesApi';
 import { employeesService } from '@/features/dashboard/pages/employees/API/employeesService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
 import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';
+import ServiceSelection from './ServiceSelection';
 
 // Estados posibles de la cita (solo para crear)
 const APPOINTMENT_STATES = [
@@ -25,15 +25,21 @@ function limpiarPrecio(valor) {
 
 
 const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
-  // Estados para el buscador
-  const [serviceQuery, setServiceQuery] = useState('');
-  const [filteredServices, setFilteredServices] = useState([]);
-  const [services, setServices] = useState([]);
-  const [professionals, setProfessionals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
   const [numero, setNumero] = useState('');
+  const [existingAppointments, setExistingAppointments] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
+
+  // Obtener fecha de hoy en formato YYYY-MM-DD
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // Formulario principal
   const [formData, setFormData] = useState({
@@ -42,34 +48,34 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     correo: '',
     documento: '',
     tipoDocumento: 'CC',
-    fecha: fecha || '',
+    fecha: fecha || getTodayDate(),
     servicios: [],
     estado: 'Agendada',
     notas: ''
   });
 
-  // Cargar datos necesarios desde el backend
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Cargar servicios desde el backend
-        const servicesData = await getAllServices();
-        // Filtrar solo servicios activos y normalizar al formato esperado
-        const normalizedServices = servicesData
-          .filter(s => s.active || s.estado === 'Activo')
-          .map(s => ({
-            id: s.id,
-            name: s.name,
-            duration: s.duration || 0,
-            price: s.price || 0,
-            description: s.description || s.descripcion || '',
-            active: s.active || s.estado === 'Activo'
-          }));
-        setServices(normalizedServices);
 
-        // Cargar empleados desde el backend
+  // useEffect para actualizar la fecha cuando cambia la prop fecha
+  useEffect(() => {
+    if (fecha) {
+      setFormData(prev => ({
+        ...prev,
+        fecha
+      }));
+    } else {
+      // Si no hay fecha pasada como prop, establecer fecha de hoy
+      setFormData(prev => ({
+        ...prev,
+        fecha: getTodayDate()
+      }));
+    }
+  }, [fecha]);
+
+  // Cargar profesionales
+  useEffect(() => {
+    const loadProfessionals = async () => {
+      try {
         const employeesData = await employeesService.getAll();
-        // Filtrar solo empleados activos y convertir a formato de profesionales
         const normalizedProfessionals = employeesData
           .filter(emp => emp.estado === 'Activo' || emp.estado === true)
           .map(emp => ({
@@ -79,73 +85,45 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
           }));
         setProfessionals(normalizedProfessionals);
       } catch (error) {
-        console.error('Error loading data:', error);
-        toast.error('Error al cargar servicios y profesionales');
-        // En caso de error, usar arrays vacíos
-        setServices([]);
+        console.error('Error loading professionals:', error);
         setProfessionals([]);
       }
     };
-    loadData();
+    loadProfessionals();
   }, []);
 
-  // useEffect para actualizar la fecha cuando cambia la prop fecha
+  // Cargar citas existentes del día seleccionado
   useEffect(() => {
-    if (fecha) {
-      setFormData(prev => ({
-        ...prev,
-        fecha
-      }));
-    }
-  }, [fecha]);
+    const loadExistingAppointments = async () => {
+      if (!formData.fecha) {
+        setExistingAppointments([]);
+        return;
+      }
 
-  // Buscador en tiempo real
-  useEffect(() => {
-    if (serviceQuery.trim() === '') {
-      setFilteredServices([]);
-    } else {
-      setFilteredServices(
-        services.filter(s =>
-          s.name.toLowerCase().includes(serviceQuery.toLowerCase())
-        )
-      );
-    }
-  }, [serviceQuery, services]);
+      try {
+        const response = await appointmentsService.getAll({
+          fecha_servicio: formData.fecha
+        });
+        
+        if (response.success && response.data) {
+          // Filtrar solo citas activas (no canceladas)
+          const activeAppointments = response.data.filter(
+            cita => cita.estado !== 'Cancelada por el usuario' && 
+                     cita.estado !== 'No asistio'
+          );
+          setExistingAppointments(activeAppointments);
+        } else {
+          setExistingAppointments([]);
+        }
+      } catch (error) {
+        console.error('Error loading existing appointments:', error);
+        setExistingAppointments([]);
+      }
+    };
 
-  // Agregar servicio desde el buscador (ahora al inicio)
-  const handleAddService = (service) => {
-    setFormData(prev => ({
-      ...prev,
-      servicios: [
-        {
-          id: Date.now() + Math.random(),
-          servicioId: service.id,
-          nombre: service.name,
-          profesional: '',
-          inicio: '08:00',
-          fin: calcularHoraFin('08:00', service.duration),
-          duracion: parseInt(service.duration?.toString().replace(/[^\d]/g, '') || 0, 10),
-          precio: parseInt(service.price?.toString().replace(/[^\d]/g, '') || 0, 10),
+    loadExistingAppointments();
+  }, [formData.fecha]);
 
-          cantidad: 1
-        },
-        ...prev.servicios
-      ]
-    }));
-    setServiceQuery('');
-    setFilteredServices([]);
-    // Marcar servicios como tocado y limpiar error
-    setTouchedFields(prev => ({ ...prev, servicios: true }));
-    clearError('servicios');
-  };
-
-  // Eliminar servicio de la lista
-  const removeService = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      servicios: prev.servicios.filter((_, i) => i !== index)
-    }));
-  };
 
   // Función para marcar un campo como "tocado" y validar
   const handleFieldBlur = (field) => {
@@ -251,32 +229,6 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     }
   };
 
-  // Actualizar campos de un servicio seleccionado
-  const updateService = (index, field, value) => {
-    setFormData(prev => {
-      const newServicios = [...prev.servicios];
-      newServicios[index] = { ...newServicios[index], [field]: value };
-      // Si cambia hora inicio o duración, recalcular hora fin
-      if (['inicio', 'duracion', 'cantidad'].includes(field)) {
-        const inicio = field === 'inicio' ? value : newServicios[index].inicio;
-        const duracion = field === 'duracion' ? value : newServicios[index].duracion;
-        const cantidad = field === 'cantidad' ? value : newServicios[index].cantidad;
-        const duracionTotal = Number(duracion) * Number(cantidad || 1);
-        newServicios[index].fin = calcularHoraFin(inicio, duracionTotal);
-      }
-      return { ...prev, servicios: newServicios };
-    });
-  };
-
-  // Calcular hora fin a partir de inicio y duración
-  function calcularHoraFin(inicio, duracion) {
-    if (!inicio || !/^\d{2}:\d{2}$/.test(inicio)) return '';
-    const [h, m] = inicio.split(':').map(Number);
-    const totalMin = h * 60 + m + Number(duracion || 0);
-    const newH = Math.floor(totalMin / 60);
-    const newM = totalMin % 60;
-    return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
-  }
 
   // Validación de teléfono
   function validarTelefono(telefono) {
@@ -339,6 +291,29 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     return false;
   }
 
+  // Validación de solapamiento de servicios para el mismo profesional (en el formulario)
+  function haySolapamientoServicios(servicios) {
+    for (let i = 0; i < servicios.length; i++) {
+      for (let j = i + 1; j < servicios.length; j++) {
+        if (
+          servicios[i].profesional &&
+          servicios[i].profesional === servicios[j].profesional
+        ) {
+          // Convertir a minutos para comparar
+          const inicioA = parseInt(servicios[i].inicio.split(':')[0]) * 60 + parseInt(servicios[i].inicio.split(':')[1]);
+          const finA = parseInt(servicios[i].fin.split(':')[0]) * 60 + parseInt(servicios[i].fin.split(':')[1]);
+          const inicioB = parseInt(servicios[j].inicio.split(':')[0]) * 60 + parseInt(servicios[j].inicio.split(':')[1]);
+          const finB = parseInt(servicios[j].fin.split(':')[0]) * 60 + parseInt(servicios[j].fin.split(':')[1]);
+          // Si se solapan
+          if (inicioA < finB && inicioB < finA) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   // Validaciones solo para campos que han sido tocados
   useEffect(() => {
     // Solo validar servicios si ya hay servicios o si ya hay un error
@@ -357,65 +332,46 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     }
   }, [formData.servicios, touchedFields.servicios]);
 
-  // Validación en tiempo real para servicios cuando cambian
-  useEffect(() => {
-    if (touchedFields.servicios && formData.servicios.length > 0) {
-      const serviciosError = haySolapamientoServicios(formData.servicios) ?
-        'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.' : '';
-      setErrors(prev => ({
-        ...prev,
-        servicios: serviciosError
-      }));
-    }
-  }, [formData.servicios, touchedFields.servicios]);
+  // Función para convertir hora de 24h a 12h (AM/PM)
+  const convertirHoraA12Horas = (hora24) => {
+    if (!hora24) return '';
+    const horaStr = hora24.toString().substring(0, 5);
+    const [horas, minutos] = horaStr.split(':').map(Number);
+    if (isNaN(horas) || isNaN(minutos)) return hora24;
+    const periodo = horas >= 12 ? 'PM' : 'AM';
+    const horas12 = horas === 0 ? 12 : horas > 12 ? horas - 12 : horas;
+    return `${horas12}:${minutos.toString().padStart(2, '0')} ${periodo}`;
+  };
 
-  // Generar opciones de hora disponibles para un servicio
-  function getHorasDisponibles(idx, profesional, duracion) {
-    if (!profesional) return [];
-    const horas = [];
-    const hoyISO = new Date().toISOString().slice(0, 10);
-    const esHoy = formData.fecha === hoyISO;
-    const ahora = new Date();
-    const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
-    for (let h = 6; h <= 20; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        // Verificar si esta hora se solapa con otro servicio del mismo profesional
-        let disponible = true;
-        const inicioA = h * 60 + m;
-        const finA = inicioA + Number(duracion);
-        if (esHoy && inicioA <= ahoraMin) {
-          disponible = false;
-        }
-        for (let i = 0; i < formData.servicios.length; i++) {
-          if (i === idx) continue;
-          const s = formData.servicios[i];
-          if (s.profesional === profesional) {
-            const inicioB = parseInt(s.inicio.split(':')[0]) * 60 + parseInt(s.inicio.split(':')[1]);
-            const finB = parseInt(s.fin.split(':')[0]) * 60 + parseInt(s.fin.split(':')[1]);
-            if (inicioA < finB && inicioB < finA) {
-              disponible = false;
-              break;
-            }
-          }
-        }
-        horas.push({ hora, disponible });
-      }
-    }
-    return horas;
-  }
+  // Convertir hora a minutos para ordenar correctamente
+  const horaAMinutos = (horaStr) => {
+    if (!horaStr) return 0;
+    const partes = horaStr.split(':');
+    return parseInt(partes[0]) * 60 + parseInt(partes[1] || 0);
+  };
 
   // Calcular duración total, hora inicio/fin global y valor total
   const calcularResumen = () => {
     if (formData.servicios.length === 0) return { duracion: 0, inicio: '', fin: '', total: 0 };
-    const inicios = formData.servicios.map(s => s.inicio).sort();
-    const fines = formData.servicios.map(s => s.fin).sort().reverse();
+    
+    // Ordenar horas correctamente convirtiéndolas a minutos
+    const inicios = formData.servicios
+      .map(s => s.inicio)
+      .filter(h => h) // Filtrar horas vacías
+      .sort((a, b) => horaAMinutos(a) - horaAMinutos(b));
+    
+    const fines = formData.servicios
+      .map(s => s.fin)
+      .filter(h => h) // Filtrar horas vacías
+      .sort((a, b) => horaAMinutos(b) - horaAMinutos(a)); // Orden descendente
+    
     const duracion = formData.servicios.reduce((acc, s) => acc + Number(s.duracion || 0), 0);
     const total = formData.servicios.reduce((acc, s) => acc + (limpiarPrecio(s.precio) * (Number(s.cantidad) || 1)), 0);
+    
     return {
       duracion,
-      inicio: inicios[0],
-      fin: fines[0],
+      inicio: inicios[0] || '',
+      fin: fines[0] || '',
       total
     };
   };
@@ -849,126 +805,21 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
         {/* Contenido scrolleable */}
         <div className="flex-1 overflow-y-auto p-6">
           <form id="appointment-form" onSubmit={handleSubmit} className="space-y-4">
-            {/* Buscador de servicios */}
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-text-main mb-1">Buscar Servicio <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                value={serviceQuery}
-                onChange={e => setServiceQuery(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="Buscar por nombre de servicio..."
-              />
-              {filteredServices.length > 0 && (
-                <div className="bg-white border rounded shadow mt-2 max-h-40 overflow-y-auto">
-                  {filteredServices.map(service => (
-                    <div key={service.id} className="flex justify-between items-center px-4 py-2 hover:bg-gray-50">
-                      <div>
-                        <div className="font-semibold">{service.name}</div>
-                        <div className="text-xs text-gray-500">{service.description}</div>
-                        <div className="text-xs text-gray-500">{service.duration} min ${service.price}</div>
-                      </div>
-                      <button
-                        type="button"
-                        className="bg-primary text-white px-3 py-1 rounded hover:bg-primary-dark text-sm"
-                        onClick={() => handleAddService(service)}
-                      >Agregar</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {touchedFields.servicios && errors.servicios && <span className="text-red-500 text-xs block mt-1">{errors.servicios}</span>}
-            </div>
-
-            {/* Servicios seleccionados */}
-            <div className="mb-6">
-              <div className="font-semibold mb-2">Servicios seleccionados ({formData.servicios.length})</div>
-              {touchedFields.servicios && errors.servicios && <p className="text-red-500 text-xs mb-2">{errors.servicios}</p>}
-              <div className="space-y-4">
-                {formData.servicios.map((service, idx) => (
-                  <div key={service.id} className="border rounded-lg p-4 bg-gray-50 relative">
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 text-gray-400 hover:text-red-600 text-lg"
-                      onClick={() => removeService(idx)}
-                    >×</button>
-                    <div className="font-semibold mb-1">{service.nombre}</div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Profesional</label>
-                        <select
-                          value={service.profesional}
-                          onChange={e => {
-                            const selectedProfessional = professionals.find(p => p.name === e.target.value);
-                            updateService(idx, 'profesional', e.target.value);
-                            if (selectedProfessional) {
-                              updateService(idx, 'id_empleado', selectedProfessional.id);
-                            }
-                          }}
-                          className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                          <option value="">Seleccionar profesional</option>
-                          {professionals.map(p => (
-                            <option key={p.id} value={p.name}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Hora inicio</label>
-                        <select
-                          value={service.inicio}
-                          onChange={e => updateService(idx, 'inicio', e.target.value)}
-                          className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                          {getHorasDisponibles(idx, service.profesional, service.duracion).map(opt => (
-                            <option key={opt.hora} value={opt.hora} disabled={!opt.disponible} style={!opt.disponible ? { color: '#aaa' } : {}}>
-                              {opt.hora} {!opt.disponible ? ' (hora no disponible)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        {(!getHorasDisponibles(idx, service.profesional, service.duracion).some(opt => opt.hora === service.inicio && opt.disponible)) && (
-                          <span className="text-xs text-red-500">hora no disponible</span>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Hora finalización</label>
-                        <input
-                          type="time"
-                          value={service.fin}
-                          readOnly
-                          className="w-full px-2 py-1 border rounded-md bg-gray-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Duración (min)</label>
-                        <input
-                          type="number"
-                          value={service.duracion}
-                          disabled
-                          className="w-full px-2 py-1 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
-                        <input
-                          type="number"
-                          value={service.cantidad}
-                          onChange={e => updateService(idx, 'cantidad', e.target.value)}
-                          className="w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          min="1"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Precio</label>
-                        <div className="font-semibold">${Number(service.precio) * (Number(service.cantidad) || 1)}</div>
-                      </div>
-                    </div>
-                    {errors[`servicio_${idx}`] && <span className="text-red-500 text-xs block mt-1">{errors[`servicio_${idx}`]}</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Componente de selección de servicios */}
+            <ServiceSelection
+              servicios={formData.servicios}
+              onServicesChange={(newServicios) => {
+                setFormData(prev => ({ ...prev, servicios: newServicios }));
+                setTouchedFields(prev => ({ ...prev, servicios: true }));
+                clearError('servicios');
+              }}
+              fecha={formData.fecha}
+              existingAppointments={existingAppointments}
+              errors={errors}
+              onErrorsChange={setErrors}
+              touchedFields={touchedFields}
+              estado={formData.estado}
+            />
 
             {/* Datos del cliente y resumen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1089,13 +940,13 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Hora inicio</label>
-                <input type="text" value={resumen.inicio} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
+                <input type="text" value={convertirHoraA12Horas(resumen.inicio)} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Hora fin</label>
                 <input
                   type="text"
-                  value={resumen.fin || ''}
+                  value={convertirHoraA12Horas(resumen.fin) || ''}
                   disabled
                   className="w-full px-2 py-1 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
                 />
@@ -1154,5 +1005,6 @@ AppointmentCreateModal.propTypes = {
 };
 
 export default AppointmentCreateModal;
+
 
 
