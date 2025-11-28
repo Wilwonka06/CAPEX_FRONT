@@ -7,11 +7,11 @@ export const APPOINTMENT_STATES = [
   { nombre: 'Agendada', descripcion: 'La cita ha sido creada por el cliente.', tipo: 'Automático' },
   { nombre: 'Confirmada', descripcion: 'El establecimiento ha confirmado la disponibilidad para la cita.', tipo: 'Manual' },
   { nombre: 'Reprogramada', descripcion: 'La cita ha sido modificada en fecha u hora.', tipo: 'Manual' },
-  { nombre: 'En Ejecucion', descripcion: 'El servicio está siendo realizado actualmente.', tipo: 'Manual' },
+  { nombre: 'En ejecución', descripcion: 'El servicio está siendo realizado actualmente.', tipo: 'Manual' },
   { nombre: 'Finalizada', descripcion: 'El servicio fue realizado con éxito.', tipo: 'Automático' },
-  { nombre: 'Cancelada por cliente', descripcion: 'El cliente canceló la cita antes de la hora programada.', tipo: 'Manual' },
   { nombre: 'Pagada', descripcion: 'El cliente pagó la cita.', tipo: 'Manual' },
-  { nombre: 'No asistió', descripcion: 'El cliente no se presentó a la cita.', tipo: 'Automático' },
+  { nombre: 'Cancelada por el usuario', descripcion: 'El cliente canceló la cita.', tipo: 'Manual' },
+  { nombre: 'No asistio', descripcion: 'El cliente no se presentó a la cita.', tipo: 'Automático' },
 ];
 
 // Función para convertir datos del backend al formato esperado por el frontend

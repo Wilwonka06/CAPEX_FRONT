@@ -4,11 +4,12 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import appointmentsService from './API/appointmentsService';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import esLocale from '@fullcalendar/core/locales/es';
 
 import AppointmentDetailModal from './components/AppointmentDetailModal';
 import AppointmentEditModal from './components/AppointmentEditModal';
+import AppointmentCreateModal from './components/AppointmentCreateModal';
 import toast from 'react-hot-toast';
 import Search from '../../../../shared/Search';
 import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
@@ -19,7 +20,7 @@ const ESTADO_COLORES = {
   'Agendada': { bg: '#FACC15', text: '#7C5700' }, // amarillo
   'Confirmada': { bg: '#60A5FA', text: '#1E3A8A' }, // azul
   'Reprogramada': { bg: '#F59E42', text: '#7C3F00' }, // naranja
-  'En proceso': { bg: '#A78BFA', text: '#4B006E' }, // morado
+  'En ejecución': { bg: '#2196F3', text: '#FFFFFF' }, // azul (cambió de morado)
   'Finalizada': { bg: '#34D399', text: '#065F46' }, // verde
   'Pagada': { bg: '#22D3EE', text: '#0E7490' }, // cyan
   'Cancelada por el usuario': { bg: '#F87171', text: '#991B1B' }, // rojo
@@ -39,6 +40,15 @@ const Appointments = () => {
   // Para pasar datos a los modales
   const [editData, setEditData] = useState(null);
   const { setTitle } = useOutletContext();
+  const navigate = useNavigate();
+
+  const handleSaveAppointment = (savedCita) => {
+    refreshAppointments();
+    if (savedCita && (savedCita.estado === 'En ejecución')) {
+      navigate('/dashboard/ventas-servicios');
+    }
+  };
+
 
   // Cargar citas al iniciar
   useEffect(() => {
@@ -66,7 +76,7 @@ const Appointments = () => {
       appointments.filter(appointment =>
         // Buscar por nombre del cliente (usuario o cliente)
         ((appointment.usuario?.nombre || appointment.cliente?.nombre) &&
-         (appointment.usuario?.nombre || appointment.cliente?.nombre).toLowerCase().includes(lowerTerm)) ||
+          (appointment.usuario?.nombre || appointment.cliente?.nombre).toLowerCase().includes(lowerTerm)) ||
         // Buscar por fecha
         (appointment.fecha_servicio && appointment.fecha_servicio.includes(searchTerm)) ||
         // Buscar por estado
@@ -78,10 +88,10 @@ const Appointments = () => {
         )) ||
         // Buscar por teléfono del cliente
         ((appointment.usuario?.telefono || appointment.cliente?.telefono) &&
-         (appointment.usuario?.telefono || appointment.cliente?.telefono).includes(searchTerm)) ||
+          (appointment.usuario?.telefono || appointment.cliente?.telefono).includes(searchTerm)) ||
         // Buscar por correo del cliente
         ((appointment.usuario?.correo || appointment.cliente?.correo) &&
-         (appointment.usuario?.correo || appointment.cliente?.correo).toLowerCase().includes(lowerTerm))
+          (appointment.usuario?.correo || appointment.cliente?.correo).toLowerCase().includes(lowerTerm))
       )
     );
   }, [searchTerm, appointments]);
@@ -140,22 +150,42 @@ const Appointments = () => {
 
     // Color según estado
     const estadoColor = ESTADO_COLORES[cita.estado] || { bg: '#A0522D', text: '#fff' };
-    
+
     // Nombre del cliente
     const clienteNombre = cita.usuario?.nombre || cita.cliente?.nombre || 'Cliente';
-    
+
     // Servicios
     const serviciosTexto = cita.servicios?.map(s => s.servicio?.nombre || s.nombre_servicio).join(', ') || 'Sin servicios';
-    
-    // Formatear hora para mostrar
-    const horaInicioFormato = horaInicio.substring(0, 5);
-    const horaFinFormato = horaFin.substring(0, 5);
-    
+
+    // Función para convertir hora de 24h a 12h (AM/PM)
+    const convertirHoraA12Horas = (hora24) => {
+      if (!hora24) return '';
+      const horaStr = hora24.toString().substring(0, 5);
+      const [horas, minutos] = horaStr.split(':').map(Number);
+      if (isNaN(horas) || isNaN(minutos)) return hora24;
+      const periodo = horas >= 12 ? 'PM' : 'AM';
+      const horas12 = horas === 0 ? 12 : horas > 12 ? horas - 12 : horas;
+      return `${horas12}:${minutos.toString().padStart(2, '0')} ${periodo}`;
+    };
+
+    // Formatear hora para mostrar en formato 12 horas
+    const horaInicioFormato = convertirHoraA12Horas(horaInicio);
+    const horaFinFormato = convertirHoraA12Horas(horaFin);
+
+    // Asegurar que las horas se interpreten en hora local (sin zona horaria)
+    // Si la hora viene sin segundos, agregarlos
+    const horaInicioCompleta = horaInicio.includes(':') && horaInicio.split(':').length === 2 
+      ? `${horaInicio}:00` 
+      : horaInicio;
+    const horaFinCompleta = horaFin.includes(':') && horaFin.split(':').length === 2 
+      ? `${horaFin}:00` 
+      : horaFin;
+
     return {
       id: cita.id_cita,
       title: `${horaInicioFormato} - ${clienteNombre}: ${serviciosTexto}`,
-      start: `${cita.fecha_servicio}T${horaInicio}`,
-      end: `${cita.fecha_servicio}T${horaFin}`,
+      start: `${cita.fecha_servicio}T${horaInicioCompleta}`,
+      end: `${cita.fecha_servicio}T${horaFinCompleta}`,
       ...cita,
       backgroundColor: estadoColor.bg,
       borderColor: estadoColor.bg,
@@ -180,8 +210,8 @@ const Appointments = () => {
               <span className="text-sm font-semibold text-gray-700 mr-2">Estados:</span>
               {Object.entries(ESTADO_COLORES).map(([estado, color]) => (
                 <div key={estado} className="flex items-center gap-2">
-                  <span 
-                    className="inline-block w-3 h-3 rounded" 
+                  <span
+                    className="inline-block w-3 h-3 rounded"
                     style={{ background: color.bg }}
                   ></span>
                   <span className="text-xs text-gray-600">{estado}</span>
@@ -190,8 +220,8 @@ const Appointments = () => {
             </div>
           </div>
         </div>
-        
-        
+
+
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <Search
             searchTerm={searchTerm}
@@ -238,7 +268,8 @@ const Appointments = () => {
               handleWindowResize={true}
               dayMaxEventRows={3}
               moreLinkClick="popover"
-              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: true }}
+              timeZone="local"
               dayCellClassNames="hover:bg-gray-50 transition-colors"
               slotLabelClassNames="text-gray-600 font-medium"
               allDayText="Todo el día"
@@ -262,14 +293,14 @@ const Appointments = () => {
           <AppointmentEditModal
             cita={editData}
             onClose={() => setShowEditModal(false)}
-            onSave={refreshAppointments}
+            onSave={handleSaveAppointment}
           />
         )}
         {showCreateModal && (
-          <AppointmentEditModal
+          <AppointmentCreateModal
             fecha={selectedDate}
             onClose={() => setShowCreateModal(false)}
-            onSave={refreshAppointments}
+            onSave={handleSaveAppointment}
           />
         )}
       </div>

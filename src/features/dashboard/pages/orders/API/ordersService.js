@@ -16,7 +16,7 @@ class OrdersService {
   async getAll(params = {}) {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (params.page) queryParams.append('page', params.page);
       const safeLimit = Math.min(Math.max(parseInt(params.limit || 50), 1), 100);
       queryParams.append('limit', safeLimit);
@@ -74,7 +74,7 @@ class OrdersService {
           await new Promise(r => setTimeout(r, 500 * i));
           const retryParams = { ...params, limit: Math.min(Math.max(parseInt(params.limit || 25), 1), 50) };
           return await this.getAll(retryParams);
-        } catch (_) {}
+        } catch (_) { }
       }
       return this._handleError('Error fetching orders', error);
     }
@@ -90,7 +90,7 @@ class OrdersService {
       if (!id) throw new Error('ID del pedido es requerido');
 
       const response = await apiRequest.get(`${ORDERS_ENDPOINT}/${id}`);
-      
+
       // Mapear respuesta
       if (response.success && response.data) {
         const pedido = response.data;
@@ -156,7 +156,7 @@ class OrdersService {
       };
 
       const response = await apiRequest.post(ORDERS_ENDPOINT, pedidoData);
-      
+
       // Mapear respuesta
       if (response.success && response.data) {
         const pedido = response.data;
@@ -225,6 +225,7 @@ class OrdersService {
    */
   async changeStatus(id, estado) {
     try {
+      console.log(`[OrdersService] Changing status for order ${id} to ${estado}`);
       if (!id) throw new Error('ID del pedido es requerido');
       if (!estado) throw new Error('El estado es requerido');
 
@@ -232,8 +233,10 @@ class OrdersService {
         `${ORDERS_ENDPOINT}/${id}/estado`,
         { estado }
       );
+      console.log(`[OrdersService] Status change response:`, response);
       return this._handleResponse(response);
     } catch (error) {
+      console.error(`[OrdersService] Error changing status:`, error);
       return this._handleError(`Error changing order status`, error);
     }
   }
@@ -347,7 +350,7 @@ class OrdersService {
    */
   _handleResponse(response) {
     const data = response.data || response;
-    
+
     // Retornar estructura consistente
     return {
       success: data.success !== false,
@@ -362,12 +365,12 @@ class OrdersService {
    * @private
    */
   _handleError(context, error) {
-    const errorMessage = error?.response?.data?.message 
-      || error?.message 
+    const errorMessage = error?.response?.data?.message
+      || error?.message
       || 'Error desconocido';
-    
+
     console.error(`[OrdersService] ${context}:`, error);
-    
+
     throw {
       success: false,
       message: errorMessage,

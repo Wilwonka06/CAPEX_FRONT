@@ -91,8 +91,8 @@ const getServiceDetailsByClient = async (idCliente, idCita) => {
         services = Array.isArray(response.data) ? response.data : [response.data];
       }
     } else {
-      // Si no hay cita, buscar todos los servicios del cliente en estado "En proceso"
-      const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/status/En proceso`);
+      // Si no hay cita, buscar todos los servicios del cliente en estado "En ejecución"
+      const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/status/En ejecución`);
       if (response.success && response.data) {
         services = Array.isArray(response.data) 
           ? response.data.filter(s => s.id_cliente === idCliente)
@@ -146,7 +146,7 @@ export const buscarCitas = async (termino) => {
 };
 
 /**
- * Inicia un servicio (cambia estado a "En proceso")
+ * Inicia un servicio (cambia estado a "En ejecución")
  */
 export const iniciarServicio = async (serviceDetailId) => {
   try {
@@ -167,7 +167,7 @@ export const actualizarEstadoCita = async (serviceDetailId, nuevoEstado) => {
     const estadoMap = {
       'Anulado': 'Cancelada por el usuario',
       'Pagado': 'Pagada',
-      'En ejecucion': 'En proceso'
+      'En ejecucion': 'En ejecución'  // Mapear estado interno del frontend al estado del backend
     };
     
     const estadoBackend = estadoMap[nuevoEstado] || nuevoEstado;
@@ -188,22 +188,41 @@ export const actualizarEstadoCita = async (serviceDetailId, nuevoEstado) => {
 const groupServicesByClient = (serviceDetails) => {
   const grouped = {};
   
+  // Primero, agrupar por id_cita si existe
   serviceDetails.forEach(detail => {
-    const key = detail.id_cita 
-      ? `cita_${detail.id_cita}` 
-      : `cliente_${detail.id_cliente}_${detail.fecha_programada || 'sin_fecha'}`;
+    // Asegurar que tenemos id_cita (puede venir como null o undefined)
+    const idCita = detail.id_cita || null;
+    const idCliente = detail.id_cliente || detail.usuario?.id_usuario || null;
+    const fechaProgramada = detail.fecha_programada || detail.fecha_creacion || null;
+    
+    // Crear clave única: priorizar id_cita si existe
+    const key = idCita 
+      ? `cita_${idCita}` 
+      : `cliente_${idCliente}_${fechaProgramada || 'sin_fecha'}`;
     
     if (!grouped[key]) {
       grouped[key] = {
-        id_cita: detail.id_cita,
-        id_cliente: detail.id_cliente,
-        cliente: detail.cliente || detail.usuario,
-        fecha_programada: detail.fecha_programada,
+        id_cita: idCita,
+        id_cliente: idCliente,
+        cliente: detail.cliente || detail.usuario || null,
+        fecha_programada: fechaProgramada,
         servicios: []
       };
     }
     
+    // Agregar el servicio al grupo
     grouped[key].servicios.push(detail);
+  });
+  
+  // Log para debugging
+  console.log('📋 Servicios agrupados:', {
+    totalServicios: serviceDetails.length,
+    gruposCreados: Object.keys(grouped).length,
+    grupos: Object.keys(grouped).map(key => ({
+      key,
+      id_cita: grouped[key].id_cita,
+      cantidadServicios: grouped[key].servicios.length
+    }))
   });
   
   return Object.values(grouped);
@@ -239,15 +258,21 @@ const transformarServiciosAVentaServicio = (grupo) => {
 
   // Determinar estado (usar el más común o el primero)
   const estados = servicios.map(s => s.estado);
-  const estado = estados.includes('En proceso') ? 'En ejecucion' : 
+  const estado = estados.includes('En ejecución') ? 'En ejecucion' :  // Estado interno del frontend
+                 estados.includes('En proceso') ? 'En ejecucion' :  // Compatibilidad con estado antiguo
                  estados.includes('Pagada') ? 'Pagado' :
                  estados.includes('Finalizada') ? 'Finalizada' :
                  estados[0] || 'En ejecucion';
 
+  // Usar id_cita del grupo si está disponible, de lo contrario usar el primer servicio
+  const citaId = grupo.id_cita || primerServicio.id_cita;
+  // Si no hay id_cita, usar el primer id_detalle_servicio como fallback
+  const idFinal = citaId || primerServicio.id_detalle_servicio;
+
   return {
-    id: primerServicio.id_cita || primerServicio.id_detalle_servicio,
+    id: idFinal,
     clientName: grupo.cliente?.nombre || primerServicio.cliente?.nombre || primerServicio.usuario?.nombre || 'Cliente no especificado',
-    status: estado === 'En proceso' ? 'En ejecucion' : estado === 'Pagada' ? 'Pagado' : estado,
+    status: (estado === 'En ejecución' || estado === 'En proceso') ? 'En ejecucion' : estado === 'Pagada' ? 'Pagado' : estado,
     date: formatearFecha(fecha),
     time: formatearHora(hora),
     dineroProporcionado: 0, // Se calculará cuando se edite

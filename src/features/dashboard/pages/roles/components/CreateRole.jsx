@@ -52,23 +52,16 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
     console.log(`🔄 handlePrivilegeChange: ${modulo} -> ${accion} = ${checked}`);
-    
+
     setPrivileges(prev => {
       // Obtener el estado actual del módulo, o un objeto vacío si no existe
       const currentModulePrivileges = prev[modulo] || {};
-      
+
       // Crear el nuevo estado del módulo SOLO con los privilegios que se están modificando
       const newModulePrivileges = {
         ...currentModulePrivileges,
         [accion]: checked
       };
-
-      // Si se selecciona cualquier privilegio que NO sea "Visualizar", 
-      // automáticamente activar "Visualizar" también
-      if (checked && accion !== 'Visualizar') {
-        newModulePrivileges['Visualizar'] = true;
-        console.log(`✅ Activando Visualizar automáticamente para ${modulo}`);
-      }
 
       // Si se deselecciona "Visualizar", deseleccionar todos los demás privilegios
       if (!checked && accion === 'Visualizar') {
@@ -90,7 +83,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
       };
 
       console.log(`📊 Nuevo estado de privilegios para ${modulo}:`, newModulePrivileges);
-      
+
       return newPrivileges;
     });
   };
@@ -129,6 +122,28 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
     
     const validationErrors = validateRole(formData, cleanedPrivileges, roles).errors;
     setErrors(validationErrors);
+    
+    // === DEBUG CREATE ROLE ===
+    console.log('=== DEBUG CREATE ROLE ===');
+    console.log('1. formData:', formData);
+    console.log('2. privileges (raw state):', privileges);
+    console.log('2.1. privileges (JSON):', JSON.stringify(privileges, null, 2));
+    
+    // Contar privilegios seleccionados
+    let totalSelected = 0;
+    const selectedPrivileges = [];
+    Object.keys(privileges).forEach(modulo => {
+      Object.keys(privileges[modulo] || {}).forEach(accion => {
+        if (privileges[modulo][accion] === true) {
+          totalSelected++;
+          selectedPrivileges.push(`${modulo} → ${accion}`);
+          console.log(`   ✓ ${modulo} → ${accion}`);
+        }
+      });
+    });
+    console.log(`3. Total privilegios seleccionados: ${totalSelected}`);
+    console.log('4. Lista de privilegios seleccionados:', selectedPrivileges);
+    
     if (Object.keys(validationErrors).length === 0 && onCreate) {
       try {
         await onCreate(formData, cleanedPrivileges); // Usar privilegios limpiados
@@ -161,6 +176,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
                 value={formData.nombre}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={16}
               />
               {(touched.nombre || showErrors) && errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
             </div>
@@ -173,6 +189,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
                 value={formData.descripcion}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={100}
               />
             </div>
           </div>

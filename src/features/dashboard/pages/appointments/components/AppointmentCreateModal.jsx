@@ -11,16 +11,10 @@ import '../../users/components/phoneinput-search.css';
 import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 import ServiceSelection from './ServiceSelection';
 
-// Estados posibles de la cita
+// Estados posibles de la cita (solo para crear)
 const APPOINTMENT_STATES = [
   { nombre: 'Agendada', descripcion: 'La cita ha sido creada por el cliente.' },
   { nombre: 'Confirmada', descripcion: 'El establecimiento ha confirmado la disponibilidad.' },
-  { nombre: 'Reprogramada', descripcion: 'La cita ha sido modificada en fecha u hora.' },
-  { nombre: 'En ejecución', descripcion: 'El servicio está siendo realizado actualmente.' },
-  { nombre: 'Finalizada', descripcion: 'El servicio fue realizado con éxito.' },
-  { nombre: 'Pagada', descripcion: 'El cliente pagó la cita.' },
-  { nombre: 'Cancelada por el usuario', descripcion: 'El cliente canceló la cita.' },
-  { nombre: 'No asistio', descripcion: 'El cliente no se presentó a la cita.' },
 ];
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
@@ -30,13 +24,22 @@ function limpiarPrecio(valor) {
 }
 
 
-const AppointmentEditModal = ({ cita, onClose, onSave }) => {
-  const [professionals, setProfessionals] = useState([]);
+const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
   const [numero, setNumero] = useState('');
   const [existingAppointments, setExistingAppointments] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
+
+  // Obtener fecha de hoy en formato YYYY-MM-DD
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // Formulario principal
   const [formData, setFormData] = useState({
@@ -45,11 +48,28 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
     correo: '',
     documento: '',
     tipoDocumento: 'CC',
-    fecha: '',
+    fecha: fecha || getTodayDate(),
     servicios: [],
     estado: 'Agendada',
     notas: ''
   });
+
+
+  // useEffect para actualizar la fecha cuando cambia la prop fecha
+  useEffect(() => {
+    if (fecha) {
+      setFormData(prev => ({
+        ...prev,
+        fecha
+      }));
+    } else {
+      // Si no hay fecha pasada como prop, establecer fecha de hoy
+      setFormData(prev => ({
+        ...prev,
+        fecha: getTodayDate()
+      }));
+    }
+  }, [fecha]);
 
   // Cargar profesionales
   useEffect(() => {
@@ -72,96 +92,10 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
     loadProfessionals();
   }, []);
 
-  // Cargar datos de la cita al editar (requerido)
-  useEffect(() => {
-    if (!cita) {
-      console.error('AppointmentEditModal requiere una cita para editar');
-      toast.error('Error: No se proporcionó una cita para editar');
-      onClose();
-      return;
-    }
-
-    // Función para cargar los datos de la cita
-    const loadCitaData = async () => {
-      try {
-        setLoading(true);
-        // Obtener la cita completa desde el backend para asegurar que tenga todos los campos
-        const citaId = cita.id_cita;
-        const response = await appointmentsService.getById(citaId);
-        
-        if (!response.success || !response.data) {
-          toast.error('Error al cargar los datos de la cita');
-          onClose();
-          return;
-        }
-
-        const citaCompleta = response.data;
-        console.log('Loading appointment data for editing:', citaCompleta);
-        console.log('Usuario data:', citaCompleta.usuario);
-        console.log('Cliente data:', citaCompleta.cliente);
-        
-        const telefono = citaCompleta.usuario?.telefono || citaCompleta.cliente?.telefono || '';
-      const telefonoLimpio = telefono.replace(/[^0-9]/g, '');
-      setNumero(telefonoLimpio);
-        
-        // Convertir documento a string si existe
-        const documento = citaCompleta.usuario?.documento || citaCompleta.cliente?.documento || '';
-        const documentoStr = documento ? String(documento) : '';
-        
-      setFormData({
-          cliente: citaCompleta.usuario?.nombre || citaCompleta.cliente?.nombre || '',
-        telefono: telefono,
-          correo: citaCompleta.usuario?.correo || citaCompleta.cliente?.correo || '',
-          documento: documentoStr,
-          tipoDocumento: citaCompleta.usuario?.tipo_documento || citaCompleta.cliente?.tipo_documento || 'CC',
-          fecha: citaCompleta.fecha_servicio || '',
-          estado: citaCompleta.estado || 'Agendada',
-          servicios: (citaCompleta.servicios || []).map(s => {
-          // Normalizar datos del backend
-          const nombreEmpleado = s.empleado?.nombre || s.nombre_empleado || '';
-          const horaInicio = s.hora_inicio ? (s.hora_inicio.includes(':') ? s.hora_inicio.substring(0, 5) : s.hora_inicio) : '08:00';
-          const duracion = s.duracion || s.servicio?.duracion || 30;
-
-          return {
-            id: s.id_detalle_servicio || Date.now() + Math.random(),
-            servicioId: s.id_servicio || s.servicio?.id_servicio,
-            nombre: s.servicio?.nombre || s.nombre_servicio || 'Servicio',
-            profesional: nombreEmpleado,
-            id_empleado: s.id_empleado || s.empleado?.id_usuario,
-            inicio: horaInicio,
-            fin: s.hora_finalizacion ? (s.hora_finalizacion.includes(':') ? s.hora_finalizacion.substring(0, 5) : s.hora_finalizacion) : (() => {
-              if (!horaInicio || !/^\d{2}:\d{2}$/.test(horaInicio)) return '';
-              const [h, m] = horaInicio.split(':').map(Number);
-              const totalMin = h * 60 + m + Number(duracion || 0);
-              const newH = Math.floor(totalMin / 60);
-              const newM = totalMin % 60;
-              return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
-            })(),
-            duracion: duracion,
-            precio: s.precio_unitario || s.precio || 0,
-            cantidad: s.cantidad || 1,
-            observaciones: s.observaciones || ''
-          };
-        }),
-          notas: citaCompleta.motivo || ''
-      });
-      } catch (error) {
-        console.error('Error loading appointment data:', error);
-        toast.error('Error al cargar los datos de la cita');
-        onClose();
-      } finally {
-        setLoading(false);
-    }
-    };
-
-    loadCitaData();
-  }, [cita, onClose]);
-
-
-  // Cargar citas existentes del día seleccionado (excluyendo la cita actual)
+  // Cargar citas existentes del día seleccionado
   useEffect(() => {
     const loadExistingAppointments = async () => {
-      if (!formData.fecha || !cita?.id_cita) {
+      if (!formData.fecha) {
         setExistingAppointments([]);
         return;
       }
@@ -172,12 +106,10 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
         });
         
         if (response.success && response.data) {
-          // Filtrar solo citas activas (no canceladas) y excluir la cita actual
+          // Filtrar solo citas activas (no canceladas)
           const activeAppointments = response.data.filter(
-            citaExistente => 
-              citaExistente.id_cita !== cita.id_cita &&
-              citaExistente.estado !== 'Cancelada por el usuario' && 
-              citaExistente.estado !== 'No asistio'
+            cita => cita.estado !== 'Cancelada por el usuario' && 
+                     cita.estado !== 'No asistio'
           );
           setExistingAppointments(activeAppointments);
         } else {
@@ -190,7 +122,7 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
     };
 
     loadExistingAppointments();
-  }, [formData.fecha, cita?.id_cita]);
+  }, [formData.fecha]);
 
 
   // Función para marcar un campo como "tocado" y validar
@@ -247,13 +179,46 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
     }));
   };
 
-  // Validación en tiempo real para campos individuales (solo para campos editables)
+  // Busca cliente por documento y autocompleta
+  const lookupClientByDocument = async (doc) => {
+    try {
+      const searchResponse = await usersService.getAll({ documento: doc.trim() });
+      if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        const existingUser = searchResponse.data.find(user => {
+          const userDoc = user.documento?.toString().trim() || '';
+          return userDoc === doc.trim();
+        });
+        if (existingUser) {
+          setFormData(prev => ({
+            ...prev,
+            cliente: existingUser.nombre || prev.cliente,
+            correo: existingUser.correo || prev.correo,
+            tipoDocumento: existingUser.tipo_documento || prev.tipoDocumento
+          }));
+          const telefono = existingUser.telefono || '';
+          const telefonoLimpio = telefono.replace(/[^0-9]/g, '');
+          if (telefonoLimpio) {
+            setNumero(telefonoLimpio);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error looking up client by document:', error);
+    }
+  };
+
+  // Validación en tiempo real para campos individuales
   const handleFieldChange = (field, value) => {
     // Actualizar el valor del campo
     setFormData(prev => ({ ...prev, [field]: value }));
 
     // Limpiar error si existe
     clearError(field);
+
+    // Autocompletar al salir del documento
+    if (field === 'documento' && value && value.length >= 6) {
+      lookupClientByDocument(value);
+    }
 
     // Validar en tiempo real solo si el campo ya fue tocado
     if (touchedFields[field]) {
@@ -292,22 +257,38 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
   // Validación de fecha
   function validarFecha(fecha) {
     if (!fecha) return 'La fecha es requerida';
-    
-    // Estados que permiten fechas pasadas (citas ya en curso o finalizadas)
-    const estadosQuePermitenFechaPasada = ['En ejecución', 'Finalizada', 'Pagada', 'Cancelada por el usuario', 'No asistio'];
-    const permiteFechaPasada = estadosQuePermitenFechaPasada.includes(formData.estado);
-    
-    if (!permiteFechaPasada) {
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      // Normalizar la fecha de la cita para evitar problemas de zona horaria
-      // Si la fecha viene como string (YYYY-MM-DD), crear la fecha en hora local
-      const fechaCita = new Date(fecha + 'T00:00:00');
-      fechaCita.setHours(0, 0, 0, 0);
-      // Permitir fecha actual (hoy)
-      if (fechaCita < hoy) return 'No puedes agendar una cita en una fecha pasada';
-    }
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    // Normalizar la fecha de la cita para evitar problemas de zona horaria
+    // Si la fecha viene como string (YYYY-MM-DD), crear la fecha en hora local
+    const fechaCita = new Date(fecha + 'T00:00:00');
+    fechaCita.setHours(0, 0, 0, 0);
+    // Permitir fecha actual (hoy)
+    if (fechaCita < hoy) return 'No puedes agendar una cita en una fecha pasada';
     return '';
+  }
+
+  // Validación de solapamiento de servicios para el mismo profesional (en el formulario)
+  function haySolapamientoServicios(servicios) {
+    for (let i = 0; i < servicios.length; i++) {
+      for (let j = i + 1; j < servicios.length; j++) {
+        if (
+          servicios[i].profesional &&
+          servicios[i].profesional === servicios[j].profesional
+        ) {
+          // Convertir a minutos para comparar
+          const inicioA = parseInt(servicios[i].inicio.split(':')[0]) * 60 + parseInt(servicios[i].inicio.split(':')[1]);
+          const finA = parseInt(servicios[i].fin.split(':')[0]) * 60 + parseInt(servicios[i].fin.split(':')[1]);
+          const inicioB = parseInt(servicios[j].inicio.split(':')[0]) * 60 + parseInt(servicios[j].inicio.split(':')[1]);
+          const finB = parseInt(servicios[j].fin.split(':')[0]) * 60 + parseInt(servicios[j].fin.split(':')[1]);
+          // Si se solapan
+          if (inicioA < finB && inicioB < finA) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   // Validación de solapamiento de servicios para el mismo profesional (en el formulario)
@@ -350,36 +331,6 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
       }
     }
   }, [formData.servicios, touchedFields.servicios]);
-
-  // Validación en tiempo real para servicios cuando cambian
-  useEffect(() => {
-    if (touchedFields.servicios && formData.servicios.length > 0) {
-      const serviciosError = haySolapamientoServicios(formData.servicios) ?
-        'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.' : '';
-      setErrors(prev => ({
-        ...prev,
-        servicios: serviciosError
-      }));
-    }
-  }, [formData.servicios, touchedFields.servicios]);
-
-
-  // Verificar si un servicio ya pasó su hora
-  const servicioHoraPasada = (service) => {
-    if (!formData.fecha || !service.inicio) return false;
-    
-    const hoyISO = new Date().toISOString().slice(0, 10);
-    const esHoy = formData.fecha === hoyISO;
-    
-    if (!esHoy) return false; // Solo verificar si es hoy
-    
-    const ahora = new Date();
-    const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
-    const [hh, mm] = service.inicio.split(':').map(Number);
-    const servicioMin = hh * 60 + mm;
-    
-    return servicioMin < ahoraMin;
-  };
 
   // Función para convertir hora de 24h a 12h (AM/PM)
   const convertirHoraA12Horas = (hora24) => {
@@ -426,20 +377,95 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
   };
   const resumen = calcularResumen();
 
-  // Obtener ID del cliente de la cita (no se crea cliente nuevo en edición)
-  const getClientId = () => {
-    if (!cita) {
-      throw new Error('No se puede editar una cita sin datos');
+  // Función para buscar o crear cliente por documento
+  const findOrCreateClient = async (clientName, clientPhone, clientEmail, clientDocument) => {
+    try {
+      console.log('Buscando cliente por documento:', clientDocument);
+
+      // Buscar usuario existente por documento
+      const searchResponse = await usersService.getAll({ documento: clientDocument.trim() });
+
+      console.log('Respuesta de búsqueda por documento:', searchResponse);
+
+      if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        // Encontrar usuario que coincida exactamente por documento
+        const existingUser = searchResponse.data.find(user => {
+          const userDoc = user.documento?.toString().trim() || '';
+          const searchDoc = clientDocument.trim();
+          return userDoc === searchDoc;
+        });
+
+        if (existingUser) {
+          console.log('Cliente encontrado por documento:', existingUser);
+          return existingUser.id_usuario || existingUser.id;
+        }
+      }
+
+      // Si no se encontró, crear nuevo usuario/cliente
+      console.log('Cliente no encontrado, creando nuevo usuario...');
+
+      // Generar contraseña temporal aleatoria
+      const generateTempPassword = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+        let password = '';
+        // Asegurar al menos una mayúscula, una minúscula, un número y un carácter especial
+        password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+        password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+        password += '0123456789'[Math.floor(Math.random() * 10)];
+        password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+        // Completar hasta 12 caracteres
+        for (let i = password.length; i < 12; i++) {
+          password += chars[Math.floor(Math.random() * chars.length)];
+        }
+        // Mezclar caracteres
+        return password.split('').sort(() => Math.random() - 0.5).join('');
+      };
+
+      // Generar datos que cumplan con las validaciones del backend
+      const cleanName = clientName.trim();
+      const cleanPhone = '+' + String(clientPhone).replace(/[^0-9]/g, '');
+      const cleanEmail = clientEmail.trim();
+      const cleanDocument = clientDocument.trim();
+      const tempPassword = generateTempPassword();
+
+      const newUserData = {
+        nombre: cleanName,
+        telefono: cleanPhone, // Formato: +573001234567
+        correo: cleanEmail,
+        contrasena: tempPassword, // Contraseña temporal generada
+        tipo_documento: toBackendDocCode(formData.tipoDocumento || 'CC'),
+        documento: cleanDocument,
+        roleId: 3, // Rol de cliente
+        estado: 'Activo',
+        sendEmail: true, // Indicar que se debe enviar correo
+        tempPassword: tempPassword // Pasar contraseña temporal para el correo
+      };
+
+      console.log('Datos del nuevo usuario:', { ...newUserData, contrasena: '***', tempPassword: '***' });
+
+      const createResponse = await usersService.create(newUserData);
+      if (createResponse.success && createResponse.data) {
+        console.log('Nuevo cliente creado:', createResponse.data);
+        // Retornar ID del usuario creado
+        return createResponse.data.id_usuario || createResponse.data.id;
+      }
+
+      throw new Error('No se pudo crear el cliente');
+    } catch (error) {
+      console.error('Error en findOrCreateClient:', error);
+      console.error('Error details:', error.response?.data);
+      throw error;
     }
-    // Usar el id_cliente de la cita existente
-    return cita.id_cliente || cita.usuario?.id_usuario || cita.cliente?.id_usuario;
   };
 
   // Guardar cita
   const handleSubmit = async (e) => {
     e.preventDefault();
     let newErrors = {};
-    // No validar datos del cliente ya que son de solo lectura
+    newErrors.cliente = !formData.cliente.trim() ? 'El nombre del cliente es requerido' : '';
+    newErrors.telefono = validarTelefono(numero);
+    newErrors.correo = validarCorreo(formData.correo);
+    newErrors.documento = validarDocumento(formData.documento);
     newErrors.fecha = validarFecha(formData.fecha);
     if (formData.servicios.length === 0) {
       newErrors.servicios = 'Debe agregar al menos un servicio';
@@ -458,13 +484,9 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
     }
 
     // Validación de hora contra el tiempo actual si es el mismo día
-    // NO validar si el estado es "En ejecución", "Finalizada" o "Pagada" (estados donde la hora ya pasó o está en curso)
-    const estadosQueNoRequierenValidacionHora = ['En ejecución', 'Finalizada', 'Pagada'];
-    const requiereValidacionHora = !estadosQueNoRequierenValidacionHora.includes(formData.estado);
-    
     try {
       const hoyISO = new Date().toISOString().slice(0, 10);
-      if (requiereValidacionHora && formData.fecha === hoyISO && formData.servicios.length > 0) {
+      if (formData.fecha === hoyISO && formData.servicios.length > 0) {
         const ahora = new Date();
         const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
         const earliest = Math.min(...formData.servicios.map(s => {
@@ -495,17 +517,22 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
     setLoading(true);
 
     try {
-      // Obtener ID del cliente de la cita existente (no se crea cliente nuevo)
+      // Buscar o crear cliente por documento
+      console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.documento);
       let clientId;
       try {
-        clientId = getClientId();
-        console.log('Client ID obtenido de la cita:', clientId);
-        if (!clientId) {
-          throw new Error('No se pudo obtener el ID del cliente de la cita');
-        }
+        const clientResult = await findOrCreateClient(
+          formData.cliente,
+          numero,
+          formData.correo,
+          formData.documento
+        );
+        clientId = clientResult;
+        console.log('Client ID obtenido:', clientId);
       } catch (error) {
-        console.error('Error obteniendo ID del cliente:', error);
-        toast.error(error.message || 'Error al obtener los datos del cliente');
+        console.error('Error en findOrCreateClient:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Error al buscar o crear el cliente';
+        toast.error(errorMessage);
         setLoading(false);
         return;
       }
@@ -595,13 +622,13 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
       });
 
       // Preparar datos para el backend según la estructura esperada
-      // En edición, usar el estado del formulario
+      // Al crear una cita nueva, siempre usar "Agendada" como estado inicial
       const appointmentData = {
         cita: {
           id_cliente: Number(clientId),
           fecha_servicio: formData.fecha,
           hora_entrada: horaEntrada,
-          estado: formData.estado,
+          estado: formData.estado || 'Agendada',
           // Solo enviar motivo si tiene contenido, de lo contrario no enviarlo (el backend lo manejará como null)
           ...(formData.notas && formData.notas.trim() && { motivo: formData.notas.trim() })
         },
@@ -610,44 +637,12 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
 
       console.log('=== DATOS DE LA CITA A ENVIAR ===');
       console.log('Appointment data to send:', JSON.stringify(appointmentData, null, 2));
-      
-      // Validación adicional de fecha antes de enviar
-      const fechaServicio = appointmentData.cita.fecha_servicio;
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      const fechaCitaObj = new Date(fechaServicio + 'T00:00:00');
-      fechaCitaObj.setHours(0, 0, 0, 0);
-      
-      console.log('Validación de fecha:', {
-        fecha_servicio_string: fechaServicio,
-        fecha_servicio_obj: fechaCitaObj.toISOString(),
-        fecha_servicio_local: fechaCitaObj.toLocaleDateString('es-CO'),
-        hoy_obj: hoy.toISOString(),
-        hoy_local: hoy.toLocaleDateString('es-CO'),
-        es_futura: fechaCitaObj >= hoy,
-        diferencia_dias: Math.floor((fechaCitaObj - hoy) / (1000 * 60 * 60 * 24))
-      });
-      
-      console.log('Validating data types:', {
-        id_cliente: typeof appointmentData.cita.id_cliente,
-        fecha_servicio: typeof appointmentData.cita.fecha_servicio,
-        hora_entrada: typeof appointmentData.cita.hora_entrada,
-        hora_entrada_value: appointmentData.cita.hora_entrada,
-        estado: appointmentData.cita.estado,
-        servicios: appointmentData.servicios.map(s => ({
-          id_servicio: typeof s.id_servicio,
-          id_empleado: typeof s.id_empleado,
-          hora_inicio: typeof s.hora_inicio,
-          hora_inicio_value: s.hora_inicio
-        }))
-      });
-      console.log('=== FIN DATOS ===');
 
-      // Actualizar la cita (solo edición)
+      // Crear la cita
       let result;
       try {
-          result = await appointmentsService.update(cita.id_cita, appointmentData);
-          toast.success('Cita editada correctamente');
+        result = await appointmentsService.create(appointmentData);
+        toast.success('Cita registrada correctamente');
       } catch (error) {
         console.error('=== ERROR AL GUARDAR LA CITA ===');
         console.error('Error completo:', error);
@@ -656,21 +651,6 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
         console.error('Error response data (stringified):', JSON.stringify(error.response?.data, null, 2));
         console.error('Error response status:', error.response?.status);
         console.error('Datos que se intentaron enviar:', JSON.stringify(appointmentData, null, 2));
-        
-        // Log específico de la fecha
-        if (appointmentData.cita.fecha_servicio) {
-          const fechaEnviada = appointmentData.cita.fecha_servicio;
-          const hoy = new Date().toISOString().slice(0, 10);
-          console.error('Análisis de fecha:', {
-            fecha_enviada: fechaEnviada,
-            fecha_hoy: hoy,
-            es_futura: fechaEnviada > hoy,
-            es_hoy: fechaEnviada === hoy,
-            es_pasada: fechaEnviada < hoy
-          });
-        }
-        
-        console.error('=== FIN ERROR ===');
         
         // Manejar errores del backend
         let errorMessage = 'Ocurrió un error al guardar la cita.';
@@ -681,7 +661,6 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
           
           // Manejar error 409 (Conflict) - Conflicto de disponibilidad
           if (statusCode === 409) {
-            // Priorizar el campo 'error' que contiene el mensaje detallado
             let baseMessage = '';
             if (errorData.error) {
               baseMessage = errorData.error;
@@ -691,10 +670,8 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
               baseMessage = 'El empleado no tiene disponibilidad para la fecha y hora seleccionadas.';
             }
             
-            // Limpiar el mensaje si tiene caracteres extra al final (como "}")
             baseMessage = baseMessage.replace(/\s*}\s*$/, '').trim();
             
-            // Verificar si la fecha es hoy y agregar sugerencia específica
             const hoy = new Date().toISOString().slice(0, 10);
             const fechaSolicitada = appointmentData?.cita?.fecha_servicio;
             const esHoy = fechaSolicitada === hoy;
@@ -702,7 +679,6 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
             let sugerencia = 'Verifica que el empleado tenga programación asignada para esta fecha en la sección de Programación de Empleados.';
             
             if (esHoy) {
-              // Calcular fecha de mañana
               const tomorrow = new Date();
               tomorrow.setDate(tomorrow.getDate() + 1);
               const fechaManana = tomorrow.toISOString().split('T')[0];
@@ -714,12 +690,10 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
           }
           // Manejar error 400 (Bad Request) - Errores de validación
           else if (statusCode === 400) {
-            // Si hay un mensaje general
             if (errorData.message) {
               errorMessage = errorData.message;
             }
             
-            // Si hay errores de validación específicos
             if (errorData.errors && Array.isArray(errorData.errors)) {
               const validationErrors = errorData.errors.map(err => {
                 if (typeof err === 'string') return err;
@@ -733,7 +707,6 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
                 errorMessage = `Errores de validación:\n${validationErrors}`;
               }
             } else if (errorData.errors && typeof errorData.errors === 'object') {
-              // Si errors es un objeto con campos específicos
               const validationErrors = Object.entries(errorData.errors)
                 .map(([field, messages]) => {
                   const msg = Array.isArray(messages) ? messages.join(', ') : messages;
@@ -746,12 +719,10 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
               }
             }
             
-            // También verificar si hay un campo 'error' con información adicional
             if (errorData.error && !errorMessage.includes(errorData.error)) {
               errorMessage = errorData.error;
             }
           }
-          // Otros errores
           else {
             if (errorData.error) {
               errorMessage = errorData.error;
@@ -763,7 +734,6 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
           errorMessage = error.message;
         }
         
-        // Mostrar error en múltiples líneas si es necesario
         toast.error(errorMessage, { 
           duration: 8000,
           style: {
@@ -772,9 +742,7 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
           }
         });
         
-        // También mostrar un alert más visible para errores de disponibilidad
         if (statusCode === 409) {
-          // Separar el mensaje principal de la sugerencia
           const messageParts = errorMessage.split('\n\n');
           const mainMessage = messageParts[0];
           const suggestion = messageParts[1] || '';
@@ -821,9 +789,9 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
         <div className="flex-none bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <i className="bi bi-pencil-square text-lg"></i>
+              <i className="bi bi-plus-circle text-lg"></i>
             </div>
-            <h2 className="text-xl font-bold m-0">Editar Cita</h2>
+            <h2 className="text-xl font-bold m-0">Crear Cita</h2>
           </div>
           <button
             className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200"
@@ -856,49 +824,87 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
             {/* Datos del cliente y resumen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento <span className="text-red-500">*</span></label>
+                <select
                   value={formData.tipoDocumento}
-                  readOnly
-                  className="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                />
+                  onChange={e => handleFieldChange('tipoDocumento', e.target.value)}
+                  onFocus={() => clearError('tipoDocumento')}
+                  onBlur={() => handleFieldBlur('tipoDocumento')}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.tipoDocumento && errors.tipoDocumento ? 'border-red-500' : 'border-gray-300'}`}
+                >
+                  <option value="">Seleccionar</option>
+                  {['RC', 'TI', 'CC', 'TE', 'CE', 'NIT', 'PP', 'PEP', 'DIE', 'NUIP', 'FOREIGN_NIT'].map(type => (
+                    <option key={type} value={type}>{`${type} - ${{
+                      RC: 'Registro civil', TI: 'Tarjeta de identidad', CC: 'Cedula de ciudadania', TE: 'Tarjeta de extranjeria', CE: 'Cedula de extranjeria', NIT: 'Número de identificación tributaria', PP: 'Pasaporte', PEP: 'Permiso especial de permanencia', DIE: 'Documento de identificación extranjero', NUIP: 'NUIP', FOREIGN_NIT: 'NIT de otro país'
+                    }[type]}`}</option>
+                  ))}
+                </select>
+                {touchedFields.tipoDocumento && errors.tipoDocumento && <p className="text-red-500 text-xs mt-1">{errors.tipoDocumento}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Número de Documento</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Número de Documento <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={formData.documento}
-                  readOnly
-                  className="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    handleFieldChange('documento', val);
+                  }}
+                  onFocus={() => clearError('documento')}
+                  onBlur={() => handleFieldBlur('documento')}
+                  maxLength={15}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.documento && errors.documento ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="Número de documento (6-15 dígitos)"
                 />
+                {touchedFields.documento && errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del cliente</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del cliente <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={formData.cliente}
-                  readOnly
-                  className="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+                  onChange={e => handleFieldChange('cliente', e.target.value)}
+                  onFocus={() => clearError('cliente')}
+                  onBlur={() => handleFieldBlur('cliente')}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.cliente && errors.cliente ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="Nombre completo"
                 />
+                {touchedFields.cliente && errors.cliente && <p className="text-red-500 text-xs mt-1">{errors.cliente}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <input
-                  type="text"
-                  value={formData.telefono}
-                  readOnly
-                  className="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
+                <PhoneInput
+                  country={'co'}
+                  value={numero}
+                  onChange={(value) => {
+                    setNumero(value);
+                    handleFieldBlur('telefono');
+                  }}
+                  onFocus={() => clearError('telefono')}
+                  onBlur={() => handleFieldBlur('telefono')}
+                  inputClass={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.telefono && errors.telefono ? 'border-red-500' : 'border-gray-300'}`}
+                  containerClass="w-full"
+                  inputProps={{
+                    name: 'telefono',
+                    required: true,
+                    placeholder: 'Ej: 3001234567',
+                  }}
+                  specialLabel=""
                 />
+                {touchedFields.telefono && errors.telefono && <p className="text-red-500 text-xs mt-1">{errors.telefono}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico <span className="text-red-500">*</span></label>
                 <input
                   type="email"
                   value={formData.correo}
-                  readOnly
-                  className="w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+                  onChange={e => handleFieldChange('correo', e.target.value)}
+                  onFocus={() => clearError('correo')}
+                  onBlur={() => handleFieldBlur('correo')}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.correo && errors.correo ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="correo@ejemplo.com"
                 />
+                {touchedFields.correo && errors.correo && <p className="text-red-500 text-xs mt-1">{errors.correo}</p>}
               </div>
 
               <div>
@@ -920,15 +926,13 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
                   onChange={e => setFormData(prev => ({ ...prev, estado: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                 >
-                  {APPOINTMENT_STATES
-                    .filter(estado => {
-                      // Al editar, permitir todos los estados excepto algunos finales
-                      return !['Pagada', 'Finalizada'].includes(estado.nombre);
-                    })
-                    .map(estado => (
-                      <option key={estado.nombre} value={estado.nombre}>{estado.nombre}</option>
-                    ))}
+                  {APPOINTMENT_STATES.map(estado => (
+                    <option key={estado.nombre} value={estado.nombre}>{estado.nombre}</option>
+                  ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Las citas nuevas se crean con estado "Agendada" por defecto
+                </p>
               </div>
             </div>
 
@@ -984,7 +988,7 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
             ) : (
               <>
                 <i className="bi bi-check-circle-fill"></i>
-                Guardar cambios
+                Crear cita
               </>
             )}
           </button>
@@ -994,10 +998,13 @@ const AppointmentEditModal = ({ cita, onClose, onSave }) => {
   );
 };
 
-AppointmentEditModal.propTypes = {
-  cita: PropTypes.object.isRequired,
+AppointmentCreateModal.propTypes = {
+  fecha: PropTypes.string,
   onClose: PropTypes.func.isRequired,
   onSave: PropTypes.func.isRequired,
 };
 
-export default AppointmentEditModal;
+export default AppointmentCreateModal;
+
+
+

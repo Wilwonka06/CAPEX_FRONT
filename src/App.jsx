@@ -1,18 +1,15 @@
-// o la ruta correcta según tu estructura
 import 'bootstrap-icons/font/bootstrap-icons.css';
-
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import router from './routes/Routes';
 import { AuthProvider } from './shared/contexts/AuthContext';
 
 function App() {
-  console.log('hoal')
   return (
     <AuthProvider>
       <div className="App">
         <RouterProvider router={router} />
-        <Toaster 
+        <Toaster
           position="top-right"
           gutter={8}
           containerStyle={{
@@ -60,4 +57,5 @@ function App() {
     </AuthProvider>
   );
 }
+
 export default App;
