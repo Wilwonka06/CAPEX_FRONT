@@ -85,8 +85,14 @@ export const employeesService = {
         throw new Error('El correo es requerido');
       }
 
-      console.log('API Service: Creating employee with data:', employeeData);
-      const response = await apiRequest.post(EMPLOYEES_ENDPOINT, employeeData);
+      // Asegurar que el estado sea "Activo" por defecto si no se proporciona
+      const employeeDataWithDefaults = {
+        ...employeeData,
+        estado: employeeData.estado || 'Activo'
+      };
+
+      console.log('API Service: Creating employee with data:', employeeDataWithDefaults);
+      const response = await apiRequest.post(EMPLOYEES_ENDPOINT, employeeDataWithDefaults);
       console.log('API Service: Employee created:', response);
       return response?.success ? response.data : response;
     } catch (error) {

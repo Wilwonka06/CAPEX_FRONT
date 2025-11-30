@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import TableSkeleton from "../../../../../shared/components/TableSkeleton";
+import Paginator from "../../../../../shared/Paginator";
 import { formatPrice } from "../../../../../shared/utils/formatters";
 
 export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, currentPage, totalPages, onPageChange, loading = false }) {
@@ -60,11 +61,11 @@ export default function SalesTable({ sales, customers = [], onView, onAnnul, onD
       </table>
       {/* Paginador */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-4">
-          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1 border rounded-l disabled:opacity-50">Anterior</button>
-          <span className="px-4 py-1 border-t border-b">Página {currentPage} de {totalPages}</span>
-          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-1 border rounded-r disabled:opacity-50">Siguiente</button>
-        </div>
+        <Paginator
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
       )}
     </div>
   );

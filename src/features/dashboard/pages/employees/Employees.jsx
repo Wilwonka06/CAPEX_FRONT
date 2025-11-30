@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
 // Importar servicios API
@@ -10,7 +9,6 @@ import { employeesService, recurringSchedulingService } from "./API/employeesSer
 import EmployeesTable from "./components/EmployeesTable";
 import AddEmployee from "./components/CreateEmployee";
 import EditEmployee from "./components/EditEmployee";
-import EmployeeDetail from "./components/EmployeeDetail";
 import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';

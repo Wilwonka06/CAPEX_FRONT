@@ -30,10 +30,21 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
     setLoading(true);
     try {
       const data = await recurringSchedulingService.getByUser(empleadoId);
-      setProgramaciones(data);
+      // Normalizar los datos para asegurar que siempre tengan un campo 'id'
+      const normalizedData = Array.isArray(data) 
+        ? data.map(prog => ({
+            ...prog,
+            id: prog.id_programacion_recurrente || prog.id
+          }))
+        : [];
+      setProgramaciones(normalizedData);
     } catch (error) {
       console.error("Error cargando programaciones:", error);
-      toast.error("Error al cargar programaciones");
+      toast.error(
+        error.response?.data?.error ||
+        error.message ||
+        "Error al cargar programaciones"
+      );
     } finally {
       setLoading(false);
     }
@@ -47,15 +58,22 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
       loadProgramaciones();
     } catch (error) {
       console.error("Error creando programación:", error);
-      toast.error(
-        error.response?.data?.error ||
-          error.message ||
-          "Error al crear programación"
-      );
+      const errorMessage = error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error al crear programación";
+      toast.error(errorMessage);
     }
   };
 
   const handleEdit = async (id, data) => {
+    // Validar que el ID existe
+    if (!id || id === 'undefined' || id === undefined) {
+      console.error("ID inválido para editar:", id);
+      toast.error("Error: No se puede editar la programación. ID inválido.");
+      return;
+    }
+
     try {
       await recurringSchedulingService.update(id, data);
       toast.success("Programación recurrente actualizada exitosamente");
@@ -63,15 +81,22 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
       loadProgramaciones();
     } catch (error) {
       console.error("Error actualizando programación:", error);
-      toast.error(
-        error.response?.data?.error ||
-          error.message ||
-          "Error al actualizar programación"
-      );
+      const errorMessage = error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error al actualizar programación";
+      toast.error(errorMessage);
     }
   };
 
   const handleDelete = async (id) => {
+    // Validar que el ID existe
+    if (!id || id === 'undefined' || id === undefined) {
+      console.error("ID inválido para eliminar:", id);
+      toast.error("Error: No se puede eliminar la programación. ID inválido.");
+      return;
+    }
+
     if (
       !window.confirm("¿Estás seguro de eliminar esta programación recurrente?")
     ) {
@@ -84,11 +109,11 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
       loadProgramaciones();
     } catch (error) {
       console.error("Error eliminando programación:", error);
-      toast.error(
-        error.response?.data?.error ||
-          error.message ||
-          "Error al eliminar programación"
-      );
+      const errorMessage = error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error al eliminar programación";
+      toast.error(errorMessage);
     }
   };
 
@@ -188,7 +213,10 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
           </div>
           <AddRecurringScheduling
             editing={editingProgramacion}
-            onSave={(data) => handleEdit(editingProgramacion.id, data)}
+            onSave={(data) => {
+              const editId = editingProgramacion.id_programacion_recurrente || editingProgramacion.id;
+              handleEdit(editId, data);
+            }}
             onCancel={() => setEditingProgramacion(null)}
             empleadoId={empleadoId}
           />
@@ -211,9 +239,11 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {programaciones.map((prog) => (
+          {programaciones.map((prog) => {
+            const progId = prog.id_programacion_recurrente || prog.id;
+            return (
             <div
-              key={prog.id}
+              key={progId}
               className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
             >
               <div className="flex justify-between items-start">
@@ -343,14 +373,24 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
 
                 <div className="flex flex-col gap-2 ml-6">
                   <button
-                    onClick={() => setEditingProgramacion(prog)}
+                    onClick={() => {
+                      // Asegurar que la programación tenga el ID normalizado
+                      const progToEdit = {
+                        ...prog,
+                        id: prog.id_programacion_recurrente || prog.id
+                      };
+                      setEditingProgramacion(progToEdit);
+                    }}
                     className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
                     title="Editar"
                   >
                     <i className="bi bi-pencil-square text-lg"></i>
                   </button>
                   <button
-                    onClick={() => handleDelete(prog.id)}
+                    onClick={() => {
+                      const deleteId = prog.id_programacion_recurrente || prog.id;
+                      handleDelete(deleteId);
+                    }}
                     className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-200"
                     title="Eliminar"
                   >
@@ -359,7 +399,8 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

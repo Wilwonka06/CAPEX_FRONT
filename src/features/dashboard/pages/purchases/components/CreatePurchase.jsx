@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import productsService from "../../products/API/productsService";
 import suppliersService from "../../suppliers/API/suppliersService";
 import CreateSupplier from "../../suppliers/components/CreateSupplier";
@@ -171,7 +172,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     let nuevosErrores = {};
 
     if (!proveedorId) {
-      alert("Debe seleccionar un proveedor antes de agregar productos.");
+      toast.error("Debe seleccionar un proveedor antes de agregar productos.");
       return;
     }
 
@@ -197,7 +198,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
     const producto = productsSelect.find((p) => p.id === Number(productoSeleccionado));
     if (!producto) {
-      alert("Producto no encontrado.");
+      toast.error("Producto no encontrado.");
       return;
     }
 
@@ -266,12 +267,12 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     e.preventDefault();
     
     if (!proveedorId) {
-      alert("Debe seleccionar un proveedor.");
+      toast.error("Debe seleccionar un proveedor.");
       return;
     }
     
     if (itemsCompra.length === 0) {
-      alert("Debe agregar al menos un producto.");
+      toast.error("Debe agregar al menos un producto.");
       return;
     }
 
@@ -303,9 +304,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       setItemsCompra([]);
       setIvaGeneral(19);
       setFechaCompra(new Date().toISOString().slice(0, 10));
+      setErrores({});
     } catch (error) {
       console.error("Error creating purchase:", error);
-      alert(error.response?.data?.message || "Error al crear la compra");
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Error al crear la compra";
+      toast.error(errorMessage);
     }
   };
 
@@ -356,173 +359,246 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
         <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
           <form id="purchase-form" onSubmit={handleSubmit} className="space-y-8">
             {/* Sección de Fechas */}
-            <div className="p-4 border rounded-lg bg-gray-50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1">
-                    Fecha de Compra <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
-                    value={fechaCompra}
-                    onChange={(e) => setFechaCompra(e.target.value)}
-                    required
-                    max={new Date().toISOString().slice(0, 10)}
-                  />
-                </div>
-              </div>
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Fecha de Compra <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
+                value={fechaCompra}
+                onChange={(e) => setFechaCompra(e.target.value)}
+                required
+                max={new Date().toISOString().slice(0, 10)}
+              />
             </div>
 
             {/* Sección de Proveedor e IVA */}
-            <div className="p-6 border rounded-lg bg-gray-50 mb-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1">
-                    Proveedor <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="w-full px-3 py-2 border rounded-md text-sm"
-                      value={proveedorId}
-                      onChange={(e) => setProveedorId(e.target.value)}
-                      required
-                      disabled={loadingSuppliers}
-                    >
-                      <option value="">
-                        {loadingSuppliers ? "Cargando..." : "Seleccione proveedor"}
-                      </option>
-                      {suppliersSelect.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.nombre}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center"
-                      title="Crear proveedor"
-                      style={{ border: "none", background: "none" }}
-                      onClick={() => setOpenSupplierModal(true)}
-                    >
-                      <i className="bi bi-plus-circle"></i>
-                    </button>
-                  </div>
-                  {suppliersSelect.length === 0 && !loadingSuppliers && (
-                    <span className="text-xs text-red-500">
-                      No hay proveedores activos disponibles
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1">
-                    IVA General (%)
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
-                    value={ivaGeneral}
-                    onChange={(e) => handleNumberInput(e, (val) => setIvaGeneral(parseFloat(val) || 0))}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Sección para agregar productos */}
-            <div className="p-6 border rounded-lg mb-6 space-y-4">
-              <h3 className="text-md font-semibold text-text-main mb-4">
-                Agregar Productos a la Compra
-              </h3>
-              {!proveedorId && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-yellow-800">
-                    <i className="bi bi-exclamation-triangle mr-2"></i>
-                    Debe seleccionar un proveedor antes de agregar productos
-                  </p>
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
-                <div className="flex items-center gap-2 md:col-span-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Proveedor <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
                   <select
-                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    value={productoSeleccionado}
-                    onChange={(e) => setProductoSeleccionado(e.target.value)}
-                    disabled={!proveedorId}
+                    className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                      errores.proveedor
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
+                    value={proveedorId}
+                    onChange={(e) => {
+                      setProveedorId(e.target.value);
+                      if (errores.proveedor) {
+                        setErrores(prev => {
+                          const newErrores = { ...prev };
+                          delete newErrores.proveedor;
+                          return newErrores;
+                        });
+                      }
+                    }}
+                    required
+                    disabled={loadingSuppliers}
                   >
-                    <option value="">Seleccionar producto</option>
-                    {productsSelect.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre}
+                    <option value="">
+                      {loadingSuppliers ? "Cargando..." : "Seleccione proveedor"}
+                    </option>
+                    {suppliersSelect.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nombre}
                       </option>
                     ))}
                   </select>
                   <button
                     type="button"
-                    className="ml-1 p-1 rounded-full hover:bg-gray-200 text-primary text-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Crear producto"
-                    style={{ border: "none", background: "none" }}
-                    onClick={() => setOpenProductModal(true)}
-                    disabled={!proveedorId}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-primary text-lg flex items-center justify-center transition-colors"
+                    title="Crear proveedor"
+                    onClick={() => setOpenSupplierModal(true)}
                   >
                     <i className="bi bi-plus-circle"></i>
                   </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1">
+                {errores.proveedor && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {errores.proveedor}
+                  </p>
+                )}
+                {suppliersSelect.length === 0 && !loadingSuppliers && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    No hay proveedores activos disponibles
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  IVA General (%)
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
+                  value={ivaGeneral}
+                  onChange={(e) => handleNumberInput(e, (val) => setIvaGeneral(parseFloat(val) || 0))}
+                />
+              </div>
+            </div>
+
+            {/* Sección para agregar productos */}
+            <div className="space-y-6">
+              <h3 className="text-sm font-semibold text-gray-700">
+                Agregar Productos a la Compra
+              </h3>
+              {!proveedorId && (
+                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3">
+                  <p className="text-xs text-yellow-800 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    Debe seleccionar un proveedor antes de agregar productos
+                  </p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Producto <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                        errores.producto
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                      value={productoSeleccionado}
+                      onChange={(e) => {
+                        setProductoSeleccionado(e.target.value);
+                        if (errores.producto) {
+                          setErrores(prev => {
+                            const newErrores = { ...prev };
+                            delete newErrores.producto;
+                            return newErrores;
+                          });
+                        }
+                      }}
+                      disabled={!proveedorId}
+                    >
+                      <option value="">Seleccionar producto</option>
+                      {productsSelect.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg hover:bg-gray-100 text-primary text-lg flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Crear producto"
+                      onClick={() => setOpenProductModal(true)}
+                      disabled={!proveedorId}
+                    >
+                      <i className="bi bi-plus-circle"></i>
+                    </button>
+                  </div>
+                  {errores.producto && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
+                      {errores.producto}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Cantidad <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={cantidad}
-                    onChange={(e) => handleNumberInput(e, setCantidad)}
-                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100"
+                    onChange={(e) => {
+                      handleNumberInput(e, setCantidad);
+                      if (errores.cantidad) {
+                        setErrores(prev => {
+                          const newErrores = { ...prev };
+                          delete newErrores.cantidad;
+                          return newErrores;
+                        });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                      errores.cantidad
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100`}
                     disabled={!proveedorId}
                     placeholder="0"
                   />
                   {errores.cantidad && (
-                    <span className="text-xs text-red-500">{errores.cantidad}</span>
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
+                      {errores.cantidad}
+                    </p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1">
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Costo <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={costo}
-                    onChange={(e) => handleNumberInput(e, setCosto)}
-                    className="w-full px-3 py-2 border rounded-md text-sm disabled:bg-gray-100"
+                    onChange={(e) => {
+                      handleNumberInput(e, setCosto);
+                      if (errores.costo) {
+                        setErrores(prev => {
+                          const newErrores = { ...prev };
+                          delete newErrores.costo;
+                          return newErrores;
+                        });
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                      errores.costo
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100`}
                     disabled={!proveedorId}
                     placeholder="0.00"
                   />
                   {errores.costo && (
-                    <span className="text-xs text-red-500">{errores.costo}</span>
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
+                      {errores.costo}
+                    </p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-main mb-1">
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Precio Venta (auto 20%)
                   </label>
                   <input
                     type="text"
                     value={precioVenta}
                     readOnly
-                    className="w-full px-3 py-2 border rounded-md text-sm bg-gray-100"
+                    className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-100 border-gray-200"
                     placeholder="0.00"
                   />
+                  {errores.precioVenta && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
+                      {errores.precioVenta}
+                    </p>
+                  )}
                 </div>
               </div>
-                <div className="text-right mt-6">
-                  <button
-                    type="button"
-                    className="bg-text-main text-white text-sm px-4 py-2 rounded-md hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    onClick={handleAddProduct}
-                    disabled={!proveedorId}
-                  >
-                    <i className="bi bi-plus-circle mr-2"></i>
-                    Agregar a la Lista
-                  </button>
-                </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all font-semibold text-sm flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:text-white"
+                  onClick={handleAddProduct}
+                  disabled={!proveedorId}
+                >
+                  <i className="bi bi-plus-circle"></i>
+                  Agregar a la Lista
+                </button>
+              </div>
             </div>
 
             {/* Tabla de productos */}

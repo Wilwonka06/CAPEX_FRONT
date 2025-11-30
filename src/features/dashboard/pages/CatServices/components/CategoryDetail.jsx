@@ -29,40 +29,12 @@ const CategoryDetail = ({ category, isOpen, onClose }) => {
         <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Nombre de la categoría */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
-                  <i className="bi bi-tag text-white text-xl"></i>
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nombre</span>
-                  <h3 className="text-xl font-bold text-gray-800">
-                    {category.nombre}
-                  </h3>
-                </div>
+            <div className="bg-white rounded-xl p-6md:col-span-2">
+              <div className="flex items-center text-center gap-3 mb-3">
+                <h3 className="text-xl font-bold text-gray-800">
+                  {category.nombre}
+                </h3>
               </div>
-            </div>
-
-            {/* Estado */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-[#FACC15] rounded-lg flex items-center justify-center">
-                  <i className="bi bi-toggle-on text-white text-xl"></i>
-                </div>
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Estado</span>
-              </div>
-              <span
-                className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${
-                  category.estado === 'Activo'
-                    ? 'bg-green-100 text-green-800 border-2 border-green-200'
-                    : 'bg-red-100 text-red-800 border-2 border-red-200'
-                }`}
-              >
-                <i className={`bi ${
-                  category.estado === 'Activo' ? 'bi-check-circle' : 'bi-x-circle'
-                } mr-2`}></i>
-                {category.estado}
-              </span>
             </div>
 
             {/* Descripción - ocupa ambas columnas */}
