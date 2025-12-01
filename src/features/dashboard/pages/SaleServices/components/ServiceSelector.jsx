@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { apiRequest } from '../../../../../shared/config/apiConfig';
 import { formatNumber } from '../../../../../shared/utils/formatters';
 
 const ServiceSelector = ({ selectedServices, onServicesChange }) => {
-  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [serviceQuery, setServiceQuery] = useState("");
+  const [filteredServices, setFilteredServices] = useState([]);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedServiceForQuantity, setSelectedServiceForQuantity] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -13,8 +14,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [retrying, setRetrying] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
+  const serviceInputRef = useRef(null);
 
   // Cargar servicios y empleados desde el backend
   useEffect(() => {
@@ -63,14 +64,72 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Cleanup del timeout al desmontar el componente
+  // Función para normalizar un servicio del backend
+  const normalizarServicio = (servicio) => {
+    // Extraer nombre de categoría si es un objeto
+    let categoriaNombre = 'Sin categoría';
+    if (servicio.categoria) {
+      if (typeof servicio.categoria === 'object' && servicio.categoria.nombre) {
+        categoriaNombre = servicio.categoria.nombre;
+      } else if (typeof servicio.categoria === 'string') {
+        categoriaNombre = servicio.categoria;
+      }
+    } else if (servicio.category) {
+      if (typeof servicio.category === 'object' && servicio.category.nombre) {
+        categoriaNombre = servicio.category.nombre;
+      } else if (typeof servicio.category === 'string') {
+        categoriaNombre = servicio.category;
+      }
+    } else if (servicio.tipo) {
+      categoriaNombre = typeof servicio.tipo === 'string' ? servicio.tipo : 'Sin categoría';
+    } else if (servicio.descripcion) {
+      categoriaNombre = typeof servicio.descripcion === 'string' ? servicio.descripcion : 'Sin categoría';
+    }
+    
+    return {
+      id: servicio.id_servicio || servicio.id,
+      nombre: servicio.nombre || servicio.name || servicio.servicio_nombre || 'Servicio sin nombre',
+      precio: servicio.precio || servicio.price || servicio.costo || 0,
+      categoria: categoriaNombre,
+      duracion: servicio.duracion || servicio.duration || servicio.tiempo || 'No especificada'
+    };
+  };
+
+  // Buscador en tiempo real
   useEffect(() => {
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
+    if (availableServices.length > 0) {
+      const normalized = availableServices.map(normalizarServicio);
+      if (serviceQuery.trim() === '') {
+        setFilteredServices(normalized);
+      } else {
+        setFilteredServices(
+          normalized.filter(s =>
+            s.nombre.toLowerCase().includes(serviceQuery.toLowerCase()) ||
+            (s.categoria && s.categoria.toLowerCase().includes(serviceQuery.toLowerCase()))
+          )
+        );
+      }
+    } else {
+      setFilteredServices([]);
+    }
+  }, [serviceQuery, availableServices]);
+
+  // Cerrar dropdown cuando se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (serviceInputRef.current && !serviceInputRef.current.contains(event.target)) {
+        setIsServiceDropdownOpen(false);
       }
     };
-  }, [searchTimeout]);
+
+    if (isServiceDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isServiceDropdownOpen]);
 
   // Cargar todos los servicios (select simple)
   const cargarServicios = async () => {
@@ -88,17 +147,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     }
   };
 
-  // Función para normalizar un servicio del backend
-  const normalizarServicio = (servicio) => {
-    return {
-      id: servicio.id_servicio || servicio.id,
-      nombre: servicio.nombre || servicio.name || servicio.servicio_nombre || 'Servicio sin nombre',
-      precio: servicio.precio || servicio.price || servicio.costo || 0,
-      categoria: servicio.categoria || servicio.category || servicio.tipo || servicio.descripcion || 'Sin categoría',
-      duracion: servicio.duracion || servicio.duration || servicio.tiempo || 'No especificada'
-    };
-  };
-
   // Función para normalizar un empleado del backend
   const normalizarEmpleado = (empleado) => {
     return {
@@ -107,11 +155,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     };
   };
 
-  // Usar directamente los servicios del backend (ya filtrados por la búsqueda)
-  const filteredServices = Array.isArray(availableServices) 
-    ? availableServices.map(normalizarServicio) 
-    : [];
-
   const handleServiceSelect = (service) => {
     const isAlreadySelected = selectedServices.some(s => s.id === service.id);
     if (!isAlreadySelected) {
@@ -119,8 +162,47 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
       setQuantity(1);
       setSelectedEmployeeForService("");
       setShowQuantityModal(true);
+      setServiceQuery('');
+      setIsServiceDropdownOpen(false);
     }
-    setSelectedServiceId("");
+  };
+
+  // Función para calcular tiempo de inicio y fin automáticamente
+  const calculateServiceTimes = (duration, existingServices) => {
+    const now = new Date();
+    let startTime;
+    
+    if (existingServices.length === 0) {
+      // Primer servicio: usar hora actual
+      startTime = now;
+    } else {
+      // Servicios subsecuentes: calcular desde el último servicio
+      const lastService = existingServices[existingServices.length - 1];
+      if (lastService.endTime) {
+        // Parsear la hora de fin del último servicio
+        const [hours, minutes] = lastService.endTime.split(':').map(Number);
+        startTime = new Date();
+        startTime.setHours(hours, minutes, 0, 0);
+      } else {
+        // Si no hay endTime en el último servicio, usar hora actual
+        startTime = now;
+      }
+    }
+    
+    // Calcular hora de fin sumando la duración
+    const endTime = new Date(startTime.getTime() + (duration * 60000)); // duration en minutos
+    
+    // Formatear a HH:MM
+    const formatTime = (date) => {
+      const h = String(date.getHours()).padStart(2, '0');
+      const m = String(date.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    };
+    
+    return {
+      startTime: formatTime(startTime),
+      endTime: formatTime(endTime)
+    };
   };
 
   const confirmServiceSelection = () => {
@@ -129,15 +211,21 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
       const empleadoSeleccionado = availableEmployees.find(emp => emp.id === parseInt(selectedEmployeeForService));
       const empleadoNormalizado = empleadoSeleccionado ? normalizarEmpleado(empleadoSeleccionado) : null;
       
+      // Calcular tiempos automáticamente
+      const duration = servicioNormalizado.duracion || 30; // Default 30 min si no hay duración
+      const times = calculateServiceTimes(duration, selectedServices);
+      
       const serviceWithDetails = {
         ...servicioNormalizado,
         name: servicioNormalizado.nombre,
         price: servicioNormalizado.precio,
         category: servicioNormalizado.categoria,
-        duration: servicioNormalizado.duracion,
+        duration: duration,
         quantity: quantity,
         subtotal: servicioNormalizado.precio * quantity,
         employee: empleadoNormalizado,
+        startTime: times.startTime,
+        endTime: times.endTime,
         uniqueId: Date.now()
       };
       onServicesChange([...selectedServices, serviceWithDetails]);
@@ -162,16 +250,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const isFormValid = selectedEmployeeForService && quantity > 0 && availableServices.length > 0 && availableEmployees.length > 0;
   const totalServices = selectedServices.reduce((total, service) => total + service.subtotal, 0);
 
-  // Funciones simples para evitar problemas de hooks
-  const handleSelectChange = (e) => {
-    const val = e.target.value;
-    setSelectedServiceId(val);
-    const servicio = filteredServices.find(s => String(s.id) === String(val));
-    if (servicio) {
-      handleServiceSelect(servicio);
-    }
-  };
-
   const handleQuantityChange = (e) => {
     setQuantity(Math.max(1, parseInt(e.target.value) || 1));
   };
@@ -190,23 +268,90 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
           </button>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">Servicio</label>
-          <select
-            value={selectedServiceId}
-            onChange={handleSelectChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            onFocus={cargarServicios}
+      {/* Buscador de servicios */}
+      <div className="relative" ref={serviceInputRef}>
+        <div className="relative">
+          <input
+            type="text"
+            value={serviceQuery}
+            onChange={e => {
+              setServiceQuery(e.target.value);
+              setIsServiceDropdownOpen(true);
+            }}
+            onFocus={() => {
+              setIsServiceDropdownOpen(true);
+              cargarServicios();
+            }}
+            className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            placeholder="Buscar por nombre de servicio..."
+          />
+          <button
+            type="button"
+            onClick={() => setIsServiceDropdownOpen(!isServiceDropdownOpen)}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
-            <option value="">Seleccionar servicio</option>
-            {filteredServices.map(service => (
-              <option key={service.id} value={service.id}>
-                {service.nombre} - ${service.precio}
-              </option>
-            ))}
-          </select>
+            <i className={`bi bi-chevron-${isServiceDropdownOpen ? 'up' : 'down'}`}></i>
+          </button>
         </div>
+        {isServiceDropdownOpen && (
+          <>
+            {loading && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <span>Cargando servicios...</span>
+                </div>
+              </div>
+            )}
+            {!loading && filteredServices.length > 0 && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-80 overflow-y-auto">
+                {filteredServices.map(service => (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => handleServiceSelect(service)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 mb-1">{service.nombre}</div>
+                        {service.categoria && service.categoria !== 'Sin categoría' && (
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{service.categoria}</div>
+                        )}
+                        <div className="flex items-center gap-4 text-xs">
+                          {service.duracion && service.duracion !== 'No especificada' && (
+                            <span className="flex items-center gap-1 text-gray-700">
+                              <i className="bi bi-clock"></i>
+                              <span className="font-medium">{service.duracion} min</span>
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1 text-gray-700">
+                            <i className="bi bi-currency-dollar"></i>
+                            <span className="font-medium">${formatNumber(service.precio)}</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-primary text-sm font-medium">Agregar</span>
+                        <i className="bi bi-plus-circle ml-2 text-primary"></i>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {!loading && filteredServices.length === 0 && serviceQuery.trim() !== '' && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
+                No se encontraron servicios
+              </div>
+            )}
+            {!loading && filteredServices.length === 0 && serviceQuery.trim() === '' && availableServices.length === 0 && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
+                No hay servicios disponibles
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Modal para cantidad, empleado y detalles del servicio */}
@@ -231,8 +376,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
             <div className="p-8 bg-white">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">Servicio</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-medium">
                     {selectedServiceForQuantity.nombre || selectedServiceForQuantity.name}
                   </div>
                 </div>
@@ -338,10 +482,11 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               <tr>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Servicio</th>
                 <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Empleado</th>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Subtotal</th>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Duración del servicio</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-700">Acciones</th>
+                <th className="px-2 py-2 text-center border-r text-xs font-medium text-gray-700">Duración</th>
+                <th className="px-2 py-2 text-center border-r text-xs font-medium text-gray-700">Horario</th>
+                <th className="px-2 py-2 text-center border-r text-xs font-medium text-gray-700">Cantidad</th>
+                <th className="px-2 py-2 text-right border-r text-xs font-medium text-gray-700">Subtotal</th>
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-700">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -354,15 +499,32 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               ) : (
                 selectedServices.map((service) => (
                   <tr key={service.uniqueId} className="border-t hover:bg-gray-50">
-                    <td className="px-2 py-2 border-r">{service.name}</td>
-                    <td className="px-2 py-2 border-r">{service.employee?.name}</td>
+                    <td className="px-2 py-2 border-r font-medium">{service.name}</td>
+                    <td className="px-2 py-2 border-r">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                        <i className="bi bi-person-badge mr-1"></i>
+                        {service.employee?.name || service.employee?.nombre || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 border-r text-center">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                        <i className="bi bi-clock mr-1"></i>
+                        {service.duration} min
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 border-r text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="font-medium text-green-700">{service.startTime}</span>
+                        <span className="text-gray-400 text-xs">→</span>
+                        <span className="font-medium text-red-700">{service.endTime}</span>
+                      </div>
+                    </td>
                     <td className="px-2 py-2 border-r text-center">{formatNumber(service.quantity)}</td>
-                    <td className="px-2 py-2 border-r">${formatNumber(service.subtotal || 0)}</td>
-                    <td className="px-2 py-2 border-r">{service.duration}</td>
+                    <td className="px-2 py-2 border-r text-right font-semibold">${formatNumber(service.subtotal || 0)}</td>
                     <td className="px-2 py-2 text-center">
                       <button
                         onClick={() => removeService(service.uniqueId)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
                         title="Eliminar servicio"
                       >
                         <i className="bi bi-trash"></i>
@@ -384,13 +546,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         </div>
       </div>
 
-      {/* Overlay para cerrar dropdown */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-5" 
-          onClick={() => setIsOpen(false)}
-        ></div>
-      )}
     </div>
   );
 };

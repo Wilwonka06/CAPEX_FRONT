@@ -1,32 +1,39 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
-import { validateServiceOrder } from "../../../../../shared/validations";
+import { validateServiceOrder, isValidEmail, validateUserDocument } from "../../../../../shared/validations";
 import { createServiceOrder } from "../API/ServiceOrderService";
 import usersService from "../../users/API/usersService";
 import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
+import { DOC_TYPES_CODES, DOC_TYPE_LABELS, toBackendDocCode } from "../../../../../shared/constants/documentTypes";
 
 const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
   const [formData, setFormData] = useState({
     id_cliente: null,
+    tipoDocumento: "CC",
+    documento: "",
+    nombre: "",
+    telefono: "",
+    correo: "",
     dineroProporcionado: "",
     status: "En ejecucion"
   });
-
-  const [clienteDoc, setClienteDoc] = useState("");
   const [clienteEncontrado, setClienteEncontrado] = useState(false);
-  const [cliente, setCliente] = useState({ id: null, documentType: "", documentNumber: "", nombre: "", email: "", phone: "" });
-  const [clienteNuevo, setClienteNuevo] = useState({ nombre: "", correo: "", telefono: "", documento: "" });
-  const [numero, setNumero] = useState("");
   const [buscandoCliente, setBuscandoCliente] = useState(false);
-
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showErrors, setShowErrors] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Refs para preservar posición de scroll y focus
+  const scrollContainerRef = useRef(null);
+  const scrollPositionRef = useRef(0);
+  const dineroInputRef = useRef(null);
+  const cursorPositionRef = useRef(0);
+  const wasDineroFocusedRef = useRef(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
@@ -35,7 +42,6 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
 
   // Validación solo cuando se envían servicios/productos (no en tiempo real)
   useEffect(() => {
-    // Solo validar cuando hay servicios o productos seleccionados
     if (selectedServices.length > 0 || selectedProducts.length > 0) {
       const orderData = {
         ...formData,
@@ -49,85 +55,212 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
   }, [selectedServices.length, selectedProducts.length, totalGeneral, services]);
 
   // Helpers para errores separados - solo servicios son obligatorios
-  const showServiceError = (showErrors || touched.dineroProporcionado) && (!selectedServices || selectedServices.length === 0);
-  // Los productos son opcionales, no se muestran errores
+  // Solo mostrar error cuando se intente enviar el formulario, no cuando se escriba en otros campos
+  const showServiceError = showErrors && (!selectedServices || selectedServices.length === 0);
+
+  // Restaurar posición de scroll y focus después de actualizar dineroProporcionado
+  useEffect(() => {
+    // Solo restaurar si el modal está abierto y el input estaba enfocado
+    if (isOpen && scrollContainerRef.current && wasDineroFocusedRef.current) {
+      // Usar requestAnimationFrame para restaurar después del render
+      requestAnimationFrame(() => {
+        // Verificar nuevamente que el modal sigue abierto
+        if (isOpen && scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+        }
+        // Restaurar focus y posición del cursor en el input solo si el modal sigue abierto
+        if (isOpen && dineroInputRef.current) {
+          dineroInputRef.current.focus();
+          // Restaurar posición del cursor
+          if (dineroInputRef.current.setSelectionRange) {
+            const cursorPos = Math.min(cursorPositionRef.current, dineroInputRef.current.value.length);
+            dineroInputRef.current.setSelectionRange(cursorPos, cursorPos);
+          }
+        }
+      });
+    }
+  }, [formData.dineroProporcionado, isOpen]);
+
+  // Memoizar cálculo de devolución para evitar re-renders innecesarios
+  const devolucion = useMemo(() => {
+    const dinero = parseFormattedNumber(formData.dineroProporcionado);
+    return formatPrice(Math.max(0, dinero - totalGeneral));
+  }, [formData.dineroProporcionado, totalGeneral]);
+
+  // Buscar cliente por documento y autocompletar
+  const lookupClientByDocument = useCallback(async (doc) => {
+    if (!doc || doc.length < 6) return;
+    
+    try {
+      setBuscandoCliente(true);
+      const searchResponse = await usersService.getAll({ documento: doc.trim() });
+      
+      if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        const existingUser = searchResponse.data.find(user => {
+          const userDoc = user.documento?.toString().trim() || '';
+          return userDoc === doc.trim();
+        });
+        
+        if (existingUser) {
+          setFormData(prev => ({
+            ...prev,
+            id_cliente: existingUser.id_usuario || existingUser.id,
+            tipoDocumento: existingUser.tipo_documento || prev.tipoDocumento,
+            nombre: existingUser.nombre || prev.nombre,
+            telefono: (existingUser.telefono || '').replace(/[^0-9]/g, ''),
+            correo: existingUser.correo || prev.correo
+          }));
+          setClienteEncontrado(true);
+        } else {
+          setClienteEncontrado(false);
+        }
+      } else {
+        setClienteEncontrado(false);
+      }
+    } catch (error) {
+      console.error('Error buscando cliente:', error);
+      setClienteEncontrado(false);
+    } finally {
+      setBuscandoCliente(false);
+    }
+  }, []);
+
+  // Función para crear o buscar cliente
+  const findOrCreateClient = useCallback(async (clientName, clientPhone, clientEmail, clientDocument) => {
+    try {
+      // Buscar usuario existente por documento
+      const searchResponse = await usersService.getAll({ documento: clientDocument.trim() });
+      
+      if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        const existingUser = searchResponse.data.find(user => {
+          const userDoc = user.documento?.toString().trim() || '';
+          return userDoc === clientDocument.trim();
+        });
+        
+        if (existingUser) {
+          return existingUser.id_usuario || existingUser.id;
+        }
+      }
+
+      // Si no se encontró, crear nuevo usuario/cliente
+      const generateTempPassword = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+        let password = '';
+        password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+        password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+        password += '0123456789'[Math.floor(Math.random() * 10)];
+        password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+        for (let i = password.length; i < 12; i++) {
+          password += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return password.split('').sort(() => Math.random() - 0.5).join('');
+      };
+
+      const cleanName = clientName.trim();
+      const cleanPhone = '+' + String(clientPhone).replace(/[^0-9]/g, '');
+      const cleanEmail = clientEmail.trim();
+      const cleanDocument = clientDocument.trim();
+      const tempPassword = generateTempPassword();
+
+      const newUserData = {
+        nombre: cleanName,
+        telefono: cleanPhone,
+        correo: cleanEmail,
+        contrasena: tempPassword,
+        tipo_documento: toBackendDocCode(formData.tipoDocumento || 'CC'),
+        documento: cleanDocument,
+        roleId: 3, // Rol de cliente
+        estado: 'Activo',
+        sendEmail: true,
+        tempPassword: tempPassword
+      };
+
+      const createResponse = await usersService.create(newUserData);
+      if (createResponse.success && createResponse.data) {
+        return createResponse.data.id_usuario || createResponse.data.id;
+      }
+
+      throw new Error('No se pudo crear el cliente');
+    } catch (error) {
+      console.error('Error en findOrCreateClient:', error);
+      throw error;
+    }
+  }, [formData.tipoDocumento]);
+
+  // Validar campos en tiempo real
+  const validateField = useCallback((name, value) => {
+    switch (name) {
+      case 'tipoDocumento':
+        return value ? '' : 'Tipo de documento requerido';
+      case 'documento':
+        return validateUserDocument(formData.tipoDocumento, value);
+      case 'nombre':
+        return value.trim() ? '' : 'Nombre requerido';
+      case 'telefono':
+        if (!value) return 'Teléfono requerido';
+        if (!/^[0-9]{7,15}$/.test(value.replace(/\s/g, ''))) {
+          return 'Teléfono debe tener entre 7 y 15 dígitos';
+        }
+        return '';
+      case 'correo':
+        if (!value) return 'Correo requerido';
+        if (!isValidEmail(value)) return 'Correo inválido';
+        return '';
+      default:
+        return '';
+    }
+  }, [formData.tipoDocumento]);
 
   // Reset form cuando se cierra el modal
   useEffect(() => {
     if (!isOpen) {
       setFormData({
         id_cliente: null,
+        tipoDocumento: "CC",
+        documento: "",
+        nombre: "",
+        telefono: "",
+        correo: "",
         dineroProporcionado: "",
         status: "En ejecucion"
       });
-      setClienteDoc("");
-      setClienteEncontrado(false);
-      setCliente({ id: null, documentType: "", documentNumber: "", nombre: "", email: "", phone: "" });
-      setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: "" });
-      setNumero("");
-      setBuscandoCliente(false);
       setSelectedServices([]);
       setSelectedProducts([]);
       setErrors({});
       setTouched({});
       setShowErrors(false);
+      setClienteEncontrado(false);
+      setBuscandoCliente(false);
+      // Resetear refs de scroll y focus
+      scrollPositionRef.current = 0;
+      cursorPositionRef.current = 0;
+      wasDineroFocusedRef.current = false;
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    const buscarCliente = async () => {
-      if (!clienteDoc || clienteDoc.trim().length < 8) {
-        setClienteEncontrado(false);
-        setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
-        setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
-        return;
-      }
-      setBuscandoCliente(true);
-      try {
-        const response = await usersService.getAll({ documento: clienteDoc.trim() });
-        if (response.success && Array.isArray(response.data)) {
-          const usuarioEncontrado = response.data.find(u => (u.documento || '').toString().trim() === clienteDoc.trim());
-          if (usuarioEncontrado) {
-            const idc = usuarioEncontrado.id_usuario || usuarioEncontrado.id;
-            setCliente({
-              id: idc,
-              documentType: usuarioEncontrado.tipo_documento || 'Cedula de ciudadania',
-              documentNumber: usuarioEncontrado.documento || '',
-              nombre: usuarioEncontrado.nombre || '',
-              email: usuarioEncontrado.correo || '',
-              phone: usuarioEncontrado.telefono || '',
-            });
-            setClienteEncontrado(true);
-            setFormData(prev => ({ ...prev, id_cliente: idc }));
-          } else {
-            setClienteEncontrado(false);
-            setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
-            setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
-          }
-        } else {
-          setClienteEncontrado(false);
-          setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
-          setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
-        }
-      } catch (error) {
-        setClienteEncontrado(false);
-        setCliente({ id: null, documentType: "", documentNumber: clienteDoc, nombre: "", email: "", phone: "" });
-        setClienteNuevo({ nombre: "", correo: "", telefono: "", documento: clienteDoc });
-      } finally {
-        setBuscandoCliente(false);
-      }
-    };
-    const timeoutId = setTimeout(buscarCliente, 500);
-    return () => clearTimeout(timeoutId);
-  }, [clienteDoc]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
     setTouched({
+      tipoDocumento: true,
+      documento: true,
+      nombre: true,
+      telefono: true,
+      correo: true,
       dineroProporcionado: true,
-      // Agrega aquí otros campos si los hay
     });
+
+    // Validar todos los campos requeridos
+    const fieldErrors = {};
+    ['tipoDocumento', 'documento', 'nombre', 'telefono', 'correo'].forEach(field => {
+      const error = validateField(field, formData[field]);
+      if (error) fieldErrors[field] = error;
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
     
     if (Object.keys(errors).length > 0 || loading) {
       return;
@@ -135,30 +268,26 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
 
     try {
       setLoading(true);
-      let clienteId = formData.id_cliente;
-      if (!clienteId) {
-        if (!clienteEncontrado) {
-          if (!clienteDoc || clienteDoc.trim().length < 8) {
-            return;
-          }
-          const newUserData = {
-            nombre: clienteNuevo.nombre.trim(),
-            telefono: '+' + numero,
-            correo: clienteNuevo.correo.trim(),
-            tipo_documento: 'Cedula de ciudadania',
-            documento: clienteDoc.trim(),
-            roleId: 2,
-          };
-          const createResponse = await usersService.create(newUserData);
-          clienteId = createResponse?.data?.id_usuario || createResponse?.data?.id;
-        } else {
-          clienteId = cliente.id;
-        }
+      
+      // Buscar o crear cliente
+      let clienteId;
+      try {
+        clienteId = await findOrCreateClient(
+          formData.nombre,
+          formData.telefono,
+          formData.correo,
+          formData.documento
+        );
+      } catch (error) {
+        console.error('Error al buscar o crear cliente:', error);
+        setLoading(false);
+        return;
       }
 
       const orderData = {
         ...formData,
         id_cliente: clienteId,
+        nombre_cliente: formData.nombre.trim(),
         servicios: selectedServices,
         productos: selectedProducts,
         totalServices,
@@ -171,7 +300,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
       if (onCreated) onCreated(newOrder);
       if (onClose) onClose();
     } catch (err) {
-      // Silenciar, validación visual se maneja en la UI de página
+      console.error('Error al crear orden:', err);
     } finally {
       setLoading(false);
     }
@@ -179,27 +308,76 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    const newVal = name === 'dineroProporcionado' ? formatNumberInput(value) : value;
-    setFormData(prev => ({ ...prev, [name]: newVal }));
-    // Solo marcar como tocado, no validar en tiempo real
-    setTouched(prev => ({ ...prev, [name]: true }));
-  }, []);
+    
+    if (name === 'dineroProporcionado') {
+      // Guardar posición de scroll y cursor SOLO para dinero proporcionado
+      if (scrollContainerRef.current) {
+        scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+      }
+      
+      // Marcar que el input estaba enfocado
+      wasDineroFocusedRef.current = true;
+      
+      // Guardar posición del cursor antes de actualizar
+      if (e.target.selectionStart !== null) {
+        cursorPositionRef.current = e.target.selectionStart;
+      }
+      
+      // Usar versión funcional de setFormData para acceder al estado más reciente
+      setFormData(prev => {
+        const currentValue = prev.dineroProporcionado || '';
+        const cleaned = value.replace(/[^0-9]/g, '');
+        
+        // Si el valor actual es solo "0" y el usuario escribe un número, reemplazar
+        if (currentValue === '0' && cleaned && cleaned !== '0') {
+          return { ...prev, [name]: formatNumberInput(cleaned) };
+        }
+        return { ...prev, [name]: formatNumberInput(value) };
+      });
+      // NO marcar como touched para dinero proporcionado para evitar activar validación de servicios
+    } else {
+      // Para otros campos, simplemente actualizar sin afectar scroll
+      setFormData(prev => ({ ...prev, [name]: value }));
+      setTouched(prev => ({ ...prev, [name]: true }));
+      
+      // NO buscar cliente en onChange, solo en onBlur para evitar pérdida de focus
+    }
+  }, []); // Sin dependencias - usa versión funcional de setState
 
   const handleBlur = useCallback((e) => {
-    const { name } = e.target;
+    const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-    // No validar en tiempo real para evitar re-renderizados
-  }, []);
+    
+    // Validar el campo al perder foco
+    if (['tipoDocumento', 'documento', 'nombre', 'telefono', 'correo'].includes(name)) {
+      const error = validateField(name, value);
+      setErrors(prev => ({ ...prev, [name]: error }));
+    }
+    
+    // Buscar cliente al perder foco del documento
+    if (name === 'documento' && value && value.length >= 6) {
+      lookupClientByDocument(value);
+    }
+    
+    // Marcar que el input ya no está enfocado
+    if (name === 'dineroProporcionado') {
+      wasDineroFocusedRef.current = false;
+    }
+  }, [validateField, lookupClientByDocument]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!loading) {
+      // Resetear refs antes de cerrar para evitar interferencias
+      wasDineroFocusedRef.current = false;
+      scrollPositionRef.current = 0;
+      cursorPositionRef.current = 0;
       onClose();
     }
-  };
+  }, [loading, onClose]);
 
   if (!isOpen) return null;
 
-  const CreateOrderCard = ({ children }) => (
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
         <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
@@ -211,60 +389,127 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
           </div>
           <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={handleClose} aria-label="Cerrar" disabled={loading}>×</button>
         </div>
-        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <CreateOrderCard>
+        <div 
+          ref={scrollContainerRef}
+          className="overflow-y-auto p-6 flex-1 bg-gray-50" 
+          style={{ 
+            maxHeight: 'calc(95vh - 120px)',
+            scrollBehavior: 'auto' // Evitar animaciones de scroll
+          }}
+        >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Cliente */}
+        {/* Datos del Cliente */}
         <div>
-          <label className="block text-xs font-medium text-black mb-1">Documento Cliente <span className="text-red-500">*</span></label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <h3 className="text-sm font-semibold text-black mb-3">Datos del Cliente</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tipo de Documento */}
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">
+                Tipo de Documento <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="tipoDocumento"
+                value={formData.tipoDocumento}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+              >
+                {DOC_TYPES_CODES.map(code => (
+                  <option key={code} value={code}>
+                    {code} - {DOC_TYPE_LABELS[code]}
+                  </option>
+                ))}
+              </select>
+              {(touched.tipoDocumento || showErrors) && errors.tipoDocumento && (
+                <p className="text-red-600 text-xs mt-1">{errors.tipoDocumento}</p>
+              )}
+            </div>
+
+            {/* Documento */}
             <div className="relative">
+              <label className="block text-xs font-medium text-black mb-1">
+                Número de Documento <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
-                value={clienteDoc}
-                onChange={(e) => setClienteDoc(e.target.value.replace(/[^0-9]/g, ''))}
-                maxLength={15}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                name="documento"
+                value={formData.documento}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
                 placeholder="Número de documento"
-                required
+                maxLength={20}
               />
               {buscandoCliente && (
-                <div className="absolute right-2 top-2">
+                <div className="absolute right-3 top-8">
                   <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
                 </div>
               )}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-black mb-1">Nombre</label>
-              {clienteEncontrado ? (
-                <input type="text" value={cliente.nombre} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
-              ) : (
-                <input type="text" value={clienteNuevo.nombre} onChange={(e) => setClienteNuevo(prev => ({ ...prev, nombre: e.target.value }))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="Nombre completo" required />
+              {!buscandoCliente && clienteEncontrado && (
+                <div className="absolute right-3 top-8 text-green-500">
+                  <i className="bi bi-check-circle"></i>
+                </div>
+              )}
+              {(touched.documento || showErrors) && errors.documento && (
+                <p className="text-red-600 text-xs mt-1">{errors.documento}</p>
               )}
             </div>
+
+            {/* Nombre */}
             <div>
-              <label className="block text-xs font-medium text-black mb-1">Teléfono</label>
-              {clienteEncontrado ? (
-                <input type="text" value={cliente.phone} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
-              ) : (
-                <input type="text" value={numero} onChange={(e) => setNumero(e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="Ej: 3001234567" required />
+              <label className="block text-xs font-medium text-black mb-1">
+                Nombre Completo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                placeholder="Nombre completo del cliente"
+              />
+              {(touched.nombre || showErrors) && errors.nombre && (
+                <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>
               )}
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+
+            {/* Teléfono */}
             <div>
-              <label className="block text-xs font-medium text-black mb-1">Correo</label>
-              {clienteEncontrado ? (
-                <input type="email" value={cliente.email} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
-              ) : (
-                <input type="email" value={clienteNuevo.correo} onChange={(e) => setClienteNuevo(prev => ({ ...prev, correo: e.target.value }))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="correo@ejemplo.com" required />
+              <label className="block text-xs font-medium text-black mb-1">
+                Teléfono <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                name="telefono"
+                value={formData.telefono}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                placeholder="Número de teléfono"
+                maxLength={15}
+              />
+              {(touched.telefono || showErrors) && errors.telefono && (
+                <p className="text-red-600 text-xs mt-1">{errors.telefono}</p>
+              )}
+            </div>
+
+            {/* Correo */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-black mb-1">
+                Correo Electrónico <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="correo"
+                value={formData.correo}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                placeholder="correo@ejemplo.com"
+              />
+              {(touched.correo || showErrors) && errors.correo && (
+                <p className="text-red-600 text-xs mt-1">{errors.correo}</p>
               )}
             </div>
           </div>
@@ -286,33 +531,39 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
           </select>
         </div>
 
-        {/* Servicios */}
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">
-            Servicios
-          </label>
-          <ErrorBoundary>
-            <ServiceSelector 
-              selectedServices={selectedServices}
-              onServicesChange={setSelectedServices}
-            />
-          </ErrorBoundary>
-          {showServiceError && (
-            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio</p>
-          )}
-        </div>
+        {/* Servicios y Productos */}
+        <div className="space-y-4">
+          {/* Servicios */}
+          <div>
+            <label className="block text-xs font-medium text-black mb-1">
+              Servicios <span className="text-red-500">*</span>
+            </label>
+            <ErrorBoundary>
+              <ServiceSelector 
+                selectedServices={selectedServices}
+                onServicesChange={setSelectedServices}
+              />
+            </ErrorBoundary>
+            {/* Mensaje de error con espacio reservado para evitar scroll */}
+            <div className="min-h-[20px] mt-1">
+              {showServiceError && (
+                <p className="text-red-600 text-xs">Debes agregar al menos un servicio</p>
+              )}
+            </div>
+          </div>
 
-        {/* Productos - Opcionales */}
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">
-            Productos (Opcional)
-          </label>
-          <ErrorBoundary>
-            <ProductSelector 
-              selectedProducts={selectedProducts}
-              onProductsChange={setSelectedProducts}
-            />
-          </ErrorBoundary>
+          {/* Productos */}
+          <div>
+            <label className="block text-xs font-medium text-black mb-1">
+              Productos (Opcional)
+            </label>
+            <ErrorBoundary>
+              <ProductSelector 
+                selectedProducts={selectedProducts}
+                onProductsChange={setSelectedProducts}
+              />
+            </ErrorBoundary>
+          </div>
         </div>
 
         {/* Resumen de totales */}
@@ -343,6 +594,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                   Dinero Proporcionado
                 </label>
                 <input
+                  ref={dineroInputRef}
                   type="text"
                   name="dineroProporcionado"
                   value={formData.dineroProporcionado}
@@ -361,7 +613,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                   Devolución
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                  {formatPrice(Math.max(0, parseFormattedNumber(formData.dineroProporcionado) - totalGeneral))}
+                  {devolucion}
                 </div>
               </div>
             </div>
@@ -394,7 +646,9 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
           </button>
         </div>
       </form>
-    </CreateOrderCard>
+        </div>
+      </div>
+    </div>
   );
 };
 
