@@ -307,31 +307,33 @@ const SaleServices = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <Search searchTerm={searchTerm} handleSearch={handleSearch} placeholder="Buscar por ID, cliente, servicio, fecha u hora..." />
-              <button
-                className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                onClick={() => setIsCreateModalOpen(true)}
-              >
-                <i className="bi bi-plus-circle mr-2"></i> Nueva orden
-              </button>
+              <div className="flex gap-2">
+                <button
+                  className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg flex items-center whitespace-nowrap"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  <i className="bi bi-plus-circle mr-2"></i>
+                  Nueva Orden
+                </button>
+              </div>
             </div>
 
             {/* Tabla de órdenes de servicio */}
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               <table className="min-w-full text-xs">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                   <tr>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Cliente</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Servicios</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Total</th>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
-                    <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
+                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Cliente</th>
+                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Servicios</th>
+                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Fecha</th>
+                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Total</th>
+                    <th className="py-3 px-4 text-center font-semibold text-gray-700">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {initialLoading ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-8">
+                      <td colSpan="5" className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                           <span className="ml-2 text-gray-600">Cargando citas...</span>
@@ -340,7 +342,7 @@ const SaleServices = () => {
                     </tr>
                   ) : loading ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-8">
+                      <td colSpan="5" className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                           <span className="ml-2 text-gray-600">Buscando...</span>
@@ -348,43 +350,53 @@ const SaleServices = () => {
                       </td>
                     </tr>
                   ) : paginatedServices.length > 0 ? paginatedServices.map((service) => (
-                    <tr key={service.id} className="hover:bg-gray-50">
-                      <td className="py-2 px-3">{service.clientName}</td>
-                      <td className="py-2 px-3">{(service.servicios || []).map(s => s.name).join(", ")}</td>
-                      <td className="py-2 px-3">{service.date}</td>
-                      <td className="py-2 px-3">${formatNumber(service.totalGeneral || 0)}</td>
-                      <td className="py-2 px-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${service.status === "Pagado"
-                          ? "bg-green-100 text-green-800"
-                          : service.status === "Anulado"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                          }`}>{service.status}</span>
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        <button className="text-primary hover:text-blue-700 mr-2 text-lg" title="Ver detalle" onClick={() => handleViewClick(service)}>
-                          <i className="bi bi-eye"></i>
-                        </button>
-                        {normalizeText(service.status).toLowerCase() === "en ejecucion" && (
-                          <button className="text-amber-600 hover:text-amber-800 mr-2 text-lg" title="Editar" onClick={() => handleEditClick(service)}>
-                            <i className="bi bi-pencil-square"></i>
+                    <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="py-3 px-4 font-medium text-gray-800">{service.clientName}</td>
+                      <td className="py-3 px-4 text-gray-600">{(service.servicios || []).map(s => s.name).join(", ")}</td>
+                      <td className="py-3 px-4 text-gray-600">{service.date}</td>
+                      <td className="py-3 px-4 font-semibold text-green-600">${formatNumber(service.totalGeneral || 0)}</td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200" 
+                            title="Ver detalle" 
+                            onClick={() => handleViewClick(service)}
+                          >
+                            <i className="bi bi-eye text-base"></i>
                           </button>
-                        )}
-                        {normalizeText(service.status).toLowerCase() !== "anulado" && (
-                          <button className="text-red-600 hover:text-red-800 mr-2 text-lg" title="Anular" onClick={() => handleAnularClick(service.id)}>
-                            <i className="bi bi-x-octagon"></i>
+                          {normalizeText(service.status).toLowerCase() === "en ejecucion" && (
+                            <button 
+                              className="p-2 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-all duration-200" 
+                              title="Editar" 
+                              onClick={() => handleEditClick(service)}
+                            >
+                              <i className="bi bi-pencil-square text-base"></i>
+                            </button>
+                          )}
+                          {normalizeText(service.status).toLowerCase() !== "anulado" && (
+                            <button 
+                              className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-200" 
+                              title="Anular" 
+                              onClick={() => handleAnularClick(service.id)}
+                            >
+                              <i className="bi bi-x-octagon text-base"></i>
+                            </button>
+                          )}
+                          <button 
+                            className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200" 
+                            title="Descargar factura" 
+                            onClick={() => {
+                              toast('Función de descarga en desarrollo');
+                            }}
+                          >
+                            <i className="bi bi-file-earmark-pdf text-base"></i>
                           </button>
-                        )}
-                        <button className="text-red-500 hover:text-red-700 text-lg" title="Descargar factura" onClick={() => {
-                          toast('Función de descarga en desarrollo');
-                        }}>
-                          <i className="bi bi-file-earmark-pdf"></i>
-                        </button>
+                        </div>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="8" className="text-center py-8 text-gray-500">
+                      <td colSpan="5" className="text-center py-8 text-gray-500">
                         <div className="flex flex-col items-center">
                           <i className="bi bi-calendar-x text-4xl text-gray-300 mb-2"></i>
                           <p className="text-sm">No hay citas en ejecución para mostrar</p>

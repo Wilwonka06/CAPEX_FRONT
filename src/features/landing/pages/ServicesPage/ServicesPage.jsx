@@ -3,7 +3,6 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getAllServices } from "./api/servicesApi";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Footer from "../../../../shared/components/Footer";
 import { formatPrice } from "../../../../shared/utils/formatters";
 import LoadingSpinner from "../../components/LoadingSpinner";
@@ -17,7 +16,6 @@ const normalizeText = (text) => {
 };
 
 const ServicesPage = () => {
-  const navigate = useNavigate();
   const [servicios, setServicios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -288,10 +286,10 @@ const ServicesPage = () => {
                   </div>
 
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Redirigir a la página de citas con el servicio preseleccionado
-                      navigate(`/landing/citas?service=${servicio.id}`);
+                    onClick={() => {
+                      // Aquí iría la lógica para agendar cita
+                      // Por ahora solo mostramos un mensaje
+                      alert('Funcionalidad de agendar cita próximamente disponible');
                     }}
                     className="w-full py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-[#1E1E1E] font-bold rounded-full hover:from-[#F59E0B] hover:to-[#D97706] transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-poppins border-2 border-transparent hover:border-[#FACC15]/30"
                   >

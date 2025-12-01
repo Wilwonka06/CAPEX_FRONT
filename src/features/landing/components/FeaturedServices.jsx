@@ -1,47 +1,45 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { getAllServices } from '../pages/ServicesPage/api/servicesApi';
-import { formatPrice } from '../../../shared/utils/formatters';
+import { Link } from 'react-router-dom';
 
-const FeaturedServices = () => {
-  const navigate = useNavigate();
-  const [servicios, setServicios] = useState([]);
-  const [loading, setLoading] = useState(true);
+const servicios = [
+  {
+    id: 1,
+    name: 'Corte de cabello',
+    category: 'Peluquería',
+    duration: '30 min',
+    price: '$25.000',
+    description: 'Corte clásico para hombre o mujer',
+    estado: 'Activo',
+  },
+  {
+    id: 2,
+    name: 'Manicura Completa',
+    category: 'Uñas',
+    duration: '45 min',
+    price: '$35.000',
+    description: 'Manicura profesional con esmaltado',
+    estado: 'Activo',
+  },
+  {
+    id: 4,
+    name: 'Depilación Láser',
+    category: 'Estética',
+    duration: '20 min',
+    price: '$150.000',
+    description: 'Depilación láser definitiva',
+    estado: 'Activo',
+  },
+  {
+    id: 5,
+    name: 'Limpieza Facial',
+    category: 'Cuidado Facial',
+    duration: '50 min',
+    price: '$60.000',
+    description: 'Limpieza profunda de cutis',
+    estado: 'Activo',
+  },
+];
 
-  useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const data = await getAllServices();
-        // Filtrar solo servicios activos y tomar los primeros 4
-        const activeServices = data
-          .filter((service) => service.active === true || service.estado === "Activo")
-          .slice(0, 4);
-        setServicios(activeServices);
-      } catch (err) {
-        console.error('Error cargando servicios destacados:', err);
-        setServicios([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadServices();
-  }, []);
-
-  if (loading) {
-    return (
-      <section className="py-20 bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-white/80">Cargando servicios...</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (servicios.length === 0) {
-    return null;
-  }
-
-  return (
+const FeaturedServices = () => (
   <section className="py-20 bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] relative overflow-hidden">
     {/* Elementos decorativos */}
     <div className="absolute top-20 right-20 w-40 h-40 bg-[#FACC15]/5 rounded-full blur-3xl"></div>
@@ -57,70 +55,47 @@ const FeaturedServices = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {servicios.map((servicio, idx) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        {servicios.map((serv, idx) => (
           <div
-            key={servicio.id}
-            className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden cursor-pointer"
-            style={{ animationDelay: `${idx * 50}ms` }}
-            onClick={() => navigate(`/landing/citas?service=${servicio.id}`)}
+            key={serv.id}
+            className="group relative bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 border border-gray-100 overflow-hidden"
+            style={{ animationDelay: `${idx * 100}ms` }}
           >
-            {/* Imagen con overlay */}
-            <div className="relative w-full aspect-[5/2] bg-gray-100 flex items-center justify-center overflow-hidden">
-              <img
-                src={
-                  servicio.imagen
-                    ? servicio.imagen
-                    : "https://via.placeholder.com/300x160?text=Sin+Imagen"
-                }
-                alt={servicio.name}
-                className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
-                loading="lazy"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src =
-                    "https://via.placeholder.com/300x160?text=Imagen+No+Disponible";
-                }}
-              />
-              {/* Overlay al hover */}
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </div>
+            {/* Efecto de fondo al hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-            {/* Info del servicio */}
-            <div className="p-6 flex flex-col gap-3">
-              <h3 className="font-bold text-lg text-[#1E1E1E] group-hover:text-[#FACC15] transition-colors duration-300 line-clamp-2 font-nunito leading-tight">
-                {servicio.name}
-              </h3>
-
-              <p className="text-sm text-gray-600 line-clamp-2 font-lato leading-relaxed">
-                {servicio.description || ''}
-              </p>
-
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-2xl font-bold text-[#FACC15] font-montserrat">
-                  {formatPrice(servicio.price)}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    {servicio.category || "General"}
-                  </span>
-                </div>
+            <div className="relative z-10">
+              <div className="w-16 h-16 flex items-center justify-center rounded-full bg-[#FACC15] mb-6 transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#1E1E1E" className="w-8 h-8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036a2.121 2.121 0 01-3-3L16.732 3.732z" />
+                </svg>
               </div>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/landing/citas?service=${servicio.id}`);
-                }}
-                className="w-full py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-[#1E1E1E] font-bold rounded-full hover:from-[#F59E0B] hover:to-[#D97706] transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-poppins border-2 border-transparent hover:border-[#FACC15]/30"
-              >
-                <i className="bi bi-calendar-check mr-2"></i>
+              <h3 className="text-xl font-bold text-[#1E1E1E] mb-3 font-nunito group-hover:text-[#FACC15] transition-colors duration-300">
+                {serv.name}
+              </h3>
+
+              <p className="text-sm text-gray-600 mb-4 line-clamp-2 font-lato leading-relaxed">
+                {serv.description}
+              </p>
+
+              <div className="mb-4">
+                <span className="text-2xl font-bold text-[#FACC15] font-montserrat block mb-1">
+                  {serv.price}
+                </span>
+                <span className="text-xs text-gray-500 font-lato">
+                  {serv.category} • {serv.duration}
+                </span>
+              </div>
+
+              <button className="w-full py-3 bg-[#FACC15] text-[#1E1E1E] font-semibold rounded-full hover:bg-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-lg font-poppins">
                 Agendar Cita
               </button>
             </div>
 
             {/* Elemento decorativo */}
-            <div className="absolute -bottom-2 -right-2 w-16 h-16 bg-[#FACC15]/10 rounded-full blur-lg group-hover:bg-[#FACC15]/20 transition-colors duration-500"></div>
+            <div className="absolute -top-4 -right-4 w-20 h-20 bg-[#FACC15]/20 rounded-full blur-xl group-hover:bg-[#FACC15]/30 transition-colors duration-500"></div>
           </div>
         ))}
       </div>
@@ -138,7 +113,6 @@ const FeaturedServices = () => {
       </div>
     </div>
   </section>
-  );
-};
+);
 
 export default FeaturedServices; 

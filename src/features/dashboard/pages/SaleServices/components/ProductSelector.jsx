@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { apiRequest } from '../../../../../shared/config/apiConfig';
 import { formatNumber } from '../../../../../shared/utils/formatters';
 
 const ProductSelector = ({ selectedProducts, onProductsChange }) => {
-  const [selectedProductId, setSelectedProductId] = useState("");
+  const [productQuery, setProductQuery] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedProductForQuantity, setSelectedProductForQuantity] = useState(null);
   const [quantity, setQuantity] = useState(1);
@@ -11,8 +12,8 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [retrying, setRetrying] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const productInputRef = useRef(null);
 
   // Cargar productos desde el backend
   useEffect(() => {
@@ -44,14 +45,69 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Cleanup del timeout al desmontar el componente
+  // Función para normalizar un producto del backend
+  const normalizarProducto = (producto) => {
+    // Extraer nombre de categoría si es un objeto
+    let categoriaNombre = 'Sin categoría';
+    if (producto.categoria) {
+      if (typeof producto.categoria === 'object' && producto.categoria.nombre) {
+        categoriaNombre = producto.categoria.nombre;
+      } else if (typeof producto.categoria === 'string') {
+        categoriaNombre = producto.categoria;
+      }
+    } else if (producto.category) {
+      if (typeof producto.category === 'object' && producto.category.nombre) {
+        categoriaNombre = producto.category.nombre;
+      } else if (typeof producto.category === 'string') {
+        categoriaNombre = producto.category;
+      }
+    } else if (producto.tipo) {
+      categoriaNombre = typeof producto.tipo === 'string' ? producto.tipo : 'Sin categoría';
+    }
+    
+    return {
+      id: producto.id_producto || producto.id,
+      nombre: producto.nombre || producto.name || producto.producto_nombre || 'Producto sin nombre',
+      precio: parseFloat(producto.costo || producto.precio || producto.price || 0),
+      categoria: categoriaNombre
+    };
+  };
+
+  // Buscador en tiempo real
   useEffect(() => {
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
+    if (availableProducts.length > 0) {
+      const normalized = availableProducts.map(normalizarProducto);
+      if (productQuery.trim() === '') {
+        setFilteredProducts(normalized);
+      } else {
+        setFilteredProducts(
+          normalized.filter(p =>
+            p.nombre.toLowerCase().includes(productQuery.toLowerCase()) ||
+            (p.categoria && p.categoria.toLowerCase().includes(productQuery.toLowerCase()))
+          )
+        );
+      }
+    } else {
+      setFilteredProducts([]);
+    }
+  }, [productQuery, availableProducts]);
+
+  // Cerrar dropdown cuando se hace click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (productInputRef.current && !productInputRef.current.contains(event.target)) {
+        setIsProductDropdownOpen(false);
       }
     };
-  }, [searchTimeout]);
+
+    if (isProductDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProductDropdownOpen]);
 
   const cargarProductos = async () => {
     setRetrying(true);
@@ -68,29 +124,15 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
     }
   };
 
-  // Función para normalizar un producto del backend
-  const normalizarProducto = (producto) => {
-    return {
-      id: producto.id_producto || producto.id,
-      nombre: producto.nombre || producto.name || producto.producto_nombre || 'Producto sin nombre',
-      precio: parseFloat(producto.costo || producto.precio || producto.price || 0),
-      categoria: producto.categoria || producto.category || producto.tipo || 'Sin categoría'
-    };
-  };
-
-  // Usar directamente los productos del backend (ya filtrados por la búsqueda)
-  const filteredProducts = Array.isArray(availableProducts) 
-    ? availableProducts.map(normalizarProducto) 
-    : [];
-
   const handleProductSelect = (product) => {
     const isAlreadySelected = selectedProducts.some(p => p.id === product.id);
     if (!isAlreadySelected) {
       setSelectedProductForQuantity(product);
       setQuantity(1);
       setShowQuantityModal(true);
+      setProductQuery('');
+      setIsProductDropdownOpen(false);
     }
-    setSelectedProductId("");
   };
 
   const confirmProductSelection = () => {
@@ -127,16 +169,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const isFormValid = quantity > 0;
   const totalProducts = selectedProducts.reduce((total, product) => total + product.subtotal, 0);
 
-  // Funciones simples para evitar problemas de hooks
-  const handleSelectChange = (e) => {
-    const val = e.target.value;
-    setSelectedProductId(val);
-    const producto = filteredProducts.find(p => String(p.id) === String(val));
-    if (producto) {
-      handleProductSelect(producto);
-    }
-  };
-
   const handleQuantityChange = (e) => {
     setQuantity(Math.max(1, parseInt(e.target.value) || 1));
   };
@@ -151,23 +183,84 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
           </button>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">Producto</label>
-          <select
-            value={selectedProductId}
-            onChange={handleSelectChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-            onFocus={cargarProductos}
+      {/* Buscador de productos */}
+      <div className="relative" ref={productInputRef}>
+        <div className="relative">
+          <input
+            type="text"
+            value={productQuery}
+            onChange={e => {
+              setProductQuery(e.target.value);
+              setIsProductDropdownOpen(true);
+            }}
+            onFocus={() => {
+              setIsProductDropdownOpen(true);
+              cargarProductos();
+            }}
+            className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            placeholder="Buscar por nombre de producto..."
+          />
+          <button
+            type="button"
+            onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
-            <option value="">Seleccionar producto</option>
-            {filteredProducts.map(product => (
-              <option key={product.id} value={product.id}>
-                {product.nombre} - ${product.precio}
-              </option>
-            ))}
-          </select>
+            <i className={`bi bi-chevron-${isProductDropdownOpen ? 'up' : 'down'}`}></i>
+          </button>
         </div>
+        {isProductDropdownOpen && (
+          <>
+            {loading && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <span>Cargando productos...</span>
+                </div>
+              </div>
+            )}
+            {!loading && filteredProducts.length > 0 && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-80 overflow-y-auto">
+                {filteredProducts.map(product => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => handleProductSelect(product)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900 mb-1">{product.nombre}</div>
+                        {product.categoria && product.categoria !== 'Sin categoría' && (
+                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{product.categoria}</div>
+                        )}
+                        <div className="flex items-center gap-4 text-xs">
+                          <span className="flex items-center gap-1 text-gray-700">
+                            <i className="bi bi-currency-dollar"></i>
+                            <span className="font-medium">${formatNumber(product.precio)}</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-primary text-sm font-medium">Agregar</span>
+                        <i className="bi bi-plus-circle ml-2 text-primary"></i>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {!loading && filteredProducts.length === 0 && productQuery.trim() !== '' && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
+                No se encontraron productos
+              </div>
+            )}
+            {!loading && filteredProducts.length === 0 && productQuery.trim() === '' && availableProducts.length === 0 && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
+                No hay productos disponibles
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Modal para cantidad y detalles del producto */}
@@ -192,8 +285,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
             <div className="p-8 bg-white">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">Producto</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-medium">
                     {selectedProductForQuantity.nombre || selectedProductForQuantity.name}
                   </div>
                 </div>
@@ -311,13 +403,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
           </span>
         </div>
       </div>
-      {/* Overlay para cerrar dropdown */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-5" 
-          onClick={() => setIsOpen(false)}
-        ></div>
-      )}
     </div>
   );
 };
