@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import toast from 'react-hot-toast';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
 // Importar servicios API
-import { employeesService, recurringSchedulingService } from "./API/employeesService";
+import { employeesService } from "./API/employeesService";
 
 // Importar componentes
 import EmployeesTable from "./components/EmployeesTable";
@@ -13,7 +12,7 @@ import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import { normalizeText } from '../../../../shared/validations';
-import { to24h } from '../../../../shared/utils/timeFormat';
+import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 const EMPLOYEES_PER_PAGE = 10;
 
@@ -23,7 +22,6 @@ const EmployeesPage = () => {
   
   // Estados principales
   const [employees, setEmployees] = useState([]);
-  const [schedulings, setSchedulings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,56 +31,23 @@ const EmployeesPage = () => {
   // Estados de vistas/modales
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
-  const [viewEmployee, setViewEmployee] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
-  
-
-  // Función para calcular fechas específicas basadas en días seleccionados
-  const calculateSpecificDates = (fechaInicio, fechaFin, diasSeleccionados) => {
-    const fechas = [];
-    const startDate = new Date(fechaInicio + 'T00:00:00');
-    const endDate = new Date(fechaFin + 'T00:00:00');
-
-    const diasMap = {
-      'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miercoles': 3,
-      'Jueves': 4, 'Viernes': 5, 'Sabado': 6
-    };
-
-    const diasNumeros = diasSeleccionados.map(dia => diasMap[dia]).filter(dia => dia !== undefined);
-    const currentDate = new Date(startDate);
-    
-    while (currentDate <= endDate) {
-      const diaSemana = currentDate.getDay();
-      if (diasNumeros.includes(diaSemana)) {
-        fechas.push(new Date(currentDate));
-      }
-      currentDate.setDate(currentDate.getDate() + 1);
-      currentDate.setHours(0, 0, 0, 0);
-    }
-
-    return fechas;
-  };
 
   // Cargar empleados y programaciones
   const loadData = async () => {
     setLoading(true);
     setError("");
     try {
-      const [employeesData, schedulingsData] = await Promise.all([
-        employeesService.getAll(),
-        recurringSchedulingService.getAll()
-      ]);
-
+      const employeesData = await employeesService.getAll();
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
-      setSchedulings(Array.isArray(schedulingsData) ? schedulingsData : []);
     } catch (err) {
       console.error("Error cargando datos:", err);
       const errorMsg = err.code === 'ERR_NETWORK' || err.message?.includes('ERR_NAME_NOT_RESOLVED')
-        ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
-        : "No se pudieron cargar los empleados y programaciones.";
+        ? "No se puede conectar al servidor. Verifique su conexión a internet."
+        : "No se pudieron cargar los datos. Por favor, intente nuevamente.";
       setError(errorMsg);
-      toast.error(errorMsg);
+      showError(err);
     } finally {
       setLoading(false);
     }
@@ -122,7 +87,7 @@ const EmployeesPage = () => {
     const current = employees.find(e => String(e.id) === String(employeeId));
     
     if (!current) {
-      toast.error("Empleado no encontrado");
+      showError("Empleado no encontrado");
       return;
     }
 
@@ -144,18 +109,26 @@ const EmployeesPage = () => {
     ));
 
     try {
-      await employeesService.toggleStatus(employeeId, nextEstado);
-      toast.success(`Estado cambiado a ${nextEstado}`);
-      setShowStatusModal(false);
-      setPendingStatusChange(null);
-    } catch (error) {
-      // Revertir en caso de error
-      setEmployees(prevList => prevList.map(e =>
-        String(e.id) === String(employeeId) ? { ...e, estado: current.estado } : e
-      ));
-      console.error("Error cambiando estado:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al cambiar estado");
+      await executeWithToast({
+        promiseFn: () => employeesService.toggleStatus(employeeId, nextEstado),
+        operation: 'update',
+        entity: 'empleado',
+        id: employeeId,
+        loadingMessage: 'Cambiando estado...',
+        successMessage: `Estado cambiado a ${nextEstado} exitosamente`,
+        onSuccess: () => {
+          setShowStatusModal(false);
+          setPendingStatusChange(null);
+        },
+        onError: () => {
+          // Revertir en caso de error
+          setEmployees(prevList => prevList.map(e =>
+            String(e.id) === String(employeeId) ? { ...e, estado: current.estado } : e
+          ));
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
     } finally {
       setTogglingId(null);
     }
@@ -163,115 +136,52 @@ const EmployeesPage = () => {
 
   // Handler para agregar empleado
   const handleAddEmployee = async (data) => {
-    const employeePromise = (async () => {
-      // Crear el empleado primero
-      const createdEmployee = await employeesService.create(data);
-      setEmployees(prev => [...prev, createdEmployee]);
-
-      // Si hay programaciones, crearlas
-      if (addEmployeeSchedulings.length > 0) {
-        const schedulingPromises = [];
-
-        for (const prog of addEmployeeSchedulings) {
-          if (!prog.fechaInicio || !prog.fechaFin || !prog.dias || prog.dias.length === 0) {
-            continue;
-          }
-
-          const fechasEspecificas = calculateSpecificDates(
-            prog.fechaInicio, 
-            prog.fechaFin, 
-            prog.dias
-          );
-
-          const blocks = (prog.bloques && prog.bloques.length > 0) 
-            ? prog.bloques 
-            : [{ inicio: prog.horaInicio, fin: prog.horaFin }];
-          
-          for (const fecha of fechasEspecificas) {
-            const fechaFormateada = fecha.toISOString().split('T')[0];
-            for (const b of blocks) {
-              const schedulingData = {
-                id_usuario: createdEmployee.id,
-                fecha_inicio: fechaFormateada,
-                hora_entrada: b.inicio.includes('M') ? to24h(b.inicio) : b.inicio,
-                hora_salida: b.fin.includes('M') ? to24h(b.fin) : b.fin,
-              };
-              schedulingPromises.push(schedulingService.create(schedulingData));
-            }
-          }
-        }
-
-        if (schedulingPromises.length > 0) {
-          const createdSchedulings = await Promise.all(schedulingPromises);
-          setSchedulings(prev => [...prev, ...createdSchedulings]);
-          return { employee: createdEmployee, schedulingsCount: createdSchedulings.length };
-        }
-      }
-      
-      return { employee: createdEmployee, schedulingsCount: 0 };
-    })();
-
-    toast.promise(employeePromise, {
-      loading: 'Creando empleado...',
-      success: (result) => {
-        setShowAddForm(false);
-        setAddEmployeeSchedulings([]);
-        
-        if (result.schedulingsCount > 0) {
-          return `Empleado creado con ${result.schedulingsCount} programación(es)!`;
-        }
-        return 'Empleado creado exitosamente. Puedes agregar programación desde la vista de edición.';
-      },
-      error: (err) => {
-        console.error("Error agregando empleado:", err);
-        const isNetworkError = err.code === 'ERR_NETWORK' || 
-                              err.message?.includes('ERR_NAME_NOT_RESOLVED') || 
-                              !err.response;
-        
-        return isNetworkError
-          ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
-          : (err?.response?.data?.message || 
-             err?.response?.data?.msg || 
-             err?.response?.data?.error || 
-             "Error al agregar empleado");
-      },
-    });
-
     try {
-      await employeePromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          // Crear el empleado primero
+          const createdEmployee = await employeesService.create(data);
+          setEmployees(prev => [...prev, createdEmployee]);
+          return { employee: createdEmployee, schedulingsCount: 0 };
+        },
+        operation: 'create',
+        entity: 'empleado',
+        loadingMessage: 'Creando empleado...',
+        successMessage: 'Empleado creado exitosamente',
+        onSuccess: () => {
+          setShowAddForm(false);
+        },
+      });
     } catch {
-      // Error ya manejado por toast.promise
+      // Error ya manejado por executeWithToast
     }
   };
 
   // Handler para editar empleado
   const handleEditSave = async (data) => {
     if (!data.id) {
-      toast.error("Error: ID de empleado no encontrado");
+      showError("Error: ID de empleado no encontrado");
       return;
     }
 
-    const employeePromise = (async () => {
-      const updatedEmployee = await employeesService.update(data.id, data);
-      await loadData();
-      setEditEmployee(null);
-      return updatedEmployee;
-    })();
-
-    toast.promise(employeePromise, {
-      loading: 'Actualizando empleado...',
-      success: 'Empleado actualizado exitosamente!',
-      error: (err) => {
-        console.error("Error actualizando empleado:", err);
-        const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
-        return backendMsg || "Error al actualizar empleado";
-      },
-    });
-
     try {
-      await employeePromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          const updatedEmployee = await employeesService.update(data.id, data);
+          await loadData();
+          return updatedEmployee;
+        },
+        operation: 'update',
+        entity: 'empleado',
+        id: data.id,
+        loadingMessage: 'Actualizando empleado...',
+        successMessage: 'Empleado actualizado exitosamente',
+        onSuccess: () => {
+          setEditEmployee(null);
+        },
+      });
     } catch {
-      // Error ya manejado por toast.promise
+      // Error ya manejado por executeWithToast
     }
   };
 
@@ -311,7 +221,7 @@ const EmployeesPage = () => {
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-6">
             {/* Vista principal: Lista de empleados */}
-            {!showAddForm && !editEmployee && !viewEmployee && (
+            {!showAddForm && !editEmployee && (
               <>
                 {/* Barra de búsqueda y botón crear */}
                 <div className="flex items-center gap-4 mb-6">

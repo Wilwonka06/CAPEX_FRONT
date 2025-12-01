@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
 import GeneralCalendar from './components/GeneralCalendar';
 import SeeScheduling from './components/SeeScheduling';
 import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
@@ -7,6 +6,7 @@ import { useOutletContext } from 'react-router-dom';
 import { recurringSchedulingService } from '../employees/API/employeesService';
 import AddRecurringScheduling from '../employees/components/AddRecurringScheduling';
 import { employeesService } from '../employees/API/employeesService';
+import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 // Función para normalizar texto (remover tildes)
 const normalizeText = (text) => {
@@ -50,10 +50,10 @@ const Scheduling = () => {
     } catch (err) {
       console.error("Error cargando datos:", err);
       const errorMsg = err.code === 'ERR_NETWORK' || err.message?.includes('ERR_NAME_NOT_RESOLVED')
-        ? "No se puede conectar al servidor. Verifique la conexión a internet o contacte al administrador."
-        : "No se pudieron cargar los empleados y programaciones.";
+        ? "No se puede conectar al servidor. Verifique su conexión a internet."
+        : "No se pudieron cargar los datos. Por favor, intente nuevamente.";
       setError(errorMsg);
-      toast.error(errorMsg);
+      showError(err);
     } finally {
       setLoading(false);
     }
@@ -88,66 +88,64 @@ const Scheduling = () => {
 
   // Handler para agregar programación
   const handleAddRecurring = async (data) => {
-    const createPromise = (async () => {
-      const created = await recurringSchedulingService.create(data);
-      setSchedulings(prev => [created, ...prev]);
-      return created;
-    })();
-
-    toast.promise(createPromise, {
-      loading: 'Creando programación recurrente...',
-      success: 'Programación recurrente creada exitosamente',
-      error: (err) => {
-        const backendMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
-        return backendMsg || 'Error al crear programación recurrente';
-      },
-    });
-
     try {
-      await createPromise;
-      setIsAddModalOpen(false);
-      setSelectedEmployeeForModal(null);
-    } catch (_) {}
+      await executeWithToast({
+        promiseFn: async () => {
+          const created = await recurringSchedulingService.create(data);
+          setSchedulings(prev => [created, ...prev]);
+          return created;
+        },
+        operation: 'create',
+        entity: 'programación',
+        loadingMessage: 'Creando programación...',
+        successMessage: 'Programación creada exitosamente',
+        onSuccess: () => {
+          setIsAddModalOpen(false);
+          setSelectedEmployeeForModal(null);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
+    }
   };
 
   // Handler para actualizar programación
   const handleUpdateRecurring = async (id, data) => {
-    const updatePromise = (async () => {
-      const updated = await recurringSchedulingService.update(id, data);
-      setSchedulings(prev => prev.map(p => (String(p.id) === String(id) ? updated : p)));
-      return updated;
-    })();
-
-    toast.promise(updatePromise, {
-      loading: 'Actualizando programación recurrente...',
-      success: 'Programación recurrente actualizada',
-      error: (err) => {
-        const backendMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
-        return backendMsg || 'Error al actualizar programación recurrente';
-      },
-    });
-
-    try { await updatePromise; } catch (_) {}
+    try {
+      await executeWithToast({
+        promiseFn: async () => {
+          const updated = await recurringSchedulingService.update(id, data);
+          setSchedulings(prev => prev.map(p => (String(p.id) === String(id) ? updated : p)));
+          return updated;
+        },
+        operation: 'update',
+        entity: 'programación',
+        id,
+        loadingMessage: 'Actualizando programación...',
+        successMessage: 'Programación actualizada exitosamente',
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
+    }
   };
 
   // Handler para eliminar programación
   const handleDeleteRecurring = async (id) => {
-    const deletePromise = (async () => {
-      await recurringSchedulingService.delete(id);
-      setSchedulings(prev => prev.filter(p => String(p.id) !== String(id)));
-      return true;
-    })();
-
-    toast.promise(deletePromise, {
-      loading: 'Eliminando programación recurrente...',
-      success: 'Programación recurrente eliminada',
-      error: (err) => {
-        const backendMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message;
-        return backendMsg || 'Error al eliminar programación recurrente';
-      },
-    });
-
-    try { await deletePromise; } catch (_) {}
+    try {
+      await executeWithToast({
+        promiseFn: async () => {
+          await recurringSchedulingService.delete(id);
+          setSchedulings(prev => prev.filter(p => String(p.id) !== String(id)));
+        },
+        operation: 'delete',
+        entity: 'programación',
+        id,
+        loadingMessage: 'Eliminando programación...',
+        successMessage: 'Programación eliminada exitosamente',
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
+    }
   };
 
   if (error) {
@@ -196,9 +194,6 @@ const Scheduling = () => {
                   Crear Programación
                 </button>
               </div>
-              {console.log("[DEBUG] Passing to GeneralCalendar:")}
-              {console.log("  - filteredEmployees:", filteredEmployees)}
-              {console.log("  - schedulings:", schedulings)}
               <GeneralCalendar
                 employees={filteredEmployees}
                 schedulings={schedulings}

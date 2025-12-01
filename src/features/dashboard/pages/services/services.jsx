@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
@@ -17,6 +16,7 @@ import ServiceDetail from './components/ServiceDetail';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
+import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 const SERVICES_PER_PAGE = 10;
 
@@ -81,7 +81,7 @@ const Services = () => {
     } catch (err) {
       console.error("Error cargando datos:", err);
       setError("No se pudieron cargar los servicios.");
-      toast.error("Error al cargar servicios");
+      showError(err);
     } finally {
       setLoading(false);
     }
@@ -150,34 +150,25 @@ const Services = () => {
 
   // Handler para editar servicio
   const handleEditService = async (editedServiceData) => {
-    const servicePromise = (async () => {
-      const response = await servicesService.update(editedServiceData.id, editedServiceData);
-      await loadData();
-      setShowEditModal(false);
-      setSelectedService(null);
-      return response;
-    })();
-
-    toast.promise(
-      servicePromise,
-      {
-        loading: 'Actualizando servicio...',
-        success: 'Servicio actualizado exitosamente',
-        error: (err) => {
-          console.error("Error actualizando servicio:", err);
-          const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
-          return backendMsg || "Error al actualizar servicio";
-        },
-      },
-      {
-        id: `update-service-${editedServiceData.id}`,
-      }
-    );
-
     try {
-      await servicePromise;
-    } catch (error) {
-      // Error ya manejado por toast.promise
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await servicesService.update(editedServiceData.id, editedServiceData);
+          await loadData();
+          return response;
+        },
+        operation: 'update',
+        entity: 'servicio',
+        id: editedServiceData.id,
+        loadingMessage: 'Actualizando servicio...',
+        successMessage: 'Servicio actualizado exitosamente',
+        onSuccess: () => {
+          setShowEditModal(false);
+          setSelectedService(null);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
     }
   };
 
@@ -195,32 +186,21 @@ const Services = () => {
     });
     
     if (result.isConfirmed) {
-      const servicePromise = (async () => {
-        await servicesService.delete(service.id);
-        await loadData();
-        return true;
-      })();
-
-      toast.promise(
-        servicePromise,
-        {
-          loading: 'Eliminando servicio...',
-          success: 'Servicio eliminado exitosamente',
-          error: (err) => {
-            console.error("Error eliminando servicio:", err);
-            const backendMsg = err?.response?.data?.message || err?.response?.data?.msg || err?.response?.data?.error;
-            return backendMsg || "Error al eliminar servicio";
-          },
-        },
-        {
-          id: `delete-service-${service.id}`,
-        }
-      );
-
       try {
-        await servicePromise;
-      } catch (error) {
-        // Error ya manejado por toast.promise
+        await executeWithToast({
+          promiseFn: async () => {
+            await servicesService.delete(service.id);
+            await loadData();
+            return true;
+          },
+          operation: 'delete',
+          entity: 'servicio',
+          id: service.id,
+          loadingMessage: 'Eliminando servicio...',
+          successMessage: 'Servicio eliminado exitosamente',
+        });
+      } catch {
+        // Error ya manejado por executeWithToast
       }
     }
   };
@@ -229,7 +209,7 @@ const Services = () => {
   const handleToggleStatus = (serviceId) => {
     const current = services.find(s => s.id === serviceId);
     if (!current) {
-      toast.error("Servicio no encontrado");
+      showError("Servicio no encontrado");
       return;
     }
 
@@ -246,15 +226,23 @@ const Services = () => {
     const nextEstado = current.estado === 'Activo' ? 'Inactivo' : 'Activo';
 
     try {
-      await servicesService.changeStatus(serviceId, nextEstado);
-      await loadData();
-      toast.success(`Estado cambiado a ${nextEstado}`);
-      setShowStatusModal(false);
-      setPendingStatusChange(null);
-    } catch (error) {
-      console.error("Error cambiando estado:", error);
-      const backendMsg = error?.response?.data?.message || error?.response?.data?.msg || error?.response?.data?.error;
-      toast.error(backendMsg || "Error al cambiar estado");
+      await executeWithToast({
+        promiseFn: async () => {
+          await servicesService.changeStatus(serviceId, nextEstado);
+          await loadData();
+        },
+        operation: 'update',
+        entity: 'servicio',
+        id: serviceId,
+        loadingMessage: 'Cambiando estado...',
+        successMessage: `Estado cambiado a ${nextEstado} exitosamente`,
+        onSuccess: () => {
+          setShowStatusModal(false);
+          setPendingStatusChange(null);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
     } finally {
       setTogglingId(null);
     }

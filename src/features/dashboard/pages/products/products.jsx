@@ -6,9 +6,9 @@ import CreateProduct from "./components/CreateProduct";
 import CharacteristicsManager from "./components/CharacteristicsManager";
 import productsService from "./API/productsService";
 import suppliersService from "../suppliers/API/suppliersService";
-import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
+import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 const ProductsPage = () => {
   // Estados para productos
@@ -101,120 +101,69 @@ const ProductsPage = () => {
     await loadProducts(newParams);
   };
 
-  // En products.jsx, reemplaza las funciones createProduct, updateProduct (líneas 83-129)
-
-  // Función para crear producto - CORREGIDA
+  // Función para crear producto
   const createProduct = async (productData) => {
     setLoading(true);
     setError(null);
 
-    const productPromise = (async () => {
-      console.log('ProductsPage: Creating product with data:', productData);
-      const response = await productsService.create(productData);
-
-      if (response.success) {
-        // Resetear a primera página y limpiar búsqueda para que el nuevo producto sea visible
-        // Si hay filtros activos, el nuevo producto podría no aparecer
-        const refreshParams = {
-          page: 1,
-          limit: queryParams.limit || 10,
-          // No incluir 'search' para mostrar todos los productos y que el nuevo sea visible
-        };
-        setQueryParams(refreshParams);
-        await loadProducts(refreshParams);
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al crear producto');
-      }
-    })();
-
-    // Descartar cualquier toast duplicado antes de mostrar el nuevo
-    toast.dismiss('create-product');
-    
-    // Crear toast de loading con ID único
-    const loadingToastId = toast.loading('Creando producto...', { id: 'create-product' });
-    
-    productPromise
-      .then(() => {
-        toast.dismiss(loadingToastId);
-        toast.success('Producto creado exitosamente', { id: 'create-product' });
-      })
-      .catch((err) => {
-        toast.dismiss(loadingToastId);
-        // Manejar errores de validación del backend
-        const errorMessage = err.response?.data?.message || err.message || 'Error al crear el producto';
-        const validationErrors = err.response?.data?.errors;
-
-        setError(errorMessage);
-        console.error('Error creating product:', err);
-        console.error('Validation errors:', validationErrors);
-
-        // Mostrar mensaje de error apropiado
-        let finalErrorMessage = errorMessage;
-        if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
-          finalErrorMessage = validationErrors[0].message || validationErrors[0] || errorMessage;
-        }
-        toast.error(finalErrorMessage, { id: 'create-product' });
-      });
-
     try {
-      return await productPromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          console.log('ProductsPage: Creating product with data:', productData);
+          const response = await productsService.create(productData);
+
+          if (response.success) {
+            // Resetear a primera página y limpiar búsqueda para que el nuevo producto sea visible
+            const refreshParams = {
+              page: 1,
+              limit: queryParams.limit || 10,
+            };
+            setQueryParams(refreshParams);
+            await loadProducts(refreshParams);
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al crear producto');
+          }
+        },
+        operation: 'create',
+        entity: 'producto',
+        loadingMessage: 'Creando producto...',
+        successMessage: 'Producto creado exitosamente',
+      });
     } catch (err) {
-      setLoading(false);
+      setError(err.message || 'Error al crear producto');
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para actualizar producto - CORREGIDA
+  // Función para actualizar producto
   const updateProduct = async (id, productData) => {
     setLoading(true);
     setError(null);
 
-    const productPromise = (async () => {
-      console.log('ProductsPage: Updating product', id, 'with data:', productData);
-      const response = await productsService.update(id, productData);
-
-      if (response.success) {
-        // Recargar la lista ANTES de mostrar el toast para asegurar que los datos estén actualizados
-        await loadProducts(queryParams);
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al actualizar producto');
-      }
-    })();
-
-    const updateToastId = `update-product-${id}`;
-    toast.dismiss(updateToastId);
-    
-    const loadingToastId = toast.loading('Actualizando producto...', { id: updateToastId });
-    
-    productPromise
-      .then(() => {
-        toast.dismiss(loadingToastId);
-        toast.success('Producto actualizado exitosamente', { id: updateToastId });
-      })
-      .catch((err) => {
-        toast.dismiss(loadingToastId);
-        const errorMessage = err.response?.data?.message || err.message || 'Error al actualizar el producto';
-        const validationErrors = err.response?.data?.errors;
-
-        setError(errorMessage);
-        console.error('Error updating product:', err);
-        console.error('Validation errors:', validationErrors);
-
-        let finalErrorMessage = errorMessage;
-        if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
-          finalErrorMessage = validationErrors[0].message || validationErrors[0] || errorMessage;
-        }
-        toast.error(finalErrorMessage, { id: updateToastId });
-      });
-
     try {
-      return await productPromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          console.log('ProductsPage: Updating product', id, 'with data:', productData);
+          const response = await productsService.update(id, productData);
+
+          if (response.success) {
+            await loadProducts(queryParams);
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al actualizar producto');
+          }
+        },
+        operation: 'update',
+        entity: 'producto',
+        id,
+        loadingMessage: 'Actualizando producto...',
+        successMessage: 'Producto actualizado exitosamente',
+      });
     } catch (err) {
-      setLoading(false);
+      setError(err.message || 'Error al actualizar producto');
       throw err;
     } finally {
       setLoading(false);
@@ -226,38 +175,26 @@ const ProductsPage = () => {
     setLoading(true);
     setError(null);
 
-    const productPromise = (async () => {
-      const response = await productsService.delete(id);
-
-      if (response.success) {
-        await loadProducts(); // Recargar lista
-        return true;
-      } else {
-        throw new Error(response.message || 'Error al eliminar producto');
-      }
-    })();
-
-    const deleteToastId = `delete-product-${id}`;
-    toast.dismiss(deleteToastId);
-    
-    const loadingToastId = toast.loading('Eliminando producto...', { id: deleteToastId });
-    
-    productPromise
-      .then(() => {
-        toast.dismiss(loadingToastId);
-        toast.success('Producto eliminado exitosamente', { id: deleteToastId });
-      })
-      .catch((err) => {
-        toast.dismiss(loadingToastId);
-        const errorMessage = err.response?.data?.message || err.message || 'Error al eliminar producto';
-        setError(errorMessage);
-        toast.error(errorMessage, { id: deleteToastId });
-      });
-
     try {
-      return await productPromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await productsService.delete(id);
+
+          if (response.success) {
+            await loadProducts();
+            return true;
+          } else {
+            throw new Error(response.message || 'Error al eliminar producto');
+          }
+        },
+        operation: 'delete',
+        entity: 'producto',
+        id,
+        loadingMessage: 'Eliminando producto...',
+        successMessage: 'Producto eliminado exitosamente',
+      });
     } catch (err) {
-      setLoading(false);
+      setError(err.message || 'Error al eliminar producto');
       throw err;
     } finally {
       setLoading(false);
