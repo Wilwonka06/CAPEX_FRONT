@@ -1,17 +1,25 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import ServiceSelector from "./ServiceSelector";
 import ProductSelector from "./ProductSelector";
 import ErrorBoundary from "./ErrorBoundary";
-import { validateServiceOrder } from "../../../../../shared/validations";
+import { validateServiceOrder, isValidEmail, validateUserDocument } from "../../../../../shared/validations";
 import { editServiceOrder } from "../API/ServiceOrderService";
 import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
+import { DOC_TYPES_CODES, DOC_TYPE_LABELS, toBackendDocCode } from "../../../../../shared/constants/documentTypes";
+import usersService from "../../users/API/usersService";
 
 const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   const [formData, setFormData] = useState({
-    clientName: "",
+    tipoDocumento: "CC",
+    documento: "",
+    nombre: "",
+    telefono: "",
+    correo: "",
     dineroProporcionado: "",
     status: "En ejecucion"
   });
+  const [clienteEncontrado, setClienteEncontrado] = useState(false);
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
 
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -19,25 +27,221 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   const [touched, setTouched] = useState({});
   const [showErrors, setShowErrors] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Refs para preservar posición de scroll y focus
+  const scrollContainerRef = useRef(null);
+  const scrollPositionRef = useRef(0);
+  const dineroInputRef = useRef(null);
+  const cursorPositionRef = useRef(0);
+  const wasDineroFocusedRef = useRef(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
   const totalProducts = selectedProducts.reduce((total, product) => total + (product.subtotal || 0), 0);
   const totalGeneral = totalServices + totalProducts;
 
-  // Define la lista de productos disponibles al inicio del componente
-  // Elimina la definición de availableProducts
+  // Buscar cliente por documento y autocompletar
+  const lookupClientByDocument = useCallback(async (doc) => {
+    if (!doc || doc.length < 6) return;
+    
+    try {
+      setBuscandoCliente(true);
+      const searchResponse = await usersService.getAll({ documento: doc.trim() });
+      
+      if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        const existingUser = searchResponse.data.find(user => {
+          const userDoc = user.documento?.toString().trim() || '';
+          return userDoc === doc.trim();
+        });
+        
+        if (existingUser) {
+          setFormData(prev => ({
+            ...prev,
+            tipoDocumento: existingUser.tipo_documento || prev.tipoDocumento,
+            nombre: existingUser.nombre || prev.nombre,
+            telefono: (existingUser.telefono || '').replace(/[^0-9]/g, ''),
+            correo: existingUser.correo || prev.correo
+          }));
+          setClienteEncontrado(true);
+        } else {
+          setClienteEncontrado(false);
+        }
+      } else {
+        setClienteEncontrado(false);
+      }
+    } catch (error) {
+      console.error('Error buscando cliente:', error);
+      setClienteEncontrado(false);
+    } finally {
+      setBuscandoCliente(false);
+    }
+  }, []);
+
+  // Función para crear o buscar cliente
+  const findOrCreateClient = useCallback(async (clientName, clientPhone, clientEmail, clientDocument) => {
+    try {
+      // Buscar usuario existente por documento
+      const searchResponse = await usersService.getAll({ documento: clientDocument.trim() });
+      
+      if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        const existingUser = searchResponse.data.find(user => {
+          const userDoc = user.documento?.toString().trim() || '';
+          return userDoc === clientDocument.trim();
+        });
+        
+        if (existingUser) {
+          return existingUser.id_usuario || existingUser.id;
+        }
+      }
+
+      // Si no se encontró, crear nuevo usuario/cliente
+      const generateTempPassword = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+        let password = '';
+        password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+        password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+        password += '0123456789'[Math.floor(Math.random() * 10)];
+        password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+        for (let i = password.length; i < 12; i++) {
+          password += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return password.split('').sort(() => Math.random() - 0.5).join('');
+      };
+
+      const cleanName = clientName.trim();
+      const cleanPhone = '+' + String(clientPhone).replace(/[^0-9]/g, '');
+      const cleanEmail = clientEmail.trim();
+      const cleanDocument = clientDocument.trim();
+      const tempPassword = generateTempPassword();
+
+      const newUserData = {
+        nombre: cleanName,
+        telefono: cleanPhone,
+        correo: cleanEmail,
+        contrasena: tempPassword,
+        tipo_documento: toBackendDocCode(formData.tipoDocumento || 'CC'),
+        documento: cleanDocument,
+        roleId: 3, // Rol de cliente
+        estado: 'Activo',
+        sendEmail: true,
+        tempPassword: tempPassword
+      };
+
+      const createResponse = await usersService.create(newUserData);
+      if (createResponse.success && createResponse.data) {
+        return createResponse.data.id_usuario || createResponse.data.id;
+      }
+
+      throw new Error('No se pudo crear el cliente');
+    } catch (error) {
+      console.error('Error en findOrCreateClient:', error);
+      throw error;
+    }
+  }, [formData.tipoDocumento]);
+
+  // Validar campos en tiempo real
+  const validateField = useCallback((name, value) => {
+    switch (name) {
+      case 'tipoDocumento':
+        return value ? '' : 'Tipo de documento requerido';
+      case 'documento':
+        return validateUserDocument(formData.tipoDocumento, value);
+      case 'nombre':
+        return value.trim() ? '' : 'Nombre requerido';
+      case 'telefono':
+        if (!value) return 'Teléfono requerido';
+        if (!/^[0-9]{7,15}$/.test(value.replace(/\s/g, ''))) {
+          return 'Teléfono debe tener entre 7 y 15 dígitos';
+        }
+        return '';
+      case 'correo':
+        if (!value) return 'Correo requerido';
+        if (!isValidEmail(value)) return 'Correo inválido';
+        return '';
+      default:
+        return '';
+    }
+  }, [formData.tipoDocumento]);
 
   // Cargar datos del order cuando se abre el modal
+  // Función para calcular tiempos de servicios existentes si no los tienen
+  const ensureServiceTimes = (services) => {
+    const now = new Date();
+    let currentTime = now;
+    
+    return services.map((service, index) => {
+      // Normalizar campos del backend al formato del frontend
+      const duration = service.duration || service.duracion || 30;
+      
+      // Función para convertir hora del backend (HH:MM:SS) a formato corto (HH:MM)
+      const formatTimeFromBackend = (timeStr) => {
+        if (!timeStr) return null;
+        const parts = timeStr.split(':');
+        return `${parts[0]}:${parts[1]}`;
+      };
+      
+      // Obtener tiempos existentes (pueden venir del backend o ya estar calculados)
+      let startTime = service.startTime || formatTimeFromBackend(service.hora_inicio);
+      let endTime = service.endTime || formatTimeFromBackend(service.hora_finalizacion);
+      
+      // Si ya tiene tiempos válidos, usarlos
+      if (startTime && endTime) {
+        // Parsear endTime para el siguiente servicio
+        const [hours, minutes] = endTime.split(':').map(Number);
+        currentTime = new Date();
+        currentTime.setHours(hours, minutes, 0, 0);
+        
+        return {
+          ...service,
+          startTime: startTime,
+          endTime: endTime,
+          duration: duration
+        };
+      }
+      
+      // Si no tiene tiempos, calcularlos desde cero
+      const startDate = new Date(currentTime);
+      const endDate = new Date(currentTime.getTime() + (duration * 60000));
+      
+      // Formatear a HH:MM
+      const formatTime = (date) => {
+        const h = String(date.getHours()).padStart(2, '0');
+        const m = String(date.getMinutes()).padStart(2, '0');
+        return `${h}:${m}`;
+      };
+      
+      currentTime = endDate; // Actualizar para el siguiente servicio
+      
+      return {
+        ...service,
+        startTime: formatTime(startDate),
+        endTime: formatTime(endDate),
+        duration: duration
+      };
+    });
+  };
+
   useEffect(() => {
     if (isOpen && order) {
+      const dineroFormateado = order.dineroProporcionado 
+        ? formatNumberInput(order.dineroProporcionado.toString())
+        : "";
+      
       setFormData({
-        clientName: order.clientName || "",
-        dineroProporcionado: order.dineroProporcionado?.toString() || "",
+        tipoDocumento: order.tipoDocumento || "CC",
+        documento: order.documento || "",
+        nombre: order.clientName || order.nombre || "",
+        telefono: (order.telefono || '').replace(/[^0-9]/g, ''),
+        correo: order.correo || "",
+        dineroProporcionado: dineroFormateado,
         status: order.status || "En ejecucion"
       });
-      setSelectedServices(order.servicios || []);
+      // Asegurar que los servicios tengan tiempos calculados
+      const serviciosConTiempos = ensureServiceTimes(order.servicios || []);
+      setSelectedServices(serviciosConTiempos);
       setSelectedProducts(order.productos || []);
+      setClienteEncontrado(false);
+      setBuscandoCliente(false);
     }
   }, [isOpen, order]);
 
@@ -56,14 +260,47 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   }, [selectedServices.length, selectedProducts.length, totalGeneral, services, isOpen]);
 
   // Helpers para errores separados - solo servicios son obligatorios
-  const showServiceError = (showErrors || touched.clientName || touched.dineroProporcionado) && (!selectedServices || selectedServices.length === 0);
-  // Los productos son opcionales, no se muestran errores
+  // Solo mostrar error cuando se intente enviar el formulario, no cuando se escriba en otros campos
+  const showServiceError = showErrors && (!selectedServices || selectedServices.length === 0);
+
+  // Restaurar posición de scroll y focus después de actualizar dineroProporcionado
+  useEffect(() => {
+    // Solo restaurar si el modal está abierto y el input estaba enfocado
+    if (isOpen && scrollContainerRef.current && wasDineroFocusedRef.current) {
+      // Usar requestAnimationFrame para restaurar después del render
+      requestAnimationFrame(() => {
+        // Verificar nuevamente que el modal sigue abierto
+        if (isOpen && scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+        }
+        // Restaurar focus y posición del cursor en el input solo si el modal sigue abierto
+        if (isOpen && dineroInputRef.current) {
+          dineroInputRef.current.focus();
+          // Restaurar posición del cursor
+          if (dineroInputRef.current.setSelectionRange) {
+            const cursorPos = Math.min(cursorPositionRef.current, dineroInputRef.current.value.length);
+            dineroInputRef.current.setSelectionRange(cursorPos, cursorPos);
+          }
+        }
+      });
+    }
+  }, [formData.dineroProporcionado, isOpen]);
+
+  // Memoizar cálculo de devolución para evitar re-renders innecesarios
+  const devolucion = useMemo(() => {
+    const dinero = parseFormattedNumber(formData.dineroProporcionado);
+    return formatPrice(Math.max(0, dinero - totalGeneral));
+  }, [formData.dineroProporcionado, totalGeneral]);
 
   // Reset form cuando se cierra el modal
   useEffect(() => {
     if (!isOpen) {
       setFormData({
-        clientName: "",
+        tipoDocumento: "CC",
+        documento: "",
+        nombre: "",
+        telefono: "",
+        correo: "",
         dineroProporcionado: "",
         status: "En ejecucion"
       });
@@ -71,6 +308,12 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       setSelectedProducts([]);
       setErrors({});
       setTouched({});
+      setClienteEncontrado(false);
+      setBuscandoCliente(false);
+      // Resetear refs de scroll y focus
+      scrollPositionRef.current = 0;
+      cursorPositionRef.current = 0;
+      wasDineroFocusedRef.current = false;
     }
   }, [isOpen]);
 
@@ -78,30 +321,66 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
     e.preventDefault();
     setShowErrors(true);
     setTouched({
-      clientName: true,
+      tipoDocumento: true,
+      documento: true,
+      nombre: true,
+      telefono: true,
+      correo: true,
       dineroProporcionado: true,
-      // Agrega aquí otros campos si los hay
     });
+
+    // Validar todos los campos requeridos
+    const fieldErrors = {};
+    ['tipoDocumento', 'documento', 'nombre', 'telefono', 'correo'].forEach(field => {
+      const error = validateField(field, formData[field]);
+      if (error) fieldErrors[field] = error;
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+    
     if (Object.keys(errors).length > 0 || loading) {
       return;
     }
 
-    const orderData = {
-      ...formData,
-      id: order.id,
-      servicios: selectedServices,
-      productos: selectedProducts,
-      totalServices,
-      totalProducts,
-      totalGeneral,
-      dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
-    };
-
     try {
       setLoading(true);
+      
+      // Buscar o crear cliente (en editar, normalmente ya existe)
+      let clienteId;
+      try {
+        clienteId = await findOrCreateClient(
+          formData.nombre,
+          formData.telefono,
+          formData.correo,
+          formData.documento
+        );
+      } catch (error) {
+        console.error('Error al buscar o crear cliente:', error);
+        setLoading(false);
+        return;
+      }
+
+      const orderData = {
+        ...formData,
+        id: order.id,
+        id_cliente: clienteId,
+        nombre_cliente: formData.nombre.trim(),
+        servicios: selectedServices,
+        productos: selectedProducts,
+        totalServices,
+        totalProducts,
+        totalGeneral,
+        dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
+      };
+
       const updatedOrder = await editServiceOrder(orderData, services);
       if (onEdited) onEdited(updatedOrder);
       if (onClose) onClose();
+    } catch (err) {
+      console.error('Error al editar orden:', err);
     } finally {
       setLoading(false);
     }
@@ -109,71 +388,220 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    const newVal = name === 'dineroProporcionado' ? formatNumberInput(value) : value;
-    setFormData(prev => ({ ...prev, [name]: newVal }));
-    // Solo marcar como tocado, no validar en tiempo real
-    setTouched(prev => ({ ...prev, [name]: true }));
-  }, []);
+    
+    if (name === 'dineroProporcionado') {
+      // Guardar posición de scroll y cursor SOLO para dinero proporcionado
+      if (scrollContainerRef.current) {
+        scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+      }
+      
+      // Marcar que el input estaba enfocado
+      wasDineroFocusedRef.current = true;
+      
+      // Guardar posición del cursor antes de actualizar
+      if (e.target.selectionStart !== null) {
+        cursorPositionRef.current = e.target.selectionStart;
+      }
+      
+      // Usar versión funcional de setFormData para acceder al estado más reciente
+      setFormData(prev => {
+        const currentValue = prev.dineroProporcionado || '';
+        const cleaned = value.replace(/[^0-9]/g, '');
+        
+        // Si el valor actual es solo "0" y el usuario escribe un número, reemplazar
+        if (currentValue === '0' && cleaned && cleaned !== '0') {
+          return { ...prev, [name]: formatNumberInput(cleaned) };
+        }
+        return { ...prev, [name]: formatNumberInput(value) };
+      });
+      // NO marcar como touched para dinero proporcionado para evitar activar validación de servicios
+    } else {
+      // Para otros campos, simplemente actualizar sin afectar scroll
+      setFormData(prev => ({ ...prev, [name]: value }));
+      setTouched(prev => ({ ...prev, [name]: true }));
+      
+      // NO buscar cliente en onChange, solo en onBlur para evitar pérdida de focus
+    }
+  }, []); // Sin dependencias - usa versión funcional de setState
 
   const handleBlur = useCallback((e) => {
-    const { name } = e.target;
+    const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-    // No validar en tiempo real para evitar re-renderizados
-  }, []);
+    
+    // Validar el campo al perder foco
+    if (['tipoDocumento', 'documento', 'nombre', 'telefono', 'correo'].includes(name)) {
+      const error = validateField(name, value);
+      setErrors(prev => ({ ...prev, [name]: error }));
+    }
+    
+    // Buscar cliente al perder foco del documento
+    if (name === 'documento' && value && value.length >= 6) {
+      lookupClientByDocument(value);
+    }
+    
+    // Marcar que el input ya no está enfocado
+    if (name === 'dineroProporcionado') {
+      wasDineroFocusedRef.current = false;
+    }
+  }, [validateField, lookupClientByDocument]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!loading) {
+      // Resetear refs antes de cerrar para evitar interferencias
+      wasDineroFocusedRef.current = false;
+      scrollPositionRef.current = 0;
+      cursorPositionRef.current = 0;
       onClose();
     }
-  };
+  }, [loading, onClose]);
 
   if (!isOpen || !order) return null;
 
-  const EditOrderCard = ({ children }) => (
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col border border-gray-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-accent m-0">Editar Orden de Servicio</h2>
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-pencil-square text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Editar Orden de Servicio</h2>
           </div>
           <button
             onClick={handleClose}
             disabled={loading}
-            className="text-gray-400 hover:text-black text-xl font-bold"
+            className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition"
             aria-label="Cerrar"
           >
             ×
           </button>
         </div>
         {/* Contenido */}
-        <div className="p-8 bg-white overflow-y-auto flex-1">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <EditOrderCard>
+        <div 
+          ref={scrollContainerRef}
+          className="overflow-y-auto p-6 flex-1 bg-gray-50" 
+          style={{ 
+            maxHeight: 'calc(95vh - 120px)',
+            scrollBehavior: 'auto' // Evitar animaciones de scroll
+          }}
+        >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Cliente */}
+        {/* Datos del Cliente */}
         <div>
-          <label className="block text-xs font-medium text-black mb-1">
-            Nombre del Cliente <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="clientName"
-            value={formData.clientName}
-            onChange={handleInputChange}
-            onBlur={handleBlur}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-            placeholder="Ingrese el nombre del cliente..."
-          />
-          {(touched.clientName || showErrors) && errors.clientName && (
-            <p className="text-red-600 text-xs mt-1">{errors.clientName}</p>
-          )}
+          <h3 className="text-sm font-semibold text-black mb-3">Datos del Cliente</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tipo de Documento */}
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">
+                Tipo de Documento <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="tipoDocumento"
+                value={formData.tipoDocumento}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+              >
+                {DOC_TYPES_CODES.map(code => (
+                  <option key={code} value={code}>
+                    {code} - {DOC_TYPE_LABELS[code]}
+                  </option>
+                ))}
+              </select>
+              {(touched.tipoDocumento || showErrors) && errors.tipoDocumento && (
+                <p className="text-red-600 text-xs mt-1">{errors.tipoDocumento}</p>
+              )}
+            </div>
+
+            {/* Documento */}
+            <div className="relative">
+              <label className="block text-xs font-medium text-black mb-1">
+                Número de Documento <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="documento"
+                value={formData.documento}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                placeholder="Número de documento"
+                maxLength={20}
+              />
+              {buscandoCliente && (
+                <div className="absolute right-3 top-8">
+                  <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
+                </div>
+              )}
+              {!buscandoCliente && clienteEncontrado && (
+                <div className="absolute right-3 top-8 text-green-500">
+                  <i className="bi bi-check-circle"></i>
+                </div>
+              )}
+              {(touched.documento || showErrors) && errors.documento && (
+                <p className="text-red-600 text-xs mt-1">{errors.documento}</p>
+              )}
+            </div>
+
+            {/* Nombre */}
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">
+                Nombre Completo <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                placeholder="Nombre completo del cliente"
+              />
+              {(touched.nombre || showErrors) && errors.nombre && (
+                <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>
+              )}
+            </div>
+
+            {/* Teléfono */}
+            <div>
+              <label className="block text-xs font-medium text-black mb-1">
+                Teléfono <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                name="telefono"
+                value={formData.telefono}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                placeholder="Número de teléfono"
+                maxLength={15}
+              />
+              {(touched.telefono || showErrors) && errors.telefono && (
+                <p className="text-red-600 text-xs mt-1">{errors.telefono}</p>
+              )}
+            </div>
+
+            {/* Correo */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-black mb-1">
+                Correo Electrónico <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="correo"
+                value={formData.correo}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                placeholder="correo@ejemplo.com"
+              />
+              {(touched.correo || showErrors) && errors.correo && (
+                <p className="text-red-600 text-xs mt-1">{errors.correo}</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Estado */}
@@ -203,9 +631,12 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
               onServicesChange={setSelectedServices}
             />
           </ErrorBoundary>
-          {showServiceError && (
-            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio</p>
-          )}
+          {/* Mensaje de error con espacio reservado para evitar scroll */}
+          <div className="min-h-[20px] mt-1">
+            {showServiceError && (
+              <p className="text-red-600 text-xs">Debes agregar al menos un servicio</p>
+            )}
+          </div>
         </div>
 
         {/* Productos - Opcionales */}
@@ -249,6 +680,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                   Dinero Proporcionado
                 </label>
                 <input
+                  ref={dineroInputRef}
                   type="text"
                   name="dineroProporcionado"
                   value={formData.dineroProporcionado}
@@ -267,9 +699,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                   Devolución
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                  ${formData.dineroProporcionado && !isNaN(parseFloat(formData.dineroProporcionado)) 
-                    ? formatNumber(Math.max(0, parseFloat(formData.dineroProporcionado) - totalGeneral))
-                    : '0'}
+                  {devolucion}
                 </div>
               </div>
             </div>
@@ -302,7 +732,9 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
           </button>
         </div>
       </form>
-    </EditOrderCard>
+        </div>
+      </div>
+    </div>
   );
 };
 
