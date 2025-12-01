@@ -222,64 +222,155 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
     <CreateOrderCard>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Cliente */}
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">Documento Cliente <span className="text-red-500">*</span></label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div className="relative">
-              <input
-                type="text"
-                value={clienteDoc}
-                onChange={(e) => setClienteDoc(e.target.value.replace(/[^0-9]/g, ''))}
-                maxLength={15}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Número de documento"
-                required
-              />
-              {buscandoCliente && (
-                <div className="absolute right-2 top-2">
-                  <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
-                </div>
+        <div className="space-y-4">
+          <label className="block text-xs font-medium text-gray-700 mb-2">Información del Cliente <span className="text-red-500">*</span></label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Documento <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={clienteDoc}
+                  onChange={(e) => setClienteDoc(e.target.value.replace(/[^0-9]/g, ''))}
+                  maxLength={15}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    errors.documento
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
+                  placeholder="Número de documento"
+                  required
+                />
+                {buscandoCliente && (
+                  <div className="absolute right-2 top-2">
+                    <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
+                  </div>
+                )}
+              </div>
+              {errors.documento && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.documento}
+                </p>
               )}
             </div>
-            <div>
-              <label className="block text-xs font-medium text-black mb-1">Nombre</label>
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Nombre <span className="text-red-500">*</span></label>
               {clienteEncontrado ? (
-                <input type="text" value={cliente.nombre} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
+                <input type="text" value={cliente.nombre} className="w-full px-3 py-2 border-2 rounded-xl bg-gray-100 border-gray-200 text-sm" readOnly />
               ) : (
-                <input type="text" value={clienteNuevo.nombre} onChange={(e) => setClienteNuevo(prev => ({ ...prev, nombre: e.target.value }))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="Nombre completo" required />
+                <input
+                  type="text"
+                  value={clienteNuevo.nombre}
+                  onChange={(e) => {
+                    setClienteNuevo(prev => ({ ...prev, nombre: e.target.value }));
+                    if (errors.nombre) {
+                      setErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.nombre;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    errors.nombre
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
+                  placeholder="Nombre completo"
+                  required
+                />
+              )}
+              {errors.nombre && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.nombre}
+                </p>
               )}
             </div>
-            <div>
-              <label className="block text-xs font-medium text-black mb-1">Teléfono</label>
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
               {clienteEncontrado ? (
-                <input type="text" value={cliente.phone} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
+                <input type="text" value={cliente.phone} className="w-full px-3 py-2 border-2 rounded-xl bg-gray-100 border-gray-200 text-sm" readOnly />
               ) : (
-                <input type="text" value={numero} onChange={(e) => setNumero(e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="Ej: 3001234567" required />
+                <input
+                  type="text"
+                  value={numero}
+                  onChange={(e) => {
+                    setNumero(e.target.value.replace(/[^0-9]/g, ''));
+                    if (errors.telefono) {
+                      setErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.telefono;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    errors.telefono
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
+                  placeholder="Ej: 3001234567"
+                  required
+                />
+              )}
+              {errors.telefono && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.telefono}
+                </p>
               )}
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div>
-              <label className="block text-xs font-medium text-black mb-1">Correo</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Correo <span className="text-red-500">*</span></label>
               {clienteEncontrado ? (
-                <input type="email" value={cliente.email} className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm" readOnly />
+                <input type="email" value={cliente.email} className="w-full px-3 py-2 border-2 rounded-xl bg-gray-100 border-gray-200 text-sm" readOnly />
               ) : (
-                <input type="email" value={clienteNuevo.correo} onChange={(e) => setClienteNuevo(prev => ({ ...prev, correo: e.target.value }))} className="w-full px-3 py-2 border rounded-md text-sm" placeholder="correo@ejemplo.com" required />
+                <input
+                  type="email"
+                  value={clienteNuevo.correo}
+                  onChange={(e) => {
+                    setClienteNuevo(prev => ({ ...prev, correo: e.target.value }));
+                    if (errors.correo) {
+                      setErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.correo;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    errors.correo
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
+                  placeholder="correo@ejemplo.com"
+                  required
+                />
+              )}
+              {errors.correo && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.correo}
+                </p>
               )}
             </div>
           </div>
         </div>
 
         {/* Estado */}
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
             Estado
           </label>
           <select
             name="status"
             value={formData.status}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+            className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
           >
             <option value="En ejecucion">En ejecución</option>
             <option value="Pagado">Pagado</option>
@@ -298,7 +389,10 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
             />
           </ErrorBoundary>
           {showServiceError && (
-            <p className="text-red-600 text-xs mt-1">Debes agregar al menos un servicio</p>
+            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <i className="bi bi-exclamation-triangle"></i>
+              Debes agregar al menos un servicio
+            </p>
           )}
         </div>
 
@@ -348,11 +442,18 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                   value={formData.dineroProporcionado}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    (touched.dineroProporcionado || showErrors) && errors.dineroProporcionado
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                   placeholder="0"
                 />
                 {(touched.dineroProporcionado || showErrors) && errors.dineroProporcionado && (
-                  <p className="text-red-600 text-xs mt-1">{errors.dineroProporcionado}</p>
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {errors.dineroProporcionado}
+                  </p>
                 )}
               </div>
 
@@ -360,7 +461,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 <label className="block text-xs font-medium text-black mb-1">
                   Devolución
                 </label>
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                <div className="w-full px-3 py-2 border-2 rounded-xl bg-gray-100 border-gray-200 text-sm">
                   {formatPrice(Math.max(0, parseFormattedNumber(formData.dineroProporcionado) - totalGeneral))}
                 </div>
               </div>

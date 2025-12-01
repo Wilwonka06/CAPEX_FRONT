@@ -145,7 +145,7 @@ const NovedadManager = ({ empleadoId }) => {
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                <label className="block text-sm font-semibold text-gray-700 font-lato items-center gap-2">
                   <i className="bi bi-tag text-[#FACC15]"></i>
                   Tipo de Novedad
                 </label>
@@ -161,7 +161,7 @@ const NovedadManager = ({ empleadoId }) => {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+                <label className="block text-sm font-semibold text-gray-700 font-lato items-center gap-2">
                   <i className="bi bi-calendar-event text-[#FACC15]"></i>
                   Fecha Específica
                 </label>

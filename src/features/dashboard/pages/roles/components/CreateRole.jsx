@@ -52,23 +52,16 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
 
   const handlePrivilegeChange = (modulo, accion, checked) => {
     console.log(`🔄 handlePrivilegeChange: ${modulo} -> ${accion} = ${checked}`);
-    
+
     setPrivileges(prev => {
       // Obtener el estado actual del módulo, o un objeto vacío si no existe
       const currentModulePrivileges = prev[modulo] || {};
-      
+
       // Crear el nuevo estado del módulo SOLO con los privilegios que se están modificando
       const newModulePrivileges = {
         ...currentModulePrivileges,
         [accion]: checked
       };
-
-      // Si se selecciona cualquier privilegio que NO sea "Visualizar", 
-      // automáticamente activar "Visualizar" también
-      if (checked && accion !== 'Visualizar') {
-        newModulePrivileges['Visualizar'] = true;
-        console.log(`✅ Activando Visualizar automáticamente para ${modulo}`);
-      }
 
       // Si se deselecciona "Visualizar", deseleccionar todos los demás privilegios
       if (!checked && accion === 'Visualizar') {
@@ -90,7 +83,7 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
       };
 
       console.log(`📊 Nuevo estado de privilegios para ${modulo}:`, newModulePrivileges);
-      
+
       return newPrivileges;
     });
   };
@@ -129,6 +122,28 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
     
     const validationErrors = validateRole(formData, cleanedPrivileges, roles).errors;
     setErrors(validationErrors);
+    
+    // === DEBUG CREATE ROLE ===
+    console.log('=== DEBUG CREATE ROLE ===');
+    console.log('1. formData:', formData);
+    console.log('2. privileges (raw state):', privileges);
+    console.log('2.1. privileges (JSON):', JSON.stringify(privileges, null, 2));
+    
+    // Contar privilegios seleccionados
+    let totalSelected = 0;
+    const selectedPrivileges = [];
+    Object.keys(privileges).forEach(modulo => {
+      Object.keys(privileges[modulo] || {}).forEach(accion => {
+        if (privileges[modulo][accion] === true) {
+          totalSelected++;
+          selectedPrivileges.push(`${modulo} → ${accion}`);
+          console.log(`   ✓ ${modulo} → ${accion}`);
+        }
+      });
+    });
+    console.log(`3. Total privilegios seleccionados: ${totalSelected}`);
+    console.log('4. Lista de privilegios seleccionados:', selectedPrivileges);
+    
     if (Object.keys(validationErrors).length === 0 && onCreate) {
       try {
         await onCreate(formData, cleanedPrivileges); // Usar privilegios limpiados
@@ -150,36 +165,68 @@ const CreateRoles = ({ isOpen, onClose, onCreate, loading, roles = [] }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <CreateRolesCard title="Crear nuevo rol" onClose={handleClose}>
-        <form onSubmit={handleSubmit} id="create-role-form" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium mb-1">Nombre</label>
+        <form onSubmit={handleSubmit} id="create-role-form" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Nombre <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 name="nombre"
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-xs bg-white"
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                  (touched.nombre || showErrors) && errors.nombre
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                 value={formData.nombre}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={16}
               />
-              {(touched.nombre || showErrors) && errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>}
+              {(touched.nombre || showErrors) && errors.nombre && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.nombre}
+                </p>
+              )}
             </div>
-            <div>
-              <label className="block text-xs font-medium mb-1">Descripción (opcional)</label>
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Descripción (opcional)
+              </label>
               <input
                 type="text"
                 name="descripcion"
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-xs bg-white"
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                  (touched.descripcion || showErrors) && errors.descripcion
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                 value={formData.descripcion}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                maxLength={100}
               />
+              {(touched.descripcion || showErrors) && errors.descripcion && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.descripcion}
+                </p>
+              )}
             </div>
           </div>
-          <div>
-            <label className="block text-text-main text-xs font-bold mb-2">Privilegios</label>
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-gray-700 mb-2">
+              Privilegios <span className="text-red-500">*</span>
+            </label>
             <PrivilegesTable value={privileges} onChange={handlePrivilegeChange} />
-            {showErrors && errors.privilegios && <p className="text-red-600 text-xs mt-1">{errors.privilegios}</p>}
+            {showErrors && errors.privilegios && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <i className="bi bi-exclamation-triangle"></i>
+                {errors.privilegios}
+              </p>
+            )}
           </div>
         </form>
       </CreateRolesCard>

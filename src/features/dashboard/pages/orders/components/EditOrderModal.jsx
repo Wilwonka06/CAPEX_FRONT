@@ -5,18 +5,36 @@ import { formatNumber } from "../../../../../shared/utils/formatters";
 
 export default function EditOrderModal({ order, customer, isOpen, onClose, estados, onUpdateEstado }) {
   const [estado, setEstado] = useState(order ? order.estado : "");
+  const [errors, setErrors] = useState({});
 
   // Actualizar el estado cuando cambie el pedido
   useEffect(() => {
     if (order) {
       setEstado(order.estado);
+      setErrors({});
     }
   }, [order]);
 
   if (!isOpen || !order || !customer) return null;
 
+  const handleEstadoChange = (e) => {
+    const newEstado = e.target.value;
+    setEstado(newEstado);
+    // Limpiar error si existe
+    if (errors.estado) {
+      setErrors({});
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validar estado
+    if (!estado || estado.trim() === '') {
+      setErrors({ estado: 'El estado es requerido' });
+      return;
+    }
+
     if (estado && estado !== order.estado) {
       onUpdateEstado(order.id, estado);
     } else {
@@ -31,76 +49,118 @@ export default function EditOrderModal({ order, customer, isOpen, onClose, estad
           <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-pencil-square text-lg"></i></div><h2 className="text-xl font-bold m-0">Editar Pedido</h2></div>
           <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <form onSubmit={handleSubmit} id="edit-order-form" className="space-y-4">
-          <div className="text-lg font-bold text-gray-800 text-center mb-2">Editar Pedido</div>
-          <div className="flex flex-col md:flex-row gap-8 mb-8">
-            {/* Información de Cliente */}
-            <div className="flex-1">
-              <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Información de Cliente</span>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm min-h-[80px]">
-                <div className="space-y-2">
-                  <div className="flex items-center"><i className="bi bi-person text-primary mr-2"></i><span className="font-medium">Nombre:</span><span className="ml-2">{customer.firstName} {customer.lastName}</span></div>
-                  <div className="flex items-center"><i className="bi bi-card-text text-primary mr-2"></i><span className="font-medium">Tipo Doc:</span><span className="ml-2">{customer.documentType}</span></div>
-                  <div className="flex items-center"><i className="bi bi-hash text-primary mr-2"></i><span className="font-medium">Documento:</span><span className="ml-2">{customer.documentNumber}</span></div>
-                  <div className="flex items-center"><i className="bi bi-envelope text-primary mr-2"></i><span className="font-medium">Correo:</span><span className="ml-2">{customer.email}</span></div>
-                  <div className="flex items-center"><i className="bi bi-telephone text-primary mr-2"></i><span className="font-medium">Teléfono:</span><span className="ml-2">{customer.phone}</span></div>
-                  <div className="flex items-center"><i className="bi bi-geo-alt text-primary mr-2"></i><span className="font-medium">Dirección:</span><span className="ml-2">{customer.address || '-'}</span></div>
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
+          <form onSubmit={handleSubmit} id="edit-order-form" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Información de Cliente */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase">Información de Cliente</label>
+                <div className="bg-white border-2 border-gray-200 rounded-xl p-4 text-gray-700 text-sm">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <i className="bi bi-person text-primary"></i>
+                      <span className="font-medium">Nombre:</span>
+                      <span className="ml-auto">{customer.firstName} {customer.lastName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <i className="bi bi-card-text text-primary"></i>
+                      <span className="font-medium">Tipo Doc:</span>
+                      <span className="ml-auto">{customer.documentType}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <i className="bi bi-hash text-primary"></i>
+                      <span className="font-medium">Documento:</span>
+                      <span className="ml-auto">{customer.documentNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <i className="bi bi-envelope text-primary"></i>
+                      <span className="font-medium">Correo:</span>
+                      <span className="ml-auto">{customer.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <i className="bi bi-telephone text-primary"></i>
+                      <span className="font-medium">Teléfono:</span>
+                      <span className="ml-auto">{customer.phone}</span>
+                    </div>
+                    {customer.address && (
+                      <div className="flex items-center gap-2">
+                        <i className="bi bi-geo-alt text-primary"></i>
+                        <span className="font-medium">Dirección:</span>
+                        <span className="ml-auto">{customer.address}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            {/* Información de Pedido */}
-            <div className="flex flex-col gap-4 md:w-1/2 w-full">
-              <span className="block text-xs font-semibold text-gray-500 mb-1 uppercase">Información de Pedido</span>
-              <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
-                <div className="flex justify-between px-4 py-2">
-                  <span className="text-xs text-gray-500">N° Orden</span>
-                  <span className="font-semibold text-gray-800 text-sm">{order.numeroOrden}</span>
-                </div>
-                <div className="flex justify-between px-4 py-2">
-                  <span className="text-xs text-gray-500">Fecha</span>
-                  <span className="font-semibold text-gray-800 text-sm">{order.fecha}</span>
-                </div>
-                <div className="flex justify-between px-4 py-2 items-center">
-                  <span className="text-xs text-gray-500">Estado</span>
-                  <span>
-                    <select className="ml-2 px-2 py-1 border rounded" value={estado} onChange={e => setEstado(e.target.value)}>
+              
+              {/* Información de Pedido */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase">Información de Pedido</label>
+                <div className="bg-white border-2 border-gray-200 rounded-xl divide-y divide-gray-100">
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">N° Orden</span>
+                    <span className="font-semibold text-gray-800 text-sm">{order.numeroOrden}</span>
+                  </div>
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">Fecha</span>
+                    <span className="font-semibold text-gray-800 text-sm">{order.fecha}</span>
+                  </div>
+                  <div className="px-4 py-3 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-500">Estado <span className="text-red-500">*</span></span>
+                    </div>
+                    <select
+                      value={estado}
+                      onChange={handleEstadoChange}
+                      className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                        errors.estado
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
+                    >
                       {estados.map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
-                  </span>
-                </div>
-                <div className="flex justify-between px-4 py-2">
-                  <span className="text-xs text-gray-500">Valor Total</span>
-                  <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.valor)}</span>
+                    {errors.estado && (
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        {errors.estado}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center px-4 py-3">
+                    <span className="text-xs font-medium text-gray-500">Valor Total</span>
+                    <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.valor)}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div>
-            <h3 className="font-semibold text-text-main mb-2">Productos</h3>
-            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              <table className="min-w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-3 text-left font-semibold text-gray-700">Producto</th>
-                    <th className="py-2 px-3 text-right font-semibold text-gray-700">Cantidad</th>
-                    <th className="py-2 px-3 text-right font-semibold text-gray-700">Precio</th>
-                    <th className="py-2 px-3 text-right font-semibold text-gray-700">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {order.productos.map((prod, idx) => (
-                    <tr key={idx}>
-                      <td className="py-2 px-3">{prod.nombre}</td>
-                      <td className="py-2 px-3 text-right">{prod.cantidad}</td>
-                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio)}</td>
-                      <td className="py-2 px-3 text-right">${formatNumber(prod.precio * prod.cantidad)}</td>
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-gray-700 mb-2">Productos</h3>
+              <div className="rounded-lg border-2 border-gray-200 overflow-hidden shadow-sm bg-white">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50 hover:bg-gray-100">
+                    <tr>
+                      <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Producto</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Cantidad</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
+                      <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Subtotal</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {order.productos.map((prod, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 transition-colors duration-150">
+                        <td className="py-4 px-4 text-xs font-medium text-gray-900">{prod.nombre}</td>
+                        <td className="py-4 px-4 text-xs text-gray-600 text-right">{prod.cantidad}</td>
+                        <td className="py-4 px-4 text-xs text-gray-600 text-right">${formatNumber(prod.precio)}</td>
+                        <td className="py-4 px-4 text-xs font-medium text-gray-900 text-right">${formatNumber(prod.precio * prod.cantidad)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200"><button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button><button type="submit" form="edit-order-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar Cambios</button></div>
       </div>
     </div>

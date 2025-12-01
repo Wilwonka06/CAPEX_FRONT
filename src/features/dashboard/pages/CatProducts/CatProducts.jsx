@@ -3,11 +3,10 @@ import CategoryTable from "./components/CategoryTable";
 import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import CreateCategory from "./components/CreateCategory";
-import LoadingTable from '../../../../shared/components/LoadingTable';
 import categoriesService from './API/categoriesService';
 import EditCategory from "./components/EditCategory";
 import CategoryDetail from "./components/CategoryDetail";
-import ChangeStatus from "./components/ChangeStatus";
+import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
@@ -47,6 +46,7 @@ const CatProductsPage = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
   const { setTitle } = useOutletContext();
 
 
@@ -182,47 +182,50 @@ const CatProductsPage = () => {
     }
   };
 
-  const handleToggleStatus = async (categoryId) => {
+  // Handler para cambiar estado - muestra modal primero
+  const handleToggleStatus = (categoryId) => {
     const category = categories.find(c => c.id_categoria_producto === categoryId);
+    if (!category) {
+      toast.error("Categoría no encontrada");
+      return;
+    }
+    setPendingStatusChange({ categoryId, category });
+    setShowStatusModal(true);
+  };
+
+  // Handler para confirmar cambio de estado
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    const { categoryId, category } = pendingStatusChange;
     const newStatus = category.estado === 'activo' ? 'inactivo' : 'activo';
     const newStatusText = newStatus === 'activo' ? 'Activo' : 'Inactivo';
 
-    const result = await Swal.fire({
-      title: '¿Confirmar cambio de estado?',
-      text: `¿Estás seguro de que deseas cambiar el estado de "${category?.nombre || category?.name}" a ${newStatusText}?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, cambiar',
-      cancelButtonText: 'Cancelar'
+    const categoryPromise = (async () => {
+      const response = await categoriesService.changeStatus(categoryId, newStatus);
+      if (response.success) {
+        await loadCategories(); // Recargar lista
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Error al cambiar el estado');
+      }
+    })();
+
+    toast.promise(categoryPromise, {
+      loading: 'Cambiando estado...',
+      success: `Estado cambiado a ${newStatusText}`,
+      error: (err) => {
+        console.error('Error changing category status:', err);
+        return err.response?.data?.message || err.message || 'Error al cambiar el estado';
+      },
     });
 
-    if (result.isConfirmed) {
-      const categoryPromise = (async () => {
-        const response = await categoriesService.changeStatus(categoryId, newStatus);
-        if (response.success) {
-          await loadCategories(); // Recargar lista
-          return response.data;
-        } else {
-          throw new Error(response.message || 'Error al cambiar el estado');
-        }
-      })();
-
-      toast.promise(categoryPromise, {
-        loading: 'Cambiando estado...',
-        success: `Estado cambiado a ${newStatusText}`,
-        error: (err) => {
-          console.error('Error changing category status:', err);
-          return err.response?.data?.message || err.message || 'Error al cambiar el estado';
-        },
-      });
-
-      try {
-        await categoryPromise;
-      } catch (error) {
-        // Error ya manejado por toast.promise
-      }
+    try {
+      await categoryPromise;
+      setShowStatusModal(false);
+      setPendingStatusChange(null);
+    } catch (error) {
+      // Error ya manejado por toast.promise
     }
   };
 
@@ -307,12 +310,18 @@ const CatProductsPage = () => {
           onClose={closeModals}
         />
       )}
-      {showStatusModal && selectedCategory && (
-        <ChangeStatus
-          category={selectedCategory}
+      {/* Modal de confirmación de cambio de estado */}
+      {showStatusModal && pendingStatusChange && (
+        <ConfirmStatusChangeModal
           isOpen={showStatusModal}
-          onClose={closeModals}
-          onStatusChange={handleToggleStatus}
+          onClose={() => {
+            setShowStatusModal(false);
+            setPendingStatusChange(null);
+          }}
+          onConfirm={handleConfirmStatusChange}
+          isActivating={pendingStatusChange.category.estado === 'inactivo'}
+          itemName={pendingStatusChange.category.nombre || pendingStatusChange.category.name}
+          loading={false}
         />
       )}
     </div>

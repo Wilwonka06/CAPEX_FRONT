@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import { formatNumber } from "../../../../../shared/utils/formatters";
 import TableSkeleton from "../../../../../shared/components/TableSkeleton";
+import Paginator from "../../../../../shared/Paginator";
 
 export default function PurchasesTable({ purchases, onView, onAnnul, currentPage, totalPages, onPageChange, loading = false }) {
   if (loading) {
@@ -28,13 +29,13 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
     <>
       <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <table className="min-w-full text-xs">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Fecha Compra</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Proveedor</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Total</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
-            <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
+        <thead>
+          <tr className="bg-gray-50 hover:bg-gray-100">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Fecha Compra</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Proveedor</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Total</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -51,8 +52,8 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
                   {p.estado === 'Completada' ? "Completada" : p.estado === 'Cancelada' ? "Cancelada" : p.estado || 'N/A'}
                 </span>
               </td>
-              <td className="py-4 px-4 text-xs font-medium text-center">
-                <div className="flex justify-center space-x-2">
+              <td className="py-4 px-4 text-xs font-medium text-right">
+                <div className="flex justify-end space-x-2">
                   <button className="h-8 w-8 p-0 hover:bg-gray-50 hover:border-blue-300 rounded-md flex items-center justify-center transition-colors" title="Ver detalles" onClick={() => onView(p)}>
                     <i className="bi bi-eye text-primary text-[18px]"></i>
                   </button>
@@ -70,11 +71,11 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
       </div>
       {/* Paginador */}
       {totalPages > 1 && purchases.length > 0 && (
-        <div className="flex justify-center mt-4">
-          <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1 border rounded-l disabled:opacity-50">Anterior</button>
-          <span className="px-4 py-1 border-t border-b">Página {currentPage} de {totalPages}</span>
-          <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-1 border rounded-r disabled:opacity-50">Siguiente</button>
-        </div>
+        <Paginator
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
       )}
     </>
   );

@@ -15,9 +15,8 @@ const RequireAdminAccess = ({ children }) => {
     return <LoadingSpinner />;
   }
 
-  // Si no hay usuario, redirigir a login (esto no debería pasar si está dentro de RequireAuth)
+  // Si no hay usuario, redirigir a login
   if (!currentUser) {
-    console.log('❌ RequireAdminAccess: Usuario no autenticado, redirigiendo a login');
     return <Navigate to="/iniciar-sesion" state={{ from: location }} replace />;
   }
 
@@ -25,19 +24,25 @@ const RequireAdminAccess = ({ children }) => {
   const roleName = typeof currentUser.rol === 'string'
     ? currentUser.rol
     : currentUser.rol?.nombre || '';
-  
+
   const normalizedRole = roleName.toLowerCase();
 
   // ⚠️ REGLA PRINCIPAL: Clientes y usuarios NUNCA deben acceder al dashboard
-  // Incluso si tienen algunos privilegios, deben ser redirigidos
   if (normalizedRole === 'cliente' || normalizedRole === 'usuario') {
-    console.log('❌ RequireAdminAccess: Cliente/Usuario intentando acceder al dashboard, redirigiendo a /landing');
     return <Navigate to="/landing" replace />;
+  }
+
+  // ✅ OPTIMIZACIÓN: Early return para administradores y empleados
+  const isAdmin = normalizedRole === 'administrador' || normalizedRole === 'admin';
+  const isEmployee = normalizedRole === 'empleado';
+
+  if (isAdmin || isEmployee) {
+    return children;
   }
 
   // Verificar si tiene permisos administrativos (solo para otros roles)
   let hasAdministrativeAccess = false;
-  
+
   if (currentUser.privileges) {
     const administrativeModules = [
       'Dashboard',
@@ -58,29 +63,23 @@ const RequireAdminAccess = ({ children }) => {
       'Citas',
       'Clientes'
     ];
-    
+
     hasAdministrativeAccess = administrativeModules.some(module => {
       const modulePrivileges = currentUser.privileges[module];
       return modulePrivileges && (
-        modulePrivileges.Visualizar === true || 
+        modulePrivileges.Visualizar === true ||
         modulePrivileges['Visualizar'] === true ||
         modulePrivileges.Read === true
       );
     });
   }
 
-  // Si es administrador o empleado, permitir acceso
-  const isAdmin = normalizedRole === 'administrador' || normalizedRole === 'admin';
-  const isEmployee = normalizedRole === 'empleado';
-
   // Si no tiene permisos administrativos y no es admin/empleado, denegar acceso
-  if (!hasAdministrativeAccess && !isAdmin && !isEmployee) {
-    console.log('❌ RequireAdminAccess: Usuario sin permisos administrativos, redirigiendo');
+  if (!hasAdministrativeAccess) {
     const redirectPath = getRoleRedirect(currentUser.rol, currentUser);
     return <Navigate to={redirectPath} replace />;
   }
 
-  console.log('✅ RequireAdminAccess: Usuario tiene acceso administrativo');
   return children;
 };
 

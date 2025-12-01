@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import Swal from 'sweetalert2';
 import { apiRequest } from '../config/apiConfig';
 
@@ -6,8 +6,8 @@ import { apiRequest } from '../config/apiConfig';
 const defaultContextValue = {
   currentUser: null,
   loading: true,
-  login: async () => {},
-  logout: async () => {},
+  login: async () => { },
+  logout: async () => { },
   hasPrivilege: () => false,
   getRoleRedirect: () => '/landing',
   checkAuth: async () => null,
@@ -39,17 +39,11 @@ export const AuthProvider = ({ children }) => {
     }
   });
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const initialCheckDone = useRef(false);
 
-  // Función para obtener el usuario del localStorage
-  const getUserFromStorage = () => {
-    try {
-      const user = localStorage.getItem('currentUser');
-      return user ? JSON.parse(user) : null;
-    } catch (error) {
-      console.error('Error al obtener usuario del localStorage:', error);
-      return null;
-    }
-  };
+  // Rutas públicas donde NO se debe verificar autenticación
+  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
 
   /**
    * ✅ CORREGIDO: Verificar privilegios con nombres correctos
@@ -70,7 +64,6 @@ export const AuthProvider = ({ children }) => {
     const isAdmin = roleName.toLowerCase() === 'administrador' || roleName.toLowerCase() === 'admin';
 
     if (isAdmin) {
-      console.log(`✅ Usuario es Administrador (${roleName}), tiene todos los privilegios para ${module} -> ${action}`);
       return true;
     }
 
@@ -79,9 +72,6 @@ export const AuthProvider = ({ children }) => {
       console.warn('⚠️ Usuario no tiene privilegios definidos:', currentUser);
       return false;
     }
-
-    console.log('🔍 Verificando privilegio:', { module, action });
-    console.log('📋 Privilegios del usuario:', currentUser.privileges);
 
     // ✅ MAPEO DE COMPATIBILIDAD para acciones
     const actionMap = {
@@ -102,45 +92,37 @@ export const AuthProvider = ({ children }) => {
 
     // ✅ USAR EL NOMBRE DEL MÓDULO DIRECTAMENTE
     const modulePrivileges = currentUser.privileges?.[module];
-    
+
     if (!modulePrivileges) {
       console.warn(`⚠️ Módulo "${module}" no encontrado en privilegios del usuario`);
-      console.log('📋 Módulos disponibles:', Object.keys(currentUser.privileges || {}));
       return false;
     }
 
     // Verificar si tiene la acción específica (probar con ambos nombres)
-    const hasPrivilege = modulePrivileges[spanishAction] === true || 
-                        modulePrivileges[action] === true;
-    
-    console.log(`🔍 Resultado: ${module} -> ${spanishAction} = ${hasPrivilege}`);
+    const hasPrivilege = modulePrivileges[spanishAction] === true ||
+      modulePrivileges[action] === true;
+
     return hasPrivilege;
   };
 
   // Función para obtener la ruta de redirección basada en el rol y permisos
   const getRoleRedirect = (role, userData = null) => {
-    const roleName = typeof role === 'string' 
-      ? role 
+    const roleName = typeof role === 'string'
+      ? role
       : (role?.nombre || '');
-    
-    const normalizedRole = roleName.toLowerCase();
 
-    console.log('🔄 Determinando redirección para rol:', { 
-      original: role, 
-      roleName, 
-      normalizedRole 
-    });
+    const normalizedRole = roleName.toLowerCase();
 
     // Obtener datos del usuario si están disponibles
     const user = userData || currentUser;
-    
+
     // ⚠️ IMPORTANTE: Clientes y usuarios NUNCA deben acceder al dashboard
     // Incluso si tienen algunos privilegios, deben ir al landing
     if (normalizedRole === 'cliente' || normalizedRole === 'usuario') {
       console.log('🚫 Cliente/Usuario detectado, redirigiendo a /landing (sin acceso administrativo)');
       return '/landing';
     }
-    
+
     // Para otros roles, verificar si tienen permisos administrativos
     if (user && user.privileges) {
       const administrativeModules = [
@@ -162,19 +144,18 @@ export const AuthProvider = ({ children }) => {
         'Citas',
         'Clientes'
       ];
-      
+
       // Verificar si tiene acceso a algún módulo administrativo
       const hasAdministrativeAccess = administrativeModules.some(module => {
         const modulePrivileges = user.privileges[module];
         return modulePrivileges && (
-          modulePrivileges.Visualizar === true || 
+          modulePrivileges.Visualizar === true ||
           modulePrivileges['Visualizar'] === true ||
           modulePrivileges.Read === true
         );
       });
-      
+
       if (hasAdministrativeAccess) {
-        console.log('✅ Usuario tiene permisos administrativos, redirigiendo a /dashboard');
         return '/dashboard';
       }
     }
@@ -187,24 +168,24 @@ export const AuthProvider = ({ children }) => {
       'usuario': '/landing'
     };
 
-    const redirect = roleRedirects[normalizedRole] || '/landing';
-    console.log(`✅ Redirigiendo rol "${normalizedRole}" a: ${redirect}`);
-    return redirect;
+    return roleRedirects[normalizedRole] || '/landing';
   };
 
   // Función para verificar si el token es válido
   const verifyAuth = async () => {
     try {
-      console.log('🔍 Verificando autenticación con el backend...');
-      
       const response = await apiRequest.get('/auth/me');
-      
+
       if (response.success && response.data) {
-        console.log('✅ Token válido, usuario autenticado:', response.data);
-        
-        // Actualizar usuario en localStorage y estado
-        localStorage.setItem('currentUser', JSON.stringify(response.data));
         setCurrentUser(response.data);
+
+        // Actualizar localStorage con datos frescos del usuario
+        try {
+          localStorage.setItem('currentUser', JSON.stringify(response.data));
+        } catch (error) {
+          console.error('⚠️ Error al actualizar usuario en localStorage:', error);
+        }
+
         return true;
       } else {
         console.warn('⚠️ Respuesta inesperada del servidor:', response);
@@ -212,9 +193,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('❌ Error al verificar autenticación:', error);
-      
-      // Limpiar datos de usuario
-      localStorage.removeItem('currentUser');
+
       setCurrentUser(null);
       return false;
     }
@@ -228,9 +207,15 @@ export const AuthProvider = ({ children }) => {
       console.log('🔑 Privilegios del usuario:', userData.privileges);
       console.log('📍 Página anterior:', previousPath);
 
-      // Guardar usuario en localStorage
-      localStorage.setItem('currentUser', JSON.stringify(userData));
       setCurrentUser(userData);
+
+      // Guardar usuario en localStorage para persistencia
+      try {
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        console.log('✅ Usuario guardado en localStorage');
+      } catch (error) {
+        console.error('⚠️ Error al guardar usuario en localStorage:', error);
+      }
 
       // Emitir evento de cambio
       window.dispatchEvent(new Event('user-auth-changed'));
@@ -247,11 +232,11 @@ export const AuthProvider = ({ children }) => {
       // Si es cliente/usuario y hay una página anterior válida, redirigir ahí
       if ((normalizedRole === 'cliente' || normalizedRole === 'usuario') && previousPath) {
         // Verificar que la página anterior no sea el dashboard ni rutas administrativas
-        const isAdminRoute = previousPath.startsWith('/dashboard') || 
-                           previousPath.startsWith('/admin') ||
-                           previousPath === '/iniciar-sesion' ||
-                           previousPath === '/registrarse';
-        
+        const isAdminRoute = previousPath.startsWith('/dashboard') ||
+          previousPath.startsWith('/admin') ||
+          previousPath === '/iniciar-sesion' ||
+          previousPath === '/registrarse';
+
         if (!isAdminRoute) {
           console.log('🔄 Cliente: Redirigiendo a página anterior:', previousPath);
           redirectPath = previousPath;
@@ -296,12 +281,12 @@ export const AuthProvider = ({ children }) => {
 
       // Limpiar datos locales
       localStorage.removeItem('currentUser');
-      try { localStorage.removeItem('authToken'); } catch {}
+      try { localStorage.removeItem('authToken'); } catch { }
       setCurrentUser(null);
-      
+
       // Emitir evento de cambio
       window.dispatchEvent(new Event('user-auth-changed'));
-      
+
       // Redirigir al login
       window.location.href = '/iniciar-sesion';
     }
@@ -310,33 +295,14 @@ export const AuthProvider = ({ children }) => {
   // Función para verificar autenticación
   const checkAuth = async () => {
     try {
-      console.log('🔍 Verificando autenticación...');
-      
-      const storedUser = getUserFromStorage();
-      
-      if (!storedUser) {
-        console.log('❌ No hay usuario en localStorage');
-        setLoading(false);
-        return null;
-      }
-
-      console.log('📝 Usuario en localStorage:', storedUser);
-      console.log('🔑 Privilegios almacenados:', storedUser.privileges);
-      
       const isValid = await verifyAuth();
-      
-      if (!isValid) {
-        console.log('❌ Token inválido o expirado');
-        setLoading(false);
-        return null;
-      }
-
-      console.log('✅ Autenticación verificada exitosamente');
       setLoading(false);
-      return currentUser;
+      setAuthChecked(true);
+      return isValid ? currentUser : null;
     } catch (error) {
       console.error('❌ Error al verificar autenticación:', error);
       setLoading(false);
+      setAuthChecked(true);
       return null;
     }
   };
@@ -358,37 +324,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Verificar autenticación al cargar
+  // Verificar autenticación al cargar (solo una vez y no en rutas públicas)
   useEffect(() => {
-    console.log('🚀 AuthProvider montado, iniciando verificación...');
-    // Si ya hay un usuario en el estado inicial, verificar su validez
-    if (currentUser) {
-      checkAuth();
-    } else {
-      // Si no hay usuario, marcar como no cargando
-      setLoading(false);
-    }
-  }, []);
+    if (initialCheckDone.current) return;
+    initialCheckDone.current = true;
 
-  // Escuchar cambios en localStorage
-  useEffect(() => {
-    const handleStorageChange = () => {
-      console.log('🔄 Cambio detectado en localStorage');
-      checkAuth();
+    const initAuth = async () => {
+      // Si ya hay un usuario en el estado inicial (localStorage)
+      if (currentUser) {
+        // ✅ OPTIMIZACIÓN: Permitir renderizado inmediato con datos cacheados
+        setLoading(false);
+        setAuthChecked(true);
+
+        // Verificar token en segundo plano (non-blocking)
+        verifyAuth().catch(() => {
+          // Si la verificación falla, limpiar usuario
+          localStorage.removeItem('currentUser');
+          setCurrentUser(null);
+        });
+      } else {
+        // Si no hay usuario, marcar como no cargando y verificado
+        setLoading(false);
+        setAuthChecked(true);
+      }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('user-auth-changed', handleStorageChange);
+    initAuth();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('user-auth-changed', handleStorageChange);
-    };
-  }, []);
 
   const value = {
     currentUser,
     loading,
+    authChecked,
     login,
     logout,
     hasPrivilege,

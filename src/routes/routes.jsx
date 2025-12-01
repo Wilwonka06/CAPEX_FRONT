@@ -1,4 +1,3 @@
-// routes/Routes.jsx
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import RequireAuth from "../features/auth/components/RequireAuth";
 import RequirePrivilege from "../features/auth/components/RequirePrivilege";
@@ -15,7 +14,7 @@ import CategoriasServicios from "../features/dashboard/pages/CatServices/CatServ
 import Appointments from "../features/dashboard/pages/appointments/Appointments";
 import Clientes from "../features/dashboard/pages/customers/customers";
 import Compras from "../features/dashboard/pages/purchases/Purchases";
-import Dashboard from "../features/dashboard/components/Dashboard";
+import Dashboard from "../features/dashboard/components/dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
 import EmployeeDetailPage from "../features/dashboard/pages/employees/components/EmployeeDetailPage";
 import Pedidos from "../features/dashboard/pages/orders/Orders";
