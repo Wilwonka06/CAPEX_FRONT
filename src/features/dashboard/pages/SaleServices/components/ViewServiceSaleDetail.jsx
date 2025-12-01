@@ -1,22 +1,44 @@
-import React from "react";
+import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import { formatNumber } from "../../../../../shared/utils/formatters";
 
 const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
   if (!isOpen || !order) return null;
 
+  // Función para convertir hora del backend (HH:MM:SS) a formato corto (HH:MM)
+  const formatTimeFromBackend = (timeStr) => {
+    if (!timeStr) return null;
+    const parts = timeStr.split(':');
+    return `${parts[0]}:${parts[1]}`;
+  };
+
+  // Normalizar servicios para mostrar correctamente
+  const serviciosNormalizados = useMemo(() => {
+    return (order.servicios || []).map(servicio => ({
+      ...servicio,
+      startTime: servicio.startTime || formatTimeFromBackend(servicio.hora_inicio),
+      endTime: servicio.endTime || formatTimeFromBackend(servicio.hora_finalizacion),
+      duration: servicio.duration || servicio.duracion
+    }));
+  }, [order.servicios]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
-          <h2 className="text-xl font-bold text-primary m-0">Detalle de la Cita en Ejecución</h2>
-          <button className="text-gray-400 hover:text-primary text-xl font-bold" onClick={onClose}>×</button>
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-eye text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Detalle de Venta de Servicio</h2>
+          </div>
+          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
         
         {/* Contenido */}
-        <div className="overflow-y-auto p-8 flex-1">
-          <div className="text-lg font-bold text-gray-800 text-center mb-2">Detalle de Cita #{order.id}</div>
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
+          <div className="text-lg font-bold text-gray-800 text-center mb-4">Detalle de Orden #{order.id}</div>
           
           <div className="flex flex-col md:flex-row gap-8 mb-8">
             {/* Información de Cliente */}
@@ -85,6 +107,8 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="py-2 px-3 text-left font-semibold text-gray-700">Servicio</th>
+                      <th className="py-2 px-3 text-center font-semibold text-gray-700">Duración</th>
+                      <th className="py-2 px-3 text-center font-semibold text-gray-700">Horario</th>
                       <th className="py-2 px-3 text-center font-semibold text-gray-700">Cantidad</th>
                       <th className="py-2 px-3 text-right font-semibold text-gray-700">Precio</th>
                       <th className="py-2 px-3 text-right font-semibold text-gray-700">Subtotal</th>
@@ -92,16 +116,33 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {order.servicios.map((servicio, index) => (
+                    {serviciosNormalizados.map((servicio, index) => (
                       <tr key={index} className="bg-white hover:bg-gray-50">
                         <td className="py-2 px-3 font-medium">{servicio.name}</td>
+                        <td className="py-2 px-3 text-center">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                            <i className="bi bi-clock mr-1"></i>
+                            {servicio.duration || servicio.duracion || 'N/A'} min
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          {servicio.startTime && servicio.endTime ? (
+                            <div className="text-xs">
+                              <div className="font-medium text-green-700">{servicio.startTime}</div>
+                              <div className="text-gray-500">a</div>
+                              <div className="font-medium text-red-700">{servicio.endTime}</div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">N/A</span>
+                          )}
+                        </td>
                         <td className="py-2 px-3 text-center">{servicio.quantity}</td>
                         <td className="py-2 px-3 text-right">${formatNumber(servicio.price || 0)}</td>
                         <td className="py-2 px-3 text-right font-semibold">${formatNumber(servicio.subtotal || 0)}</td>
                         <td className="py-2 px-3">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                             <i className="bi bi-person-badge mr-1"></i>
-                            {servicio.employee?.name || 'N/A'}
+                            {servicio.employee?.name || servicio.employee?.nombre || 'N/A'}
                           </span>
                         </td>
                       </tr>
@@ -164,12 +205,12 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
         </div>
         
         {/* Footer */}
-        <div className="sticky bottom-0 z-10 bg-white rounded-b-lg flex justify-end px-8 py-4">
+        <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-2xl flex justify-end px-6 py-3 shadow-lg">
           <button 
-            className="px-4 py-2 rounded-md bg-text-main text-white text-sm font-semibold hover:bg-primary-dark transition flex items-center" 
+            className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-gray-600 to-gray-700 text-white text-sm font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex items-center gap-2 shadow-md" 
             onClick={onClose}
           >
-            <i className="bi bi-x-circle mr-2"></i>
+            <i className="bi bi-x-circle"></i>
             Cerrar
           </button>
         </div>
