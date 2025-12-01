@@ -4,6 +4,7 @@ import RoleDetail from "./RoleDetail";
 import EditRole from "./EditRole";
 import TruncatedText from "../../../../../shared/components/TruncatedText";
 import TableSkeleton from "../../../../../shared/components/TableSkeleton";
+import ConfirmStatusChangeModal from "../../../../../shared/components/ConfirmStatusChangeModal";
 import toast from 'react-hot-toast';
 
 /**
@@ -14,6 +15,8 @@ const RolesTable = ({ roles, onEdit, onDelete, onStatusChange, loading = false }
   const [selectedRole, setSelectedRole] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
 
   // Roles del sistema que no se pueden eliminar
   const systemRoles = ['Administrador', 'Empleado', 'Cliente'];
@@ -46,11 +49,24 @@ const RolesTable = ({ roles, onEdit, onDelete, onStatusChange, loading = false }
     }
   };
 
-  const handleStatusChange = async (roleId, currentStatus) => {
+  // Handler para mostrar modal de confirmación
+  const handleStatusChange = (roleId, currentStatus) => {
+    const role = roles.find(r => r.id === roleId);
+    if (!role) return;
+    setPendingStatusChange({ roleId, currentStatus, role });
+    setShowStatusModal(true);
+  };
+
+  // Handler para confirmar cambio de estado
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+    const { roleId, currentStatus } = pendingStatusChange;
     const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
     if (onStatusChange) {
       await onStatusChange(roleId, newStatus);
     }
+    setShowStatusModal(false);
+    setPendingStatusChange(null);
   };
 
   const handleDelete = (roleId, roleName) => {
@@ -68,7 +84,7 @@ const RolesTable = ({ roles, onEdit, onDelete, onStatusChange, loading = false }
   // Loading state
   if (loading) {
     return (
-      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <TableSkeleton columns={4} rows={5} hasActions={true} hasAvatar={false} />
       </div>
     );
@@ -77,7 +93,7 @@ const RolesTable = ({ roles, onEdit, onDelete, onStatusChange, loading = false }
   // Empty state
   if (!roles || roles.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <div className="py-12 text-center">
           <i className="bi bi-shield-lock text-6xl text-gray-300"></i>
           <p className="mt-4 text-gray-500 text-sm">No hay roles registrados.</p>
@@ -89,7 +105,7 @@ const RolesTable = ({ roles, onEdit, onDelete, onStatusChange, loading = false }
 
   return (
     <>
-      <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <table className="min-w-full text-xs">
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100">
@@ -222,6 +238,21 @@ const RolesTable = ({ roles, onEdit, onDelete, onStatusChange, loading = false }
         onEdit={handleSaveEdit}
         roles={roles}
       />
+
+      {/* Modal de confirmación de cambio de estado */}
+      {showStatusModal && pendingStatusChange && (
+        <ConfirmStatusChangeModal
+          isOpen={showStatusModal}
+          onClose={() => {
+            setShowStatusModal(false);
+            setPendingStatusChange(null);
+          }}
+          onConfirm={handleConfirmStatusChange}
+          isActivating={pendingStatusChange.currentStatus === 'Inactivo'}
+          itemName={pendingStatusChange.role.name || pendingStatusChange.role.nombre || ''}
+          loading={false}
+        />
+      )}
     </>
   );
 };

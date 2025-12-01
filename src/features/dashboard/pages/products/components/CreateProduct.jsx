@@ -435,7 +435,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Fotos del producto */}
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <label className="block text-xs font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <label className="block text-xs font-semibold text-gray-800 mb-3 items-center gap-2">
                     <i className="bi bi-images text-[#FACC15]"></i>
                     Fotos del Producto <span className="text-gray-500 text-xs font-normal">(Máximo {MAX_IMAGES})</span>
                   </label>
@@ -452,7 +452,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                             <i className="bi bi-cloud-upload text-2xl text-gray-500 group-hover:text-[#FACC15] transition-colors"></i>
                           </div>
                           <p className="text-xs font-medium text-gray-600 mb-1">
-                            Arrastra y suelta imágenes aquí
+                            Arrastra y suelta imagenes aquí
                           </p>
                           <p className="text-xs text-gray-500">
                             o haz clic para seleccionar ({formData.fotos.length}/{MAX_IMAGES})
@@ -641,7 +641,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                     </h3>
                     <button
                       type="button"
-                      className="px-3 py-1.5 bg-[#FACC15] text-gray-800 rounded-lg hover:bg-yellow-400 transition-all duration-200 flex items-center gap-2 text-xs font-medium"
+                      className="px-3 py-2 bg-[#FACC15] text-gray-800 rounded-lg hover:bg-yellow-400 transition-all duration-200 flex items-center gap-2 text-xs font-medium"
                       onClick={handleAddEspecificacion}
                     >
                       <i className="bi bi-plus"></i> Agregar
@@ -651,7 +651,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                     {especificaciones.map((esp, idx) => (
                       <div key={idx} className="flex flex-wrap gap-3 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <select
-                          className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs min-w-[160px] max-w-[200px] focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
+                          className="px-2.5 py-2 border border-gray-300 rounded-lg text-xs min-w-[160px] max-w-[200px] focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
                           value={esp.concepto}
                           onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
                         >
@@ -666,7 +666,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                         {esp.concepto === "otro" && (
                           <input
                             type="text"
-                            className="flex-1 min-w-[140px] max-w-[200px] px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
+                            className="flex-1 min-w-[140px] max-w-[200px] px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
                             placeholder="Nuevo concepto"
                             value={esp.otroConcepto}
                             onChange={e => handleChangeEspecificacion(idx, "otroConcepto", e.target.value)}
@@ -674,7 +674,7 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                         )}
                         <input
                           type="text"
-                          className="flex-1 min-w-[140px] max-w-[240px] px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
+                          className="flex-1 min-w-[140px] max-w-[240px] px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
                           placeholder="Valor"
                           value={esp.valor}
                           onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}

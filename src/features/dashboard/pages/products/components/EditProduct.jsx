@@ -190,19 +190,19 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
 
     const remainingSlots = MAX_IMAGES - formData.fotos.length;
     if (files.length > remainingSlots) {
-      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) mÃ¡s`);
+      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) más`);
       return;
     }
 
     try {
       for (const file of files) {
         if (!validateFileType(file)) {
-          toast.error(`${file.name}: Tipo de archivo no vÃ¡lido`);
+          toast.error(`${file.name}: Tipo de archivo no válido`);
           continue;
         }
 
         if (!validateFileSize(file, 5)) {
-          toast.error(`${file.name}: MÃ¡ximo 5MB`);
+          toast.error(`${file.name}: Máximo 5MB`);
           continue;
         }
 
@@ -217,8 +217,8 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
         setPreviews((prev) => [...prev, preview]);
       }
     } catch (error) {
-      console.error('Error procesando imÃ¡genes:', error);
-      toast.error('Error al procesar las imÃ¡genes');
+      console.error('Error procesando imágenes:', error);
+      toast.error('Error al procesar las imágenes');
     }
   };
 
@@ -234,19 +234,19 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
 
     const remainingSlots = MAX_IMAGES - formData.fotos.length;
     if (files.length > remainingSlots) {
-      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) mÃ¡s`);
+      toast.warning(`Solo puedes agregar ${remainingSlots} imagen(es) más`);
       return;
     }
 
     try {
       for (const file of files) {
         if (!validateFileType(file)) {
-          toast.error(`${file.name}: Tipo no vÃ¡lido`);
+          toast.error(`${file.name}: Tipo no válido`);
           continue;
         }
 
         if (!validateFileSize(file, 5)) {
-          toast.error(`${file.name}: MÃ¡ximo 5MB`);
+          toast.error(`${file.name}: Máximo 5MB`);
           continue;
         }
 
@@ -262,7 +262,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Error al procesar las imÃ¡genes');
+      toast.error('Error al procesar las imágenes');
     }
   };
 
@@ -485,12 +485,12 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                 {/* Fotos del producto */}
                 <div>
                   <label className="block text-xs font-medium text-text-main mb-1">
-                    Fotos del Producto <span className="text-gray-500 text-xs">(MÃ¡ximo {MAX_IMAGES})</span>
+                    Fotos del Producto <span className="text-gray-500 text-xs">(Máximo {MAX_IMAGES})</span>
                   </label>
                   <div className="space-y-3">
                     {formData.fotos.length < MAX_IMAGES && (
                       <div
-                        className="relative w-full h-28 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors"
+                        className="relative w-full h-28 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer group-hover:text-[#FACC15] transition-colors"
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
                         onClick={() => document.getElementById("file-input").click()}
@@ -498,7 +498,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                         <div className="text-center">
                           <i className="bi bi-cloud-upload text-2xl text-gray-400 mb-2"></i>
                           <p className="text-xs text-gray-500 mb-1">
-                            Arrastra y suelta imÃ¡genes aquÃ­
+                            Arrastra y suelta imágenes aquí
                           </p>
                           <p className="text-xs text-gray-400">
                             o haz clic para seleccionar ({formData.fotos.length}/{MAX_IMAGES})
@@ -530,7 +530,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                               onClick={() => removeImage(index)}
                               className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 transition-colors text-xs"
                             >
-                              Ã—
+                              x
                             </button>
                           </div>
                         ))}
@@ -687,7 +687,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                     </h3>
                     <button
                       type="button"
-                      className="px-3 py-1.5 bg-[#FACC15] text-gray-800 rounded-lg hover:bg-yellow-400 transition-all duration-200 flex items-center gap-2 text-xs font-medium"
+                      className="px-3 py-2 bg-[#FACC15] text-gray-800 rounded-lg hover:bg-yellow-400 transition-all duration-200 flex items-center gap-2 text-xs font-medium"
                       onClick={handleAddEspecificacion}
                     >
                       <i className="bi bi-plus"></i> Agregar
@@ -697,7 +697,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                     {especificaciones.map((esp, idx) => (
                       <div key={idx} className="flex flex-wrap gap-3 items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <select
-                          className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs min-w-[160px] max-w-[200px] focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
+                          className="px-2.5 py-2 border border-gray-300 rounded-lg text-xs min-w-[160px] max-w-[200px] focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
                           value={esp.concepto}
                           onChange={e => handleChangeEspecificacion(idx, "concepto", e.target.value)}
                         >
@@ -712,7 +712,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                         {esp.concepto === "otro" && (
                           <input
                             type="text"
-                            className="flex-1 min-w-[140px] max-w-[200px] px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
+                            className="flex-1 min-w-[140px] max-w-[200px] px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
                             placeholder="Nuevo concepto"
                             value={esp.otroConcepto}
                             onChange={e => handleChangeEspecificacion(idx, "otroConcepto", e.target.value)}
@@ -720,7 +720,7 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
                         )}
                         <input
                           type="text"
-                          className="flex-1 min-w-[140px] max-w-[240px] px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
+                          className="flex-1 min-w-[140px] max-w-[240px] px-2.5 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent transition-all duration-200"
                           placeholder="Valor"
                           value={esp.valor}
                           onChange={e => handleChangeEspecificacion(idx, "valor", e.target.value)}

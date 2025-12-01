@@ -454,7 +454,6 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 <p className="text-red-600 text-xs mt-1">{errors.documento}</p>
               )}
             </div>
-
             {/* Nombre */}
             <div>
               <label className="block text-xs font-medium text-black mb-1">
@@ -516,15 +515,15 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
         </div>
 
         {/* Estado */}
-        <div>
-          <label className="block text-xs font-medium text-black mb-1">
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-700 mb-1">
             Estado
           </label>
           <select
             name="status"
             value={formData.status}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+            className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
           >
             <option value="En ejecucion">En ejecución</option>
             <option value="Pagado">Pagado</option>
@@ -600,11 +599,18 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                   value={formData.dineroProporcionado}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    (touched.dineroProporcionado || showErrors) && errors.dineroProporcionado
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                   placeholder="0"
                 />
                 {(touched.dineroProporcionado || showErrors) && errors.dineroProporcionado && (
-                  <p className="text-red-600 text-xs mt-1">{errors.dineroProporcionado}</p>
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {errors.dineroProporcionado}
+                  </p>
                 )}
               </div>
 
@@ -614,6 +620,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
                   {devolucion}
+
                 </div>
               </div>
             </div>

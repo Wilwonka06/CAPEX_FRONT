@@ -214,42 +214,29 @@ const Users = () => {
   const handleStatusChange = async (userId, newStatus, conceptoEstado = null) => {
     const user = users.find(u => (u.id_usuario || u.id) === userId);
     if (user) {
-      const result = await Swal.fire({
-        title: '¿Confirmar cambio de estado?',
-        text: `¿Estás seguro de que deseas cambiar el estado de "${user.nombre}" a ${newStatus}?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Sí, cambiar',
-        cancelButtonText: 'Cancelar'
+      const userPromise = (async () => {
+        const response = await usersService.changeStatus(userId, newStatus, conceptoEstado);
+        if (response.success) {
+          await loadUsers(); // Recargar lista
+          return response.data;
+        } else {
+          throw new Error(response.message || 'Error al cambiar el estado');
+        }
+      })();
+
+      toast.promise(userPromise, {
+        loading: 'Cambiando estado...',
+        success: `Estado cambiado a ${newStatus}`,
+        error: (err) => {
+          console.error('Error changing user status:', err);
+          return err.response?.data?.message || err.message || 'Error al cambiar el estado';
+        },
       });
 
-      if (result.isConfirmed) {
-        const userPromise = (async () => {
-          const response = await usersService.changeStatus(userId, newStatus, conceptoEstado);
-          if (response.success) {
-            await loadUsers(); // Recargar lista
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al cambiar el estado');
-          }
-        })();
-
-        toast.promise(userPromise, {
-          loading: 'Cambiando estado...',
-          success: `Estado cambiado a ${newStatus}`,
-          error: (err) => {
-            console.error('Error changing user status:', err);
-            return err.response?.data?.message || err.message || 'Error al cambiar el estado';
-          },
-        });
-
-        try {
-          await userPromise;
-        } catch (error) {
-          // Error ya manejado por toast.promise
-        }
+      try {
+        await userPromise;
+      } catch (error) {
+        // Error ya manejado por toast.promise
       }
     }
   };

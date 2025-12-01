@@ -1,7 +1,7 @@
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import router from './routes/Routes';
+import router from './routes/routes';
 import { AuthProvider } from './shared/contexts/AuthContext';
 
 function App() {

@@ -100,7 +100,7 @@ const CategoriesTable = ({
                     </span>
                   </div>
                 </td>
-                <td className="py-4 px-4 text-sm font-medium text-right">
+                <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
                     <button
                       onClick={() => onView(category)}

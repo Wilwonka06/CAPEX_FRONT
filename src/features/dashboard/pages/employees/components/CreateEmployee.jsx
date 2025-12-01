@@ -37,7 +37,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
            form.telefono.trim() &&
            form.correo.trim() &&
            form.direccion.trim() &&
-           form.estado.trim() &&
            Object.keys(errors).length === 0;
   };
 
@@ -133,7 +132,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
         telefono: telefonoFormateado,
         correo: form.correo,
         direccion: form.direccion,
-        estado: form.estado,
+        estado: 'Activo', // Siempre se crea como Activo por defecto
         schedulings: schedulings // ✅ AHORA SÍ INCLUYE LAS PROGRAMACIONES
       };
 
@@ -350,30 +349,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
               {errors.direccion && <p className="text-red-500 text-sm mt-2 flex items-center gap-1"><i className="bi bi-exclamation-triangle"></i>{errors.direccion}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-[#1E1E1E] font-lato mb-2">
-                <i className="bi bi-toggle-on mr-2 text-[#FACC15]"></i>Estado Inicial
-              </label>
-              <div className="relative">
-                <select
-                  name="estado"
-                  value={form.estado}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] transition-all appearance-none bg-white font-lato"
-                >
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                  <i className="bi bi-toggle-on text-lg"></i>
-                </div>
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                  <i className="bi bi-chevron-down text-lg"></i>
-                </div>
-              </div>
-            </div>
-          
             {/* Information note */}
             <div className="md:col-span-2 mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
               <div className="flex items-start gap-3">
@@ -419,7 +394,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                       telefono: telefonoFormateado,
                       correo: form.correo,
                       direccion: form.direccion,
-                      estado: form.estado,
+                      estado: 'Activo', // Siempre se crea como Activo por defecto
                     };
 
                     onSave(newEmployee);

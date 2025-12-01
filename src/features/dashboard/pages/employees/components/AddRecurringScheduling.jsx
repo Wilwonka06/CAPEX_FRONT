@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { HOURS_12, to24h, to12h } from '../../../../../shared/utils/timeFormat';
 
 const diasSemanaOptions = [
@@ -246,7 +246,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
       {/* Selección de Empleado (si no viene predefinido) */}
       {!empleadoId && employees.length > 0 && (
         <div>
-          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 items-center gap-2">
             <i className="bi bi-person text-[#FACC15]"></i>
             Empleado *
           </label>
@@ -254,8 +254,8 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
             name="id_usuario"
             value={form.id_usuario}
             onChange={handleChange}
-            className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
-              errors.id_usuario ? 'border-red-300 bg-red-50' : 'border-gray-200'
+            className={`w-full border-2 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+              errors.id_usuario ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
             }`}
           >
             <option value="">Seleccione un empleado...</option>
@@ -266,7 +266,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
             ))}
           </select>
           {errors.id_usuario && (
-            <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
               <i className="bi bi-exclamation-triangle"></i>
               {errors.id_usuario}
             </p>
@@ -277,7 +277,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
       {/* Bloques Horarios */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <label className="block text-sm font-semibold text-gray-700 font-lato flex items-center gap-2">
+          <label className="block text-sm font-semibold text-gray-700 font-lato items-center gap-2">
             <i className="bi bi-clock-history text-[#FACC15]"></i>
             Bloques Horarios *
           </label>
@@ -337,7 +337,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
         </button>
 
         {errors.bloques_horarios && (
-          <p className="text-red-500 text-sm flex items-center gap-1">
+          <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
             <i className="bi bi-exclamation-triangle"></i>
             {errors.bloques_horarios}
           </p>
@@ -346,7 +346,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
 
       {/* Días de la semana */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 font-lato mb-3 flex items-center gap-2">
+        <label className="block text-sm font-semibold text-gray-700 font-lato mb-3 items-center gap-2">
           <i className="bi bi-calendar-week text-[#FACC15]"></i>
           Días de la Semana *
         </label>
@@ -365,7 +365,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
           ))}
         </div>
         {errors.dias_semana && (
-          <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+          <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
             <i className="bi bi-exclamation-triangle"></i>
             {errors.dias_semana}
           </p>
@@ -375,7 +375,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
       {/* Fechas */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 items-center gap-2">
             <i className="bi bi-calendar-day text-[#FACC15]"></i>
             Fecha de Inicio *
           </label>
@@ -385,13 +385,13 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
             value={form.fecha_inicio}
             min={minDate}
             onChange={handleChange}
-            className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
-              errors.fecha_inicio ? 'border-red-300 bg-red-50' : 'border-gray-200'
+            className={`w-full border-2 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+              errors.fecha_inicio ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
             }`}
             required
           />
           {errors.fecha_inicio && (
-            <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
               <i className="bi bi-exclamation-triangle"></i>
               {errors.fecha_inicio}
             </p>
@@ -399,7 +399,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 items-center gap-2">
             <i className="bi bi-calendar-check text-[#FACC15]"></i>
             Fecha de Fin (Opcional)
           </label>
@@ -409,15 +409,15 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
             value={form.fecha_fin}
             min={form.fecha_inicio || minDate}
             onChange={handleChange}
-            className={`w-full border-2 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
-              errors.fecha_fin ? 'border-red-300 bg-red-50' : 'border-gray-200'
+            className={`w-full border-2 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
+              errors.fecha_fin ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
             }`}
           />
           <p className="text-xs text-gray-500 mt-1">
             Dejar vacío para programación indefinida
           </p>
           {errors.fecha_fin && (
-            <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
               <i className="bi bi-exclamation-triangle"></i>
               {errors.fecha_fin}
             </p>
@@ -427,7 +427,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
 
       {/* Estado */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+        <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 items-center gap-2">
           <i className="bi bi-toggle-on text-[#FACC15]"></i>
           Estado
         </label>
@@ -435,7 +435,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
           name="estado"
           value={form.estado}
           onChange={handleChange}
-          className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all"
+          className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all hover:border-gray-300"
         >
           <option value="Activa">Activa</option>
           <option value="Inactiva">Inactiva</option>
@@ -444,7 +444,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
 
       {/* Observaciones */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 flex items-center gap-2">
+        <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 items-center gap-2">
           <i className="bi bi-chat-text text-[#FACC15]"></i>
           Observaciones
         </label>
@@ -453,7 +453,7 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
           value={form.observaciones}
           onChange={handleChange}
           rows="3"
-          className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all resize-none"
+          className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all resize-none hover:border-gray-300"
           placeholder="Notas adicionales sobre esta programación..."
         />
       </div>

@@ -79,5 +79,3 @@ const WeeklySalesChart = ({ data = [] }) => {
 };
 
 export default WeeklySalesChart;
-
-

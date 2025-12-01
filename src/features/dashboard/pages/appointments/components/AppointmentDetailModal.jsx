@@ -207,7 +207,7 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
           <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <span
-                className="font-semibold text-sm px-3 py-1.5 rounded-full"
+                className="font-semibold text-sm px-3 py-2 rounded-full"
                 style={{
                   background: ESTADO_COLORES[cita.estado]?.bg || "#e5e7eb",
                   color: ESTADO_COLORES[cita.estado]?.text || "#374151",

@@ -187,6 +187,15 @@ const Scheduling = () => {
             <CalendarContentSkeleton />
           ) : (
             <>
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => openAddRecurringModal(null)}
+                  className="px-4 py-2 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all font-semibold text-sm flex items-center gap-2 shadow-sm hover:shadow-md"
+                >
+                  <i className="bi bi-plus-circle"></i>
+                  Crear Programación
+                </button>
+              </div>
               {console.log("[DEBUG] Passing to GeneralCalendar:")}
               {console.log("  - filteredEmployees:", filteredEmployees)}
               {console.log("  - schedulings:", schedulings)}

@@ -12,29 +12,47 @@ const Paginator = ({
   if (totalPages <= 1) return null;
 
   const getVisiblePages = () => {
-    const delta = 2; // Número de páginas a mostrar a cada lado de la página actual
-    const range = [];
-    const rangeWithDots = [];
+    const delta = 3; // Número de páginas a mostrar a cada lado de la página actual
+    const pages = [];
 
-    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
-      range.push(i);
+    // Si hay pocas páginas (7 o menos), mostrar todas
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+      return pages;
     }
 
-    if (currentPage - delta > 2) {
-      rangeWithDots.push(1, '...');
-    } else {
-      rangeWithDots.push(1);
+    // Siempre mostrar la primera página
+    pages.push(1);
+
+    // Calcular el rango alrededor de la página actual
+    const start = Math.max(2, currentPage - delta);
+    const end = Math.min(totalPages - 1, currentPage + delta);
+
+    // Si hay un gap entre la página 1 y el inicio del rango, agregar "..."
+    if (start > 2) {
+      pages.push('...');
     }
 
-    rangeWithDots.push(...range);
-
-    if (currentPage + delta < totalPages - 1) {
-      rangeWithDots.push('...', totalPages);
-    } else if (totalPages > 1) {
-      rangeWithDots.push(totalPages);
+    // Agregar páginas del rango (excluyendo 1 y totalPages que ya se manejan)
+    for (let i = start; i <= end; i++) {
+      if (i !== 1 && i !== totalPages) {
+        pages.push(i);
+      }
     }
 
-    return rangeWithDots;
+    // Si hay un gap entre el final del rango y la última página, agregar "..."
+    if (end < totalPages - 1) {
+      pages.push('...');
+    }
+
+    // Siempre mostrar la última página
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
   };
 
   // Calcular información de items si se proporciona
@@ -76,7 +94,7 @@ const Paginator = ({
                 disabled={page === '...'}
                 className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                   page === currentPage
-                    ? 'z-10 bg-yellow-500 border-yellow-500 text-white'
+                    ? 'z-10 bg-yellow-600 border-yellow-600 shadow-md transform scale-105 text-white'
                     : page === '...'
                     ? 'border-gray-300 bg-white text-gray-700 cursor-default'
                     : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
@@ -123,7 +141,7 @@ const Paginator = ({
           disabled={page === '...'}
           className={`flex items-center justify-center w-8 h-8 rounded border transition-colors ${
             page === currentPage
-              ? 'bg-yellow-500 border-yellow-500 text-white shadow-sm'
+              ? 'bg-yellow-600 border-yellow-600 shadow-md transform scale-105 text-white shadow-sm'
               : page === '...'
               ? 'border-transparent bg-transparent text-gray-500 cursor-default'
               : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400'

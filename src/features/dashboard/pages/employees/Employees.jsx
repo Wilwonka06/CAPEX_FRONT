@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
 // Importar servicios API
@@ -10,10 +9,9 @@ import { employeesService, recurringSchedulingService } from "./API/employeesSer
 import EmployeesTable from "./components/EmployeesTable";
 import AddEmployee from "./components/CreateEmployee";
 import EditEmployee from "./components/EditEmployee";
-import EmployeeDetail from "./components/EmployeeDetail";
-import RecurringSchedulingManager from "./components/RecurringSchedulingManager";
 import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
+import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import { normalizeText } from '../../../../shared/validations';
 import { to24h } from '../../../../shared/utils/timeFormat';
 
@@ -36,6 +34,8 @@ const EmployeesPage = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
   const [viewEmployee, setViewEmployee] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
   
 
   // Función para calcular fechas específicas basadas en días seleccionados
@@ -117,8 +117,8 @@ const EmployeesPage = () => {
     setCurrentPage(1);
   }, [searchTerm, employees]);
 
-  // Handler para cambiar estado
-  const handleToggleStatus = async (employeeId) => {
+  // Handler para cambiar estado - muestra modal primero
+  const handleToggleStatus = (employeeId) => {
     const current = employees.find(e => String(e.id) === String(employeeId));
     
     if (!current) {
@@ -126,6 +126,15 @@ const EmployeesPage = () => {
       return;
     }
 
+    setPendingStatusChange({ employeeId, current });
+    setShowStatusModal(true);
+  };
+
+  // Handler para confirmar cambio de estado
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    const { employeeId, current } = pendingStatusChange;
     const nextEstado = current.estado === 'Activo' ? 'Inactivo' : 'Activo';
     setTogglingId(employeeId);
 
@@ -137,6 +146,8 @@ const EmployeesPage = () => {
     try {
       await employeesService.toggleStatus(employeeId, nextEstado);
       toast.success(`Estado cambiado a ${nextEstado}`);
+      setShowStatusModal(false);
+      setPendingStatusChange(null);
     } catch (error) {
       // Revertir en caso de error
       setEmployees(prevList => prevList.map(e =>
@@ -362,13 +373,28 @@ const EmployeesPage = () => {
                   onCancel={() => setEditEmployee(null)}
                   onSave={handleEditSave}
                 />
-
-                <RecurringSchedulingManager empleadoId={editEmployee.id || editEmployee.id_usuario} />
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación de cambio de estado */}
+      {showStatusModal && pendingStatusChange && (
+        <ConfirmStatusChangeModal
+          isOpen={showStatusModal}
+          onClose={() => {
+            if (!togglingId) {
+              setShowStatusModal(false);
+              setPendingStatusChange(null);
+            }
+          }}
+          onConfirm={handleConfirmStatusChange}
+          isActivating={pendingStatusChange.current.estado === 'Inactivo'}
+          itemName={pendingStatusChange.current.nombre}
+          loading={togglingId === pendingStatusChange.employeeId}
+        />
+      )}
 
       {/* Se redirige a la página dedicada de detalle */}
     </div>

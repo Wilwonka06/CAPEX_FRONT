@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { useAuth } from "../../../../shared/contexts/AuthContext";
+import ConfirmStatusChangeModal from "../../../../../shared/components/ConfirmStatusChangeModal";
 
 const ChangeUserStatus = ({ user, onStatusChange }) => {
   const [isChanging, setIsChanging] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const { hasPrivilege } = useAuth();
 
   // Solo mostrar el switch si el usuario tiene permisos de edición
   const canModifyStatus = hasPrivilege('Gestión de Usuarios', 'Editar');
 
-  const handleStatusChange = async () => {
+  const handleToggleClick = () => {
     if (!canModifyStatus) return;
+    setShowModal(true);
+  };
 
+  const handleConfirmChange = async () => {
     setIsChanging(true);
     try {
       // Para usuarios, el estado es un string, no un booleano como en proveedores
@@ -19,10 +24,17 @@ const ChangeUserStatus = ({ user, onStatusChange }) => {
       const conceptoEstado = newStatus === 'Inactivo' ? 'Otro' : null; // Concepto por defecto
 
       if (onStatusChange) await onStatusChange(user.id_usuario || user.id, newStatus, conceptoEstado);
+      setShowModal(false);
     } catch (error) {
       console.error("Error al cambiar el estado del usuario:", error);
     } finally {
       setIsChanging(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (!isChanging) {
+      setShowModal(false);
     }
   };
 
@@ -37,25 +49,35 @@ const ChangeUserStatus = ({ user, onStatusChange }) => {
   }
 
   return (
-    <button
-      onClick={handleStatusChange}
-      disabled={isChanging}
-      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
-        user.estado === 'Activo' ? 'bg-text-main' : 'bg-gray-300'
-      } ${isChanging ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-      title={`Cambiar a ${user.estado === 'Activo' ? 'Inactivo' : 'Activo'}`}
-    >
-      <span
-        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-          user.estado === 'Activo' ? 'translate-x-6' : 'translate-x-1'
-        }`}
+    <>
+      <button
+        onClick={handleToggleClick}
+        disabled={isChanging}
+        className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+          user.estado === 'Activo' ? 'bg-text-main' : 'bg-gray-300'
+        } ${isChanging ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        title={`Cambiar a ${user.estado === 'Activo' ? 'Inactivo' : 'Activo'}`}
+      >
+        <span
+          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+            user.estado === 'Activo' ? 'translate-x-6' : 'translate-x-1'
+          }`}
+        />
+        {isChanging && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+      </button>
+      <ConfirmStatusChangeModal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmChange}
+        isActivating={user.estado === 'Inactivo'}
+        itemName={user.nombre}
+        loading={isChanging}
       />
-      {isChanging && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
-    </button>
+    </>
   );
 };
 
