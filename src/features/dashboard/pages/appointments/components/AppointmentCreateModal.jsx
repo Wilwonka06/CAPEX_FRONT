@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
@@ -35,6 +35,7 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
   const [touchedFields, setTouchedFields] = useState({});
   const [numero, setNumero] = useState('');
   const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+  const dataLoadedRef = useRef(false);
 
   // Formulario principal
   const [formData, setFormData] = useState({
@@ -51,11 +52,17 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
 
   // Cargar datos necesarios desde el backend
   useEffect(() => {
+    // Evitar múltiples llamadas
+    if (dataLoadedRef.current) {
+      return;
+    }
+
     const loadData = async () => {
       try {
+        dataLoadedRef.current = true;
+        
         // Cargar servicios desde el backend
         const servicesData = await getAllServices();
-        console.log('Servicios recibidos de la API:', servicesData);
         // Filtrar solo servicios activos y normalizar al formato esperado
         const normalizedServices = servicesData
           .filter(s => s.active || s.estado === 'Activo')
@@ -67,7 +74,6 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
             description: s.description || s.descripcion || '',
             active: s.active || s.estado === 'Activo'
           }));
-        console.log('Servicios normalizados:', normalizedServices);
         setServices(normalizedServices);
 
         // Cargar empleados desde el backend
@@ -87,9 +93,15 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
         // En caso de error, usar arrays vacíos
         setServices([]);
         setProfessionals([]);
+        dataLoadedRef.current = false; // Permitir reintento en caso de error
       }
     };
     loadData();
+
+    // Cleanup: resetear el ref cuando el componente se desmonte
+    return () => {
+      dataLoadedRef.current = false;
+    };
   }, []);
 
   // useEffect para actualizar la fecha cuando cambia la prop fecha
@@ -112,22 +124,19 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     if (serviceQuery.trim() === '') {
       // Si no hay texto de búsqueda, mostrar los primeros 4 servicios
       const firstFour = services.slice(0, 4);
-      console.log('Mostrando primeros 4 servicios:', firstFour);
       setFilteredServices(firstFour);
     } else {
       // Si hay búsqueda, filtrar y limitar a 4
       const filtered = services.filter(s =>
         s.name.toLowerCase().includes(serviceQuery.toLowerCase())
       ).slice(0, 4);
-      console.log('Servicios filtrados:', filtered);
       setFilteredServices(filtered);
     }
   }, [serviceQuery, services]);
 
-  // Actualizar filteredServices cuando se muestra el dropdown
+  // Actualizar filteredServices cuando se muestra el dropdown (solo si está vacío)
   useEffect(() => {
-    if (showServiceDropdown && services.length > 0 && serviceQuery.trim() === '') {
-      console.log('Dropdown activado, actualizando servicios filtrados');
+    if (showServiceDropdown && services.length > 0 && serviceQuery.trim() === '' && filteredServices.length === 0) {
       const firstFour = services.slice(0, 4);
       if (firstFour.length > 0) {
         setFilteredServices(firstFour);
@@ -883,9 +892,6 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
                   setShowServiceDropdown(true);
                 }}
                 onFocus={() => {
-                  console.log('Campo enfocado, mostrando dropdown');
-                  console.log('Servicios disponibles:', services.length);
-                  console.log('Servicios filtrados:', filteredServices.length);
                   // Asegurar que filteredServices tenga los primeros 4 si está vacío
                   if (filteredServices.length === 0 && services.length > 0) {
                     setFilteredServices(services.slice(0, 4));
