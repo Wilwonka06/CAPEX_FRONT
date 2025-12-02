@@ -114,8 +114,12 @@ const SaleServices = () => {
     }
     
     const matchesTab = tab === "En ejecucion"
-      ? statusToCheck === "en ejecucion" || statusToCheck === "anulado"
-      : statusToCheck === "pagado" || statusToCheck === "anulado";
+      ? statusToCheck === "en ejecucion"
+      : tab === "Pagadas"
+      ? statusToCheck === "pagado"
+      : tab === "Anuladas"
+      ? statusToCheck === "anulado"
+      : false;
 
     return matchesSearch && matchesTab;
   });
@@ -339,6 +343,16 @@ const SaleServices = () => {
               >
                 <i className={`bi bi-check-circle text-xs ${tab === "Pagadas" ? "text-green-600" : "text-gray-500"}`}></i>
                 Pagadas
+              </button>
+              <button
+                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${tab === "Anuladas"
+                  ? "bg-white text-text-main shadow-sm border border-gray-200"
+                  : "text-gray-600 hover:text-text-main hover:bg-white/50"
+                  }`}
+                onClick={() => setTab("Anuladas")}
+              >
+                <i className={`bi bi-x-octagon text-xs ${tab === "Anuladas" ? "text-red-600" : "text-gray-500"}`}></i>
+                Anuladas
               </button>
             </div>
 
