@@ -245,8 +245,13 @@ const transformarServiciosAVentaServicio = (grupo) => {
                  estados.includes('Finalizada') ? 'Finalizada' :
                  estados[0] || 'En ejecucion';
 
+  // Usar id_cita del grupo si está disponible, de lo contrario usar el primer servicio
+  const citaId = grupo.id_cita || primerServicio.id_cita;
+  // Si no hay id_cita, usar el primer id_detalle_servicio como fallback
+  const idFinal = citaId || primerServicio.id_detalle_servicio;
+
   return {
-    id: primerServicio.id_cita || primerServicio.id_detalle_servicio,
+    id: idFinal,
     clientName: grupo.cliente?.nombre || primerServicio.cliente?.nombre || primerServicio.usuario?.nombre || 'Cliente no especificado',
     status: (estado === 'En ejecución' || estado === 'En proceso') ? 'En ejecucion' : estado === 'Pagada' ? 'Pagado' : estado,
     date: formatearFecha(fecha),

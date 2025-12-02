@@ -766,8 +766,9 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       let result;
       try {
         if (cita) {
-          // Para actualización, incluir id_cliente en la cita
-          appointmentData.cita.id_cliente = cita.id_cliente;
+          // Para actualización, usar el clientId obtenido de findOrCreateClient
+          // Esto permite cambiar el cliente si el documento cambió
+          // El clientId ya está en appointmentData.cita.id_cliente desde la línea 720
           result = await appointmentsService.update(cita.id_cita, appointmentData);
           toast.success('Cita editada correctamente');
         } else {

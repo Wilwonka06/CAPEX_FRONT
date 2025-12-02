@@ -65,8 +65,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       setBuscandoCliente(true);
       console.log('🔍 Buscando cliente con documento:', cleanDoc);
       
-      // Buscar usuarios - sin filtro en la petición para que el backend retorne todos
-      const searchResponse = await usersService.getAll();
+      // Buscar usuarios con filtro en el backend para mejor rendimiento
+      const searchResponse = await usersService.getAll({ documento: cleanDoc });
       
       console.log('📦 Respuesta de búsqueda:', searchResponse);
       
@@ -130,6 +130,15 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
     } finally {
       setBuscandoCliente(false);
     }
+  }, []);
+
+  // Cleanup: limpiar timeout cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Función para crear o buscar cliente
