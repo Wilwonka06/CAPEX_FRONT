@@ -239,11 +239,35 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
         </div>
 
         {/* Footer fijo */}
-        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+        <div className="rounded-b-2xl flex justify-end gap-2 px-6 py-3 bg-gray-50 border-t border-gray-200">
           {!esCancelada && (
-            <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 font-semibold" onClick={handleCancelar} disabled={loadingCancel}>{loadingCancel ? "Cancelando..." : "Cancelar cita"}</button>
+            <button 
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 font-semibold text-sm" 
+              onClick={handleCancelar} 
+              disabled={loadingCancel}
+            >
+              {loadingCancel ? "Cancelando..." : "Cancelar cita"}
+            </button>
           )}
-          <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" onClick={onClose}><i className="bi bi-check-circle"></i>Cerrar</button>
+          {!esCancelada && (
+            <button 
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex items-center gap-2 shadow-sm" 
+              onClick={() => {
+                onEdit(cita);
+                onClose();
+              }}
+            >
+              <i className="bi bi-pencil-square"></i>
+              Editar cita
+            </button>
+          )}
+          <button 
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm" 
+            onClick={onClose}
+          >
+            <i className="bi bi-check-circle"></i>
+            Cerrar
+          </button>
         </div>
       </div>
     </div>

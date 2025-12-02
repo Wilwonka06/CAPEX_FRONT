@@ -301,6 +301,30 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
     }
   }, [isOpen]);
 
+  // Manejar tecla Enter para guardar cambios
+  const handleKeyDown = useCallback((e) => {
+    // Si se presiona Enter y no está en un textarea, select, o botón
+    if (e.key === 'Enter' && 
+        e.target.tagName !== 'TEXTAREA' && 
+        e.target.tagName !== 'SELECT' &&
+        !e.target.closest('button') &&
+        !loading) {
+      // Si el target es un input, prevenir el comportamiento por defecto
+      // y disparar el submit del formulario haciendo clic en el botón de submit
+      if (e.target.tagName === 'INPUT') {
+        e.preventDefault();
+        const form = e.target.closest('form');
+        if (form) {
+          // Buscar el botón de submit y hacer clic en él
+          const submitButton = form.querySelector('button[type="submit"]');
+          if (submitButton && !submitButton.disabled) {
+            submitButton.click();
+          }
+        }
+      }
+    }
+  }, [loading]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setShowErrors(true);
@@ -389,13 +413,14 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
       // Usar versión funcional de setFormData para acceder al estado más reciente
       setFormData(prev => {
         const currentValue = prev.dineroProporcionado || '';
-        const cleaned = value.replace(/[^0-9]/g, '');
+        // Permitir números, puntos (miles) y coma (decimal)
+        const cleaned = value.replace(/[^0-9.,]/g, '');
         
         // Si el valor actual es solo "0" y el usuario escribe un número, reemplazar
         if (currentValue === '0' && cleaned && cleaned !== '0') {
-          return { ...prev, [name]: formatNumberInput(cleaned) };
+          return { ...prev, [name]: formatNumberInput(cleaned, 2) };
         }
-        return { ...prev, [name]: formatNumberInput(value) };
+        return { ...prev, [name]: formatNumberInput(value, 2) };
       });
       // NO marcar como touched para dinero proporcionado para evitar activar validación de servicios
     } else {
@@ -471,7 +496,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
             scrollBehavior: 'auto' // Evitar animaciones de scroll
           }}
         >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6">
         {/* Datos del Cliente */}
         <div>
           <h3 className="text-sm font-semibold text-black mb-3">Datos del Cliente</h3>
@@ -680,7 +705,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                       ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
-                  placeholder="0"
+                  placeholder="0,00"
                 />
                 {(touched.dineroProporcionado || showErrors) && errors.dineroProporcionado && (
                   <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
