@@ -25,7 +25,6 @@ const Sidebar = () => {
         id: 'main',
         name: 'Dashboard',
         title: 'Dashboard',
-        name:  'Dashboard',
         icon: 'bi-speedometer2',
         path: '/dashboard',
         module: 'Dashboard'

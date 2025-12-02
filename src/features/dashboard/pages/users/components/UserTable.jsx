@@ -20,7 +20,7 @@ const UserTable = ({
 
   if (!loading && (!users || users.length === 0)) {
     return (
-      <div className="overflow-x-auto rounded-lg shadow font-inter">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
         <div className="py-12 text-center">
           <i className="bi bi-people text-6xl text-gray-300"></i>
           <p className="mt-4 text-gray-500 text-sm">No hay usuarios registrados.</p>
@@ -31,16 +31,16 @@ const UserTable = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg shadow font-inter">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white font-inter">
       <table className="min-w-full text-xs">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Foto</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Nombre</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Correo</th>
-                        <th className="py-2 px-3 text-left font-semibold text-gray-700">Rol</th>
-            <th className="py-2 px-3 text-left font-semibold text-gray-700">Estado</th>
-            <th className="py-2 px-3 text-center font-semibold text-gray-700">Acciones</th>
+        <thead>
+          <tr className="bg-gray-50 hover:bg-gray-100">
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Foto</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Correo</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Rol</th>
+            <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Estado</th>
+            <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
@@ -49,19 +49,19 @@ const UserTable = ({
               key={user.id_usuario || user.id}
               className="hover:bg-gray-50 transition-colors duration-150"
             >
-              <td className="py-2 px-3">
+              <td className="py-4 px-4">
                 <img
                   src={user.foto || user.avatarCompressed || DEFAULT_AVATAR}
                   alt={user.nombre}
                   className="w-10 h-10 rounded-full object-cover border"
                 />
               </td>
-              <td className="py-2 px-3">{user.nombre}</td>
-              <td className="py-2 px-3">{user.correo}</td>
-                            <td className="py-2 px-3">
+              <td className="py-4 px-4 text-xs font-medium text-gray-900">{user.nombre}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">{user.correo}</td>
+              <td className="py-4 px-4 text-xs text-gray-600">
                 {user.rol ? user.rol.nombre : "Sin rol asignado"}
               </td>
-              <td className="py-2 px-3">
+              <td className="py-4 px-4 text-xs text-gray-600">
                 <div className="flex items-center space-x-3">
                   <span
                     className={`text-xs font-semibold rounded-full px-2 py-1
@@ -96,7 +96,7 @@ user.estado === "Activo"
                   <button
                     title="Ver"
                     onClick={() => onView(user)}
-                    className="h-8 w-8 p-0 rounded-md hover:bg-gray-100 flex items-center justify-center"
+                    className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors"
                   >
                     <i className="bi bi-eye text-primary text-[18px]"></i>
                   </button>
@@ -104,7 +104,7 @@ user.estado === "Activo"
                   <button
                     title="Editar"
                     onClick={() => onEdit(user)}
-                    className="h-8 w-8 p-0 rounded-md hover:bg-gray-100 flex items-center justify-center"
+                    className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors"
                   >
                     <i className="bi bi-pencil-square text-amber-500 text-[18px]"></i>
                   </button>
@@ -114,7 +114,7 @@ user.estado === "Activo"
                     onClick={() =>
                       onDelete(user.id_usuario || user.id)
                     }
-                    className="h-8 w-8 p-0 rounded-md hover:bg-red-50 flex items-center justify-center"
+                    className="h-8 w-8 p-0 hover:bg-red-50 rounded-md flex items-center justify-center transition-colors"
                   >
                     <i className="bi bi-trash text-red-500 text-[18px]"></i>
                   </button>

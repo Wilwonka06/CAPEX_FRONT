@@ -6,6 +6,7 @@ import CategoryDetail from "./components/CategoryDetail";
 import CategoriesTable from "./components/CategoriesTable";
 import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
+import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
@@ -25,6 +26,8 @@ const CatServices = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
 
   useEffect(() => {
     loadCategories();
@@ -171,7 +174,17 @@ const CatServices = () => {
     }
   };
 
-  const handleToggleStatus = async (category) => {
+  // Handler para cambiar estado - muestra modal primero
+  const handleToggleStatus = (category) => {
+    setPendingStatusChange(category);
+    setShowStatusModal(true);
+  };
+
+  // Handler para confirmar cambio de estado
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
+    const category = pendingStatusChange;
     setTogglingId(category.id_categoria_servicio);
     try {
       const newStatus = category.estado === 'Activo' ? 'inactivo' : 'activo';
@@ -179,6 +192,8 @@ const CatServices = () => {
       await loadCategories();
       const statusText = newStatus === 'activo' ? "activada" : "desactivada";
       toast.success(`Categoría ${statusText}`);
+      setShowStatusModal(false);
+      setPendingStatusChange(null);
     } catch (error) {
       console.error("[CatServices] Error cambiando estado:", error);
       const backendMsg = error?.response?.data?.message || error?.response?.data?.error || error?.message;
@@ -283,6 +298,23 @@ const CatServices = () => {
           category={selectedCategory}
           isOpen={showDetailModal}
           onClose={closeModals}
+        />
+      )}
+
+      {/* Modal de confirmación de cambio de estado */}
+      {showStatusModal && pendingStatusChange && (
+        <ConfirmStatusChangeModal
+          isOpen={showStatusModal}
+          onClose={() => {
+            if (!togglingId) {
+              setShowStatusModal(false);
+              setPendingStatusChange(null);
+            }
+          }}
+          onConfirm={handleConfirmStatusChange}
+          isActivating={pendingStatusChange.estado === 'Inactivo'}
+          itemName={pendingStatusChange.nombre}
+          loading={togglingId === pendingStatusChange.id_categoria_servicio}
         />
       )}
     </div>

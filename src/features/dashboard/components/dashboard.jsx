@@ -816,7 +816,7 @@ const Dashboard = () => {
               {lowStock.map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border">
                   <span className="text-xs font-medium text-gray-700">{p.nombre}</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${p.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{p.stock} u</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${p.stock > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>disponibles {p.stock}</span>
                 </div>
               ))}
             </div>

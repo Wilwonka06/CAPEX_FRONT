@@ -123,38 +123,50 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
           <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-calendar-event text-lg"></i></div><h2 className="text-xl font-bold m-0">Detalles de la cita</h2></div>
           <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <div className="flex items-center gap-2 mb-2">
-          <span
-            className="font-semibold text-xs px-2 py-1 rounded-full"
-            style={{
-              background: ESTADO_COLORES[cita.estado]?.bg || "#e5e7eb",
-              color: ESTADO_COLORES[cita.estado]?.text || "#374151",
-              border: "1px solid #e5e7eb",
-            }}
-          >
-            {cita.estado}
-          </span>
-          <span className="text-xs text-gray-400">{fechaStr}</span>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <div className="font-semibold mb-2 text-text-main">
-            Información del Cliente
-          </div>
-          <div className="flex gap-8 text-sm">
-            <div>
-              <span className="font-medium">Nombre:</span>{" "}
-              {cita.usuario?.nombre || cita.cliente?.nombre || "Cliente"}
-            </div>
-            <div>
-              <span className="font-medium">Teléfono:</span>{" "}
-              {cita.usuario?.telefono ||
-                cita.cliente?.telefono ||
-                "Sin teléfono"}
+
+        {/* Contenido scrolleable */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Estado y Fecha */}
+          <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span
+                className="font-semibold text-sm px-3 py-2 rounded-full"
+                style={{
+                  background: ESTADO_COLORES[cita.estado]?.bg || "#e5e7eb",
+                  color: ESTADO_COLORES[cita.estado]?.text || "#374151",
+                }}
+              >
+                {cita.estado}
+              </span>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <i className="bi bi-calendar3"></i>
+                <span className="font-medium">{fechaStr}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <div className="font-semibold mb-2 text-text-main">Servicios</div>
+
+          {/* Información del Cliente */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="font-semibold mb-2 text-text-main">
+              Información del Cliente
+            </div>
+            <div className="flex gap-8 text-sm">
+              <div>
+                <span className="font-medium">Nombre:</span>{" "}
+                {cita.usuario?.nombre || cita.cliente?.nombre || "Cliente"}
+              </div>
+              <div>
+                <span className="font-medium">Teléfono:</span>{" "}
+                {cita.usuario?.telefono ||
+                  cita.cliente?.telefono ||
+                  "Sin teléfono"}
+              </div>
+            </div>
+          </div>
+
+          {/* Servicios */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="font-semibold mb-2 text-text-main">Servicios</div>
           {cita.servicios &&
             cita.servicios.map((s, idx) => {
               // Normalizar campos del backend
@@ -195,31 +207,38 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
                 </div>
               );
             })}
-        </div>
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <div className="font-semibold mb-2 text-text-main">Horario</div>
-          <div className="flex gap-8 text-sm">
-            <div>
-              Hora inicio: <span className="font-semibold">{horaInicio} h</span>
-            </div>
-            <div>
-              Hora finalización:{" "}
-              <span className="font-semibold">{horaFin} h</span>
-            </div>
-            <div>
-              Duración total:{" "}
-              <span className="font-semibold">{duracionTotal} min</span>
+          </div>
+
+          {/* Horario */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="font-semibold mb-2 text-text-main">Horario</div>
+            <div className="flex gap-8 text-sm">
+              <div>
+                Hora inicio: <span className="font-semibold">{horaInicio} h</span>
+              </div>
+              <div>
+                Hora finalización:{" "}
+                <span className="font-semibold">{horaFin} h</span>
+              </div>
+              <div>
+                Duración total:{" "}
+                <span className="font-semibold">{duracionTotal} min</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex justify-end items-center gap-8">
-          <div className="text-lg font-bold text-text-main">
-            Valor Total: <span className="text-primary">${valorTotal}</span>
+
+          {/* Valor Total */}
+          <div className="flex justify-end items-center gap-8 mb-4">
+            <div className="text-lg font-bold text-text-main">
+              Valor Total: <span className="text-primary">${valorTotal}</span>
+            </div>
           </div>
+          {errorCancel && (
+            <span className="text-xs text-red-500 ml-2">{errorCancel}</span>
+          )}
         </div>
-        {errorCancel && (
-          <span className="text-xs text-red-500 ml-2">{errorCancel}</span>
-        )}
+
+        {/* Footer fijo */}
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           {!esCancelada && (
             <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 font-semibold" onClick={handleCancelar} disabled={loadingCancel}>{loadingCancel ? "Cancelando..." : "Cancelar cita"}</button>

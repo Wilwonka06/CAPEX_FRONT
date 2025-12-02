@@ -48,20 +48,10 @@ export function labelFromAny(valueOrLabel) {
 }
 
 // Convert front-end extended codes to backend-accepted codes
+// El backend acepta los mismos códigos que el frontend, así que devolvemos el código tal cual
 export function toBackendDocCode(code) {
   const c = codeFromLabel(code);
-  const map = {
-    RC: 'CC',
-    TI: 'TI',
-    CC: 'CC',
-    TE: 'CE',
-    CE: 'CE',
-    NIT: 'NIT',
-    PP: 'PAS',
-    PEP: 'CC',
-    DIE: 'CE',
-    NUIP: 'TI',
-    FOREIGN_NIT: 'NIT'
-  };
-  return map[c] || c;
+  // El backend acepta directamente: RC, TI, CC, TE, CE, NIT, PP, PEP, DIE, NUIP, FOREIGN_NIT
+  // No necesitamos conversión, devolvemos el código tal cual
+  return c || code;
 }

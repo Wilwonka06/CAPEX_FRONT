@@ -78,13 +78,13 @@ export default function ProductsTable({ products, onEdit, onDelete, loading = fa
         <table className="min-w-full text-xs">
           <thead>
             <tr className="bg-gray-50 hover:bg-gray-100">
-              <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Foto</th>
-              <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
-              <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
-              <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Stock</th>
-              <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
-              <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 tracking-wider">Margen</th>
-              <th className="py-2 px-3 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Foto</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Nombre</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Categoría</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Stock</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Precio</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-gray-700 tracking-wider">Margen</th>
+              <th className="py-3 px-4 text-right text-xs font-semibold text-gray-700 tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -93,7 +93,7 @@ export default function ProductsTable({ products, onEdit, onDelete, loading = fa
                 key={product.id_producto || product.id || `product-${index}`}
                 className="hover:bg-gray-50 transition-colors duration-150"
               >
-                <td className="py-3 px-3">
+                <td className="py-4 px-4">
                   <div className="flex items-center">
                     <img
                       src={
@@ -109,21 +109,21 @@ export default function ProductsTable({ products, onEdit, onDelete, loading = fa
                     />
                   </div>
                 </td>
-                <td className="py-3 px-3 text-xs font-medium text-gray-900">
+                <td className="py-4 px-4 text-xs font-medium text-gray-900">
                   <TruncatedText
                     text={product.nombre}
                     maxLength={25}
                     maxWidth="max-w-[180px]"
                   />
                 </td>
-                <td className="py-3 px-3 text-xs text-gray-600">
+                <td className="py-4 px-4 text-xs text-gray-600">
                   <TruncatedText
                     text={product.categoria || "Sin categoría"}
                     maxLength={20}
                     maxWidth="max-w-[120px]"
                   />
                 </td>
-                <td className="py-3 px-3 text-xs text-gray-600">
+                <td className="py-4 px-4 text-xs text-gray-600">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
                       (product.stock || product.cantidad || 0) > 10
@@ -136,10 +136,10 @@ export default function ProductsTable({ products, onEdit, onDelete, loading = fa
                     {formatNumber(product.stock || product.cantidad || 0)}
                   </span>
                 </td>
-                <td className="py-3 px-3 text-xs text-gray-600 font-semibold">
+                <td className="py-4 px-4 text-xs text-gray-600 font-semibold">
                   ${formatPrice(product.precio_venta || product.precio || 0)}
                 </td>
-                <td className="py-3 px-3 text-xs text-gray-600">
+                <td className="py-4 px-4 text-xs text-gray-600">
                   {(() => {
                     const costo = parseFloat(product.costo || 0);
                     const precio = parseFloat(product.precio_venta || product.precio || 0);
@@ -152,7 +152,7 @@ export default function ProductsTable({ products, onEdit, onDelete, loading = fa
                     );
                   })()}
                 </td>
-                <td className="py-3 px-3 text-xs font-medium text-right">
+                <td className="py-4 px-4 text-xs font-medium text-right">
                   <div className="flex justify-end space-x-2">
                     <button
                       className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors"

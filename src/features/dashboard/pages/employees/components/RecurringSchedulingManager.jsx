@@ -1,12 +1,17 @@
-import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
-import { recurringSchedulingService } from '../API/employeesService';
-import AddRecurringScheduling from './AddRecurringScheduling';
-import { to12h } from '../../../../../shared/utils/timeFormat';
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import { recurringSchedulingService } from "../API/employeesService";
+import AddRecurringScheduling from "./AddRecurringScheduling";
+import { to12h } from "../../../../../shared/utils/timeFormat";
 
 const diasSemanaMap = {
-  0: 'Dom', 1: 'Lun', 2: 'Mar', 3: 'Mié',
-  4: 'Jue', 5: 'Vie', 6: 'Sáb'
+  0: "Dom",
+  1: "Lun",
+  2: "Mar",
+  3: "Mié",
+  4: "Jue",
+  5: "Vie",
+  6: "Sáb",
 };
 
 const RecurringSchedulingManager = ({ empleadoId }) => {
@@ -25,10 +30,21 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
     setLoading(true);
     try {
       const data = await recurringSchedulingService.getByUser(empleadoId);
-      setProgramaciones(data);
+      // Normalizar los datos para asegurar que siempre tengan un campo 'id'
+      const normalizedData = Array.isArray(data) 
+        ? data.map(prog => ({
+            ...prog,
+            id: prog.id_programacion_recurrente || prog.id
+          }))
+        : [];
+      setProgramaciones(normalizedData);
     } catch (error) {
-      console.error('Error cargando programaciones:', error);
-      toast.error('Error al cargar programaciones');
+      console.error("Error cargando programaciones:", error);
+      toast.error(
+        error.response?.data?.error ||
+        error.message ||
+        "Error al cargar programaciones"
+      );
     } finally {
       setLoading(false);
     }
@@ -37,50 +53,81 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
   const handleAdd = async (data) => {
     try {
       await recurringSchedulingService.create(data);
-      toast.success('Programación recurrente creada exitosamente');
+      toast.success("Programación recurrente creada exitosamente");
       setShowAddForm(false);
       loadProgramaciones();
     } catch (error) {
-      console.error('Error creando programación:', error);
-      toast.error(error.response?.data?.error || error.message || 'Error al crear programación');
+      console.error("Error creando programación:", error);
+      const errorMessage = error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error al crear programación";
+      toast.error(errorMessage);
     }
   };
 
   const handleEdit = async (id, data) => {
+    // Validar que el ID existe
+    if (!id || id === 'undefined' || id === undefined) {
+      console.error("ID inválido para editar:", id);
+      toast.error("Error: No se puede editar la programación. ID inválido.");
+      return;
+    }
+
     try {
       await recurringSchedulingService.update(id, data);
-      toast.success('Programación recurrente actualizada exitosamente');
+      toast.success("Programación recurrente actualizada exitosamente");
       setEditingProgramacion(null);
       loadProgramaciones();
     } catch (error) {
-      console.error('Error actualizando programación:', error);
-      toast.error(error.response?.data?.error || error.message || 'Error al actualizar programación');
+      console.error("Error actualizando programación:", error);
+      const errorMessage = error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error al actualizar programación";
+      toast.error(errorMessage);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta programación recurrente?')) {
+    // Validar que el ID existe
+    if (!id || id === 'undefined' || id === undefined) {
+      console.error("ID inválido para eliminar:", id);
+      toast.error("Error: No se puede eliminar la programación. ID inválido.");
+      return;
+    }
+
+    if (
+      !window.confirm("¿Estás seguro de eliminar esta programación recurrente?")
+    ) {
       return;
     }
 
     try {
       await recurringSchedulingService.delete(id);
-      toast.success('Programación recurrente eliminada exitosamente');
+      toast.success("Programación recurrente eliminada exitosamente");
       loadProgramaciones();
     } catch (error) {
-      console.error('Error eliminando programación:', error);
-      toast.error(error.response?.data?.error || error.message || 'Error al eliminar programación');
+      console.error("Error eliminando programación:", error);
+      const errorMessage = error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error al eliminar programación";
+      toast.error(errorMessage);
     }
   };
 
   const formatDiasSemana = (dias) => {
-    if (!Array.isArray(dias) || dias.length === 0) return 'Ninguno';
-    return dias.sort((a, b) => a - b).map(d => diasSemanaMap[d] || d).join(', ');
+    if (!Array.isArray(dias) || dias.length === 0) return "Ninguno";
+    return dias
+      .sort((a, b) => a - b)
+      .map((d) => diasSemanaMap[d] || d)
+      .join(", ");
   };
 
   const formatBloques = (bloques) => {
-    if (!Array.isArray(bloques) || bloques.length === 0) return 'Sin horarios';
-    
+    if (!Array.isArray(bloques) || bloques.length === 0) return "Sin horarios";
+
     return bloques.map((bloque, index) => (
       <div key={index} className="flex items-center gap-2 text-sm">
         <i className="bi bi-clock text-[#FACC15]"></i>
@@ -92,13 +139,13 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
   };
 
   const calcularHorasTotales = (bloques) => {
-    if (!Array.isArray(bloques)) return '0h 0m';
-    
+    if (!Array.isArray(bloques)) return "0h 0m";
+
     let totalMinutos = 0;
     for (const bloque of bloques) {
-      const [hI, mI] = bloque.inicio.split(':').map(Number);
-      const [hF, mF] = bloque.fin.split(':').map(Number);
-      totalMinutos += ((hF * 60 + mF) - (hI * 60 + mI));
+      const [hI, mI] = bloque.inicio.split(":").map(Number);
+      const [hF, mF] = bloque.fin.split(":").map(Number);
+      totalMinutos += hF * 60 + mF - (hI * 60 + mI);
     }
     const horas = Math.floor(totalMinutos / 60);
     const minutos = totalMinutos % 60;
@@ -111,7 +158,9 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
         <div className="w-12 h-12 bg-[#FACC15] rounded-full flex items-center justify-center mb-3">
           <i className="bi bi-arrow-repeat animate-spin text-xl text-gray-800"></i>
         </div>
-        <p className="text-gray-600 font-lato">Cargando programaciones recurrentes...</p>
+        <p className="text-gray-600 font-lato">
+          Cargando programaciones recurrentes...
+        </p>
       </div>
     );
   }
@@ -120,8 +169,12 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h3 className="text-xl font-bold text-gray-800 font-nunito">Programaciones Recurrentes</h3>
-          <p className="text-gray-600 font-lato text-sm">Horarios semanales fijos del empleado</p>
+          <h3 className="text-xl font-bold text-gray-800 font-nunito">
+            Programaciones Recurrentes
+          </h3>
+          <p className="text-gray-600 font-lato text-sm">
+            Horarios semanales fijos del empleado
+          </p>
         </div>
         {!showAddForm && !editingProgramacion && (
           <button
@@ -160,7 +213,10 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
           </div>
           <AddRecurringScheduling
             editing={editingProgramacion}
-            onSave={(data) => handleEdit(editingProgramacion.id, data)}
+            onSave={(data) => {
+              const editId = editingProgramacion.id_programacion_recurrente || editingProgramacion.id;
+              handleEdit(editId, data);
+            }}
             onCancel={() => setEditingProgramacion(null)}
             empleadoId={empleadoId}
           />
@@ -172,16 +228,24 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
           <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="bi bi-calendar-week text-3xl text-gray-500"></i>
           </div>
-          <h4 className="text-xl font-bold text-gray-700 mb-2 font-nunito">Sin Programaciones Recurrentes</h4>
+          <h4 className="text-xl font-bold text-gray-700 mb-2 font-nunito">
+            Sin Programaciones Recurrentes
+          </h4>
           <p className="text-gray-600 font-lato max-w-md mx-auto">
-            Este empleado no tiene programaciones semanales fijas asignadas. 
-            Crea una nueva para establecer horarios recurrentes con bloques horarios y pausas.
+            Este empleado no tiene programaciones semanales fijas asignadas.
+            Crea una nueva para establecer horarios recurrentes con bloques
+            horarios y pausas.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {programaciones.map((prog) => (
-            <div key={prog.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+          {programaciones.map((prog) => {
+            const progId = prog.id_programacion_recurrente || prog.id;
+            return (
+            <div
+              key={progId}
+              className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
+            >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-4">
@@ -190,12 +254,20 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          prog.estado === 'Activa'
-                            ? 'bg-green-100 text-green-800 border-2 border-green-200'
-                            : 'bg-gray-100 text-gray-800 border-2 border-gray-200'
-                        }`}>
-                          <i className={`bi mr-1 ${prog.estado === 'Activa' ? 'bi-check-circle' : 'bi-pause-circle'}`}></i>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            prog.estado === "Activa"
+                              ? "bg-green-100 text-green-800 border-2 border-green-200"
+                              : "bg-gray-100 text-gray-800 border-2 border-gray-200"
+                          }`}
+                        >
+                          <i
+                            className={`bi mr-1 ${
+                              prog.estado === "Activa"
+                                ? "bi-check-circle"
+                                : "bi-pause-circle"
+                            }`}
+                          ></i>
                           {prog.estado}
                         </span>
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border-2 border-blue-200">
@@ -203,7 +275,9 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                           {calcularHorasTotales(prog.bloques_horarios)} / día
                         </span>
                       </div>
-                      <h5 className="text-lg font-bold text-gray-800 font-nunito">Programación Recurrente</h5>
+                      <h5 className="text-lg font-bold text-gray-800 font-nunito">
+                        Programación Recurrente
+                      </h5>
                     </div>
                   </div>
 
@@ -215,7 +289,8 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                           <i className="bi bi-clock-history text-white text-xs"></i>
                         </div>
                         <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">
-                          Bloques Horarios ({(prog.bloques_horarios || []).length})
+                          Bloques Horarios (
+                          {(prog.bloques_horarios || []).length})
                         </span>
                       </div>
                       <div className="space-y-2">
@@ -229,9 +304,13 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                         <div className="w-6 h-6 bg-[#FACC15] rounded-lg flex items-center justify-center">
                           <i className="bi bi-calendar-week text-white text-xs"></i>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">Días</span>
+                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">
+                          Días
+                        </span>
                       </div>
-                      <p className="text-gray-800 font-medium">{formatDiasSemana(prog.dias_semana)}</p>
+                      <p className="text-gray-800 font-medium">
+                        {formatDiasSemana(prog.dias_semana)}
+                      </p>
                     </div>
 
                     {/* Fecha Inicio */}
@@ -240,10 +319,14 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                         <div className="w-6 h-6 bg-[#FACC15] rounded-lg flex items-center justify-center">
                           <i className="bi bi-calendar-day text-white text-xs"></i>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">Fecha Inicio</span>
+                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">
+                          Fecha Inicio
+                        </span>
                       </div>
                       <p className="text-gray-800 font-bold font-mono">
-                        {new Date(prog.fecha_inicio + 'T00:00:00').toLocaleDateString('es-ES')}
+                        {new Date(
+                          prog.fecha_inicio + "T00:00:00"
+                        ).toLocaleDateString("es-ES")}
                       </p>
                     </div>
 
@@ -253,12 +336,20 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                         <div className="w-6 h-6 bg-[#FACC15] rounded-lg flex items-center justify-center">
                           <i className="bi bi-calendar-check text-white text-xs"></i>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">Fecha Fin</span>
+                        <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">
+                          Fecha Fin
+                        </span>
                       </div>
-                      <p className={`font-bold font-mono ${prog.fecha_fin ? 'text-gray-800' : 'text-blue-600'}`}>
+                      <p
+                        className={`font-bold font-mono ${
+                          prog.fecha_fin ? "text-gray-800" : "text-blue-600"
+                        }`}
+                      >
                         {prog.fecha_fin
-                          ? new Date(prog.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES')
-                          : '♾️ Indefinido'}
+                          ? new Date(
+                              prog.fecha_fin + "T00:00:00"
+                            ).toLocaleDateString("es-ES")
+                          : "♾️ Indefinido"}
                       </p>
                     </div>
                   </div>
@@ -269,23 +360,37 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                         <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
                           <i className="bi bi-chat-text text-white text-xs"></i>
                         </div>
-                        <span className="text-sm font-semibold text-blue-700 uppercase tracking-wide font-lato">Observaciones</span>
+                        <span className="text-sm font-semibold text-blue-700 uppercase tracking-wide font-lato">
+                          Observaciones
+                        </span>
                       </div>
-                      <p className="text-blue-800 font-medium">{prog.observaciones}</p>
+                      <p className="text-blue-800 font-medium">
+                        {prog.observaciones}
+                      </p>
                     </div>
                   )}
                 </div>
 
                 <div className="flex flex-col gap-2 ml-6">
                   <button
-                    onClick={() => setEditingProgramacion(prog)}
+                    onClick={() => {
+                      // Asegurar que la programación tenga el ID normalizado
+                      const progToEdit = {
+                        ...prog,
+                        id: prog.id_programacion_recurrente || prog.id
+                      };
+                      setEditingProgramacion(progToEdit);
+                    }}
                     className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
                     title="Editar"
                   >
                     <i className="bi bi-pencil-square text-lg"></i>
                   </button>
                   <button
-                    onClick={() => handleDelete(prog.id)}
+                    onClick={() => {
+                      const deleteId = prog.id_programacion_recurrente || prog.id;
+                      handleDelete(deleteId);
+                    }}
                     className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-200"
                     title="Eliminar"
                   >
@@ -294,7 +399,8 @@ const RecurringSchedulingManager = ({ empleadoId }) => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -272,7 +272,8 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
           <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-scissors text-lg"></i></div><h2 className="text-xl font-bold m-0">Crear Nuevo Servicio</h2></div>
           <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <form id="create-service-form" onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
+          <form id="create-service-form" onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
             {/* Columna izquierda: Imagen */}
             <div className="flex flex-col items-center md:w-1/2 w-full gap-4">
               <div
@@ -349,10 +350,10 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
             </div>
 
             {/* Columna derecha: Campos */}
-            <div className="flex flex-col gap-4 md:w-1/2 w-full">
+            <div className="flex flex-col gap-6 md:w-1/2 w-full">
               {/* Nombre */}
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Nombre del Servicio <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -362,26 +363,35 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                   onChange={handleChange}
                   onBlur={handleNameBlur}
                   onKeyDown={handleKeyDown}
-                  className={`w-full px-3 py-2 border rounded-md text-sm ${
-                    !isNameValid || nameError ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    !isNameValid || nameError
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                   required
                 />
-                {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
+                {nameError && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {nameError}
+                  </p>
+                )}
               </div>
 
               {/* Categoría */}
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Categoría <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="id_categoria_servicio"
                   value={formData.id_categoria_servicio}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md text-sm ${
-                    errors.id_categoria_servicio ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                    errors.id_categoria_servicio
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                   required
                 >
                   {activeCategories.length === 0 && (
@@ -396,13 +406,16 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                   ))}
                 </select>
                 {errors.id_categoria_servicio && (
-                  <p className="text-red-500 text-xs mt-1">{errors.id_categoria_servicio}</p>
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {errors.id_categoria_servicio}
+                  </p>
                 )}
               </div>
 
               {/* Descripción */}
-              <div>
-                <label className="block text-xs font-medium text-text-main mb-1">
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
                   Descripción <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -410,21 +423,26 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                   value={formData.descripcion}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-3 py-2 border rounded-md text-sm resize-none ${
-                    errors.descripcion ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm resize-none ${
+                    errors.descripcion
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                   rows={3}
                   required
                 />
                 {errors.descripcion && (
-                  <p className="text-xs text-red-500 mt-1">{errors.descripcion}</p>
+                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {errors.descripcion}
+                  </p>
                 )}
               </div>
 
               {/* Duración y Precio */}
-              <div className="flex gap-4">
-                <div className="w-1/2">
-                  <label className="block text-xs font-medium text-text-main mb-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Duración (min) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -434,18 +452,23 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
-                    className={`w-full px-3 py-2 border rounded-md text-sm ${
-                      errors.duracion ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                      errors.duracion
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                     required
                     placeholder="Ej: 60"
                   />
                   {errors.duracion && (
-                    <p className="text-xs text-red-500 mt-1">{errors.duracion}</p>
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
+                      {errors.duracion}
+                    </p>
                   )}
                 </div>
-                <div className="w-1/2">
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Precio <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -455,19 +478,25 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
-                    className={`w-full px-3 py-2 border rounded-md text-sm ${
-                      errors.precio ? "border-red-500" : "border-gray-300"
-                    }`}
+                    className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                      errors.precio
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                     required
                     placeholder="Ej: 50000"
                   />
                   {errors.precio && (
-                    <p className="text-xs text-red-500 mt-1">{errors.precio}</p>
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
+                      {errors.precio}
+                    </p>
                   )}
                 </div>
               </div>
             </div>
-        </form>
+          </form>
+        </div>
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
           <button type="submit" form="create-service-form" disabled={!isNameValid} className={`px-4 py-2 rounded-lg ml-2 text-xs font-semibold flex items-center gap-2 ${isNameValid ? 'bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 hover:from-yellow-400 hover:to-yellow-500' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}><i className="bi bi-check-circle"></i>Guardar</button>
