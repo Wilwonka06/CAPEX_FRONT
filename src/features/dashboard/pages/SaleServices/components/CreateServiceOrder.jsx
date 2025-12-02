@@ -87,38 +87,92 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
     return formatPrice(Math.max(0, dinero - totalGeneral));
   }, [formData.dineroProporcionado, totalGeneral]);
 
-  // Buscar cliente por documento y autocompletar
-  const lookupClientByDocument = useCallback(async (doc) => {
-    if (!doc || doc.length < 6) return;
+  // Buscar cliente por documento y autocompletar (con debounce)
+  const searchTimeoutRef = useRef(null);
+  
+  const lookupClientByDocument = useCallback(async (doc, clearIfNotFound = false) => {
+    const cleanDoc = doc?.toString().trim();
+    
+    // Si el documento es muy corto, limpiar los campos si clearIfNotFound es true
+    if (!cleanDoc || cleanDoc.length < 5) {
+      setClienteEncontrado(false);
+      if (clearIfNotFound) {
+        setFormData(prev => ({
+          ...prev,
+          id_cliente: null,
+          nombre: '',
+          telefono: '',
+          correo: ''
+        }));
+      }
+      return;
+    }
     
     try {
       setBuscandoCliente(true);
-      const searchResponse = await usersService.getAll({ documento: doc.trim() });
+      console.log('🔍 Buscando cliente con documento:', cleanDoc);
+      
+      // Buscar usuarios - sin filtro en la petición para que el backend retorne todos
+      const searchResponse = await usersService.getAll();
+      
+      console.log('📦 Respuesta de búsqueda:', searchResponse);
       
       if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        // Buscar el usuario que coincida exactamente con el documento
         const existingUser = searchResponse.data.find(user => {
           const userDoc = user.documento?.toString().trim() || '';
-          return userDoc === doc.trim();
+          const matches = userDoc === cleanDoc;
+          if (matches) {
+            console.log('✅ Cliente encontrado:', user);
+          }
+          return matches;
         });
         
         if (existingUser) {
+          console.log('🎯 Autocompletando datos del cliente:', existingUser);
           setFormData(prev => ({
             ...prev,
             id_cliente: existingUser.id_usuario || existingUser.id,
-            tipoDocumento: existingUser.tipo_documento || prev.tipoDocumento,
-            nombre: existingUser.nombre || prev.nombre,
-            telefono: (existingUser.telefono || '').replace(/[^0-9]/g, ''),
-            correo: existingUser.correo || prev.correo
+            tipoDocumento: existingUser.tipo_documento || prev.tipoDocumento || 'CC',
+            nombre: existingUser.nombre || '',
+            telefono: (existingUser.telefono || '').replace(/\D/g, ''),
+            correo: existingUser.correo || ''
           }));
           setClienteEncontrado(true);
+          setTouched(prev => ({
+            ...prev,
+            nombre: false,
+            telefono: false,
+            correo: false
+          }));
         } else {
+          console.log('❌ No se encontró cliente con ese documento');
           setClienteEncontrado(false);
+          if (clearIfNotFound) {
+            setFormData(prev => ({
+              ...prev,
+              id_cliente: null,
+              nombre: '',
+              telefono: '',
+              correo: ''
+            }));
+          }
         }
       } else {
+        console.log('⚠️ No hay datos de usuarios en la respuesta');
         setClienteEncontrado(false);
+        if (clearIfNotFound) {
+          setFormData(prev => ({
+            ...prev,
+            id_cliente: null,
+            nombre: '',
+            telefono: '',
+            correo: ''
+          }));
+        }
       }
     } catch (error) {
-      console.error('Error buscando cliente:', error);
+      console.error('❌ Error buscando cliente:', error);
       setClienteEncontrado(false);
     } finally {
       setBuscandoCliente(false);
@@ -340,7 +394,18 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
       setFormData(prev => ({ ...prev, [name]: value }));
       setTouched(prev => ({ ...prev, [name]: true }));
       
-      // NO buscar cliente en onChange, solo en onBlur para evitar pérdida de focus
+      // Búsqueda en tiempo real para el documento
+      if (name === 'documento') {
+        // Cancelar búsqueda anterior si existe
+        if (searchTimeoutRef.current) {
+          clearTimeout(searchTimeoutRef.current);
+        }
+        
+        // Buscar después de 500ms de inactividad (debounce)
+        searchTimeoutRef.current = setTimeout(() => {
+          lookupClientByDocument(value, true);
+        }, 500);
+      }
     }
   }, []); // Sin dependencias - usa versión funcional de setState
 
@@ -426,30 +491,32 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
             </div>
 
             {/* Documento */}
-            <div className="relative">
+            <div>
               <label className="block text-xs font-medium text-black mb-1">
                 Número de Documento <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                name="documento"
-                value={formData.documento}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                placeholder="Número de documento"
-                maxLength={20}
-              />
-              {buscandoCliente && (
-                <div className="absolute right-3 top-8">
-                  <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
-                </div>
-              )}
-              {!buscandoCliente && clienteEncontrado && (
-                <div className="absolute right-3 top-8 text-green-500">
-                  <i className="bi bi-check-circle"></i>
-                </div>
-              )}
+              <div className="relative">
+                <input
+                  type="text"
+                  name="documento"
+                  value={formData.documento}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  placeholder="Número de documento"
+                  maxLength={20}
+                />
+                {buscandoCliente && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
+                  </div>
+                )}
+                {!buscandoCliente && clienteEncontrado && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-600">
+                    <i className="bi bi-check-circle-fill"></i>
+                  </div>
+                )}
+              </div>
               {(touched.documento || showErrors) && errors.documento && (
                 <p className="text-red-600 text-xs mt-1">{errors.documento}</p>
               )}
