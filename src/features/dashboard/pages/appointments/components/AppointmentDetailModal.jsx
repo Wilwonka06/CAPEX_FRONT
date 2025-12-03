@@ -242,11 +242,21 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
         <div className="rounded-b-2xl flex justify-end gap-2 px-6 py-3 bg-gray-50 border-t border-gray-200">
           {!esCancelada && (
             <button 
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 font-semibold text-sm" 
+              className="px-4 py-2 bg-red-600 text-white rounded-lg shadow hover:bg-red-700 font-semibold text-sm transition-all duration-200 flex items-center gap-2" 
               onClick={handleCancelar} 
               disabled={loadingCancel}
             >
-              {loadingCancel ? "Cancelando..." : "Cancelar cita"}
+              {loadingCancel ? (
+                <>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                  Cancelando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-x-circle-fill"></i>
+                  Cancelar cita
+                </>
+              )}
             </button>
           )}
           {!esCancelada && (
