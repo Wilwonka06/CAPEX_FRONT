@@ -273,69 +273,60 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
           <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
         <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
-          <form id="create-service-form" onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
-            {/* Columna izquierda: Imagen */}
-            <div className="flex flex-col items-center md:w-1/2 w-full gap-4">
-              <div
-                className="w-60 h-60 bg-gray-50 rounded-lg flex items-center justify-center mb-2 shadow-lg p-0 relative border-2 border-dashed border-gray-300 cursor-pointer hover:border-primary transition-colors"
-                onClick={() => document.getElementById("file-input-service").click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                }}
-                onDrop={async (e) => {
-                  e.preventDefault();
-                  const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
-                  if (files.length > 0) {
-                    const file = files[0];
-                    if (!validateFileType(file)) {
-                      toast.error(`${file.name}: Tipo de archivo no válido`);
-                      return;
-                    }
-                    if (!validateFileSize(file, 5)) {
-                      toast.error(`${file.name}: Máximo 5MB`);
-                      return;
-                    }
-                    try {
-                      const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
-                      setFormData((prev) => ({ ...prev, foto: base64Image }));
-                      const preview = URL.createObjectURL(file);
-                      setPreviews([preview]);
-                    } catch (error) {
-                      console.error('Error procesando imagen:', error);
-                      toast.error('Error al procesar la imagen');
-                    }
-                  }
-                }}
-              >
-                {previews.length > 0 ? (
-                  <>
-                    <img
-                      src={previews[0]}
-                      alt="Vista previa"
-                      className="w-full h-full object-cover rounded-lg m-0"
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeImage();
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-sm"
-                    >
-                      ×
-                    </button>
-                  </>
-                ) : (
-                  <div className="text-center">
-                    <i className="bi bi-cloud-upload text-3xl text-gray-400 mb-2"></i>
-                    <p className="text-sm text-gray-500 mb-1">
-                      Arrastra y suelta una imagen aquí
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      o haz clic para seleccionar (1 máx)
-                    </p>
+          <form id="create-service-form" onSubmit={handleSubmit} className="space-y-6">
+            {/* Fotos del servicio */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <label className="block text-xs font-semibold text-gray-800 mb-3 items-center gap-2">
+                <i className="bi bi-images text-[#FACC15]"></i>
+                Foto del Servicio <span className="text-gray-500 text-xs font-normal">(Máximo 1)</span>
+              </label>
+              <div className="space-y-4">
+                {!formData.foto && (
+                  <div
+                    className="relative w-full h-32 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#FACC15] hover:bg-yellow-50 transition-all duration-200 group"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                    }}
+                    onDrop={async (e) => {
+                      e.preventDefault();
+                      const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+                      if (files.length > 0) {
+                        const file = files[0];
+                        if (!validateFileType(file)) {
+                          toast.error(`${file.name}: Tipo de archivo no válido`);
+                          return;
+                        }
+                        if (!validateFileSize(file, 5)) {
+                          toast.error(`${file.name}: Máximo 5MB`);
+                          return;
+                        }
+                        try {
+                          const base64Image = await compressImageToBase64(file, 1000, 1000, 0.8);
+                          setFormData((prev) => ({ ...prev, foto: base64Image }));
+                          const preview = URL.createObjectURL(file);
+                          setPreviews([preview]);
+                        } catch (error) {
+                          console.error('Error procesando imagen:', error);
+                          toast.error('Error al procesar la imagen');
+                        }
+                      }
+                    }}
+                    onClick={() => document.getElementById("file-input-service").click()}
+                  >
+                    <div className="text-center">
+                      <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-yellow-100 transition-colors">
+                        <i className="bi bi-cloud-upload text-2xl text-gray-500 group-hover:text-[#FACC15] transition-colors"></i>
+                      </div>
+                      <p className="text-xs font-medium text-gray-600 mb-1">
+                        Arrastra y suelta imagen aquí
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        o haz clic para seleccionar
+                      </p>
+                    </div>
                   </div>
                 )}
+
                 <input
                   id="file-input-service"
                   type="file"
@@ -343,14 +334,35 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                   onChange={handleChange}
                   className="hidden"
                 />
-              </div>
-              <div className="text-lg font-bold text-gray-800 text-center mb-2">
-                {formData.nombre || "Nombre del servicio"}
+
+                {previews.length > 0 && (
+                  <div className="flex gap-2">
+                    <div className="relative group">
+                      <img
+                        src={previews[0]}
+                        alt="Vista previa"
+                        className="w-24 h-24 object-cover rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-lg"
+                      >
+                        <i className="bi bi-x text-sm"></i>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Columna derecha: Campos */}
-            <div className="flex flex-col gap-6 md:w-1/2 w-full">
+            {/* Campos del formulario en grid */}
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <h3 className="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <i className="bi bi-info-circle text-[#FACC15]"></i>
+                Información del Servicio
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Nombre */}
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -493,6 +505,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                     </p>
                   )}
                 </div>
+              </div>
               </div>
             </div>
           </form>

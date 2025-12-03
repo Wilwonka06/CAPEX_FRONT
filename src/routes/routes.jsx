@@ -17,13 +17,13 @@ import Compras from "../features/dashboard/pages/purchases/Purchases";
 import Dashboard from "../features/dashboard/components/dashboard";
 import Empleados from "../features/dashboard/pages/employees/Employees";
 import EmployeeDetailPage from "../features/dashboard/pages/employees/components/EmployeeDetailPage";
-import Pedidos from "../features/dashboard/pages/orders/Orders";
+import Pedidos from "../features/dashboard/pages/orders/orders";
 import Productos from "../features/dashboard/pages/products/products";
 import Proveedores from "../features/dashboard/pages/Suppliers/Suppliers";
 import RolesPage from "../features/dashboard/pages/roles/Roles";
 import SaleServices from "../features/dashboard/pages/SaleServices/SaleServices";
-import Servicios from "../features/dashboard/pages/Services/Services";
-import Users from "../features/dashboard/pages/users/Users";
+import Servicios from "../features/dashboard/pages/Services/services";
+import Users from "../features/dashboard/pages/users/users";
 import VentasProductos from "../features/dashboard/pages/SaleProducts/SalesProducts";
 import Scheduling from "../features/dashboard/pages/scheduling/scheduling";
 
