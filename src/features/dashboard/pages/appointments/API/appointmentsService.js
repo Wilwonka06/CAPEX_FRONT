@@ -360,8 +360,7 @@ export const appointmentsService = {
       console.error('Error fetching appointment stats:', error);
       throw error;
     }
-  },
-
+  }
 };
 
 export default appointmentsService;
