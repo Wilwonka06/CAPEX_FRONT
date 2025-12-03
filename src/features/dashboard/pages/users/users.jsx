@@ -54,21 +54,9 @@ const Users = () => {
     }
   };
 
-  // Sincronizar filteredUsers con users y aplicar ordenamiento personalizado
+  // Sincronizar filteredUsers con users
   useEffect(() => {
-    // Orden personalizado: Ronald Erazo Valencia (1033488966) siempre primero
-    const sortedUsers = [...users].sort((a, b) => {
-      const aIsSpecial = (a.documento === '1033488966' && a.nombre === 'Ronald Erazo Valencia');
-      const bIsSpecial = (b.documento === '1033488966' && b.nombre === 'Ronald Erazo Valencia');
-      
-      if (aIsSpecial && !bIsSpecial) return -1;
-      if (!aIsSpecial && bIsSpecial) return 1;
-      
-      // Si ambos o ninguno es especial, ordenar por nombre
-      return (a.nombre || '').localeCompare(b.nombre || '');
-    });
-    
-    setFilteredUsers(sortedUsers);
+    setFilteredUsers(users);
   }, [users]);
 
   // Filtrar usuarios por todos los campos cuando cambia el término de búsqueda
