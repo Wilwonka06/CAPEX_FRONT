@@ -42,11 +42,16 @@ function compressImageToBase64(file, maxWidth = 80, maxHeight = 80, quality = 0.
 
 const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const { hasPrivilege } = useAuth();
+  // Inicializar roles: usar roles múltiples si están disponibles, sino usar roleId
+  const initialRoles = user.roles && Array.isArray(user.roles) && user.roles.length > 0
+    ? user.roles.map(role => role.id_rol?.toString() || role.toString())
+    : (user.roleId ? [user.roleId.toString()] : []);
+  
   const [form, setForm] = useState({
     ...user,
     tipoDocumento: user.tipo_documento, // Map backend field to frontend field
     telefono: user.telefono, // Ensure telefono field is properly set
-    roles: user.roleId ? [user.roleId.toString()] : [],
+    roles: initialRoles,
     conceptoEstado: user.concepto_estado || '' // Add concepto_estado field
   });
   const [availableRoles, setAvailableRoles] = useState([]);
@@ -179,7 +184,10 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       tipo_documento: toBackendDocCode(form.tipoDocumento),
       documento: form.documento,
       telefono: numero,
-      roleId: parseInt(form.roles[0]) || form.roleId,
+      // Enviar array de roles para permitir múltiples roles
+      roles: form.roles.map(r => parseInt(r)).filter(id => !isNaN(id) && id > 0),
+      // También enviar roleId como el primer rol para compatibilidad
+      roleId: form.roles.length > 0 ? parseInt(form.roles[0]) : form.roleId,
       estado: form.estado,
       ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
       ...(foto && { foto }), //
