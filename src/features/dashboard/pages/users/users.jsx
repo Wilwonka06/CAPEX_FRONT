@@ -36,7 +36,8 @@ const Users = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await usersService.getAll();
+      // Solicitar un límite mayor para asegurar que se obtengan todos los usuarios
+      const response = await usersService.getAll({ limit: 1000 });
       if (response.success) {
         setUsers(response.data || []);
       } else {
