@@ -42,10 +42,31 @@ function compressImageToBase64(file, maxWidth = 80, maxHeight = 80, quality = 0.
 
 const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const { hasPrivilege } = useAuth();
+  
+  console.log('🟡 [EditUser] Usuario recibido para editar:', {
+    id: user.id_usuario || user.id,
+    nombre: user.nombre,
+    roleId: user.roleId,
+    roles: user.roles,
+    rolesIsArray: Array.isArray(user.roles),
+    rolesLength: user.roles?.length || 0,
+    userData: JSON.stringify(user, null, 2)
+  });
+  
   // Inicializar roles: usar roles múltiples si están disponibles, sino usar roleId
   const initialRoles = user.roles && Array.isArray(user.roles) && user.roles.length > 0
-    ? user.roles.map(role => role.id_rol?.toString() || role.toString())
+    ? user.roles.map(role => {
+        const roleId = role.id_rol || role.id || role;
+        console.log('🟡 [EditUser] Mapeando rol:', { role, roleId, tipo: typeof role });
+        return roleId.toString();
+      })
     : (user.roleId ? [user.roleId.toString()] : []);
+  
+  console.log('🟡 [EditUser] Roles iniciales calculados:', {
+    initialRoles,
+    tieneRoles: !!user.roles,
+    tieneRoleId: !!user.roleId
+  });
   
   const [form, setForm] = useState({
     ...user,
@@ -53,6 +74,11 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
     telefono: user.telefono, // Ensure telefono field is properly set
     roles: initialRoles,
     conceptoEstado: user.concepto_estado || '' // Add concepto_estado field
+  });
+  
+  console.log('🟡 [EditUser] Form inicializado:', {
+    rolesEnForm: form.roles,
+    roleIdEnForm: form.roleId
   });
   const [availableRoles, setAvailableRoles] = useState([]);
   const [preview, setPreview] = useState(user.avatarCompressed || '');
@@ -177,6 +203,8 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
+    const rolesArray = form.roles.map(r => parseInt(r)).filter(id => !isNaN(id) && id > 0);
+    
     const updatedUser = {
       id_usuario: form.id_usuario || form.id,
       nombre: form.nombre,
@@ -185,14 +213,23 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       documento: form.documento,
       telefono: numero,
       // Enviar array de roles para permitir múltiples roles
-      roles: form.roles.map(r => parseInt(r)).filter(id => !isNaN(id) && id > 0),
+      roles: rolesArray,
       // También enviar roleId como el primer rol para compatibilidad
-      roleId: form.roles.length > 0 ? parseInt(form.roles[0]) : form.roleId,
+      roleId: rolesArray.length > 0 ? rolesArray[0] : form.roleId,
       estado: form.estado,
       ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
       ...(foto && { foto }), //
       ...(form.direccion && { direccion: form.direccion }),
     };
+
+    console.log('🟡 [EditUser] Datos a enviar al backend:', {
+      userId: updatedUser.id_usuario,
+      roles: updatedUser.roles,
+      roleId: updatedUser.roleId,
+      rolesOriginal: form.roles,
+      rolesProcesados: rolesArray,
+      todosLosDatos: JSON.stringify(updatedUser, null, 2)
+    });
 
     onEdit(updatedUser);
   };
