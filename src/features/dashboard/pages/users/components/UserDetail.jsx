@@ -3,11 +3,15 @@ const DEFAULT_AVATAR =
   "https://ui-avatars.com/api/?name=User&background=eee&color=888&size=256";
 
 const UserDetailModal = ({ onClose, user }) => {
-  if (!user) return null;
+  console.log('UserDetailModal: Rendering with user:', user);
+  if (!user) {
+    console.warn('UserDetailModal: No user provided, returning null');
+    return null;
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-primary to-accent text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
               <i className="bi bi-person text-lg"></i>
@@ -100,7 +104,7 @@ const UserDetailModal = ({ onClose, user }) => {
                               {user.roles.map((rol, idx) => (
                                 <span
                                   key={idx}
-                                  className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium"
+                                  className="inline-block px-2 py-1 bg-accent-light text-primary rounded text-xs font-medium"
                                 >
                                   {typeof rol === "string"
                                     ? rol
@@ -167,7 +171,7 @@ const UserDetailModal = ({ onClose, user }) => {
 
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold hover:from-primary-dark hover:to-accent-light transition-all duration-200 flex items-center gap-2"
             onClick={onClose}
           >
             <i className="bi bi-check-circle"></i>Cerrar

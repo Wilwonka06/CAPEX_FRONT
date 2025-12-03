@@ -42,17 +42,56 @@ function compressImageToBase64(file, maxWidth = 80, maxHeight = 80, quality = 0.
 
 const EditUserModal = ({ onClose, onEdit, user, users }) => {
   const { hasPrivilege } = useAuth();
+  
+  console.log('🟡 [EditUser] Usuario recibido para editar:', {
+    id: user.id_usuario || user.id,
+    nombre: user.nombre,
+    roleId: user.roleId,
+    roles: user.roles,
+    rolesIsArray: Array.isArray(user.roles),
+    rolesLength: user.roles?.length || 0,
+    userData: JSON.stringify(user, null, 2)
+  });
+  
+  // Inicializar roles: usar roles múltiples si están disponibles, sino usar roleId
+  const initialRoles = user.roles && Array.isArray(user.roles) && user.roles.length > 0
+    ? user.roles.map(role => {
+        const roleId = role.id_rol || role.id || role;
+        console.log('🟡 [EditUser] Mapeando rol:', { role, roleId, tipo: typeof role });
+        return roleId.toString();
+      })
+    : (user.roleId ? [user.roleId.toString()] : []);
+  
+  console.log('🟡 [EditUser] Roles iniciales calculados:', {
+    initialRoles,
+    tieneRoles: !!user.roles,
+    tieneRoleId: !!user.roleId
+  });
+  
   const [form, setForm] = useState({
     ...user,
     tipoDocumento: user.tipo_documento, // Map backend field to frontend field
     telefono: user.telefono, // Ensure telefono field is properly set
-    roles: user.roleId ? [user.roleId.toString()] : [],
+    roles: initialRoles,
     conceptoEstado: user.concepto_estado || '' // Add concepto_estado field
+  });
+  
+  console.log('🟡 [EditUser] Form inicializado:', {
+    rolesEnForm: form.roles,
+    roleIdEnForm: form.roleId
   });
   const [availableRoles, setAvailableRoles] = useState([]);
   const [preview, setPreview] = useState(user.avatarCompressed || '');
   const [error, setError] = useState({});
   const canModifyStatus = hasPrivilege('Gestión de Usuarios', 'Editar');
+  
+  // Verificar si el usuario tiene asociaciones de cliente que requieren mantener el rol Cliente
+  const hasClientAssociations = user.hasClientAssociations || false;
+  const clientAssociationsInfo = user.clientAssociationsInfo || null;
+  
+  // Obtener el ID del rol Cliente
+  const clienteRoleId = availableRoles.find(r => r.nombre === 'Cliente')?.id_rol?.toString();
+  const isClienteRoleDisabled = hasClientAssociations && clienteRoleId;
 
   // Parsear teléfono guardado
   const parseTelefono = (telefono) => {
@@ -63,12 +102,16 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   useEffect(() => {
     const loadRoles = async () => {
       try {
+        console.log('EditUser: Loading available roles...');
         const response = await usersService.getAvailableRoles();
         if (response.success) {
           setAvailableRoles(response.data || []);
+          console.log('EditUser: Roles loaded successfully:', response.data);
+        } else {
+          console.warn('EditUser: Failed to load roles:', response);
         }
       } catch (error) {
-        console.error('Error loading roles:', error);
+        console.error('EditUser: Error loading roles:', error);
         setAvailableRoles([]);
       }
     };
@@ -172,6 +215,8 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       foto = await compressImageToBase64(form.avatar, 512, 512, 0.8);
     }
 
+    const rolesArray = form.roles.map(r => parseInt(r)).filter(id => !isNaN(id) && id > 0);
+    
     const updatedUser = {
       id_usuario: form.id_usuario || form.id,
       nombre: form.nombre,
@@ -179,12 +224,24 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
       tipo_documento: toBackendDocCode(form.tipoDocumento),
       documento: form.documento,
       telefono: numero,
-      roleId: parseInt(form.roles[0]) || form.roleId,
+      // Enviar array de roles para permitir múltiples roles
+      roles: rolesArray,
+      // También enviar roleId como el primer rol para compatibilidad
+      roleId: rolesArray.length > 0 ? rolesArray[0] : form.roleId,
       estado: form.estado,
       ...(form.estado === 'Inactivo' && { concepto_estado: form.conceptoEstado }),
       ...(foto && { foto }), //
       ...(form.direccion && { direccion: form.direccion }),
     };
+
+    console.log('🟡 [EditUser] Datos a enviar al backend:', {
+      userId: updatedUser.id_usuario,
+      roles: updatedUser.roles,
+      roleId: updatedUser.roleId,
+      rolesOriginal: form.roles,
+      rolesProcesados: rolesArray,
+      todosLosDatos: JSON.stringify(updatedUser, null, 2)
+    });
 
     onEdit(updatedUser);
   };
@@ -197,7 +254,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-primary to-accent text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-pencil-square text-lg"></i></div>
             <h2 className="text-xl font-bold m-0">Editar usuario</h2>
@@ -272,24 +329,48 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
               <div>
                 <label className="block text-xs font-medium text-text-main mb-2">Roles <span className="text-red-500">*</span></label>
                 <div className="flex flex-wrap gap-3 p-3 border border-gray-200 rounded-md bg-gray-50">
-                  {availableRoles.map(role => (
-                    <label 
-                      key={role.id_rol} 
-                      className="flex items-center gap-2 text-sm font-medium text-text-main cursor-pointer hover:text-primary transition-colors px-3 py-2 rounded-md hover:bg-white border border-transparent hover:border-gray-300"
-                    >
-                      <input
-                        type="checkbox"
-                        name="roles"
-                        value={role.id_rol.toString()}
-                        checked={form.roles.includes(role.id_rol.toString())}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        className="accent-primary-dark w-4 h-4 cursor-pointer"
-                      />
-                      <span>{role.nombre}</span>
-                    </label>
-                  ))}
+                  {availableRoles.map(role => {
+                    const roleIdStr = role.id_rol.toString();
+                    const isCliente = role.nombre === 'Cliente';
+                    const isDisabled = isCliente && isClienteRoleDisabled;
+                    const isChecked = form.roles.includes(roleIdStr);
+                    
+                    return (
+                      <label 
+                        key={role.id_rol} 
+                        className={`flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-md border transition-colors ${
+                          isDisabled 
+                            ? 'text-gray-400 cursor-not-allowed bg-gray-100 border-gray-200' 
+                            : 'text-text-main cursor-pointer hover:text-primary hover:bg-white border-transparent hover:border-gray-300'
+                        }`}
+                        title={isDisabled ? (clientAssociationsInfo?.message || 'Este rol no puede ser removido porque el usuario tiene ventas u órdenes asociadas') : ''}
+                      >
+                        <input
+                          type="checkbox"
+                          name="roles"
+                          value={roleIdStr}
+                          checked={isChecked}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          disabled={isDisabled}
+                          className={`accent-primary-dark w-4 h-4 ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                        />
+                        <span>{role.nombre}</span>
+                        {isDisabled && isChecked && (
+                          <i className="bi bi-lock-fill text-xs text-gray-500 ml-1" title="Este rol no puede ser removido"></i>
+                        )}
+                      </label>
+                    );
+                  })}
                 </div>
+                {isClienteRoleDisabled && (
+                  <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-xs text-yellow-800">
+                      <i className="bi bi-info-circle mr-1"></i>
+                      {clientAssociationsInfo?.message || 'El rol de Cliente no puede ser removido porque el usuario tiene ventas u órdenes de servicio asociadas.'}
+                    </p>
+                  </div>
+                )}
                 {error.roles && <span className="text-red-500 text-xs mt-1 block">{error.roles}</span>}
               </div>
               <div>
@@ -360,7 +441,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
         </div>
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"><i className="bi bi-x-circle"></i>Cancelar</button>
-          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.values(error).some(Boolean)}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
+          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold hover:from-primary-dark hover:to-accent-light transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.values(error).some(Boolean)}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
         </div>
       </div>
     </div>

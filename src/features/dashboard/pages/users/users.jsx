@@ -9,7 +9,83 @@ import LoadingTable from '../../../../shared/components/LoadingTable';
 import usersService from './API/usersService';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
+
+import { getCitasEnEjecucion } from '../SaleServices/API/CitasService';
+
+const USERS_PER_PAGE = 5;
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
+
+
+// Función para ordenar usuarios con prioridad especial
+const sortUsers = (usersArray) => {
+  if (!Array.isArray(usersArray)) return [];
+  
+  // Crear una copia para no mutar el array original
+  const sortedUsers = [...usersArray];
+  
+  // Ordenar los usuarios
+  sortedUsers.sort((a, b) => {
+    // 1. PRIORIDAD ESPECIAL: Ronald Erazo Valencia (documento 1033488966) siempre primero
+    const ronaldDoc = '1033488966';
+    const aIsRonald = a.documento === ronaldDoc;
+    const bIsRonald = b.documento === ronaldDoc;
+    
+    if (aIsRonald && !bIsRonald) return -1;
+    if (!aIsRonald && bIsRonald) return 1;
+    
+    // Si ambos son Ronald, mantener el orden (no debería pasar)
+    if (aIsRonald && bIsRonald) return 0;
+    
+    // 2. PRIORIDAD ESPECIAL: Superadmin con correo heieihei183@gmail.com siempre segundo
+    const superAdminEmail = 'heieihei183@gmail.com';
+    const aIsSuperAdmin = a.correo && a.correo.toLowerCase() === superAdminEmail.toLowerCase();
+    const bIsSuperAdmin = b.correo && b.correo.toLowerCase() === superAdminEmail.toLowerCase();
+    
+    if (aIsSuperAdmin && !bIsSuperAdmin) return -1;
+    if (!aIsSuperAdmin && bIsSuperAdmin) return 1;
+    
+    // Si ambos son el Superadmin, mantener el orden (no debería pasar)
+    if (aIsSuperAdmin && bIsSuperAdmin) return 0;
+    
+    // 3. ORDENAMIENTO ALFABÉTICO: Resto de usuarios ordenados alfabéticamente por nombre
+    // Normalizar nombres: trim y lowercase para comparación consistente
+    const aName = (a.nombre || '').trim().toLowerCase();
+    const bName = (b.nombre || '').trim().toLowerCase();
+    
+    // Comparación alfabética estricta
+    if (aName < bName) return -1;
+    if (aName > bName) return 1;
+    
+    // Si los nombres son iguales, mantener orden estable (por ID si existe)
+    if (aName === bName) {
+      const aId = a.id_usuario || a.id || 0;
+      const bId = b.id_usuario || b.id || 0;
+      return aId - bId;
+    }
+    
+    return 0;
+  });
+  
+  return sortedUsers;
+};
+
+// Función helper para buscar recursivamente en objetos y arrays
+const searchInValue = (value, searchTerm) => {
+  if (value === null || value === undefined) return false;
+  
+  // Si es un objeto, buscar en sus valores
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return Object.values(value).some(val => searchInValue(val, searchTerm));
+  }
+  
+  // Si es un array, buscar en cada elemento
+  if (Array.isArray(value)) {
+    return value.some(item => searchInValue(item, searchTerm));
+  }
+  
+  // Para valores primitivos, convertir a string y buscar
+  return String(value).toLowerCase().includes(searchTerm);
+};
 
 const Users = () => {
   const { setTitle } = useOutletContext();
@@ -37,9 +113,23 @@ const Users = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await usersService.getAll();
+      // Solicitar el límite máximo permitido (100) para obtener la mayor cantidad de usuarios
+      const response = await usersService.getAll({ limit: 100 });
       if (response.success) {
-        setUsers(response.data || []);
+        const usersData = response.data || [];
+        console.log('🔍 [Users] Total usuarios recibidos:', usersData.length);
+        
+        // Buscar el usuario específico
+        const targetUser = usersData.find(u => 
+          u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com')
+        );
+        if (targetUser) {
+          console.log('✅ [Users] Usuario encontrado:', targetUser);
+        } else {
+          console.warn('⚠️ [Users] Usuario con correo heieihei183@gmail.com NO encontrado en la respuesta del backend');
+        }
+        
+        setUsers(usersData);
       } else {
         console.error('API returned error:', response.message);
         setUsers([]);
@@ -55,25 +145,53 @@ const Users = () => {
     }
   };
 
-  // Sincronizar filteredUsers con users
+  // Sincronizar filteredUsers con users y aplicar ordenamiento
   useEffect(() => {
-    setFilteredUsers(users);
+    const sortedUsers = sortUsers(users);
+    console.log('🔍 [Users] Usuarios sincronizados y ordenados:', sortedUsers.length);
+    
+    // Verificar si el usuario objetivo está presente
+    const targetInSorted = sortedUsers.find(u => 
+      u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com')
+    );
+    if (targetInSorted) {
+      console.log('✅ [Users] Usuario objetivo presente en lista ordenada:', targetInSorted);
+      console.log('✅ [Users] Posición en lista:', sortedUsers.indexOf(targetInSorted));
+    } else if (users.some(u => u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com'))) {
+      console.error('❌ [Users] Usuario objetivo existe pero NO está en lista ordenada. Posible error en sortUsers');
+    }
+    
+    setFilteredUsers(sortedUsers);
   }, [users]);
 
   // Filtrar usuarios por todos los campos cuando cambia el término de búsqueda
   useEffect(() => {
     if (!searchTerm) {
-      setFilteredUsers(users);
+      // Si no hay búsqueda, aplicar ordenamiento a todos los usuarios
+      const sortedUsers = sortUsers(users);
+      setFilteredUsers(sortedUsers);
       return;
     }
     const lowerTerm = searchTerm.toLowerCase();
-    setFilteredUsers(
-      users.filter(user =>
-        Object.values(user).some(val =>
-          String(val).toLowerCase().includes(lowerTerm)
-        )
-      )
+    const filtered = users.filter(user => {
+      // Buscar recursivamente en todos los campos del usuario
+      return Object.values(user).some(val => searchInValue(val, lowerTerm));
+    });
+    console.log('🔍 [Users] Usuarios filtrados con término:', searchTerm, '->', filtered.length);
+    
+    // Verificar si el usuario objetivo está en los resultados
+    const targetInFiltered = filtered.find(u => 
+      u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com')
     );
+    if (targetInFiltered) {
+      console.log('✅ [Users] Usuario objetivo encontrado en resultados filtrados');
+    } else if (users.some(u => u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com'))) {
+      console.warn('⚠️ [Users] Usuario objetivo existe pero fue filtrado por:', searchTerm);
+    }
+    
+    // Aplicar ordenamiento también a los resultados filtrados
+    const sortedFiltered = sortUsers(filtered);
+    setFilteredUsers(sortedFiltered);
   }, [searchTerm, users]);
 
   // Paginación
@@ -213,9 +331,63 @@ const Users = () => {
 
   // Abrir modales
   const openCreate = () => setShowCreate(true);
-  const openEdit = (user) => {
-    setSelectedUser(user);
-    setShowEdit(true);
+  const openEdit = async (user) => {
+    try {
+      // Cargar el usuario completo con información de asociaciones
+      const userId = user.id_usuario || user.id;
+      const response = await usersService.getById(userId);
+      if (response.success) {
+        let userData = response.data;
+        
+        // Verificar si realmente tiene órdenes activas (no pagadas)
+        // Si el backend dice que tiene asociaciones, verificar que no sean solo órdenes pagadas
+        if (userData.hasClientAssociations) {
+          try {
+            // Obtener todas las órdenes de servicio para verificar si hay alguna activa
+            const allOrders = await getCitasEnEjecucion();
+            
+            // Filtrar órdenes del usuario actual que NO estén pagadas
+            const userActiveOrders = allOrders.filter(order => {
+              const orderClientId = order.client?.id || order.id_cliente || order.cliente?.id_usuario;
+              const isUserOrder = orderClientId === userId;
+              const isNotPaid = order.status !== 'Pagado' && 
+                                order.status !== 'Pagada' && 
+                                order.status?.toLowerCase() !== 'pagado' &&
+                                order.status?.toLowerCase() !== 'pagada';
+              
+              return isUserOrder && isNotPaid;
+            });
+            
+            // Si no hay órdenes activas, corregir hasClientAssociations
+            if (userActiveOrders.length === 0) {
+              console.log('⚠️ [Users] Usuario marcado con asociaciones pero no tiene órdenes activas (solo pagadas). Corrigiendo...');
+              userData = {
+                ...userData,
+                hasClientAssociations: false,
+                clientAssociationsInfo: null
+              };
+            } else {
+              console.log('✅ [Users] Usuario tiene', userActiveOrders.length, 'órdenes activas confirmadas');
+            }
+          } catch (orderError) {
+            console.warn('⚠️ [Users] No se pudieron verificar las órdenes del usuario:', orderError);
+            // Si hay error al verificar, mantener el valor del backend
+          }
+        }
+        
+        setSelectedUser(userData);
+        setShowEdit(true);
+      } else {
+        // Si falla, usar el usuario de la lista como fallback
+        setSelectedUser(user);
+        setShowEdit(true);
+      }
+    } catch (error) {
+      console.error('Error loading user details:', error);
+      // Si falla, usar el usuario de la lista como fallback
+      setSelectedUser(user);
+      setShowEdit(true);
+    }
   };
   const openDetail = (user) => {
     setSelectedUser(user);

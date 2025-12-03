@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { anularServiceOrder } from '../API/ServiceOrderService';
 import Swal from 'sweetalert2';
-import { formatNumber } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatPrice } from '../../../../../shared/utils/formatters';
 
 const AnularServiceOrder = ({ isOpen, onClose, order, onAnularSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -61,7 +61,7 @@ const AnularServiceOrder = ({ isOpen, onClose, order, onAnularSuccess }) => {
               <p><span className="font-medium">ID:</span> {order.id}</p>
               <p><span className="font-medium">Cliente:</span> {order.clientName}</p>
               <p><span className="font-medium">Estado:</span> {order.status}</p>
-              <p><span className="font-medium">Total:</span> ${formatNumber(order.totalGeneral || 0)}</p>
+              <p><span className="font-medium">Total:</span> {formatPrice(order.totalGeneral || 0)}</p>
             </div>
           </div>
         </div>

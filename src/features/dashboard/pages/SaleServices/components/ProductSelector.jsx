@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiRequest } from '../../../../../shared/config/apiConfig';
-import { formatNumber } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatPrice } from '../../../../../shared/utils/formatters';
 
 const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [productQuery, setProductQuery] = useState("");
@@ -236,7 +236,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                         <div className="flex items-center gap-4 text-xs">
                           <span className="flex items-center gap-1 text-gray-700">
                             <i className="bi bi-currency-dollar"></i>
-                            <span className="font-medium">${formatNumber(product.precio)}</span>
+                            <span className="font-medium">{formatPrice(product.precio)}</span>
                           </span>
                         </div>
                       </div>
@@ -329,7 +329,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-green-600">
-                    ${formatNumber((selectedProductForQuantity.precio || selectedProductForQuantity.price || 0) * quantity)}
+                    {formatPrice((selectedProductForQuantity.precio || selectedProductForQuantity.price || 0) * quantity)}
                   </div>
                 </div>
               </div>
@@ -379,7 +379,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                   <tr key={product.uniqueId} className="border-t hover:bg-gray-50">
                     <td className="px-2 py-2 border-r">{product.name}</td>
                     <td className="px-2 py-2 border-r text-center">{formatNumber(product.quantity)}</td>
-                    <td className="px-2 py-2 border-r">${formatNumber(product.subtotal || 0)}</td>
+                    <td className="px-2 py-2 border-r">{formatPrice(product.subtotal || 0)}</td>
                     <td className="px-2 py-2 text-center">
                       <button
                         onClick={() => removeProduct(product.uniqueId)}
@@ -399,7 +399,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
         <div className="mt-2 text-sm bg-green-50 p-2 rounded-md border border-green-100">
           <span className="font-medium">TOTAL DE PRODUCTOS: </span>
           <span className="font-bold text-green-600">
-            ${formatNumber(totalProducts)}
+            {formatPrice(totalProducts)}
           </span>
         </div>
       </div>

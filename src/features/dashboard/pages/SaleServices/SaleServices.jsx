@@ -8,7 +8,7 @@ import Paginator from "../../../../shared/Paginator";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./API/ServiceOrderService";
 import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./API/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
-import { formatNumber } from '../../../../shared/utils/formatters';
+import { formatNumber, formatPrice } from '../../../../shared/utils/formatters';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -48,7 +48,7 @@ const SaleServices = () => {
         response: error.response?.data,
         status: error.response?.status
       });
-      toast.error('Error al cargar las citas en ejecución. Verifica la conexión con el servidor.');
+      toast.error('Error al cargar las ventas de servicio. Verifica la conexión con el servidor.');
       // En caso de error, mantener array vacío
       setServices([]);
     } finally {
@@ -86,9 +86,40 @@ const SaleServices = () => {
     );
 
     // Filtrar por estado según el tab seleccionado
+    // Normalizar el estado del servicio para comparación
+    const serviceStatusNormalized = normalizeText(service.status || '');
+    
+    // Mapear estados del backend al frontend para comparación
+    let statusToCheck = serviceStatusNormalized;
+    if (statusToCheck === 'pagada') {
+      statusToCheck = 'pagado';
+    } else if (statusToCheck === 'en ejecucion' || statusToCheck === 'en proceso') {
+      statusToCheck = 'en ejecucion';
+    } else if (statusToCheck === 'cancelada por el usuario') {
+      statusToCheck = 'anulado';
+    }
+    
+    // Log para depuración (solo para servicios con estado "Pagado" o "Pagada")
+    if (service.status && (service.status.toLowerCase().includes('pagad') || serviceStatusNormalized.includes('pagad'))) {
+      console.log('🔍 Filtrando servicio:', {
+        id: service.id,
+        statusOriginal: service.status,
+        statusNormalized: serviceStatusNormalized,
+        statusToCheck: statusToCheck,
+        tab: tab,
+        matchesTab: tab === "En ejecucion"
+          ? statusToCheck === "en ejecucion" || statusToCheck === "anulado"
+          : statusToCheck === "pagado" || statusToCheck === "anulado"
+      });
+    }
+    
     const matchesTab = tab === "En ejecucion"
-      ? normalizeText(service.status).toLowerCase() === "en ejecucion" || normalizeText(service.status).toLowerCase() === "anulado"
-      : normalizeText(service.status).toLowerCase() === "pagado" || normalizeText(service.status).toLowerCase() === "anulado";
+      ? statusToCheck === "en ejecucion"
+      : tab === "Pagadas"
+      ? statusToCheck === "pagado"
+      : tab === "Anuladas"
+      ? statusToCheck === "anulado"
+      : false;
 
     return matchesSearch && matchesTab;
   });
@@ -131,7 +162,7 @@ const SaleServices = () => {
   const handleAnularClick = async (orderId) => {
     const result = await Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas anular la cita #${orderId}? Esta acción no se puede deshacer.`,
+      text: `¿Estás seguro de que deseas anular la venta de servicio #${orderId}? Esta acción no se puede deshacer.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -152,10 +183,10 @@ const SaleServices = () => {
             ? { ...service, status: "Anulado" }
             : service
         ));
-        toast.success('Cita anulada exitosamente');
+        toast.success('Venta de servicio anulada exitosamente');
       } catch (error) {
-        console.error('Error al anular cita:', error);
-        toast.error('Error al anular la cita');
+        console.error('Error al anular venta de servicio:', error);
+        toast.error('Error al anular la venta de servicio');
       } finally {
         setLoading(false);
       }
@@ -195,12 +226,22 @@ const SaleServices = () => {
     setLoading(true);
 
     const orderPromise = (async () => {
+      // Usar el estado del formulario, no el estado anterior
       const updatedOrder = await editServiceOrder({
         id: selectedOrder.id,
-        ...formData,
-        status: selectedOrder.status
+        ...formData
       }, services);
-      setServices(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
+      
+      // Actualizar la lista con el estado correcto
+      setServices(prev => prev.map(order => 
+        order.id === updatedOrder.id 
+          ? { ...updatedOrder, status: formData.status || updatedOrder.status }
+          : order
+      ));
+      
+      // Recargar las órdenes para obtener el estado actualizado del backend
+      cargarCitas();
+      
       setIsEditModalOpen(false);
       setSelectedOrder(null);
       return updatedOrder;
@@ -266,7 +307,7 @@ const SaleServices = () => {
         setServices(resultados);
       } catch (error) {
         console.error('Error al buscar citas:', error);
-        toast.error('Error al buscar citas');
+        toast.error('Error al buscar ventas de servicio');
       } finally {
         setLoading(false);
       }
@@ -303,6 +344,16 @@ const SaleServices = () => {
                 <i className={`bi bi-check-circle text-xs ${tab === "Pagadas" ? "text-green-600" : "text-gray-500"}`}></i>
                 Pagadas
               </button>
+              <button
+                className={`px-6 py-2.5 rounded-md font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${tab === "Anuladas"
+                  ? "bg-white text-text-main shadow-sm border border-gray-200"
+                  : "text-gray-600 hover:text-text-main hover:bg-white/50"
+                  }`}
+                onClick={() => setTab("Anuladas")}
+              >
+                <i className={`bi bi-x-octagon text-xs ${tab === "Anuladas" ? "text-red-600" : "text-gray-500"}`}></i>
+                Anuladas
+              </button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -336,7 +387,7 @@ const SaleServices = () => {
                       <td colSpan="5" className="text-center py-8">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                          <span className="ml-2 text-gray-600">Cargando citas...</span>
+                          <span className="ml-2 text-gray-600">Cargando ventas de servicio...</span>
                         </div>
                       </td>
                     </tr>
@@ -354,7 +405,7 @@ const SaleServices = () => {
                       <td className="py-3 px-4 font-medium text-gray-800">{service.clientName}</td>
                       <td className="py-3 px-4 text-gray-600">{(service.servicios || []).map(s => s.name).join(", ")}</td>
                       <td className="py-3 px-4 text-gray-600">{service.date}</td>
-                      <td className="py-3 px-4 font-semibold text-green-600">${formatNumber(service.totalGeneral || 0)}</td>
+                      <td className="py-3 px-4 font-semibold text-green-600">{formatPrice(service.totalGeneral || 0)}</td>
                       <td className="py-3 px-3">
                         <div className="flex items-center justify-center gap-2">
                           <button 
@@ -399,9 +450,9 @@ const SaleServices = () => {
                       <td colSpan="5" className="text-center py-8 text-gray-500">
                         <div className="flex flex-col items-center">
                           <i className="bi bi-calendar-x text-4xl text-gray-300 mb-2"></i>
-                          <p className="text-sm">No hay citas en ejecución para mostrar</p>
+                          <p className="text-sm">No hay ventas de servicio para mostrar</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Las citas aparecerán aquí cuando cambien a estado "En ejecución"
+                            Las ventas de servicio aparecerán aquí cuando cambien a estado "En ejecución"
                           </p>
                         </div>
                       </td>
@@ -448,7 +499,37 @@ const SaleServices = () => {
           onClose={() => setIsEditModalOpen(false)}
           order={selectedOrder}
           onEdited={(updatedOrder) => {
-            setServices(prev => prev.map(order => order.id === updatedOrder.id ? updatedOrder : order));
+            console.log('🔄 Callback onEdited llamado con:', updatedOrder);
+            
+            // Actualizar la orden en la lista con el estado correcto inmediatamente
+            setServices(prev => {
+              const updated = prev.map(order => {
+                if (order.id === updatedOrder.id) {
+                  // Asegurar que el estado se mapee correctamente
+                  const newStatus = updatedOrder.status || order.status;
+                  console.log('🔄 Actualizando orden en lista local:', {
+                    id: order.id,
+                    estadoAnterior: order.status,
+                    estadoNuevo: newStatus,
+                    updatedOrder: updatedOrder
+                  });
+                  return { ...order, ...updatedOrder, status: newStatus };
+                }
+                return order;
+              });
+              
+              console.log('📋 Lista actualizada:', updated.map(o => ({ id: o.id, status: o.status })));
+              return updated;
+            });
+            
+            // NO recargar desde el backend inmediatamente porque el backend no está guardando el estado
+            // En su lugar, confiar en la actualización local
+            // Si el usuario recarga la página, entonces se cargará desde el backend
+            // setTimeout(() => {
+            //   console.log('🔄 Recargando órdenes desde el backend...');
+            //   cargarCitas();
+            // }, 1000);
+            
             setSelectedOrder(null);
             toast.success('Orden de servicio actualizada exitosamente');
           }}

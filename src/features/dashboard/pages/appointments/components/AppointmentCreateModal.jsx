@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import { isValidDocumentByType } from '@/shared/validations';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
 import { employeesService } from '@/features/dashboard/pages/employees/API/employeesService';
+import ServiceSelection from './ServiceSelection';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import '../../users/components/phoneinput-search.css';
 import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';
-import ServiceSelection from './ServiceSelection';
 
 // Estados posibles de la cita (solo para crear)
 const APPOINTMENT_STATES = [
@@ -25,21 +25,13 @@ function limpiarPrecio(valor) {
 
 
 const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
+  // Estados
+  const [professionals, setProfessionals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
   const [numero, setNumero] = useState('');
-  const [existingAppointments, setExistingAppointments] = useState([]);
-  const [professionals, setProfessionals] = useState([]);
-
-  // Obtener fecha de hoy en formato YYYY-MM-DD
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  const dataLoadedRef = useRef(false);
 
   // Formulario principal
   const [formData, setFormData] = useState({
@@ -48,34 +40,29 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     correo: '',
     documento: '',
     tipoDocumento: 'CC',
-    fecha: fecha || getTodayDate(),
+    fecha: fecha || (() => {
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    })(),
     servicios: [],
     estado: 'Agendada',
     notas: ''
   });
 
-
-  // useEffect para actualizar la fecha cuando cambia la prop fecha
+  // Cargar datos necesarios desde el backend
   useEffect(() => {
-    if (fecha) {
-      setFormData(prev => ({
-        ...prev,
-        fecha
-      }));
-    } else {
-      // Si no hay fecha pasada como prop, establecer fecha de hoy
-      setFormData(prev => ({
-        ...prev,
-        fecha: getTodayDate()
-      }));
+    // Evitar múltiples llamadas
+    if (dataLoadedRef.current) {
+      return;
     }
-  }, [fecha]);
 
-  // Cargar profesionales
-  useEffect(() => {
-    const loadProfessionals = async () => {
+    const loadData = async () => {
       try {
+        dataLoadedRef.current = true;
+        
+        // Cargar empleados desde el backend
         const employeesData = await employeesService.getAll();
+        // Filtrar solo empleados activos y convertir a formato de profesionales
         const normalizedProfessionals = employeesData
           .filter(emp => emp.estado === 'Activo' || emp.estado === true)
           .map(emp => ({
@@ -85,45 +72,46 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
           }));
         setProfessionals(normalizedProfessionals);
       } catch (error) {
-        console.error('Error loading professionals:', error);
+        console.error('Error loading data:', error);
+        toast.error('Error al cargar profesionales');
+        // En caso de error, usar arrays vacíos
         setProfessionals([]);
+        dataLoadedRef.current = false; // Permitir reintento en caso de error
       }
     };
-    loadProfessionals();
+    loadData();
+
+    // Cleanup: resetear el ref cuando el componente se desmonte
+    return () => {
+      dataLoadedRef.current = false;
+    };
   }, []);
 
-  // Cargar citas existentes del día seleccionado
+  // useEffect para actualizar la fecha cuando cambia la prop fecha
   useEffect(() => {
-    const loadExistingAppointments = async () => {
-      if (!formData.fecha) {
-        setExistingAppointments([]);
-        return;
-      }
+    if (fecha) {
+      setFormData(prev => ({
+        ...prev,
+        fecha
+      }));
+    } else {
+      // Si la prop fecha es null o undefined, asegurar que se use la fecha de hoy
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      setFormData(prev => ({
+        ...prev,
+        fecha: todayStr
+      }));
+    }
+  }, [fecha]);
 
-      try {
-        const response = await appointmentsService.getAll({
-          fecha_servicio: formData.fecha
-        });
-        
-        if (response.success && response.data) {
-          // Filtrar solo citas activas (no canceladas)
-          const activeAppointments = response.data.filter(
-            cita => cita.estado !== 'Cancelada por el usuario' && 
-                     cita.estado !== 'No asistio'
-          );
-          setExistingAppointments(activeAppointments);
-        } else {
-          setExistingAppointments([]);
-        }
-      } catch (error) {
-        console.error('Error loading existing appointments:', error);
-        setExistingAppointments([]);
-      }
-    };
 
-    loadExistingAppointments();
-  }, [formData.fecha]);
-
+  // Handler para cambios en servicios desde ServiceSelection
+  const handleServicesChange = (newServicios) => {
+    setFormData(prev => ({ ...prev, servicios: newServicios }));
+    setTouchedFields(prev => ({ ...prev, servicios: true }));
+    clearError('servicios');
+  };
 
   // Función para marcar un campo como "tocado" y validar
   const handleFieldBlur = (field) => {
@@ -291,29 +279,6 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     return false;
   }
 
-  // Validación de solapamiento de servicios para el mismo profesional (en el formulario)
-  function haySolapamientoServicios(servicios) {
-    for (let i = 0; i < servicios.length; i++) {
-      for (let j = i + 1; j < servicios.length; j++) {
-        if (
-          servicios[i].profesional &&
-          servicios[i].profesional === servicios[j].profesional
-        ) {
-          // Convertir a minutos para comparar
-          const inicioA = parseInt(servicios[i].inicio.split(':')[0]) * 60 + parseInt(servicios[i].inicio.split(':')[1]);
-          const finA = parseInt(servicios[i].fin.split(':')[0]) * 60 + parseInt(servicios[i].fin.split(':')[1]);
-          const inicioB = parseInt(servicios[j].inicio.split(':')[0]) * 60 + parseInt(servicios[j].inicio.split(':')[1]);
-          const finB = parseInt(servicios[j].fin.split(':')[0]) * 60 + parseInt(servicios[j].fin.split(':')[1]);
-          // Si se solapan
-          if (inicioA < finB && inicioB < finA) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   // Validaciones solo para campos que han sido tocados
   useEffect(() => {
     // Solo validar servicios si ya hay servicios o si ya hay un error
@@ -332,40 +297,52 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
     }
   }, [formData.servicios, touchedFields.servicios]);
 
-  // Función para convertir hora de 24h a 12h (AM/PM)
-  const convertirHoraA12Horas = (hora24) => {
-    if (!hora24) return '';
-    const horaStr = hora24.toString().substring(0, 5);
-    const [horas, minutos] = horaStr.split(':').map(Number);
-    if (isNaN(horas) || isNaN(minutos)) return hora24;
-    const periodo = horas >= 12 ? 'PM' : 'AM';
-    const horas12 = horas === 0 ? 12 : horas > 12 ? horas - 12 : horas;
-    return `${horas12}:${minutos.toString().padStart(2, '0')} ${periodo}`;
+  // Validación en tiempo real para servicios cuando cambian
+  useEffect(() => {
+    if (touchedFields.servicios && formData.servicios.length > 0) {
+      const serviciosError = haySolapamientoServicios(formData.servicios) ?
+        'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.' : '';
+      setErrors(prev => ({
+        ...prev,
+        servicios: serviciosError
+      }));
+    }
+  }, [formData.servicios, touchedFields.servicios]);
+
+
+  // Función auxiliar para convertir hora a minutos
+  const horaAMinutos = (hora) => {
+    if (!hora) return 0;
+    const [h, m] = hora.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
   };
 
-  // Convertir hora a minutos para ordenar correctamente
-  const horaAMinutos = (horaStr) => {
-    if (!horaStr) return 0;
-    const partes = horaStr.split(':');
-    return parseInt(partes[0]) * 60 + parseInt(partes[1] || 0);
+  // Función para convertir hora de 24h a 12h (AM/PM)
+  const convertirHoraA12Horas = (hora24) => {
+    if (!hora24 || hora24 === '') return '';
+    const [h, m] = hora24.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return hora24;
+    const periodo = h >= 12 ? 'PM' : 'AM';
+    const hora12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${hora12}:${m.toString().padStart(2, '0')} ${periodo}`;
   };
 
   // Calcular duración total, hora inicio/fin global y valor total
   const calcularResumen = () => {
     if (formData.servicios.length === 0) return { duracion: 0, inicio: '', fin: '', total: 0 };
     
-    // Ordenar horas correctamente convirtiéndolas a minutos
-    const inicios = formData.servicios
-      .map(s => s.inicio)
-      .filter(h => h) // Filtrar horas vacías
-      .sort((a, b) => horaAMinutos(a) - horaAMinutos(b));
+    // Ordenar servicios por hora de inicio (numéricamente)
+    const serviciosConHora = formData.servicios
+      .filter(s => s.inicio)
+      .sort((a, b) => horaAMinutos(a.inicio) - horaAMinutos(b.inicio));
     
+    const inicios = serviciosConHora.map(s => s.inicio);
     const fines = formData.servicios
+      .filter(s => s.fin)
       .map(s => s.fin)
-      .filter(h => h) // Filtrar horas vacías
-      .sort((a, b) => horaAMinutos(b) - horaAMinutos(a)); // Orden descendente
+      .sort((a, b) => horaAMinutos(b) - horaAMinutos(a));
     
-    const duracion = formData.servicios.reduce((acc, s) => acc + Number(s.duracion || 0), 0);
+    const duracion = formData.servicios.reduce((acc, s) => acc + Number(s.duracion || 0) * (Number(s.cantidad) || 1), 0);
     const total = formData.servicios.reduce((acc, s) => acc + (limpiarPrecio(s.precio) * (Number(s.cantidad) || 1)), 0);
     
     return {
@@ -805,21 +782,18 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
         {/* Contenido scrolleable */}
         <div className="flex-1 overflow-y-auto p-6">
           <form id="appointment-form" onSubmit={handleSubmit} className="space-y-4">
-            {/* Componente de selección de servicios */}
-            <ServiceSelection
-              servicios={formData.servicios}
-              onServicesChange={(newServicios) => {
-                setFormData(prev => ({ ...prev, servicios: newServicios }));
-                setTouchedFields(prev => ({ ...prev, servicios: true }));
-                clearError('servicios');
-              }}
-              fecha={formData.fecha}
-              existingAppointments={existingAppointments}
-              errors={errors}
-              onErrorsChange={setErrors}
-              touchedFields={touchedFields}
-              estado={formData.estado}
-            />
+            {/* Selección de servicios */}
+            <div className="mb-6">
+              <ServiceSelection
+                servicios={formData.servicios}
+                onServicesChange={handleServicesChange}
+                fecha={formData.fecha}
+                professionals={professionals}
+              />
+              {touchedFields.servicios && errors.servicios && (
+                <span className="text-red-500 text-xs block mt-2">{errors.servicios}</span>
+              )}
+            </div>
 
             {/* Datos del cliente y resumen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -921,17 +895,14 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Estado de la cita</label>
-                <select
-                  value={formData.estado}
-                  onChange={e => setFormData(prev => ({ ...prev, estado: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                >
-                  {APPOINTMENT_STATES.map(estado => (
-                    <option key={estado.nombre} value={estado.nombre}>{estado.nombre}</option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value="Agendada"
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
+                />
                 <p className="text-xs text-gray-500 mt-1">
-                  Las citas nuevas se crean con estado "Agendada" por defecto
+                  Las citas nuevas siempre se crean con estado "Agendada"
                 </p>
               </div>
             </div>
