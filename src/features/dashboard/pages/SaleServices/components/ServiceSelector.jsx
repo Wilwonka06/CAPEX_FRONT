@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiRequest } from '../../../../../shared/config/apiConfig';
-import { formatNumber } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatPrice } from '../../../../../shared/utils/formatters';
 
 const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [serviceQuery, setServiceQuery] = useState("");
@@ -327,7 +327,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                           )}
                           <span className="flex items-center gap-1 text-gray-700">
                             <i className="bi bi-currency-dollar"></i>
-                            <span className="font-medium">${formatNumber(service.precio)}</span>
+                            <span className="font-medium">{formatPrice(service.precio)}</span>
                           </span>
                         </div>
                       </div>
@@ -448,7 +448,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                 <div className="border-t pt-3">
                   <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
                   <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-blue-600">
-                    ${formatNumber(((selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0) * quantity))}
+                    {formatPrice(((selectedServiceForQuantity.precio || selectedServiceForQuantity.price || 0) * quantity))}
                   </div>
                 </div>
               </div>
@@ -520,7 +520,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                       </div>
                     </td>
                     <td className="px-2 py-2 border-r text-center">{formatNumber(service.quantity)}</td>
-                    <td className="px-2 py-2 border-r text-right font-semibold">${formatNumber(service.subtotal || 0)}</td>
+                    <td className="px-2 py-2 border-r text-right font-semibold">{formatPrice(service.subtotal || 0)}</td>
                     <td className="px-2 py-2 text-center">
                       <button
                         onClick={() => removeService(service.uniqueId)}
@@ -541,7 +541,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         <div className="mt-2 text-sm bg-blue-50 p-2 rounded-md border border-blue-100">
           <span className="font-medium">TOTAL DE SERVICIOS: </span>
           <span className="font-bold text-blue-600">
-            ${formatNumber(totalServices)}
+            {formatPrice(totalServices)}
           </span>
         </div>
       </div>

@@ -40,41 +40,105 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   const totalProducts = selectedProducts.reduce((total, product) => total + (product.subtotal || 0), 0);
   const totalGeneral = totalServices + totalProducts;
 
-  // Buscar cliente por documento y autocompletar
-  const lookupClientByDocument = useCallback(async (doc) => {
-    if (!doc || doc.length < 6) return;
+  // Buscar cliente por documento y autocompletar (con debounce)
+  const searchTimeoutRef = useRef(null);
+  
+  const lookupClientByDocument = useCallback(async (doc, clearIfNotFound = false) => {
+    const cleanDoc = doc?.toString().trim();
+    
+    // Si el documento es muy corto, limpiar los campos si clearIfNotFound es true
+    if (!cleanDoc || cleanDoc.length < 5) {
+      setClienteEncontrado(false);
+      if (clearIfNotFound) {
+        setFormData(prev => ({
+          ...prev,
+          id_cliente: null,
+          nombre: '',
+          telefono: '',
+          correo: ''
+        }));
+      }
+      return;
+    }
     
     try {
       setBuscandoCliente(true);
-      const searchResponse = await usersService.getAll({ documento: doc.trim() });
+      console.log('🔍 Buscando cliente con documento:', cleanDoc);
+      
+      // Buscar usuarios con filtro en el backend para mejor rendimiento
+      const searchResponse = await usersService.getAll({ documento: cleanDoc });
+      
+      console.log('📦 Respuesta de búsqueda:', searchResponse);
       
       if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+        // Buscar el usuario que coincida exactamente con el documento
         const existingUser = searchResponse.data.find(user => {
           const userDoc = user.documento?.toString().trim() || '';
-          return userDoc === doc.trim();
+          const matches = userDoc === cleanDoc;
+          if (matches) {
+            console.log('✅ Cliente encontrado:', user);
+          }
+          return matches;
         });
         
         if (existingUser) {
+          console.log('🎯 Autocompletando datos del cliente:', existingUser);
           setFormData(prev => ({
             ...prev,
-            tipoDocumento: existingUser.tipo_documento || prev.tipoDocumento,
-            nombre: existingUser.nombre || prev.nombre,
-            telefono: (existingUser.telefono || '').replace(/[^0-9]/g, ''),
-            correo: existingUser.correo || prev.correo
+            id_cliente: existingUser.id_usuario || existingUser.id,
+            tipoDocumento: existingUser.tipo_documento || prev.tipoDocumento || 'CC',
+            nombre: existingUser.nombre || '',
+            telefono: (existingUser.telefono || '').replace(/\D/g, ''),
+            correo: existingUser.correo || ''
           }));
           setClienteEncontrado(true);
+          setTouched(prev => ({
+            ...prev,
+            nombre: false,
+            telefono: false,
+            correo: false
+          }));
         } else {
+          console.log('❌ No se encontró cliente con ese documento');
           setClienteEncontrado(false);
+          if (clearIfNotFound) {
+            setFormData(prev => ({
+              ...prev,
+              id_cliente: null,
+              nombre: '',
+              telefono: '',
+              correo: ''
+            }));
+          }
         }
       } else {
+        console.log('⚠️ No hay datos de usuarios en la respuesta');
         setClienteEncontrado(false);
+        if (clearIfNotFound) {
+          setFormData(prev => ({
+            ...prev,
+            id_cliente: null,
+            nombre: '',
+            telefono: '',
+            correo: ''
+          }));
+        }
       }
     } catch (error) {
-      console.error('Error buscando cliente:', error);
+      console.error('❌ Error buscando cliente:', error);
       setClienteEncontrado(false);
     } finally {
       setBuscandoCliente(false);
     }
+  }, []);
+
+  // Cleanup: limpiar timeout cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Función para crear o buscar cliente
@@ -221,29 +285,118 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
     });
   };
 
+  // Función para cargar datos del cliente desde el backend si no están en el order
+  const loadClientData = useCallback(async (clientId) => {
+    if (!clientId) return null;
+    
+    try {
+      const response = await usersService.getAll();
+      if (response.success && response.data) {
+        const client = response.data.find(u => 
+          (u.id_usuario || u.id) === clientId || 
+          (u.id_usuario || u.id)?.toString() === clientId?.toString()
+        );
+        return client;
+      }
+    } catch (error) {
+      console.error('Error cargando datos del cliente:', error);
+    }
+    return null;
+  }, []);
+
   useEffect(() => {
     if (isOpen && order) {
-      const dineroFormateado = order.dineroProporcionado 
-        ? formatNumberInput(order.dineroProporcionado.toString())
-        : "";
+      console.log('📋 Cargando datos del order:', order);
       
-      setFormData({
-        tipoDocumento: order.tipoDocumento || "CC",
-        documento: order.documento || "",
-        nombre: order.clientName || order.nombre || "",
-        telefono: (order.telefono || '').replace(/[^0-9]/g, ''),
-        correo: order.correo || "",
-        dineroProporcionado: dineroFormateado,
-        status: order.status || "En ejecucion"
-      });
-      // Asegurar que los servicios tengan tiempos calculados
-      const serviciosConTiempos = ensureServiceTimes(order.servicios || []);
-      setSelectedServices(serviciosConTiempos);
-      setSelectedProducts(order.productos || []);
-      setClienteEncontrado(false);
-      setBuscandoCliente(false);
+      // Función asíncrona para cargar todos los datos
+      const loadOrderData = async () => {
+        // Formatear dinero proporcionado
+        const dineroProporcionado = order.dineroProporcionado || order.dinero_proporcionado || 0;
+        const dineroFormateado = dineroProporcionado 
+          ? formatNumberInput(dineroProporcionado.toString())
+          : "";
+        
+        // Obtener datos del cliente - puede venir de diferentes campos
+        let clienteNombre = order.clientName || order.nombre || order.cliente?.nombre || order.usuario?.nombre || "";
+        let clienteDocumento = order.documento || order.cliente?.documento || order.usuario?.documento || "";
+        let clienteTelefono = order.telefono || order.cliente?.telefono || order.usuario?.telefono || "";
+        let clienteCorreo = order.correo || order.cliente?.correo || order.usuario?.correo || "";
+        let clienteTipoDoc = order.tipoDocumento || order.tipo_documento || order.cliente?.tipo_documento || order.usuario?.tipo_documento || "CC";
+        
+        // Si no tenemos los datos del cliente, intentar buscarlos por id_cliente
+        if ((!clienteNombre || !clienteDocumento) && order.id_cliente) {
+          console.log('🔍 Buscando datos del cliente por ID:', order.id_cliente);
+          const clientData = await loadClientData(order.id_cliente);
+          if (clientData) {
+            console.log('✅ Cliente encontrado:', clientData);
+            clienteNombre = clientData.nombre || clienteNombre;
+            clienteDocumento = clientData.documento || clienteDocumento;
+            clienteTelefono = clientData.telefono || clienteTelefono;
+            clienteCorreo = clientData.correo || clienteCorreo;
+            clienteTipoDoc = clientData.tipo_documento || clienteTipoDoc;
+          }
+        }
+        
+        console.log('👤 Datos del cliente finales:', {
+          nombre: clienteNombre,
+          documento: clienteDocumento,
+          telefono: clienteTelefono,
+          correo: clienteCorreo,
+          tipoDocumento: clienteTipoDoc
+        });
+        
+        // Mapear estado del backend al frontend
+        let orderStatus = order.status || "En ejecucion";
+        // Si el estado viene del backend con formato diferente, mapearlo
+        if (orderStatus === 'En ejecución' || orderStatus === 'En proceso') {
+          orderStatus = 'En ejecucion';
+        } else if (orderStatus === 'Pagada') {
+          orderStatus = 'Pagado';
+        } else if (orderStatus === 'Cancelada por el usuario') {
+          orderStatus = 'Anulado';
+        }
+        
+        console.log('📊 Estado de la orden:', {
+          estadoOriginal: order.status,
+          estadoMapeado: orderStatus,
+          dineroProporcionado: dineroProporcionado
+        });
+        
+        // Si el estado es "En ejecucion", limpiar dinero proporcionado
+        const dineroFinal = orderStatus === 'Pagado' ? dineroFormateado : '';
+        
+        setFormData({
+          tipoDocumento: clienteTipoDoc,
+          documento: clienteDocumento ? clienteDocumento.toString().replace(/[^0-9]/g, '') : '',
+          nombre: clienteNombre,
+          telefono: clienteTelefono ? clienteTelefono.toString().replace(/[^0-9]/g, '') : '',
+          correo: clienteCorreo,
+          dineroProporcionado: dineroFinal,
+          status: orderStatus
+        });
+        
+        // Asegurar que los servicios tengan tiempos calculados
+        const serviciosConTiempos = ensureServiceTimes(order.servicios || []);
+        console.log('🔧 Servicios procesados:', serviciosConTiempos);
+        
+        // Obtener el id_cita del primer servicio o del order
+        const citaId = order.citaId || order.id_cita || serviciosConTiempos[0]?.id_cita || null;
+        console.log('📋 ID de cita relacionada:', citaId);
+        
+        setSelectedServices(serviciosConTiempos);
+        setSelectedProducts(order.productos || []);
+        setClienteEncontrado(false);
+        setBuscandoCliente(false);
+        
+        // Limpiar errores y touched al cargar
+        setErrors({});
+        setTouched({});
+        setShowErrors(false);
+      };
+      
+      loadOrderData();
     }
-  }, [isOpen, order]);
+  }, [isOpen, order, loadClientData]);
 
   // Validación solo cuando se envían servicios/productos (no en tiempo real)
   useEffect(() => {
@@ -336,6 +489,29 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       if (error) fieldErrors[field] = error;
     });
 
+    // Validar que si hay dinero proporcionado, el estado debe ser "Pagado"
+    const dineroProporcionado = parseFormattedNumber(formData.dineroProporcionado);
+    if (dineroProporcionado > 0 && formData.status !== 'Pagado') {
+      fieldErrors.dineroProporcionado = 'Solo se puede registrar dinero proporcionado cuando el estado es "Pagado"';
+    }
+
+    // Validar que el dinero proporcionado sea igual al total general cuando el estado es "Pagado"
+    if (formData.status === 'Pagado') {
+      if (!dineroProporcionado || dineroProporcionado === 0) {
+        fieldErrors.dineroProporcionado = 'El dinero proporcionado es requerido cuando el estado es "Pagado"';
+      } else {
+        // Redondear ambos valores a 2 decimales para comparación precisa
+        const dineroRedondeado = Math.round(dineroProporcionado * 100) / 100;
+        const totalRedondeado = Math.round(totalGeneral * 100) / 100;
+        
+        // Comparar con tolerancia de 0.01 para evitar problemas de precisión de punto flotante
+        const diferencia = Math.abs(dineroRedondeado - totalRedondeado);
+        if (diferencia > 0.01) {
+          fieldErrors.dineroProporcionado = `El dinero proporcionado (${formatPrice(dineroProporcionado)}) debe ser igual al total general (${formatPrice(totalGeneral)})`;
+        }
+      }
+    }
+
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
       return;
@@ -363,6 +539,9 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
         return;
       }
 
+      // Obtener el id_cita del order o de los servicios
+      const citaId = order.citaId || order.id_cita || selectedServices[0]?.id_cita || null;
+      
       const orderData = {
         ...formData,
         id: order.id,
@@ -373,10 +552,28 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
         totalServices,
         totalProducts,
         totalGeneral,
-        dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
+        dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado),
+        status: formData.status, // Asegurar que el estado se incluya explícitamente
+        citaId: citaId // Incluir el ID de la cita relacionada
       };
+      
+      console.log('📋 ID de cita para actualizar:', citaId);
+
+      console.log('📤 Enviando orden al backend:', {
+        id: orderData.id,
+        status: orderData.status,
+        formDataStatus: formData.status,
+        servicios: orderData.servicios.length,
+        totalGeneral: orderData.totalGeneral
+      });
 
       const updatedOrder = await editServiceOrder(orderData, services);
+      
+      console.log('📥 Respuesta del backend:', {
+        id: updatedOrder.id,
+        status: updatedOrder.status,
+        updatedOrder: updatedOrder
+      });
       if (onEdited) onEdited(updatedOrder);
       if (onClose) onClose();
     } catch (err) {
@@ -386,43 +583,104 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
     }
   };
 
+  // Manejar tecla Enter para guardar cambios
+  const handleKeyDown = useCallback((e) => {
+    // Si se presiona Enter y no está en un textarea, select, o botón
+    if (e.key === 'Enter' && 
+        e.target.tagName !== 'TEXTAREA' && 
+        e.target.tagName !== 'SELECT' &&
+        !e.target.closest('button') &&
+        !loading) {
+      // Si el target es un input, prevenir el comportamiento por defecto
+      // y disparar el submit del formulario haciendo clic en el botón de submit
+      if (e.target.tagName === 'INPUT') {
+        e.preventDefault();
+        const form = e.target.closest('form');
+        if (form) {
+          // Buscar el botón de submit y hacer clic en él
+          const submitButton = form.querySelector('button[type="submit"]');
+          if (submitButton && !submitButton.disabled) {
+            submitButton.click();
+          }
+        }
+      }
+    }
+  }, [loading]);
+
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     
     if (name === 'dineroProporcionado') {
-      // Guardar posición de scroll y cursor SOLO para dinero proporcionado
-      if (scrollContainerRef.current) {
-        scrollPositionRef.current = scrollContainerRef.current.scrollTop;
-      }
-      
-      // Marcar que el input estaba enfocado
-      wasDineroFocusedRef.current = true;
-      
-      // Guardar posición del cursor antes de actualizar
-      if (e.target.selectionStart !== null) {
-        cursorPositionRef.current = e.target.selectionStart;
-      }
-      
-      // Usar versión funcional de setFormData para acceder al estado más reciente
+      // Si el estado es "En ejecucion", no permitir ingresar dinero proporcionado
       setFormData(prev => {
+        if (prev.status !== 'Pagado') {
+          // Limpiar el error si existe
+          setErrors(prevErrors => {
+            const newErrors = { ...prevErrors };
+            delete newErrors.dineroProporcionado;
+            return newErrors;
+          });
+          return prev; // No actualizar el campo
+        }
+        
+        // Guardar posición de scroll y cursor SOLO para dinero proporcionado
+        if (scrollContainerRef.current) {
+          scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+        }
+        
+        // Marcar que el input estaba enfocado
+        wasDineroFocusedRef.current = true;
+        
+        // Guardar posición del cursor antes de actualizar
+        if (e.target.selectionStart !== null) {
+          cursorPositionRef.current = e.target.selectionStart;
+        }
+        
         const currentValue = prev.dineroProporcionado || '';
-        const cleaned = value.replace(/[^0-9]/g, '');
+        // Permitir números, puntos (miles) y coma (decimal)
+        const cleaned = value.replace(/[^0-9.,]/g, '');
         
         // Si el valor actual es solo "0" y el usuario escribe un número, reemplazar
         if (currentValue === '0' && cleaned && cleaned !== '0') {
-          return { ...prev, [name]: formatNumberInput(cleaned) };
+          return { ...prev, [name]: formatNumberInput(cleaned, 2) };
         }
-        return { ...prev, [name]: formatNumberInput(value) };
+        return { ...prev, [name]: formatNumberInput(value, 2) };
       });
       // NO marcar como touched para dinero proporcionado para evitar activar validación de servicios
+    } else if (name === 'status') {
+      // Si cambia el estado a "En ejecucion", limpiar dinero proporcionado
+      setFormData(prev => {
+        if (value === 'En ejecucion' && prev.dineroProporcionado) {
+          // Limpiar error si existe
+          setErrors(prevErrors => {
+            const newErrors = { ...prevErrors };
+            delete newErrors.dineroProporcionado;
+            return newErrors;
+          });
+          return { ...prev, [name]: value, dineroProporcionado: '' };
+        }
+        return { ...prev, [name]: value };
+      });
+      setTouched(prev => ({ ...prev, [name]: true }));
     } else {
       // Para otros campos, simplemente actualizar sin afectar scroll
       setFormData(prev => ({ ...prev, [name]: value }));
       setTouched(prev => ({ ...prev, [name]: true }));
       
-      // NO buscar cliente en onChange, solo en onBlur para evitar pérdida de focus
+      // Búsqueda en tiempo real para el documento
+      if (name === 'documento') {
+        // Cancelar búsqueda anterior si existe
+        if (searchTimeoutRef.current) {
+          clearTimeout(searchTimeoutRef.current);
+        }
+        
+        // Buscar después de 500ms de inactividad (debounce)
+        searchTimeoutRef.current = setTimeout(() => {
+          lookupClientByDocument(value, true);
+        }, 500);
+      }
     }
-  }, []); // Sin dependencias - usa versión funcional de setState
+  }, [lookupClientByDocument]); // Sin dependencias - usa versión funcional de setState
 
   const handleBlur = useCallback((e) => {
     const { name, value } = e.target;
@@ -486,7 +744,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             scrollBehavior: 'auto' // Evitar animaciones de scroll
           }}
         >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6">
         {/* Datos del Cliente */}
         <div>
           <h3 className="text-sm font-semibold text-black mb-3">Datos del Cliente</h3>
@@ -515,30 +773,32 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             </div>
 
             {/* Documento */}
-            <div className="relative">
+            <div>
               <label className="block text-xs font-medium text-black mb-1">
                 Número de Documento <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                name="documento"
-                value={formData.documento}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                placeholder="Número de documento"
-                maxLength={20}
-              />
-              {buscandoCliente && (
-                <div className="absolute right-3 top-8">
-                  <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
-                </div>
-              )}
-              {!buscandoCliente && clienteEncontrado && (
-                <div className="absolute right-3 top-8 text-green-500">
-                  <i className="bi bi-check-circle"></i>
-                </div>
-              )}
+              <div className="relative">
+                <input
+                  type="text"
+                  name="documento"
+                  value={formData.documento}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  placeholder="Número de documento"
+                  maxLength={20}
+                />
+                {buscandoCliente && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
+                  </div>
+                )}
+                {!buscandoCliente && clienteEncontrado && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-600">
+                    <i className="bi bi-check-circle-fill"></i>
+                  </div>
+                )}
+              </div>
               {(touched.documento || showErrors) && errors.documento && (
                 <p className="text-red-600 text-xs mt-1">{errors.documento}</p>
               )}
@@ -660,24 +920,27 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Servicios:</span>
-                <span className="text-blue-600 font-bold">${formatNumber(totalServices)}</span>
+                <span className="text-blue-600 font-bold">{formatPrice(totalServices)}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total Productos:</span>
-                <span className="text-green-600 font-bold">${formatNumber(totalProducts)}</span>
+                <span className="text-green-600 font-bold">{formatPrice(totalProducts)}</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="font-medium text-black">Total General:</span>
-                <span className="text-primary font-bold">${formatNumber(totalGeneral)}</span>
+                <span className="text-primary font-bold">{formatPrice(totalGeneral)}</span>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-black mb-1">
                   Dinero Proporcionado
+                  {formData.status !== 'Pagado' && (
+                    <span className="text-gray-500 text-xs ml-2">(Solo disponible cuando el estado es "Pagado")</span>
+                  )}
                 </label>
                 <input
                   ref={dineroInputRef}
@@ -686,11 +949,25 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                   value={formData.dineroProporcionado}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                  placeholder="0"
+                  disabled={formData.status !== 'Pagado'}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 text-sm ${
+                    formData.status !== 'Pagado'
+                      ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'border-gray-300 focus:ring-gray-400 focus:border-gray-400 text-black bg-white'
+                  }`}
+                  placeholder="0,00"
                 />
                 {(touched.dineroProporcionado || showErrors) && errors.dineroProporcionado && (
-                  <p className="text-red-600 text-xs mt-1">{errors.dineroProporcionado}</p>
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    {errors.dineroProporcionado}
+                  </p>
+                )}
+                {formData.status !== 'Pagado' && formData.dineroProporcionado && (
+                  <p className="text-amber-600 text-xs mt-1 flex items-center gap-1">
+                    <i className="bi bi-info-circle"></i>
+                    Cambia el estado a "Pagado" para registrar el dinero proporcionado
+                  </p>
                 )}
               </div>
 
@@ -712,22 +989,26 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             type="button"
             onClick={handleClose}
             disabled={loading}
-            className="px-4 py-2 border border-gray-300 rounded-md text-black hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
           >
+            <i className="bi bi-x-circle"></i>
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-dark transition-colors disabled:opacity-50 flex items-center"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-bold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm disabled:opacity-50"
           >
             {loading ? (
               <>
-                <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
+                <span className="animate-spin h-4 w-4 border-2 border-gray-800 border-t-transparent rounded-full"></span>
                 Guardando...
               </>
             ) : (
-              'Guardar Cambios'
+              <>
+                <i className="bi bi-check-circle-fill"></i>
+                Guardar Cambios
+              </>
             )}
           </button>
         </div>

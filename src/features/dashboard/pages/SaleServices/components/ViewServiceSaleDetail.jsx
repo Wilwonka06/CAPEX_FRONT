@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
-import { formatNumber } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatPrice } from "../../../../../shared/utils/formatters";
 
 const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
   if (!isOpen || !order) return null;
@@ -85,11 +85,11 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
                 </div>
                 <div className="flex justify-between px-4 py-2">
                   <span className="text-xs text-gray-500">Dinero Proporcionado</span>
-                  <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.dineroProporcionado || 0)}</span>
+                  <span className="font-semibold text-gray-800 text-sm">{formatPrice(order.dineroProporcionado || 0)}</span>
                 </div>
                 <div className="flex justify-between px-4 py-2">
                   <span className="text-xs text-gray-500">Devolución</span>
-                  <span className="font-semibold text-gray-800 text-sm">${formatNumber(order.devolucion || 0)}</span>
+                  <span className="font-semibold text-gray-800 text-sm">{formatPrice(order.devolucion || 0)}</span>
                 </div>
               </div>
             </div>
@@ -137,8 +137,8 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
                           )}
                         </td>
                         <td className="py-2 px-3 text-center">{servicio.quantity}</td>
-                        <td className="py-2 px-3 text-right">${formatNumber(servicio.price || 0)}</td>
-                        <td className="py-2 px-3 text-right font-semibold">${formatNumber(servicio.subtotal || 0)}</td>
+                        <td className="py-2 px-3 text-right">{formatPrice(servicio.price || 0)}</td>
+                        <td className="py-2 px-3 text-right font-semibold">{formatPrice(servicio.subtotal || 0)}</td>
                         <td className="py-2 px-3">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                             <i className="bi bi-person-badge mr-1"></i>
@@ -175,8 +175,8 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
                       <tr key={index} className="bg-white hover:bg-gray-50">
                         <td className="py-2 px-3 font-medium">{producto.name}</td>
                         <td className="py-2 px-3 text-center">{producto.quantity}</td>
-                        <td className="py-2 px-3 text-right">${formatNumber(producto.price || 0)}</td>
-                        <td className="py-2 px-3 text-right font-semibold">${formatNumber(producto.subtotal || 0)}</td>
+                        <td className="py-2 px-3 text-right">{formatPrice(producto.price || 0)}</td>
+                        <td className="py-2 px-3 text-right font-semibold">{formatPrice(producto.subtotal || 0)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -190,15 +190,15 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
             <div className="w-full max-w-xs space-y-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Total Servicios:</span>
-                <span className="font-semibold text-gray-800">${formatNumber(order.totalServices || 0)}</span>
+                <span className="font-semibold text-gray-800">{formatPrice(order.totalServices || 0)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Total Productos:</span>
-                <span className="font-semibold text-gray-800">${formatNumber(order.totalProducts || 0)}</span>
+                <span className="font-semibold text-gray-800">{formatPrice(order.totalProducts || 0)}</span>
               </div>
               <div className="border-t pt-2 flex justify-between text-base font-bold">
                 <span className="text-gray-800">Total General:</span>
-                <span className="text-primary">${formatNumber(order.totalGeneral || 0)}</span>
+                <span className="text-primary">{formatPrice(order.totalGeneral || 0)}</span>
               </div>
             </div>
           </div>

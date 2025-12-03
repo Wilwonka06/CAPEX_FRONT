@@ -166,7 +166,24 @@ export const usersService = {
         cleanData.telefono = normalizePhone(cleanData.telefono);
       }
 
+      console.log('🟡 [usersService.update] Datos finales a enviar:', {
+        id,
+        cleanData: JSON.stringify(cleanData, null, 2),
+        roles: cleanData.roles,
+        roleId: cleanData.roleId,
+        rolesIsArray: Array.isArray(cleanData.roles),
+        endpoint: `${USERS_ENDPOINT}/${id}`
+      });
+
       const response = await apiRequest.put(`${USERS_ENDPOINT}/${id}`, cleanData);
+      
+      console.log('🟡 [usersService.update] Respuesta del servidor:', {
+        success: response.success,
+        data: response.data,
+        rolesEnRespuesta: response.data?.roles?.map(r => ({ id: r.id_rol, nombre: r.nombre })) || [],
+        roleIdEnRespuesta: response.data?.roleId
+      });
+
       return response;
     } catch (error) {
       console.error(`Error updating user ${id}:`, error);

@@ -49,7 +49,6 @@ const Appointments = () => {
     }
   };
 
-
   // Cargar citas al iniciar
   useEffect(() => {
     loadAppointments();
@@ -157,35 +156,15 @@ const Appointments = () => {
     // Servicios
     const serviciosTexto = cita.servicios?.map(s => s.servicio?.nombre || s.nombre_servicio).join(', ') || 'Sin servicios';
 
-    // Función para convertir hora de 24h a 12h (AM/PM)
-    const convertirHoraA12Horas = (hora24) => {
-      if (!hora24) return '';
-      const horaStr = hora24.toString().substring(0, 5);
-      const [horas, minutos] = horaStr.split(':').map(Number);
-      if (isNaN(horas) || isNaN(minutos)) return hora24;
-      const periodo = horas >= 12 ? 'PM' : 'AM';
-      const horas12 = horas === 0 ? 12 : horas > 12 ? horas - 12 : horas;
-      return `${horas12}:${minutos.toString().padStart(2, '0')} ${periodo}`;
-    };
-
-    // Formatear hora para mostrar en formato 12 horas
-    const horaInicioFormato = convertirHoraA12Horas(horaInicio);
-    const horaFinFormato = convertirHoraA12Horas(horaFin);
-
-    // Asegurar que las horas se interpreten en hora local (sin zona horaria)
-    // Si la hora viene sin segundos, agregarlos
-    const horaInicioCompleta = horaInicio.includes(':') && horaInicio.split(':').length === 2 
-      ? `${horaInicio}:00` 
-      : horaInicio;
-    const horaFinCompleta = horaFin.includes(':') && horaFin.split(':').length === 2 
-      ? `${horaFin}:00` 
-      : horaFin;
+    // Formatear hora para mostrar
+    const horaInicioFormato = horaInicio.substring(0, 5);
+    const horaFinFormato = horaFin.substring(0, 5);
 
     return {
       id: cita.id_cita,
       title: `${horaInicioFormato} - ${clienteNombre}: ${serviciosTexto}`,
-      start: `${cita.fecha_servicio}T${horaInicioCompleta}`,
-      end: `${cita.fecha_servicio}T${horaFinCompleta}`,
+      start: `${cita.fecha_servicio}T${horaInicio}`,
+      end: `${cita.fecha_servicio}T${horaFin}`,
       ...cita,
       backgroundColor: estadoColor.bg,
       borderColor: estadoColor.bg,
@@ -268,8 +247,7 @@ const Appointments = () => {
               handleWindowResize={true}
               dayMaxEventRows={3}
               moreLinkClick="popover"
-              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: true }}
-              timeZone="local"
+              slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
               dayCellClassNames="hover:bg-gray-50 transition-colors"
               slotLabelClassNames="text-gray-600 font-medium"
               allDayText="Todo el día"
@@ -285,7 +263,11 @@ const Appointments = () => {
           <AppointmentDetailModal
             cita={selectedEvent}
             onClose={() => setShowDetailModal(false)}
-            onEdit={data => { setEditData(data); setShowEditModal(true); }}
+            onEdit={data => { 
+              setEditData(data); 
+              setShowDetailModal(false); // Cerrar modal de detalle
+              setShowEditModal(true); // Abrir modal de edición
+            }}
             onCancel={refreshAppointments}
           />
         )}
