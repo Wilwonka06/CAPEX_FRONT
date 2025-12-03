@@ -243,9 +243,25 @@ const Users = () => {
 
   // Abrir modales
   const openCreate = () => setShowCreate(true);
-  const openEdit = (user) => {
-    setSelectedUser(user);
-    setShowEdit(true);
+  const openEdit = async (user) => {
+    try {
+      // Cargar el usuario completo con información de asociaciones
+      const userId = user.id_usuario || user.id;
+      const response = await usersService.getById(userId);
+      if (response.success) {
+        setSelectedUser(response.data);
+        setShowEdit(true);
+      } else {
+        // Si falla, usar el usuario de la lista como fallback
+        setSelectedUser(user);
+        setShowEdit(true);
+      }
+    } catch (error) {
+      console.error('Error loading user details:', error);
+      // Si falla, usar el usuario de la lista como fallback
+      setSelectedUser(user);
+      setShowEdit(true);
+    }
   };
   const openDetail = (user) => {
     setSelectedUser(user);
