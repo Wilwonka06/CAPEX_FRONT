@@ -7,9 +7,9 @@ import EditCustomer from "./components/EditCustomer";
 import CustomerDetail from "./components/CustomerDetail";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import customersService from "./API/customersService";
-import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
+import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 const CustomersPage = () => {
   // Estados para clientes
@@ -93,155 +93,99 @@ const CustomersPage = () => {
     await loadCustomers(newParams);
   };
 
-  // Función para crear cliente - NUEVA IMPLEMENTACIÓN
+  // Función para crear cliente
   const createCustomer = async (customerData) => {
     setLoading(true);
     setError(null);
 
-    const customerPromise = (async () => {
-      console.log('CustomersPage: Creating customer with data:', customerData);
-      const response = await customersService.create(customerData);
-
-      if (response.success) {
-        // Resetear a primera página para que el nuevo cliente sea visible
-        const refreshParams = {
-          page: 1,
-          limit: queryParams.limit || 10,
-        };
-        setQueryParams(refreshParams);
-        await loadCustomers(refreshParams);
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al crear cliente');
-      }
-    })();
-
-    // Descartar toasts duplicados
-    toast.dismiss('create-customer');
-    
-    const loadingToastId = toast.loading('Creando cliente...', { id: 'create-customer' });
-    
-    customerPromise
-      .then(() => {
-        toast.dismiss(loadingToastId);
-        toast.success('Cliente creado exitosamente', { id: 'create-customer' });
-      })
-      .catch((err) => {
-        toast.dismiss(loadingToastId);
-        const errorMessage = err.response?.data?.message || err.message || 'Error al crear el cliente';
-        const validationErrors = err.response?.data?.errors;
-
-        setError(errorMessage);
-        console.error('Error creating customer:', err);
-        console.error('Validation errors:', validationErrors);
-
-        let finalErrorMessage = errorMessage;
-        if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
-          finalErrorMessage = validationErrors[0].message || validationErrors[0] || errorMessage;
-        }
-        toast.error(finalErrorMessage, { id: 'create-customer' });
-      });
-
     try {
-      return await customerPromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          console.log('CustomersPage: Creating customer with data:', customerData);
+          const response = await customersService.create(customerData);
+
+          if (response.success) {
+            const refreshParams = {
+              page: 1,
+              limit: queryParams.limit || 10,
+            };
+            setQueryParams(refreshParams);
+            await loadCustomers(refreshParams);
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al crear cliente');
+          }
+        },
+        operation: 'create',
+        entity: 'cliente',
+        loadingMessage: 'Creando cliente...',
+        successMessage: 'Cliente creado exitosamente',
+      });
     } catch (err) {
-      setLoading(false);
+      setError(err.message || 'Error al crear cliente');
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para actualizar cliente - NUEVA IMPLEMENTACIÓN
+  // Función para actualizar cliente
   const updateCustomer = async (id, customerData) => {
     setLoading(true);
     setError(null);
 
-    const customerPromise = (async () => {
-      console.log('CustomersPage: Updating customer', id, 'with data:', customerData);
-      const response = await customersService.update(id, customerData);
-
-      if (response.success) {
-        await loadCustomers(queryParams);
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al actualizar cliente');
-      }
-    })();
-
-    const updateToastId = `update-customer-${id}`;
-    toast.dismiss(updateToastId);
-    
-    const loadingToastId = toast.loading('Actualizando cliente...', { id: updateToastId });
-    
-    customerPromise
-      .then(() => {
-        toast.dismiss(loadingToastId);
-        toast.success('Cliente actualizado exitosamente', { id: updateToastId });
-      })
-      .catch((err) => {
-        toast.dismiss(loadingToastId);
-        const errorMessage = err.response?.data?.message || err.message || 'Error al actualizar el cliente';
-        const validationErrors = err.response?.data?.errors;
-
-        setError(errorMessage);
-        console.error('Error updating customer:', err);
-        console.error('Validation errors:', validationErrors);
-
-        let finalErrorMessage = errorMessage;
-        if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
-          finalErrorMessage = validationErrors[0].message || validationErrors[0] || errorMessage;
-        }
-        toast.error(finalErrorMessage, { id: updateToastId });
-      });
-
     try {
-      return await customerPromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          console.log('CustomersPage: Updating customer', id, 'with data:', customerData);
+          const response = await customersService.update(id, customerData);
+
+          if (response.success) {
+            await loadCustomers(queryParams);
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al actualizar cliente');
+          }
+        },
+        operation: 'update',
+        entity: 'cliente',
+        id,
+        loadingMessage: 'Actualizando cliente...',
+        successMessage: 'Cliente actualizado exitosamente',
+      });
     } catch (err) {
-      setLoading(false);
+      setError(err.message || 'Error al actualizar cliente');
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para eliminar cliente - NUEVA IMPLEMENTACIÓN (sin modal separado)
+  // Función para eliminar cliente
   const deleteCustomer = async (id) => {
     setLoading(true);
     setError(null);
 
-    const customerPromise = (async () => {
-      const response = await customersService.delete(id);
-
-      if (response.success) {
-        await loadCustomers(); // Recargar lista
-        return true;
-      } else {
-        throw new Error(response.message || 'Error al eliminar cliente');
-      }
-    })();
-
-    const deleteToastId = `delete-customer-${id}`;
-    toast.dismiss(deleteToastId);
-    
-    const loadingToastId = toast.loading('Eliminando cliente...', { id: deleteToastId });
-    
-    customerPromise
-      .then(() => {
-        toast.dismiss(loadingToastId);
-        toast.success('Cliente eliminado exitosamente', { id: deleteToastId });
-      })
-      .catch((err) => {
-        toast.dismiss(loadingToastId);
-        const errorMessage = err.response?.data?.message || err.message || 'Error al eliminar cliente';
-        setError(errorMessage);
-        toast.error(errorMessage, { id: deleteToastId });
-      });
-
     try {
-      return await customerPromise;
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await customersService.delete(id);
+
+          if (response.success) {
+            await loadCustomers();
+            return true;
+          } else {
+            throw new Error(response.message || 'Error al eliminar cliente');
+          }
+        },
+        operation: 'delete',
+        entity: 'cliente',
+        id,
+        loadingMessage: 'Eliminando cliente...',
+        successMessage: 'Cliente eliminado exitosamente',
+      });
     } catch (err) {
-      setLoading(false);
+      setError(err.message || 'Error al eliminar cliente');
       throw err;
     } finally {
       setLoading(false);
@@ -321,7 +265,7 @@ const CustomersPage = () => {
   const handleToggleStatus = (customerId) => {
     const current = customers.find(c => c.id === customerId);
     if (!current) {
-      toast.error("Cliente no encontrado");
+      showError("Cliente no encontrado");
       return;
     }
     setPendingStatusChange({ customerId, current });
@@ -336,18 +280,28 @@ const CustomersPage = () => {
     const nextStatus = current?.status === 'Activo' ? 'Inactivo' : 'Activo';
     
     try {
-      const response = await customersService.changeStatus(customerId, nextStatus);
-      
-      if (response.success) {
-        await loadCustomers(queryParams);
-        toast.success(`Estado cambiado a ${nextStatus}`);
-        setShowStatusModal(false);
-        setPendingStatusChange(null);
-      }
-    } catch (error) {
-      console.error('Error changing customer status:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Error al cambiar el estado';
-      toast.error(errorMessage);
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await customersService.changeStatus(customerId, nextStatus);
+          
+          if (response.success) {
+            await loadCustomers(queryParams);
+            return response;
+          }
+          throw new Error('Error al cambiar estado');
+        },
+        operation: 'update',
+        entity: 'cliente',
+        id: customerId,
+        loadingMessage: 'Cambiando estado...',
+        successMessage: `Estado cambiado a ${nextStatus} exitosamente`,
+        onSuccess: () => {
+          setShowStatusModal(false);
+          setPendingStatusChange(null);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
     }
   };
 

@@ -7,12 +7,14 @@ import UserDetail from './components/UserDetail';
 import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import usersService from './API/usersService';
-import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
+
 import { getCitasEnEjecucion } from '../SaleServices/API/CitasService';
 
 const USERS_PER_PAGE = 5;
+import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
+
 
 // Función para ordenar usuarios con prioridad especial
 const sortUsers = (usersArray) => {
@@ -95,9 +97,12 @@ const Users = () => {
   const [showDetail, setShowDetail] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Estado para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10); // Default a 10 items
 
   // Cargar usuarios desde la API al iniciar
   useEffect(() => {
@@ -190,89 +195,72 @@ const Users = () => {
   }, [searchTerm, users]);
 
   // Paginación
-  const totalPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * USERS_PER_PAGE,
-    currentPage * USERS_PER_PAGE
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   // Resetear página al cambiar el filtro
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, users]);
+  }, [searchTerm, itemsPerPage]); // Resetear también si cambia itemsPerPage
+
+  const handleItemsPerPageChange = (newVal) => {
+    setItemsPerPage(newVal);
+    setCurrentPage(1);
+  };
 
   // Acciones CRUD
   const handleCreateUser = async (newUser) => {
-    const userPromise = (async () => {
-      const response = await usersService.create(newUser);
-      if (response.success) {
-        await loadUsers(); // Recargar lista
-        setShowCreate(false);
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al crear el usuario');
-      }
-    })();
-
-    toast.promise(
-      userPromise,
-      {
-        loading: 'Creando usuario...',
-        success: 'Usuario creado exitosamente',
-        error: (err) => {
-          console.error('Error creating user:', err);
-          const backendMsg = err.response?.data?.message || err.message;
-          const validationErrors = err.response?.data?.errors;
-          if (validationErrors && Array.isArray(validationErrors) && validationErrors.length > 0) {
-            return validationErrors[0].message || backendMsg || 'Error al crear el usuario';
-          }
-          return backendMsg || 'Error al crear el usuario';
-        },
-      },
-      {
-        id: 'create-user',
-      }
-    );
-
     try {
-      await userPromise;
-    } catch (error) {
-      // Error ya manejado por toast.promise
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await usersService.create(newUser);
+          if (response.success) {
+            await loadUsers();
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al crear el usuario');
+          }
+        },
+        operation: 'create',
+        entity: 'usuario',
+        loadingMessage: 'Creando usuario...',
+        successMessage: 'Usuario creado exitosamente',
+        onSuccess: () => {
+          setShowCreate(false);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
     }
   };
 
   const handleEditUser = async (updatedUser) => {
-    const userPromise = (async () => {
-      const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
-      if (response.success) {
-        setShowEdit(false);
-        setSelectedUser(null);
-        await loadUsers(); // Recargar lista
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al actualizar el usuario');
-      }
-    })();
-
-    toast.promise(
-      userPromise,
-      {
-        loading: 'Actualizando usuario...',
-        success: 'Usuario actualizado exitosamente',
-        error: (err) => {
-          console.error('Error updating user:', err);
-          return err.response?.data?.message || err.message || 'Error al actualizar el usuario';
-        },
-      },
-      {
-        id: `update-user-${updatedUser.id_usuario || updatedUser.id}`,
-      }
-    );
-
     try {
-      await userPromise;
-    } catch (error) {
-      // Error ya manejado por toast.promise
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await usersService.update(updatedUser.id_usuario || updatedUser.id, updatedUser);
+          if (response.success) {
+            await loadUsers();
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al actualizar el usuario');
+          }
+        },
+        operation: 'update',
+        entity: 'usuario',
+        id: updatedUser.id_usuario || updatedUser.id,
+        loadingMessage: 'Actualizando usuario...',
+        successMessage: 'Usuario actualizado exitosamente',
+        onSuccess: () => {
+          setShowEdit(false);
+          setSelectedUser(null);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
     }
   };
 
@@ -291,35 +279,25 @@ const Users = () => {
       });
 
       if (result.isConfirmed) {
-        const userPromise = (async () => {
-          const response = await usersService.delete(userId);
-          if (response.success) {
-            await loadUsers(); // Recargar lista
-            return response.data;
-          } else {
-            throw new Error(response.message || 'Error al eliminar el usuario');
-          }
-        })();
-
-        toast.promise(
-          userPromise,
-          {
-            loading: 'Eliminando usuario...',
-            success: 'Usuario eliminado exitosamente',
-            error: (err) => {
-              console.error('Error deleting user:', err);
-              return err.response?.data?.message || err.message || 'Error al eliminar el usuario';
-            },
-          },
-          {
-            id: `delete-user-${userId}`,
-          }
-        );
-
         try {
-          await userPromise;
-        } catch (error) {
-          // Error ya manejado por toast.promise
+          await executeWithToast({
+            promiseFn: async () => {
+              const response = await usersService.delete(userId);
+              if (response.success) {
+                await loadUsers();
+                return response.data;
+              } else {
+                throw new Error(response.message || 'Error al eliminar el usuario');
+              }
+            },
+            operation: 'delete',
+            entity: 'usuario',
+            id: userId,
+            loadingMessage: 'Eliminando usuario...',
+            successMessage: 'Usuario eliminado exitosamente',
+          });
+        } catch {
+          // Error ya manejado por executeWithToast
         }
       }
     }
@@ -328,29 +306,25 @@ const Users = () => {
   const handleStatusChange = async (userId, newStatus, conceptoEstado = null) => {
     const user = users.find(u => (u.id_usuario || u.id) === userId);
     if (user) {
-      const userPromise = (async () => {
-        const response = await usersService.changeStatus(userId, newStatus, conceptoEstado);
-        if (response.success) {
-          await loadUsers(); // Recargar lista
-          return response.data;
-        } else {
-          throw new Error(response.message || 'Error al cambiar el estado');
-        }
-      })();
-
-      toast.promise(userPromise, {
-        loading: 'Cambiando estado...',
-        success: `Estado cambiado a ${newStatus}`,
-        error: (err) => {
-          console.error('Error changing user status:', err);
-          return err.response?.data?.message || err.message || 'Error al cambiar el estado';
-        },
-      });
-
       try {
-        await userPromise;
-      } catch (error) {
-        // Error ya manejado por toast.promise
+        await executeWithToast({
+          promiseFn: async () => {
+            const response = await usersService.changeStatus(userId, newStatus, conceptoEstado);
+            if (response.success) {
+              await loadUsers();
+              return response.data;
+            } else {
+              throw new Error(response.message || 'Error al cambiar el estado');
+            }
+          },
+          operation: 'update',
+          entity: 'usuario',
+          id: userId,
+          loadingMessage: 'Cambiando estado...',
+          successMessage: `Estado cambiado a ${newStatus} exitosamente`,
+        });
+      } catch {
+        // Error ya manejado por executeWithToast
       }
     }
   };
@@ -489,11 +463,15 @@ const Users = () => {
                 />
               )}
             </div>
-            {filteredUsers.length > USERS_PER_PAGE && (
+            {filteredUsers.length > 0 && (
               <Paginator
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={filteredUsers.length}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                pageSizeOptions={[5, 10, 20, 50, 100]}
               />
             )}
           </div>

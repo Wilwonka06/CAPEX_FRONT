@@ -3,14 +3,13 @@ import cartIcon from "../../../shared/images/cart.png";
 import { useCartToast } from "../components/CartToastContext";
 import { useCart } from "../components/CartContext";
 import productsService from "../../dashboard/pages/products/API/productsService";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { formatNumber } from "../../../shared/utils/formatters";
 
 const FeaturedProducts = () => {
   const { showCartToast } = useCartToast();
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const addingToCartRef = useRef(new Set()); // Rastrear productos que se están agregando
 
   // Estados para productos
   const [productos, setProductos] = useState([]);
@@ -122,21 +121,11 @@ const FeaturedProducts = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Prevenir múltiples clics
-                    if (addingToCartRef.current.has(prod.id)) {
-                      return;
-                    }
-                    addingToCartRef.current.add(prod.id);
                     addToCart(prod, 1);
                     showCartToast(prod);
-                    // Permitir agregar de nuevo después de 1 segundo
-                    setTimeout(() => {
-                      addingToCartRef.current.delete(prod.id);
-                    }, 1000);
                   }}
-                  className="absolute bottom-4 right-4 bg-[#FACC15] text-[#1E1E1E] rounded-full p-3 shadow-lg hover:bg-yellow-400 transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="absolute bottom-4 right-4 bg-[#FACC15] text-[#1E1E1E] rounded-full p-3 shadow-lg hover:bg-yellow-400 transition-all duration-300 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
                   title="Agregar al carrito"
-                  disabled={addingToCartRef.current.has(prod.id)}
                 >
                   <img src={cartIcon} alt="Carrito" className="w-5 h-5" />
                 </button>

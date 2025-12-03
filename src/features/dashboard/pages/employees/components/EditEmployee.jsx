@@ -168,15 +168,15 @@ const EditEmployee = ({
   };
 
   return (
-    <div className="bg-gray-50 rounded-xl p-6">
+    <div className="">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="bg-gradient-to-r from-[#FACC15] to-[#F59E0B] rounded-2xl h-16 w-16 flex items-center justify-center shadow-lg">
-          <i className="bi bi-pencil-square text-2xl text-white" />
+        <div className="bg-gradient-to-r from-[#FACC15] to-[#F59E0B] rounded-2xl h-10 w-10 flex items-center justify-center shadow-lg">
+          <i className={`bi ${isReadOnly ? 'bi-eye' : 'bi-pencil-square'} text-2xl text-white`} />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-gray-800 font-nunito">
-            Editar Empleado
+            {isReadOnly ? 'Ver Empleado' : 'Editar Empleado'}
           </h2>
         </div>
       </div>
