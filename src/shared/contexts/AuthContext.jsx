@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
-import Swal from 'sweetalert2';
 import { apiRequest } from '../config/apiConfig';
 
 // Valor por defecto del contexto para evitar errores cuando no está disponible
@@ -7,7 +6,8 @@ const defaultContextValue = {
   currentUser: null,
   loading: true,
   login: async () => { },
-  logout: async () => { },
+  logout: () => { },
+  logoutConfirmed: async () => { },
   hasPrivilege: () => false,
   getRoleRedirect: () => '/landing',
   checkAuth: async () => null,
@@ -84,7 +84,8 @@ export const AuthProvider = ({ children }) => {
       'Crear': 'Crear',
       'Visualizar': 'Visualizar',
       'Editar': 'Editar',
-      'Eliminar': 'Eliminar'
+      'Eliminar': 'Eliminar',
+      'Crear novedades': 'Crear novedades'
     };
 
     // Obtener el nombre de la acción en español
@@ -259,37 +260,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Función de logout
-  const logout = async () => {
-    const result = await Swal.fire({
-      title: '¿Deseas cerrar sesión?',
-      text: 'Tendrás que volver a iniciar sesión para acceder nuevamente.',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, cerrar sesión',
-      cancelButtonText: 'Cancelar',
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await apiRequest.post('/auth/logout');
-      } catch (error) {
-        console.warn('⚠️ Error al cerrar sesión en el backend:', error);
-      }
-
-      // Limpiar datos locales
-      localStorage.removeItem('currentUser');
-      try { localStorage.removeItem('authToken'); } catch { }
-      setCurrentUser(null);
-
-      // Emitir evento de cambio
-      window.dispatchEvent(new Event('user-auth-changed'));
-
-      // Redirigir al login
-      window.location.href = '/iniciar-sesion';
+  // Función de logout (sin confirmación, para usar después del modal)
+  const logoutConfirmed = async () => {
+    try {
+      await apiRequest.post('/auth/logout');
+    } catch (error) {
+      console.warn('⚠️ Error al cerrar sesión en el backend:', error);
     }
+
+    // Limpiar datos locales
+    localStorage.removeItem('currentUser');
+    try { localStorage.removeItem('authToken'); } catch { }
+    setCurrentUser(null);
+
+    // Emitir evento de cambio
+    window.dispatchEvent(new Event('user-auth-changed'));
+
+    // Redirigir al login
+    window.location.href = '/iniciar-sesion';
+  };
+
+  // Función de logout (mantener para compatibilidad, pero ahora solo retorna función)
+  const logout = () => {
+    // Esta función ahora solo retorna la función de logout confirmado
+    // El modal se manejará en el componente que llama
+    return logoutConfirmed;
   };
 
   // Función para verificar autenticación
@@ -359,6 +354,7 @@ export const AuthProvider = ({ children }) => {
     authChecked,
     login,
     logout,
+    logoutConfirmed,
     hasPrivilege,
     getRoleRedirect,
     checkAuth,

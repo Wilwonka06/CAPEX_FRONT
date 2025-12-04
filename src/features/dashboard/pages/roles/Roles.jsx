@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import RolesTable from "./components/RolesTable";
 import Paginator from "../../../../shared/Paginator";
 import CreateRole from "./components/CreateRole";
+import ConfirmDeleteModal from "../../../../shared/components/ConfirmDeleteModal";
 import rolesService from "./API/rolesService";
 import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 
@@ -18,6 +18,9 @@ const RolesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const { setTitle } = useOutletContext();
   
   // Verificar permisos
@@ -140,38 +143,40 @@ const RolesPage = () => {
     }
   };
 
-  // Eliminar rol
-  const handleDeleteRole = async (roleId) => {
+  // Handler para eliminar rol - muestra modal primero
+  const handleDeleteRole = (roleId) => {
     const role = roles.find(r => r.id === roleId);
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas eliminar el rol "${role?.name || role?.nombre}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+    if (role) {
+      setPendingDelete({ id: roleId, role });
+      setShowDeleteModal(true);
+    }
+  };
+
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    const rolePromise = (async () => {
+      await rolesService.delete(pendingDelete.id);
+      await loadRoles();
+      return true;
+    })();
+
+    toast.promise(rolePromise, {
+      loading: 'Eliminando rol...',
+      success: 'Rol eliminado exitosamente',
+      error: (err) => err.message || 'Error al eliminar el rol',
     });
 
-    if (result.isConfirmed) {
-      const rolePromise = (async () => {
-        await rolesService.delete(roleId);
-        await loadRoles();
-        return true;
-      })();
-
-      toast.promise(rolePromise, {
-        loading: 'Eliminando rol...',
-        success: 'Rol eliminado exitosamente',
-        error: (err) => err.message || 'Error al eliminar el rol',
-      });
-
-      try {
-        await rolePromise;
-      } catch (error) {
-        // Error ya manejado por toast.promise
-      }
+    try {
+      await rolePromise;
+      setShowDeleteModal(false);
+      setPendingDelete(null);
+    } catch (error) {
+      // Error ya manejado por toast.promise
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -260,6 +265,23 @@ const RolesPage = () => {
           onCreate={handleCreateRole}
           roles={roles}
         />
+
+        {/* Modal de confirmación de eliminación */}
+        {showDeleteModal && pendingDelete && (
+          <ConfirmDeleteModal
+            isOpen={showDeleteModal}
+            onClose={() => {
+              if (!deletingId) {
+                setShowDeleteModal(false);
+                setPendingDelete(null);
+              }
+            }}
+            onConfirm={handleConfirmDelete}
+            itemName={pendingDelete.role.name || pendingDelete.role.nombre}
+            entityType="rol"
+            loading={deletingId === pendingDelete.id}
+          />
+        )}
       </div>
     </div>
   );

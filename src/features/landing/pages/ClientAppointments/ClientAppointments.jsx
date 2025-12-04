@@ -222,6 +222,7 @@ const ClientAppointments = () => {
       ...prev,
       cliente: currentUser?.nombre || '',
       telefono: currentUser?.telefono || '',
+      correo: currentUser?.correo || prev.correo || '', // Mantener correo si ya estaba ingresado
       tipoDocumento: currentUser?.tipoDocumento || '',
       documento: currentUser?.documento || ''
     }));
@@ -345,8 +346,18 @@ const ClientAppointments = () => {
       setAppointments(updatedAppointments);
       setActiveTab('misCitas');
     } catch (error) {
-      showError('Ocurrió un error al agendar la cita.', 'appointment-create-error');
+      // Mostrar mensaje de error más específico
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Ocurrió un error al agendar la cita. Por favor, verifica los datos e intenta nuevamente.';
+      showError(errorMessage, 'appointment-create-error');
       console.error('Error al crear la cita:', error);
+      console.error('Detalles del error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
     } finally {
       setLoading(false);
     }

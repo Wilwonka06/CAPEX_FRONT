@@ -25,7 +25,7 @@ const SaleServices = () => {
   const [services, setServices] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   const [tab, setTab] = useState("En ejecucion");
   const { setTitle } = useOutletContext();
 

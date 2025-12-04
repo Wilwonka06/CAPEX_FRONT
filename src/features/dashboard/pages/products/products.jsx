@@ -4,9 +4,9 @@ import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import CreateProduct from "./components/CreateProduct";
 import CharacteristicsManager from "./components/CharacteristicsManager";
+import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import productsService from "./API/productsService";
 import suppliersService from "../suppliers/API/suppliersService";
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
@@ -28,6 +28,9 @@ const ProductsPage = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isCharacteristicsManagerOpen, setIsCharacteristicsManagerOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const { setTitle } = useOutletContext();
   const [suppliers, setSuppliers] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState("");
@@ -245,27 +248,29 @@ const ProductsPage = () => {
     }
   };
 
-  // Función para eliminar un producto con confirmación
-  const handleDeleteProduct = async (productId) => {
+  // Handler para eliminar producto - muestra modal primero
+  const handleDeleteProduct = (productId) => {
     const product = products.find(p => p.id === productId);
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas eliminar el producto "${product?.nombre}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
+    if (product) {
+      setPendingDelete({ id: productId, product });
+      setShowDeleteModal(true);
+    }
+  };
 
-    if (result.isConfirmed) {
-      try {
-        await deleteProduct(productId);
-      } catch (error) {
-        // El error ya se maneja en la función
-        console.error('Error deleting product:', error);
-      }
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    try {
+      await deleteProduct(pendingDelete.id);
+      setShowDeleteModal(false);
+      setPendingDelete(null);
+    } catch (error) {
+      // El error ya se maneja en la función
+      console.error('Error deleting product:', error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -343,6 +348,23 @@ const ProductsPage = () => {
         isOpen={isCharacteristicsManagerOpen} 
         onClose={() => setIsCharacteristicsManagerOpen(false)} 
       />
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deletingId) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={pendingDelete.product.nombre}
+          entityType="producto"
+          loading={deletingId === pendingDelete.id}
+        />
+      )}
     </div>
   );
 };
