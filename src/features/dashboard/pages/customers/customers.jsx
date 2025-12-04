@@ -6,8 +6,8 @@ import CreateCustomer from "./components/CreateCustomer";
 import EditCustomer from "./components/EditCustomer";
 import CustomerDetail from "./components/CustomerDetail";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
+import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import customersService from "./API/customersService";
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
@@ -34,6 +34,9 @@ const CustomersPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const { setTitle } = useOutletContext();
 
   // Función para cargar clientes
@@ -238,26 +241,28 @@ const CustomersPage = () => {
     }
   };
 
-  // Función para eliminar un cliente con confirmación
-  const handleDeleteCustomer = async (customerId) => {
+  // Handler para eliminar cliente - muestra modal primero
+  const handleDeleteCustomer = (customerId) => {
     const customer = customers.find(c => c.id === customerId);
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas eliminar al cliente "${customer?.nombre || customer?.firstName}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
+    if (customer) {
+      setPendingDelete({ id: customerId, customer });
+      setShowDeleteModal(true);
+    }
+  };
 
-    if (result.isConfirmed) {
-      try {
-        await deleteCustomer(customerId);
-      } catch (error) {
-        console.error('Error deleting customer:', error);
-      }
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    try {
+      await deleteCustomer(pendingDelete.id);
+      setShowDeleteModal(false);
+      setPendingDelete(null);
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -434,6 +439,23 @@ const CustomersPage = () => {
           isActivating={pendingStatusChange.current.status === 'Inactivo'}
           itemName={pendingStatusChange.current.nombre || pendingStatusChange.current.firstName || 'este cliente'}
           loading={false}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deletingId) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={pendingDelete.customer.nombre || pendingDelete.customer.firstName}
+          entityType="cliente"
+          loading={deletingId === pendingDelete.id}
         />
       )}
     </div>

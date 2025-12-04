@@ -759,7 +759,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.tipoDocumento}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                disabled={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
               >
                 {DOC_TYPES_CODES.map(code => (
                   <option key={code} value={code}>
@@ -784,7 +785,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                   value={formData.documento}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  className="w-full px-3 py-2 pr-10 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                   placeholder="Número de documento"
                   maxLength={20}
                 />
@@ -815,7 +816,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.nombre}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                readOnly={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
                 placeholder="Nombre completo del cliente"
               />
               {(touched.nombre || showErrors) && errors.nombre && (
@@ -834,7 +836,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.telefono}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                readOnly={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
                 placeholder="Número de teléfono"
                 maxLength={15}
               />
@@ -854,7 +857,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.correo}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                readOnly={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
                 placeholder="correo@ejemplo.com"
               />
               {(touched.correo || showErrors) && errors.correo && (
@@ -873,7 +877,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             name="status"
             value={formData.status}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+            className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
           >
             <option value="En ejecucion">En ejecución</option>
             <option value="Pagado">Pagado</option>

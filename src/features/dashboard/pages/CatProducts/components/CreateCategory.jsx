@@ -112,10 +112,10 @@ const CreateCategory = ({ onCreate, categories }) => {
             <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
               <form id="create-category-form" onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">Nombre <span className='text-red-500'>*</span></label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Nombre <span className='text-red-500'>*</span></label>
                     <input
                       type="text"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                         !isNameValid || nameError ? 'border-red-500' : 'border-gray-300'
                       }`}
                       value={name}
@@ -124,13 +124,16 @@ const CreateCategory = ({ onCreate, categories }) => {
                       required
                     />
                     {nameError && (
-                      <p className="text-xs text-red-500 mt-1">{nameError}</p>
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        {nameError}
+                      </p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">Descripción</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
                     <textarea
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm resize-none border-gray-300`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm resize-none border-gray-300`}
                       value={description}
                       onChange={handleDescriptionChange}
                       onBlur={handleDescriptionBlur}

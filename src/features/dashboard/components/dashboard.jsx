@@ -31,7 +31,7 @@ const mesesES = [
   "Noviembre",
   "Diciembre",
 ];
-
+let mesActual = new Date().getMonth();
 
 
 // Función helper para agrupar servicios por cliente/cita (fuera del componente)
@@ -838,10 +838,9 @@ const Dashboard = () => {
             {/* Gráfica de Ventas Mensuales */}
             <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
               <div className="mb-6">
-                <h3 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">
-                  Ventas Diarias del Mes
-                </h3>
-                <p className="text-sm text-gray-600 font-lato">Análisis detallado de ventas por día</p>
+                  <h3 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">
+                    Ventas Diarias de {mesesES[selMonth - 1]} {selYear}
+                  </h3>
               </div>
               {loading ? (
                 <ChartContentSkeleton />
@@ -854,9 +853,8 @@ const Dashboard = () => {
             <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-[#1E1E1E] mb-2 font-montserrat">
-                  Totales por Mes
+                  Totales Ultimos 6 Meses
                 </h3>
-                <p className="text-sm text-gray-600 font-lato">Últimos 6 meses de actividad</p>
               </div>
               {loading ? (
                 <ChartContentSkeleton />
@@ -869,9 +867,14 @@ const Dashboard = () => {
           {/* Segunda fila: Ventas Semanales */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
             <div className="mb-6">
-              <h3 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">
-                Ventas Semanales (últimas 8 semanas)
-              </h3>
+              <div className="gap-2 flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-[#1E1E1E] font-montserrat">
+                  Ventas Semanales (últimas 8 semanas)
+                </h3>
+                <div className="flex items-center px-3 py-2 bg-gray-50 rounded-xl border">
+                  <h4 className="text-lg font-semibold text-[#1E1E1E] font-montserrat">{mesesES[selMonth - 1]} {selYear}</h4>
+                </div>
+              </div>
               <p className="text-sm text-gray-600 font-lato">
                 Comparativo de productos y servicios por semana
               </p>
@@ -886,9 +889,14 @@ const Dashboard = () => {
           {/* Tercera fila: Top Servicios y Productos */}
           <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100">
             <div className="mb-6">
-              <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">
-                Top Servicios y Productos (rentabilidad)
-              </h3>
+              <div className="gap-2 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-[#1E1E1E] mb-2 font-montserrat">
+                  Top Servicios y Productos (rentabilidad)
+                </h3>
+                <div className="flex items-center px-3 py-2 bg-gray-50 rounded-xl border">
+                <h4 className="text-lg font-semibold text-[#1E1E1E] font-montserrat">{mesesES[selMonth - 1]} {selYear}</h4>
+                </div>
+              </div>
               <p className="text-sm text-gray-600 font-lato">Más solicitados y vendidos este mes</p>
             </div>
             {loading ? (

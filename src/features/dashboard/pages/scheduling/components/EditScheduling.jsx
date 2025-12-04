@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { HOURS_12, to24h, to12h } from '../../../../../shared/utils/timeFormat';
 
 const diasSemanaOptions = [
@@ -11,44 +12,52 @@ const diasSemanaOptions = [
   { value: 0, label: 'Domingo' }
 ];
 
-const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], editing = null }) => {
+const EditScheduling = ({ scheduling, onUpdate, isOpen: externalOpen = undefined, onClose: externalOnClose }) => {
+  const [open, setOpen] = useState(false);
   // Calcular fecha mínima (día siguiente)
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const minDate = tomorrow.toISOString().split('T')[0];
 
   const [form, setForm] = useState({
-    id_usuario: empleadoId || '',
+    id_usuario: '',
     bloques_horarios: [
       { inicio: '09:00 AM', fin: '12:00 PM' },
       { inicio: '01:00 PM', fin: '05:00 PM' }
     ],
-    dias_semana: [1, 2, 3, 4, 5, 6], // Lunes a Sábado por defecto
+    dias_semana: [1, 2, 3, 4, 5, 6],
     fecha_inicio: minDate,
-    fecha_fin: '', // Vacío = indefinido
+    fecha_fin: '',
     estado: 'Activa',
     observaciones: ''
   });
   const [errors, setErrors] = useState({});
 
+  const modalOpen = externalOpen !== undefined ? externalOpen : open;
+
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => {
+    setOpen(false);
+    setErrors({});
+    if (externalOnClose) externalOnClose();
+  };
+
   useEffect(() => {
-    if (editing) {
+    if (scheduling && modalOpen) {
       setForm({
-        id_usuario: editing.id_usuario || empleadoId || '',
-        bloques_horarios: editing.bloques_horarios?.map(b => ({
+        id_usuario: scheduling.id_usuario || '',
+        bloques_horarios: scheduling.bloques_horarios?.map(b => ({
           inicio: to12h(b.inicio),
           fin: to12h(b.fin)
         })) || [{ inicio: '09:00 AM', fin: '05:00 PM' }],
-        dias_semana: editing.dias_semana || [],
-        fecha_inicio: editing.fecha_inicio || minDate,
-        fecha_fin: editing.fecha_fin || '',
-        estado: editing.estado || 'Activa',
-        observaciones: editing.observaciones || ''
+        dias_semana: scheduling.dias_semana || [],
+        fecha_inicio: scheduling.fecha_inicio || minDate,
+        fecha_fin: scheduling.fecha_fin || '',
+        estado: scheduling.estado || 'Activa',
+        observaciones: scheduling.observaciones || ''
       });
-    } else if (empleadoId) {
-      setForm(prev => ({ ...prev, id_usuario: empleadoId }));
     }
-  }, [editing, empleadoId]);
+  }, [scheduling, minDate, modalOpen]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -222,11 +231,12 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
       ...form,
       bloques_horarios: bloquesBackend,
       id_usuario: form.id_usuario,
-      fecha_fin: form.fecha_fin || null, // Convertir string vacío a null
-      estado: 'Activa' // Siempre activa por defecto
+      fecha_fin: form.fecha_fin || null,
+      estado: form.estado
     };
 
-    onSave(data);
+    onUpdate(data);
+    handleClose();
   };
 
   // Calcular horas totales por día
@@ -242,39 +252,34 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
     return `${horas}h ${minutos}m`;
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Selección de Empleado (si no viene predefinido) */}
-      {!empleadoId && employees.length > 0 && (
-        <div className="md:col-span-2">
-          <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 items-center gap-2">
-            <i className="bi bi-person text-[#FACC15]"></i>
-            Empleado *
-          </label>
-          <select
-            name="id_usuario"
-            value={form.id_usuario}
-            onChange={handleChange}
-            className={`w-full border-2 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all ${
-              errors.id_usuario ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <option value="">Seleccione un empleado...</option>
-            {employees.map(emp => (
-              <option key={emp.id} value={emp.id}>
-                {emp.nombre} {emp.apellido} ({emp.documento})
-              </option>
-            ))}
-          </select>
-          {errors.id_usuario && (
-            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-              <i className="bi bi-exclamation-triangle"></i>
-              {errors.id_usuario}
-            </p>
-          )}
-        </div>
-      )}
+  if (!scheduling || !modalOpen) {
+    return null;
+  }
 
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md overflow-hidden">
+      <div className="w-full max-w-4xl mx-4">
+        <div className="bg-white rounded-2xl shadow-2xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header fijo */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <i className="bi bi-pencil text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold m-0">Editar Programación Recurrente</h2>
+          </div>
+          <button
+            className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200"
+            onClick={handleClose}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Contenido con scroll */}
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Bloques Horarios */}
       <div className="space-y-4 md:col-span-2">
         <div className="flex justify-between items-center">
@@ -426,7 +431,6 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
         </div>
       </div>
 
-
       {/* Observaciones */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 font-lato mb-2 items-center gap-2">
@@ -443,26 +447,38 @@ const AddRecurringScheduling = ({ onSave, onCancel, empleadoId, employees = [], 
         />
       </div>
 
-      {/* Botones */}
-      <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 md:col-span-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 border-2 border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-semibold flex items-center gap-2 text-xs"
-        >
-          <i className="bi bi-x-lg"></i>
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl text-xs"
-        >
-          <i className="bi bi-check-circle"></i>
-          {editing ? 'Actualizar' : 'Crear'} Programación
-        </button>
+            {/* Botones */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 md:col-span-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-4 py-2 border-2 border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-semibold flex items-center gap-2 text-xs"
+              >
+                <i className="bi bi-x-lg"></i>
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all font-semibold flex items-center gap-2 shadow-lg hover:shadow-xl text-xs"
+              >
+                <i className="bi bi-check-circle"></i>
+                Actualizar Programación
+              </button>
+            </div>
+          </form>
+        </div>
+        </div>
       </div>
-    </form>
+    </div>
   );
 };
 
-export default AddRecurringScheduling;
+EditScheduling.propTypes = {
+  scheduling: PropTypes.object.isRequired,
+  onUpdate: PropTypes.func.isRequired,
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func
+};
+
+export default EditScheduling;
+

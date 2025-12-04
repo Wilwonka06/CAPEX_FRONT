@@ -7,8 +7,8 @@ import categoriesService from './API/categoriesService';
 import EditCategory from "./components/EditCategory";
 import CategoryDetail from "./components/CategoryDetail";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
+import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 const CATEGORIES_PER_PAGE = 10;
@@ -47,6 +47,9 @@ const CatProductsPage = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const { setTitle } = useOutletContext();
 
 
@@ -141,44 +144,47 @@ const CatProductsPage = () => {
     }
   };
 
-  const handleDeleteCategory = async (categoryId) => {
+  // Handler para eliminar categoría - muestra modal primero
+  const handleDeleteCategory = (categoryId) => {
     const category = categories.find(c => c.id_categoria_producto === categoryId);
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas eliminar la categoría "${category?.nombre || category?.name}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+    if (category) {
+      setPendingDelete({ id: categoryId, category });
+      setShowDeleteModal(true);
+    }
+  };
+
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    const categoryPromise = (async () => {
+      const response = await categoriesService.delete(pendingDelete.id);
+      if (response.success) {
+        await loadCategories(); // Recargar lista
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Error al eliminar la categoría');
+      }
+    })();
+
+    toast.promise(categoryPromise, {
+      loading: 'Eliminando categoría...',
+      success: 'Categoría eliminada exitosamente',
+      error: (err) => {
+        console.error('Error deleting category:', err);
+        return err.response?.data?.message || err.message || 'Error al eliminar la categoría';
+      },
     });
 
-    if (result.isConfirmed) {
-      const categoryPromise = (async () => {
-        const response = await categoriesService.delete(categoryId);
-        if (response.success) {
-          await loadCategories(); // Recargar lista
-          return response.data;
-        } else {
-          throw new Error(response.message || 'Error al eliminar la categoría');
-        }
-      })();
-
-      toast.promise(categoryPromise, {
-        loading: 'Eliminando categoría...',
-        success: 'Categoría eliminada exitosamente',
-        error: (err) => {
-          console.error('Error deleting category:', err);
-          return err.response?.data?.message || err.message || 'Error al eliminar la categoría';
-        },
-      });
-
-      try {
-        await categoryPromise;
-      } catch (error) {
-        // Error ya manejado por toast.promise
-      }
+    try {
+      await categoryPromise;
+      setShowDeleteModal(false);
+      setPendingDelete(null);
+    } catch (error) {
+      // Error ya manejado por toast.promise
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -322,6 +328,23 @@ const CatProductsPage = () => {
           isActivating={pendingStatusChange.category.estado === 'inactivo'}
           itemName={pendingStatusChange.category.nombre || pendingStatusChange.category.name}
           loading={false}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deletingId) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={pendingDelete.category.nombre || pendingDelete.category.name}
+          entityType="categoría"
+          loading={deletingId === pendingDelete.id}
         />
       )}
     </div>

@@ -6,13 +6,13 @@ import usersService from '../users/API/usersService';
 import Search from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
+import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import CreateSaleModal from './components/CreateSaleModal';
 import SaleDetailModal from './components/SaleDetailModal';
 import SalesTable from './components/SalesTable';
 import { generateProductInvoicePDF } from '../../../../shared/utils/invoicePdf';
 import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 const SalesProducts = () => {
@@ -35,6 +35,9 @@ const SalesProducts = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filteredSales, setFilteredSales] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   
   const { setTitle } = useOutletContext();
   const itemsPerPage = 5;
@@ -199,50 +202,51 @@ const SalesProducts = () => {
     setShowDetailModal(true);
   };
 
-  const handleDeleteSale = async (saleId) => {
+  // Handler para cancelar venta - muestra modal primero
+  const handleDeleteSale = (saleId) => {
     const sale = sales.find(s => s.id === saleId);
+    if (sale) {
+      setPendingDelete({ id: saleId, sale });
+      setShowDeleteModal(true);
+    }
+  };
+
+  // Handler para confirmar cancelación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    setLoading(true);
     
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Deseas cancelar la venta #${sale?.numeroVenta}? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, cancelar',
-      cancelButtonText: 'Cancelar'
+    const salePromise = (async () => {
+      const response = await salesService.changeStatus(pendingDelete.id, 'Cancelado');
+      
+      if (response.success) {
+        await loadSales(); // Recargar lista
+        return response.data;
+      } else {
+        throw new Error(response.message || 'Error al cancelar la venta');
+      }
+    })();
+
+    toast.promise(salePromise, {
+      loading: 'Cancelando venta...',
+      success: 'Venta cancelada exitosamente',
+      error: (err) => {
+        console.error('Error canceling sale:', err);
+        return err.response?.data?.message || err.message || 'Error al cancelar la venta';
+      },
     });
 
-    if (result.isConfirmed) {
-      setLoading(true);
-      
-      const salePromise = (async () => {
-        const response = await salesService.changeStatus(saleId, 'Cancelado');
-        
-        if (response.success) {
-          await loadSales(); // Recargar lista
-          return response.data;
-        } else {
-          throw new Error(response.message || 'Error al cancelar la venta');
-        }
-      })();
-
-      toast.promise(salePromise, {
-        loading: 'Cancelando venta...',
-        success: 'Venta cancelada exitosamente',
-        error: (err) => {
-          console.error('Error canceling sale:', err);
-          return err.response?.data?.message || err.message || 'Error al cancelar la venta';
-        },
-      });
-
-      try {
-        await salePromise;
-      } catch (error) {
-        // Error ya manejado por toast.promise
-      } finally {
-        setLoading(false);
-      }
+    try {
+      await salePromise;
+      setShowDeleteModal(false);
+      setPendingDelete(null);
+    } catch (error) {
+      // Error ya manejado por toast.promise
+    } finally {
+      setLoading(false);
+      setDeletingId(null);
     }
   };
 
@@ -459,6 +463,23 @@ const SalesProducts = () => {
           customer={customers.find(c => c.id === selectedSale?.clienteId) || selectedSale?.customer || null}
           isOpen={showDetailModal}
           onClose={closeModals}
+        />
+      )}
+
+      {/* Modal de confirmación de cancelación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deletingId) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={`venta #${pendingDelete.sale.numeroVenta}`}
+          entityType="venta"
+          loading={deletingId === pendingDelete.id}
         />
       )}
       

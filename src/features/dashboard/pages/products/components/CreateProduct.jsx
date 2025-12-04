@@ -515,7 +515,12 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                         required
                         placeholder="Ingresa el nombre del producto"
                       />
-                      {fieldErrors.nombre && <p className="text-xs text-red-500 mt-1">{fieldErrors.nombre}</p>}
+                      {fieldErrors.nombre && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                          <i className="bi bi-exclamation-triangle"></i>
+                          {fieldErrors.nombre}
+                        </p>
+                      )}
                     </div>
 
                     {/* Categoría */}
@@ -537,7 +542,12 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                           </option>
                         ))}
                       </select>
-                      {fieldErrors.categoryId && <p className="text-xs text-red-500 mt-1">{fieldErrors.categoryId}</p>}
+                      {fieldErrors.categoryId && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                          <i className="bi bi-exclamation-triangle"></i>
+                          {fieldErrors.categoryId}
+                        </p>
+                      )}
                     </div>
 
                     {/* Costo */}
@@ -558,7 +568,12 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                           placeholder="0"
                         />
                       </div>
-                      {fieldErrors.costo && <p className="text-xs text-red-500 mt-1">{fieldErrors.costo}</p>}
+                      {fieldErrors.costo && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                          <i className="bi bi-exclamation-triangle"></i>
+                          {fieldErrors.costo}
+                        </p>
+                      )}
                     </div>
 
                     {/* Precio (auto margen) */}
@@ -578,7 +593,12 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                           placeholder="0"
                         />
                       </div>
-                      {fieldErrors.precio && <p className="text-xs text-red-500 mt-1">{fieldErrors.precio}</p>}
+                      {fieldErrors.precio && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                          <i className="bi bi-exclamation-triangle"></i>
+                          {fieldErrors.precio}
+                        </p>
+                      )}
                       {formData.costo && formData.precio && (
                         <p className="text-[10px] text-gray-500">Margen: ${formatNumber(parseFormattedNumber(formData.precio) - parseFormattedNumber(formData.costo))} ({(((parseFormattedNumber(formData.precio) - parseFormattedNumber(formData.costo)) / parseFormattedNumber(formData.costo)) * 100 || 0).toFixed(2)}%)</p>
                       )}

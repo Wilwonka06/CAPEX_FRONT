@@ -6,13 +6,13 @@ import EditUser from './components/EditUser';
 import UserDetail from './components/UserDetail';
 import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
+import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import usersService from './API/usersService';
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 import { getCitasEnEjecucion } from '../SaleServices/API/CitasService';
 
-const USERS_PER_PAGE = 5;
+const USERS_PER_PAGE = 10;
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 
@@ -99,6 +99,9 @@ const Users = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Estado para paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -264,6 +267,7 @@ const Users = () => {
     }
   };
 
+  // Handler para eliminar usuario - verifica asociaciones y muestra modal
   const handleDeleteUser = async (userId) => {
     const userToDelete = users.find(u => (u.id_usuario || u.id) === userId);
     if (!userToDelete) return;
@@ -281,55 +285,51 @@ const Users = () => {
           const message = clientAssociationsInfo?.message || 
             'Este usuario no puede ser eliminado porque tiene ventas u órdenes de servicio asociadas.';
           
-          await Swal.fire({
-            title: 'No se puede eliminar',
-            text: message,
-            icon: 'error',
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#3085d6'
-          });
+          showError(message, { id: 'user-delete-error' });
           return;
         }
       }
     } catch (error) {
       console.error('Error al verificar asociaciones del usuario:', error);
       // Si hay error al verificar, continuar con la confirmación pero advertir
-      toast.error('No se pudo verificar si el usuario tiene ventas asociadas. Proceda con precaución.');
+      showError('No se pudo verificar si el usuario tiene ventas asociadas. Proceda con precaución.', { id: 'user-verify-warning' });
     }
 
-    // Si no tiene asociaciones, proceder con la confirmación y eliminación
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas eliminar al usuario "${userToDelete.nombre || userToDelete.name}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
+    // Si no tiene asociaciones, proceder con el modal de confirmación
+    setPendingDelete({ id: userId, user: userToDelete });
+    setShowDeleteModal(true);
+  };
 
-    if (result.isConfirmed) {
-      try {
-        await executeWithToast({
-          promiseFn: async () => {
-            const response = await usersService.delete(userId);
-            if (response.success) {
-              await loadUsers();
-              return response.data;
-            } else {
-              throw new Error(response.message || 'Error al eliminar el usuario');
-            }
-          },
-          operation: 'delete',
-          entity: 'usuario',
-          id: userId,
-          loadingMessage: 'Eliminando usuario...',
-          successMessage: 'Usuario eliminado exitosamente',
-        });
-      } catch {
-        // Error ya manejado por executeWithToast
-      }
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    try {
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await usersService.delete(pendingDelete.id);
+          if (response.success) {
+            await loadUsers();
+            return response.data;
+          } else {
+            throw new Error(response.message || 'Error al eliminar el usuario');
+          }
+        },
+        operation: 'delete',
+        entity: 'usuario',
+        id: pendingDelete.id,
+        loadingMessage: 'Eliminando usuario...',
+        successMessage: 'Usuario eliminado exitosamente',
+        onSuccess: () => {
+          setShowDeleteModal(false);
+          setPendingDelete(null);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -526,6 +526,23 @@ const Users = () => {
         <UserDetail
           onClose={closes}
           user={selectedUser}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deletingId) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={pendingDelete.user.nombre || pendingDelete.user.name}
+          entityType="usuario"
+          loading={deletingId === pendingDelete.id}
         />
       )}
     </div>
