@@ -237,12 +237,12 @@ const CreateSupplier = ({
               >
                 {/* Campo Tipo - Primero */}
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Tipo de Proveedor <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="tipo"
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                       errors.tipo ? "border-red-500" : "border-gray-300"
                     }`}
                     value={formData.tipo}
@@ -255,21 +255,24 @@ const CreateSupplier = ({
                     <option value="J">Jurídico (J)</option>
                   </select>
                   {errors.tipo && (
-                    <p className="text-red-500 text-xs mt-1">{errors.tipo}</p>
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
+                      {errors.tipo}
+                    </p>
                   )}
                 </div>
 
                 {/* Campo condicional: NIT o Número de Documento */}
                 {formData.tipo === "J" && (
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       NIT (Número de Identificación Tributaria) – dígito de verificación incluido{" "}
                       <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="nit"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                         errors.nit ? "border-red-500" : "border-gray-300"
                       }`}
                       value={formData.nit}
@@ -280,7 +283,10 @@ const CreateSupplier = ({
                       required
                     />
                     {errors.nit && (
-                      <p className="text-red-500 text-xs mt-1">{errors.nit}</p>
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        {errors.nit}
+                      </p>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
                       Formato: números con separadores opcionales (puntos) y dígito de verificación con guión
@@ -290,13 +296,13 @@ const CreateSupplier = ({
 
                 {formData.tipo === "N" && (
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Número de Documento <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="numeroDocumento"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                         errors.numeroDocumento ? "border-red-500" : "border-gray-300"
                       }`}
                       value={formData.numeroDocumento}
@@ -307,7 +313,10 @@ const CreateSupplier = ({
                       required
                     />
                     {errors.numeroDocumento && (
-                      <p className="text-red-500 text-xs mt-1">{errors.numeroDocumento}</p>
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        {errors.numeroDocumento}
+                      </p>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
                       Debe tener entre 8 y 15 dígitos
@@ -317,13 +326,13 @@ const CreateSupplier = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Nombre <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="nombre"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                         errors.nombre ? "border-red-500" : "border-gray-300"
                       }`}
                       value={formData.nombre}
@@ -332,19 +341,20 @@ const CreateSupplier = ({
                       required
                     />
                     {errors.nombre && (
-                      <p className="text-red-500 text-xs mt-1">
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
                         {errors.nombre}
                       </p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Contacto <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="contacto"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                         errors.contacto ? "border-red-500" : "border-gray-300"
                       }`}
                       value={formData.contacto}
@@ -353,7 +363,8 @@ const CreateSupplier = ({
                       required
                     />
                     {errors.contacto && (
-                      <p className="text-red-500 text-xs mt-1">
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
                         {errors.contacto}
                       </p>
                     )}
@@ -361,13 +372,13 @@ const CreateSupplier = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-text-main mb-1">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Dirección <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="direccion"
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                       errors.direccion ? "border-red-500" : "border-gray-300"
                     }`}
                     value={formData.direccion}
@@ -376,7 +387,8 @@ const CreateSupplier = ({
                     required
                   />
                   {errors.direccion && (
-                    <p className="text-red-500 text-xs mt-1">
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <i className="bi bi-exclamation-triangle"></i>
                       {errors.direccion}
                     </p>
                   )}
@@ -384,14 +396,14 @@ const CreateSupplier = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Teléfono <span className="text-red-500">*</span>
                     </label>
                     <PhoneInput
                       country={"co"}
                       value={numero}
                       onChange={handlePhoneChange}
-                      inputClass={`w-full py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      inputClass={`w-full py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                         errors.telefono ? "border-red-500" : "border-gray-300"
                       }`}
                       containerClass="w-full"
@@ -403,19 +415,20 @@ const CreateSupplier = ({
                       specialLabel=""
                     />
                     {errors.telefono && (
-                      <p className="text-red-500 text-xs mt-1">
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
                         {errors.telefono}
                       </p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Correo <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       name="correo"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-gray-800 text-sm ${
                         errors.correo || !isEmailValid
                           ? "border-red-500"
                           : "border-gray-300"
@@ -426,7 +439,8 @@ const CreateSupplier = ({
                       required
                     />
                     {errors.correo && (
-                      <p className="text-red-500 text-xs mt-1">
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
                         {errors.correo}
                       </p>
                     )}

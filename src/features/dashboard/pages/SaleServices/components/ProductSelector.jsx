@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { apiRequest } from '../../../../../shared/config/apiConfig';
 import { formatNumber, formatPrice } from '../../../../../shared/utils/formatters';
 
 const ProductSelector = ({ selectedProducts, onProductsChange }) => {
-  const [productQuery, setProductQuery] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [showQuantityModal, setShowQuantityModal] = useState(false);
-  const [selectedProductForQuantity, setSelectedProductForQuantity] = useState(null);
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedTime, setSelectedTime] = useState("");
   const [availableProducts, setAvailableProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [retrying, setRetrying] = useState(false);
-  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
-  const productInputRef = useRef(null);
+  const [errors, setErrors] = useState({});
 
   // Cargar productos desde el backend
   useEffect(() => {
@@ -73,41 +71,52 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
     };
   };
 
-  // Buscador en tiempo real
+  // Reset form when product changes
   useEffect(() => {
-    if (availableProducts.length > 0) {
-      const normalized = availableProducts.map(normalizarProducto);
-      if (productQuery.trim() === '') {
-        setFilteredProducts(normalized);
-      } else {
-        setFilteredProducts(
-          normalized.filter(p =>
-            p.nombre.toLowerCase().includes(productQuery.toLowerCase()) ||
-            (p.categoria && p.categoria.toLowerCase().includes(productQuery.toLowerCase()))
-          )
-        );
-      }
+    if (selectedProductId) {
+      setQuantity(1);
+      setSelectedTime("");
+      setErrors(prev => ({ ...prev, product: '', quantity: '', time: '' }));
     } else {
-      setFilteredProducts([]);
+      setQuantity(1);
+      setSelectedTime("");
     }
-  }, [productQuery, availableProducts]);
+  }, [selectedProductId]);
 
-  // Cerrar dropdown cuando se hace click fuera
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (productInputRef.current && !productInputRef.current.contains(event.target)) {
-        setIsProductDropdownOpen(false);
+  // Generar horarios disponibles para productos (horario comercial)
+  const generateAvailableTimeSlots = () => {
+    const slots = [];
+    const now = new Date();
+    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+    const isToday = selectedDateObj.toDateString() === now.toDateString();
+
+    // Horario comercial: 8:00 AM - 6:00 PM
+    const startHour = 8;
+    const endHour = 18;
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+        // Si es hoy, no mostrar horas pasadas
+        if (isToday) {
+          const slotTime = new Date();
+          slotTime.setHours(hour, minute, 0, 0);
+          if (slotTime <= now) continue;
+        }
+
+        slots.push({
+          time: timeString,
+          display: timeString,
+          available: true
+        });
       }
-    };
-
-    if (isProductDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
     }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isProductDropdownOpen]);
+    return slots;
+  };
+
+  const availableTimeSlots = generateAvailableTimeSlots();
 
   const cargarProductos = async () => {
     setRetrying(true);
@@ -124,57 +133,93 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
     }
   };
 
-  const handleProductSelect = (product) => {
-    const isAlreadySelected = selectedProducts.some(p => p.id === product.id);
-    if (!isAlreadySelected) {
-      setSelectedProductForQuantity(product);
-      setQuantity(1);
-      setShowQuantityModal(true);
-      setProductQuery('');
-      setIsProductDropdownOpen(false);
-    }
-  };
+  const handleAddProduct = () => {
+    let newErrors = {};
 
-  const confirmProductSelection = () => {
-    if (selectedProductForQuantity && quantity > 0) {
-      const productoNormalizado = normalizarProducto(selectedProductForQuantity);
-      
-      const productWithQuantity = { 
-        ...productoNormalizado,
-        name: productoNormalizado.nombre,
-        price: productoNormalizado.precio,
-        category: productoNormalizado.categoria,
-        quantity,
-        subtotal: productoNormalizado.precio * quantity,
-        uniqueId: Date.now()
-      };
-      
-      onProductsChange([...selectedProducts, productWithQuantity]);
-      setShowQuantityModal(false);
-      setSelectedProductForQuantity(null);
-      setQuantity(1);
+    if (!selectedProductId) {
+      newErrors.product = "Seleccione un producto.";
     }
-  };
+    if (!selectedTime) {
+      newErrors.time = "Seleccione una hora.";
+    }
+    if (quantity <= 0) {
+      newErrors.quantity = "La cantidad debe ser mayor a 0.";
+    }
 
-  const cancelProductSelection = () => {
-    setShowQuantityModal(false);
-    setSelectedProductForQuantity(null);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
+
+    const selectedProduct = availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId));
+
+    if (!selectedProduct) {
+      setErrors({ product: "Producto no encontrado." });
+      return;
+    }
+
+    const productoNormalizado = normalizarProducto(selectedProduct);
+
+    const productWithDetails = {
+      ...productoNormalizado,
+      name: productoNormalizado.nombre,
+      price: productoNormalizado.precio,
+      category: productoNormalizado.categoria,
+      quantity: quantity,
+      subtotal: productoNormalizado.precio * quantity,
+      deliveryDate: selectedDate,
+      deliveryTime: selectedTime,
+      uniqueId: Date.now()
+    };
+
+    onProductsChange([...selectedProducts, productWithDetails]);
+
+    // Reset form
+    setSelectedProductId("");
     setQuantity(1);
+    setSelectedTime("");
   };
 
   const removeProduct = (uniqueId) => {
     onProductsChange(selectedProducts.filter(p => p.uniqueId !== uniqueId));
   };
 
-  const isFormValid = quantity > 0;
   const totalProducts = selectedProducts.reduce((total, product) => total + product.subtotal, 0);
 
   const handleQuantityChange = (e) => {
-    setQuantity(Math.max(1, parseInt(e.target.value) || 1));
+    const value = Math.max(1, parseInt(e.target.value) || 1);
+    setQuantity(value);
+    if (errors.quantity) {
+      setErrors(prev => ({ ...prev, quantity: '' }));
+    }
+  };
+
+  const handleDateChange = (e) => {
+    setSelectedDate(e.target.value);
+    setSelectedTime(""); // Reset time when date changes
+    if (errors.date) {
+      setErrors(prev => ({ ...prev, date: '' }));
+    }
+  };
+
+  const handleTimeChange = (e) => {
+    setSelectedTime(e.target.value);
+    if (errors.time) {
+      setErrors(prev => ({ ...prev, time: '' }));
+    }
+  };
+
+  const handleProductChange = (e) => {
+    setSelectedProductId(e.target.value);
+    if (errors.product) {
+      setErrors(prev => ({ ...prev, product: '' }));
+    }
   };
 
   return (
-    <div className="relative">
+    <div className="space-y-6">
       {errorMsg && (
         <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-sm flex items-center justify-between">
           <span className="text-red-700">{errorMsg}</span>
@@ -183,201 +228,195 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
           </button>
         </div>
       )}
-      {/* Buscador de productos */}
-      <div className="relative" ref={productInputRef}>
-        <div className="relative">
-          <input
-            type="text"
-            value={productQuery}
-            onChange={e => {
-              setProductQuery(e.target.value);
-              setIsProductDropdownOpen(true);
-            }}
-            onFocus={() => {
-              setIsProductDropdownOpen(true);
-              cargarProductos();
-            }}
-            className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            placeholder="Buscar por nombre de producto..."
-          />
-          <button
-            type="button"
-            onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <i className={`bi bi-chevron-${isProductDropdownOpen ? 'up' : 'down'}`}></i>
-          </button>
+      {/* Sección para agregar productos */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-gray-700">
+          Agregar Productos
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Fecha de entrega <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                errors.date
+                  ? 'border-red-500 bg-red-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
+              min={new Date().toISOString().split('T')[0]}
+            />
+            {errors.date && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <i className="bi bi-exclamation-triangle"></i>
+                {errors.date}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Producto <span className="text-red-500">*</span>
+            </label>
+            <select
+              className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                errors.product
+                  ? 'border-red-500 bg-red-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed`}
+              value={selectedProductId}
+              onChange={handleProductChange}
+              disabled={loading}
+            >
+              <option value="">
+                {loading ? "Cargando..." : "Seleccionar producto"}
+              </option>
+              {availableProducts.map(product => {
+                const normalized = normalizarProducto(product);
+                return (
+                  <option key={normalized.id} value={normalized.id}>
+                    {normalized.nombre} - ${formatPrice(normalized.precio)}
+                  </option>
+                );
+              })}
+            </select>
+            {errors.product && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <i className="bi bi-exclamation-triangle"></i>
+                {errors.product}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Hora de entrega <span className="text-red-500">*</span>
+            </label>
+            <select
+              className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                errors.time
+                  ? 'border-red-500 bg-red-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed`}
+              value={selectedTime}
+              onChange={handleTimeChange}
+              disabled={!selectedProductId}
+            >
+              <option value="">
+                {!selectedProductId ? "Seleccione producto primero" : "Seleccionar hora"}
+              </option>
+              {availableTimeSlots.map(slot => (
+                <option key={slot.time} value={slot.time}>
+                  {slot.display}
+                </option>
+              ))}
+            </select>
+            {errors.time && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <i className="bi bi-exclamation-triangle"></i>
+                {errors.time}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Cantidad <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={quantity}
+              onChange={handleQuantityChange}
+              className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
+                errors.quantity
+                  ? 'border-red-500 bg-red-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100`}
+              disabled={!selectedProductId}
+              min="1"
+              placeholder="1"
+            />
+            {errors.quantity && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <i className="bi bi-exclamation-triangle"></i>
+                {errors.quantity}
+              </p>
+            )}
+          </div>
         </div>
-        {isProductDropdownOpen && (
-          <>
-            {loading && (
-              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  <span>Cargando productos...</span>
-                </div>
-              </div>
-            )}
-            {!loading && filteredProducts.length > 0 && (
-              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-80 overflow-y-auto">
-                {filteredProducts.map(product => (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => handleProductSelect(product)}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
-                  >
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900 mb-1">{product.nombre}</div>
-                        {product.categoria && product.categoria !== 'Sin categoría' && (
-                          <div className="text-xs text-gray-600 mb-2 line-clamp-2">{product.categoria}</div>
-                        )}
-                        <div className="flex items-center gap-4 text-xs">
-                          <span className="flex items-center gap-1 text-gray-700">
-                            <i className="bi bi-currency-dollar"></i>
-                            <span className="font-medium">{formatPrice(product.precio)}</span>
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-primary text-sm font-medium">Agregar</span>
-                        <i className="bi bi-plus-circle ml-2 text-primary"></i>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {!loading && filteredProducts.length === 0 && productQuery.trim() !== '' && (
-              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
-                No se encontraron productos
-              </div>
-            )}
-            {!loading && filteredProducts.length === 0 && productQuery.trim() === '' && availableProducts.length === 0 && (
-              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 p-4 text-center text-gray-500 text-sm">
-                No hay productos disponibles
-              </div>
-            )}
-          </>
-        )}
-      </div>
 
-      {/* Modal para cantidad y detalles del producto */}
-      {showQuantityModal && selectedProductForQuantity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative animate-fade-in flex flex-col border border-gray-200">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 rounded-t-lg flex items-center justify-between px-8 py-4">
+        {/* Mostrar detalles del producto seleccionado */}
+        {selectedProductId && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h2 className="text-xl font-bold text-accent m-0">Detalles del Producto</h2>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Producto seleccionado</label>
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-medium">
+                  {availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.nombre || 'Producto no encontrado'}
+                </div>
               </div>
-              <button
-                onClick={cancelProductSelection}
-                className="text-gray-400 hover:text-black text-xl font-bold"
-                aria-label="Cerrar"
-              >
-                ×
-              </button>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Precio unitario</label>
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
+                  ${formatPrice(availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.precio || availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.costo || 0)}
+                </div>
+              </div>
             </div>
-            
-            {/* Contenido */}
-            <div className="p-8 bg-white">
-              <div className="space-y-4">
-                <div>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm font-medium">
-                    {selectedProductForQuantity.nombre || selectedProductForQuantity.name}
-                  </div>
-                </div>
-                
-                
-                
-                <div>
-                  <label className="block text-xs font-medium text-black mb-1">Precio unitario</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                    ${selectedProductForQuantity.precio || selectedProductForQuantity.price || 0}
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-medium text-black mb-1">
-                    Cantidad <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      className="w-16 text-center border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
-                      min="1"
-                    />
-                    <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="w-8 h-8 border border-gray-300 rounded-md flex items-center justify-center hover:bg-gray-50"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-3">
-                  <label className="block text-xs font-medium text-black mb-1">Subtotal</label>
-                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-green-600">
-                    {formatPrice((selectedProductForQuantity.precio || selectedProductForQuantity.price || 0) * quantity)}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={cancelProductSelection}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-black hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmProductSelection}
-                  disabled={!isFormValid}
-                  className={`px-4 py-2 rounded-md text-white ${isFormValid ? 'bg-accent hover:bg-accent-dark' : 'bg-gray-300 cursor-not-allowed'} transition-colors`}
-                >
-                  Agregar Producto
-                </button>
+            <div className="mt-4 border-t pt-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Subtotal</label>
+              <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-green-600">
+                ${formatPrice((availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.precio || availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.costo || 0) * quantity)}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Lista de productos seleccionados - SIEMPRE VISIBLE */}
-      <div className="mt-4">
-        <h4 className="text-xs font-medium mb-2">Lista de Productos:</h4>
-        <div className="border border-gray-300 rounded-md overflow-hidden">
-          <table className="w-full text-xs">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Producto</th>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
-                <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Subtotal</th>
-                <th className="px-2 py-2 text-left text-xs font-medium text-gray-700">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedProducts.length === 0 ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="px-4 py-2 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all font-semibold text-sm flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:text-white"
+            onClick={handleAddProduct}
+            disabled={!selectedProductId || loading}
+          >
+            <i className="bi bi-plus-circle"></i>
+            Agregar a la Lista
+          </button>
+        </div>
+      </div>
+
+
+      {/* Lista de productos seleccionados - Solo visible cuando hay productos */}
+      {selectedProducts.length > 0 && (
+        <div className="mt-4">
+          <h4 className="text-xs font-medium mb-2">Lista de Productos:</h4>
+          <div className="border border-gray-300 rounded-md overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan="5" className="px-2 py-4 text-center text-gray-500">
-                    No hay productos seleccionados
-                  </td>
+                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Producto</th>
+                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Fecha entrega</th>
+                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Hora entrega</th>
+                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
+                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Subtotal</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-700">Acciones</th>
                 </tr>
-              ) : (
-                selectedProducts.map((product) => (
+              </thead>
+              <tbody>
+                {selectedProducts.map((product) => (
                   <tr key={product.uniqueId} className="border-t hover:bg-gray-50">
                     <td className="px-2 py-2 border-r">{product.name}</td>
+                    <td className="px-2 py-2 border-r">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                        <i className="bi bi-calendar mr-1"></i>
+                        {product.deliveryDate}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 border-r">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                        <i className="bi bi-clock mr-1"></i>
+                        {product.deliveryTime}
+                      </span>
+                    </td>
                     <td className="px-2 py-2 border-r text-center">{formatNumber(product.quantity)}</td>
                     <td className="px-2 py-2 border-r">{formatPrice(product.subtotal || 0)}</td>
                     <td className="px-2 py-2 text-center">
@@ -390,19 +429,19 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Total de productos */}
+          <div className="mt-2 text-sm bg-green-50 p-2 rounded-md border border-green-100">
+            <span className="font-medium">TOTAL DE PRODUCTOS: </span>
+            <span className="font-bold text-green-600">
+              {formatPrice(totalProducts)}
+            </span>
+          </div>
         </div>
-        {/* Total de productos */}
-        <div className="mt-2 text-sm bg-green-50 p-2 rounded-md border border-green-100">
-          <span className="font-medium">TOTAL DE PRODUCTOS: </span>
-          <span className="font-bold text-green-600">
-            {formatPrice(totalProducts)}
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
