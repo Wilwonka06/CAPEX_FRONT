@@ -372,7 +372,7 @@ const SaleServices = () => {
             {/* Tabla de órdenes de servicio */}
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               <table className="min-w-full text-xs">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                <thead className="bg-gray-50">
                   <tr>
                     <th className="py-3 px-4 text-left font-semibold text-gray-700">Cliente</th>
                     <th className="py-3 px-4 text-left font-semibold text-gray-700">Servicios</th>
@@ -408,12 +408,12 @@ const SaleServices = () => {
                       <td className="py-3 px-4 font-semibold text-green-600">{formatPrice(service.totalGeneral || 0)}</td>
                       <td className="py-3 px-3">
                         <div className="flex items-center justify-center gap-2">
-                          <button 
-                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200" 
-                            title="Ver detalle" 
+                          <button
+                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                            title="Ver detalle"
                             onClick={() => handleViewClick(service)}
                           >
-                            <i className="bi bi-eye text-base"></i>
+                            <i className="bi bi-eye text-primary text-[18px]"></i>
                           </button>
                           {normalizeText(service.status).toLowerCase() === "en ejecucion" && (
                             <button 
