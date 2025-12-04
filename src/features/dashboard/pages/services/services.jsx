@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 
 // Importar el nuevo servicio API
@@ -16,6 +15,7 @@ import ServiceDetail from './components/ServiceDetail';
 import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
+import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 const SERVICES_PER_PAGE = 10;
@@ -39,6 +39,9 @@ const Services = () => {
   const [selectedService, setSelectedService] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Cargar servicios y categorías
   const loadData = async () => {
@@ -172,36 +175,38 @@ const Services = () => {
     }
   };
 
-  // Handler para eliminar servicio
-  const handleDeleteService = async (service) => {
-    const result = await Swal.fire({
-      title: "¿Estás seguro?",
-      text: `Eliminar "${service.nombre}" no se puede deshacer.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, eliminar",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-    });
-    
-    if (result.isConfirmed) {
-      try {
-        await executeWithToast({
-          promiseFn: async () => {
-            await servicesService.delete(service.id);
-            await loadData();
-            return true;
-          },
-          operation: 'delete',
-          entity: 'servicio',
-          id: service.id,
-          loadingMessage: 'Eliminando servicio...',
-          successMessage: 'Servicio eliminado exitosamente',
-        });
-      } catch {
-        // Error ya manejado por executeWithToast
-      }
+  // Handler para eliminar servicio - muestra modal primero
+  const handleDeleteService = (service) => {
+    setPendingDelete(service);
+    setShowDeleteModal(true);
+  };
+
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    try {
+      await executeWithToast({
+        promiseFn: async () => {
+          await servicesService.delete(pendingDelete.id);
+          await loadData();
+          return true;
+        },
+        operation: 'delete',
+        entity: 'servicio',
+        id: pendingDelete.id,
+        loadingMessage: 'Eliminando servicio...',
+        successMessage: 'Servicio eliminado exitosamente',
+        onSuccess: () => {
+          setShowDeleteModal(false);
+          setPendingDelete(null);
+        },
+      });
+    } catch {
+      // Error ya manejado por executeWithToast
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -369,6 +374,23 @@ const Services = () => {
           isActivating={pendingStatusChange.current.estado === 'Inactivo'}
           itemName={pendingStatusChange.current.nombre}
           loading={togglingId === pendingStatusChange.serviceId}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deletingId) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={pendingDelete.nombre}
+          entityType="servicio"
+          loading={deletingId === pendingDelete.id}
         />
       )}
     </div>

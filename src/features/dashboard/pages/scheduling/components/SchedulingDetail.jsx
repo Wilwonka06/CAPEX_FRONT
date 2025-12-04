@@ -32,8 +32,9 @@ const SchedulingDetail = ({ scheduling, isOpen, onClose, onEdit, onDelete, canEd
     .join(', ') || 'No especificados';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md overflow-hidden">
+      <div className="w-full max-w-4xl mx-4">
+        <div className="bg-white rounded-2xl shadow-2xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header fijo */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3">
@@ -217,6 +218,7 @@ const SchedulingDetail = ({ scheduling, isOpen, onClose, onEdit, onDelete, canEd
             <i className="bi bi-x-lg"></i>
             Cerrar
           </button>
+        </div>
         </div>
       </div>
     </div>

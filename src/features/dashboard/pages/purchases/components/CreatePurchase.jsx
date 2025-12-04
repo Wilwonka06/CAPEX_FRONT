@@ -374,7 +374,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
             </div>
 
             {/* Sección de Proveedor e IVA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   Proveedor <span className="text-red-500">*</span>
@@ -429,6 +429,18 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                     No hay proveedores activos disponibles
                   </p>
                 )}
+              </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  NIT
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-100 border-gray-200 cursor-not-allowed"
+                  value={nit || ""}
+                  placeholder="Seleccione un proveedor"
+                />
               </div>
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">
