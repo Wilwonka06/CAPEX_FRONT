@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import DashboardProfileMenu from './DashboardProfileMenu';
+import ConfirmLogoutModal from '../../../shared/components/ConfirmLogoutModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const AdminNavbar = ({ title }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
-  const { logout, currentUser: authUser, setActiveRole } = useAuth();
+  const { logoutConfirmed, currentUser: authUser, setActiveRole } = useAuth();
   const profileRef = useRef();
 
   // Sincronizar con el contexto de autenticación
@@ -93,12 +96,36 @@ const AdminNavbar = ({ title }) => {
               <DashboardProfileMenu
                 user={currentUser}
                 onClose={() => setShowProfileMenu(false)}
-                onLogout={logout}
+                onLogout={() => {
+                  setShowProfileMenu(false);
+                  setShowLogoutModal(true);
+                }}
               />
             )}
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación de logout */}
+      <ConfirmLogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => {
+          if (!isLoggingOut) {
+            setShowLogoutModal(false);
+          }
+        }}
+        onConfirm={async () => {
+          setIsLoggingOut(true);
+          try {
+            await logoutConfirmed();
+          } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+            setIsLoggingOut(false);
+            setShowLogoutModal(false);
+          }
+        }}
+        loading={isLoggingOut}
+      />
     </nav>
   );
 };

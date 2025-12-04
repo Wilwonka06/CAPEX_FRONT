@@ -5,7 +5,7 @@ import ErrorBoundary from "./ErrorBoundary";
 import { validateServiceOrder, isValidEmail, validateUserDocument } from "../../../../../shared/validations";
 import { createServiceOrder } from "../API/ServiceOrderService";
 import usersService from "../../users/API/usersService";
-import { formatNumber, formatNumberInput, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatNumberInput, formatPrice } from "../../../../../shared/utils/formatters";
 import { DOC_TYPES_CODES, DOC_TYPE_LABELS, toBackendDocCode } from "../../../../../shared/constants/documentTypes";
 
 const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
@@ -16,7 +16,6 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
     nombre: "",
     telefono: "",
     correo: "",
-    dineroProporcionado: "",
     status: "En ejecucion"
   });
   const [clienteEncontrado, setClienteEncontrado] = useState(false);
@@ -31,9 +30,6 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
   // Refs para preservar posición de scroll y focus
   const scrollContainerRef = useRef(null);
   const scrollPositionRef = useRef(0);
-  const dineroInputRef = useRef(null);
-  const cursorPositionRef = useRef(0);
-  const wasDineroFocusedRef = useRef(false);
 
   // Calcular totales
   const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
@@ -58,34 +54,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
   // Solo mostrar error cuando se intente enviar el formulario, no cuando se escriba en otros campos
   const showServiceError = showErrors && (!selectedServices || selectedServices.length === 0);
 
-  // Restaurar posición de scroll y focus después de actualizar dineroProporcionado
-  useEffect(() => {
-    // Solo restaurar si el modal está abierto y el input estaba enfocado
-    if (isOpen && scrollContainerRef.current && wasDineroFocusedRef.current) {
-      // Usar requestAnimationFrame para restaurar después del render
-      requestAnimationFrame(() => {
-        // Verificar nuevamente que el modal sigue abierto
-        if (isOpen && scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
-        }
-        // Restaurar focus y posición del cursor en el input solo si el modal sigue abierto
-        if (isOpen && dineroInputRef.current) {
-          dineroInputRef.current.focus();
-          // Restaurar posición del cursor
-          if (dineroInputRef.current.setSelectionRange) {
-            const cursorPos = Math.min(cursorPositionRef.current, dineroInputRef.current.value.length);
-            dineroInputRef.current.setSelectionRange(cursorPos, cursorPos);
-          }
-        }
-      });
-    }
-  }, [formData.dineroProporcionado, isOpen]);
 
-  // Memoizar cálculo de devolución para evitar re-renders innecesarios
-  const devolucion = useMemo(() => {
-    const dinero = parseFormattedNumber(formData.dineroProporcionado);
-    return formatPrice(Math.max(0, dinero - totalGeneral));
-  }, [formData.dineroProporcionado, totalGeneral]);
 
   // Buscar cliente por documento y autocompletar (con debounce)
   const searchTimeoutRef = useRef(null);
@@ -284,7 +253,6 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
         nombre: "",
         telefono: "",
         correo: "",
-        dineroProporcionado: "",
         status: "En ejecucion"
       });
       setSelectedServices([]);
@@ -296,8 +264,6 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
       setBuscandoCliente(false);
       // Resetear refs de scroll y focus
       scrollPositionRef.current = 0;
-      cursorPositionRef.current = 0;
-      wasDineroFocusedRef.current = false;
     }
   }, [isOpen]);
 
@@ -334,7 +300,6 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
       nombre: true,
       telefono: true,
       correo: true,
-      dineroProporcionado: true,
     });
 
     // Validar todos los campos requeridos
@@ -379,8 +344,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
         productos: selectedProducts,
         totalServices,
         totalProducts,
-        totalGeneral,
-        dineroProporcionado: parseFormattedNumber(formData.dineroProporcionado)
+        totalGeneral
       };
 
       const newOrder = await createServiceOrder(orderData, services);
@@ -395,81 +359,45 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    
-    if (name === 'dineroProporcionado') {
-      // Guardar posición de scroll y cursor SOLO para dinero proporcionado
-      if (scrollContainerRef.current) {
-        scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+
+    // Para otros campos, simplemente actualizar sin afectar scroll
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setTouched(prev => ({ ...prev, [name]: true }));
+
+    // Búsqueda en tiempo real para el documento
+    if (name === 'documento') {
+      // Cancelar búsqueda anterior si existe
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
-      
-      // Marcar que el input estaba enfocado
-      wasDineroFocusedRef.current = true;
-      
-      // Guardar posición del cursor antes de actualizar
-      if (e.target.selectionStart !== null) {
-        cursorPositionRef.current = e.target.selectionStart;
-      }
-      
-      // Usar versión funcional de setFormData para acceder al estado más reciente
-      setFormData(prev => {
-        const currentValue = prev.dineroProporcionado || '';
-        // Permitir números, puntos (miles) y coma (decimal)
-        const cleaned = value.replace(/[^0-9.,]/g, '');
-        
-        // Si el valor actual es solo "0" y el usuario escribe un número, reemplazar
-        if (currentValue === '0' && cleaned && cleaned !== '0') {
-          return { ...prev, [name]: formatNumberInput(cleaned, 2) };
-        }
-        return { ...prev, [name]: formatNumberInput(value, 2) };
-      });
-      // NO marcar como touched para dinero proporcionado para evitar activar validación de servicios
-    } else {
-      // Para otros campos, simplemente actualizar sin afectar scroll
-      setFormData(prev => ({ ...prev, [name]: value }));
-      setTouched(prev => ({ ...prev, [name]: true }));
-      
-      // Búsqueda en tiempo real para el documento
-      if (name === 'documento') {
-        // Cancelar búsqueda anterior si existe
-        if (searchTimeoutRef.current) {
-          clearTimeout(searchTimeoutRef.current);
-        }
-        
-        // Buscar después de 500ms de inactividad (debounce)
-        searchTimeoutRef.current = setTimeout(() => {
-          lookupClientByDocument(value, true);
-        }, 500);
-      }
+
+      // Buscar después de 500ms de inactividad (debounce)
+      searchTimeoutRef.current = setTimeout(() => {
+        lookupClientByDocument(value, true);
+      }, 500);
     }
   }, []); // Sin dependencias - usa versión funcional de setState
 
   const handleBlur = useCallback((e) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-    
+
     // Validar el campo al perder foco
     if (['tipoDocumento', 'documento', 'nombre', 'telefono', 'correo'].includes(name)) {
       const error = validateField(name, value);
       setErrors(prev => ({ ...prev, [name]: error }));
     }
-    
+
     // Buscar cliente al perder foco del documento
     if (name === 'documento' && value && value.length >= 6) {
       lookupClientByDocument(value);
-    }
-    
-    // Marcar que el input ya no está enfocado
-    if (name === 'dineroProporcionado') {
-      wasDineroFocusedRef.current = false;
     }
   }, [validateField, lookupClientByDocument]);
 
   const handleClose = useCallback(() => {
     if (!loading) {
       // Resetear refs antes de cerrar para evitar interferencias
-      wasDineroFocusedRef.current = false;
       scrollPositionRef.current = 0;
-      cursorPositionRef.current = 0;
       onClose();
     }
   }, [loading, onClose]);
@@ -499,11 +427,11 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
       <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6">
         {/* Datos del Cliente */}
         <div>
-          <h3 className="text-sm font-semibold text-black mb-3">Datos del Cliente</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Datos del Cliente</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Tipo de Documento */}
             <div>
-              <label className="block text-xs font-medium text-black mb-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Tipo de Documento <span className="text-red-500">*</span>
               </label>
               <select
@@ -511,7 +439,8 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 value={formData.tipoDocumento}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                disabled={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
               >
                 {DOC_TYPES_CODES.map(code => (
                   <option key={code} value={code}>
@@ -520,13 +449,16 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 ))}
               </select>
               {(touched.tipoDocumento || showErrors) && errors.tipoDocumento && (
-                <p className="text-red-600 text-xs mt-1">{errors.tipoDocumento}</p>
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.tipoDocumento}
+                </p>
               )}
             </div>
 
             {/* Documento */}
             <div>
-              <label className="block text-xs font-medium text-black mb-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Número de Documento <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -536,7 +468,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                   value={formData.documento}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  className="w-full px-3 py-2 pr-10 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                   placeholder="Número de documento"
                   maxLength={20}
                 />
@@ -552,12 +484,15 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 )}
               </div>
               {(touched.documento || showErrors) && errors.documento && (
-                <p className="text-red-600 text-xs mt-1">{errors.documento}</p>
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.documento}
+                </p>
               )}
             </div>
             {/* Nombre */}
             <div>
-              <label className="block text-xs font-medium text-black mb-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Nombre Completo <span className="text-red-500">*</span>
               </label>
               <input
@@ -566,17 +501,21 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 value={formData.nombre}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                readOnly={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
                 placeholder="Nombre completo del cliente"
               />
               {(touched.nombre || showErrors) && errors.nombre && (
-                <p className="text-red-600 text-xs mt-1">{errors.nombre}</p>
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.nombre}
+                </p>
               )}
             </div>
 
             {/* Teléfono */}
             <div>
-              <label className="block text-xs font-medium text-black mb-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Teléfono <span className="text-red-500">*</span>
               </label>
               <input
@@ -585,18 +524,22 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 value={formData.telefono}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                readOnly={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
                 placeholder="Número de teléfono"
                 maxLength={15}
               />
               {(touched.telefono || showErrors) && errors.telefono && (
-                <p className="text-red-600 text-xs mt-1">{errors.telefono}</p>
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.telefono}
+                </p>
               )}
             </div>
 
             {/* Correo */}
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-black mb-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Correo Electrónico <span className="text-red-500">*</span>
               </label>
               <input
@@ -605,11 +548,15 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 value={formData.correo}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                readOnly={clienteEncontrado}
+                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
                 placeholder="correo@ejemplo.com"
               />
               {(touched.correo || showErrors) && errors.correo && (
-                <p className="text-red-600 text-xs mt-1">{errors.correo}</p>
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  {errors.correo}
+                </p>
               )}
             </div>
           </div>
@@ -635,7 +582,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
         <div className="space-y-4">
           {/* Servicios */}
           <div>
-            <label className="block text-xs font-medium text-black mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Servicios <span className="text-red-500">*</span>
             </label>
             <ErrorBoundary>
@@ -647,14 +594,17 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
             {/* Mensaje de error con espacio reservado para evitar scroll */}
             <div className="min-h-[20px] mt-1">
               {showServiceError && (
-                <p className="text-red-600 text-xs">Debes agregar al menos un servicio</p>
+                <p className="text-red-500 text-xs flex items-center gap-1">
+                  <i className="bi bi-exclamation-triangle"></i>
+                  Debes agregar al menos un servicio
+                </p>
               )}
             </div>
           </div>
 
           {/* Productos */}
           <div>
-            <label className="block text-xs font-medium text-black mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Productos (Opcional)
             </label>
             <ErrorBoundary>
@@ -689,59 +639,25 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
                 <span className="text-primary font-bold">{formatPrice(totalGeneral)}</span>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Dinero Proporcionado
-                </label>
-                <input
-                  ref={dineroInputRef}
-                  type="text"
-                  name="dineroProporcionado"
-                  value={formData.dineroProporcionado}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
-                    (touched.dineroProporcionado || showErrors) && errors.dineroProporcionado
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
-                  placeholder="0,00"
-                />
-                {(touched.dineroProporcionado || showErrors) && errors.dineroProporcionado && (
-                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                    <i className="bi bi-exclamation-triangle"></i>
-                    {errors.dineroProporcionado}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-black mb-1">
-                  Devolución
-                </label>
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                  {devolucion}
-
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Botones */}
-        <div className="flex justify-end space-x-3 pt-4">
+        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button
             type="button"
             onClick={handleClose}
             disabled={loading}
-            className="px-4 py-2 border border-gray-300 rounded-md text-black hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
           >
+            <i className="bi bi-x-circle"></i>
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-dark transition-colors disabled:opacity-50 flex items-center"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
           >
             {loading ? (
               <>

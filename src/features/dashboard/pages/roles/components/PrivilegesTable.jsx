@@ -10,48 +10,64 @@ import { rolesService } from '../API/rolesService';
  *  onChange: (modulo, accion, checked) => void
  *  disabled: boolean (opcional)
  */
+
+// Configuración de acciones permitidas por módulo
+const moduleActions = {
+  'Usuarios': ['Crear', 'Visualizar', 'Editar', 'Eliminar'],
+  'Roles': ['Crear', 'Visualizar', 'Editar', 'Eliminar'],
+  'Categorías de Productos': ['Crear', 'Visualizar', 'Editar'],
+  'Productos': ['Crear', 'Visualizar', 'Editar', 'Eliminar'],
+  'Proveedores': ['Crear', 'Visualizar', 'Editar'],
+  'Compras': ['Crear', 'Visualizar', 'Editar'],
+  'Categorías de Servicios': ['Crear', 'Visualizar', 'Editar'],
+  'Servicios': ['Crear', 'Visualizar', 'Editar', 'Eliminar'],
+  'Empleados': ['Crear', 'Visualizar', 'Editar'],
+  'Programación': ['Crear', 'Visualizar', 'Editar', 'Crear novedades'],
+  'Clientes': ['Crear', 'Visualizar', 'Editar'],
+  'Citas': ['Crear', 'Visualizar', 'Editar'],
+  'Pedidos': ['Visualizar', 'Editar'],
+  'Venta de Productos': ['Crear', 'Visualizar', 'Editar'],
+  'Ventas': ['Crear', 'Visualizar', 'Editar']
+};
+
+// Configuración de categorías y sus módulos
+const categories = [
+  {
+    nombre: 'Gestión de Usuarios',
+    modulos: ['Usuarios', 'Roles']
+  },
+  {
+    nombre: 'Compras',
+    modulos: ['Categorías de Productos', 'Productos', 'Proveedores', 'Compras']
+  },
+  {
+    nombre: 'Servicios',
+    modulos: ['Categorías de Servicios', 'Servicios', 'Empleados', 'Programación']
+  },
+  {
+    nombre: 'Ventas',
+    modulos: ['Clientes', 'Citas', 'Pedidos', 'Venta de Productos', 'Ventas']
+  }
+];
+
 const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
   const [modules, setModules] = useState([]);
-  const [actions, setActions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Cargar permisos y privilegios disponibles desde el backend
+  // Cargar permisos disponibles desde el backend
   useEffect(() => {
     const loadPermissionsAndPrivileges = async () => {
       try {
         setLoading(true);
-        const [permissionsData, privilegesData] = await Promise.all([
-          rolesService.getAvailablePermissions(),
-          rolesService.getAvailablePrivileges()
+        const [permissionsData] = await Promise.all([
+          rolesService.getAvailablePermissions()
         ]);
 
-        // Ordenar permisos de forma lógica: principales primero, luego submódulos
+        // Ordenar permisos según el orden de las categorías
         const orderedPermissions = permissionsData.sort((a, b) => {
-          const order = [
-            'Dashboard',
-            'Gestión de Usuarios',
-            'Gestión de Compras',
-            'Gestión de Servicios',
-            'Ventas',
-            'Venta de Productos',
-            // Submódulos de Compras
-            'Categorías de Productos',
-            'Productos',
-            'Proveedores',
-            'Compras',
-            // Submódulos de Servicios
-            'Categorías de Servicios',
-            'Servicios',
-            'Empleados',
-            'Programación',
-            // Submódulos de Ventas
-            'Clientes',
-            'Citas',
-            'Pedidos'
-          ];
-          
-          const aIndex = order.indexOf(a.nombre);
-          const bIndex = order.indexOf(b.nombre);
+          const allModules = categories.flatMap(cat => cat.modulos);
+          const aIndex = allModules.indexOf(a.nombre);
+          const bIndex = allModules.indexOf(b.nombre);
           
           // Si ambos están en el orden, ordenar según el orden
           if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
@@ -64,19 +80,26 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
         });
 
         setModules(orderedPermissions.map(p => p.nombre));
-        setActions(privilegesData.map(p => p.nombre));
       } catch (error) {
         console.error('Error al cargar permisos y privilegios:', error);
         // Fallback a valores por defecto si hay error
         setModules([
-          "Dashboard",
-          "Gestión de Usuarios",
-          "Gestión de Compras",
-          "Gestión de Servicios",
-          "Ventas",
-          "Venta de Productos"
+          "Usuarios",
+          "Roles",
+          "Categorías de Productos",
+          "Productos",
+          "Proveedores",
+          "Compras",
+          "Categorías de Servicios",
+          "Servicios",
+          "Empleados",
+          "Programación",
+          "Clientes",
+          "Citas",
+          "Pedidos",
+          "Venta de Productos",
+          "Ventas"
         ]);
-        setActions(["Crear", "Visualizar", "Editar", "Eliminar"]);
       } finally {
         setLoading(false);
       }
@@ -84,11 +107,12 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
 
     loadPermissionsAndPrivileges();
   }, []);
-  // Handler para seleccionar todos los permisos
+
+  // Handler para seleccionar todos los permisos (respetando acciones permitidas)
   const handleSelectAll = () => {
     modules.forEach(mod => {
-      actions.forEach(action => {
-        // ✅ CORREGIDO: Verificar correctamente si el privilegio NO está activo
+      const allowedActions = moduleActions[mod] || [];
+      allowedActions.forEach(action => {
         if (!value[mod]?.[action]) {
           onChange(mod, action, true);
         }
@@ -96,10 +120,11 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
     });
   };
 
-  // Handler para deseleccionar todos los permisos
+  // Handler para deseleccionar todos los permisos (respetando acciones permitidas)
   const handleDeselectAll = () => {
     modules.forEach(mod => {
-      actions.forEach(action => {
+      const allowedActions = moduleActions[mod] || [];
+      allowedActions.forEach(action => {
         if (value[mod]?.[action]) {
           onChange(mod, action, false);
         }
@@ -108,9 +133,32 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
   };
 
   // Verificar si todos los privilegios están seleccionados
-  const allSelected = modules.length > 0 && actions.length > 0 && modules.every(mod => 
-    actions.every(action => value[mod]?.[action] === true)
-  );
+  const allSelected = modules.length > 0 && modules.every(mod => {
+    const allowedActions = moduleActions[mod] || [];
+    return allowedActions.length > 0 && allowedActions.every(action => value[mod]?.[action] === true);
+  });
+
+  // Calcular total de privilegios disponibles
+  const getTotalPrivileges = () => {
+    let total = 0;
+    modules.forEach(mod => {
+      const allowedActions = moduleActions[mod] || [];
+      total += allowedActions.length;
+    });
+    return total;
+  };
+
+  // Calcular privilegios seleccionados
+  const getSelectedCount = () => {
+    let count = 0;
+    modules.forEach(mod => {
+      const allowedActions = moduleActions[mod] || [];
+      allowedActions.forEach(action => {
+        if (value[mod]?.[action]) count++;
+      });
+    });
+    return count;
+  };
 
   if (loading) {
     return (
@@ -120,18 +168,18 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
     );
   }
 
-  if (modules.length === 0 || actions.length === 0) {
+  if (modules.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        <p>No hay permisos o privilegios disponibles</p>
+        <p>No hay permisos disponibles</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto w-full">
+    <div className="w-full">
       {!disabled && (
-        <div className="sticky top-0 z-20 bg-gray-50 py-2 px-2 flex justify-between items-center">
+        <div className="sticky top-0 z-20 bg-gray-50 py-2 px-2 flex justify-between items-center mb-4 rounded-lg">
           <button
             type="button"
             onClick={handleDeselectAll}
@@ -150,59 +198,65 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
           </button>
         </div>
       )}
-      <table className="min-w-full rounded-lg border border-gray-200 shadow-sm text-xs">
-        <thead>
-          <tr className="bg-gray-50 hover:bg-gray-100">
-            <th className="py-2 px-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-              Acción / Módulo
-            </th>
-            {modules.map((mod) => (
-              <th key={mod} className="py-2 px-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                {mod}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {actions.map((action, rowIdx) => (
-            <tr key={action} className={rowIdx % 2 === 1 ? "bg-gray-50" : ""}>
-              <td className="py-2 px-3 font-medium text-gray-900 whitespace-nowrap">
-                {action}
-              </td>
-              {modules.map((mod) => {
-                const isChecked = !!(value[mod] && value[mod][action]);
-                
-                return (
-                  <td key={mod} className="py-2 px-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={e => {
-                        console.log(`Cambiando privilegio: ${mod} -> ${action} = ${e.target.checked}`);
-                        onChange(mod, action, e.target.checked);
-                      }}
-                      disabled={disabled}
-                      className="accent-primary-dark w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
-                    />
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      
+      {/* Contenedor con scroll vertical */}
+      <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
+        {categories.map((categoria) => {
+          // Filtrar módulos que existen en la lista cargada
+          const modulosEnCategoria = categoria.modulos.filter(mod => modules.includes(mod));
+          
+          if (modulosEnCategoria.length === 0) return null;
+
+          return (
+            <div key={categoria.nombre} className="border rounded-lg p-4 bg-white shadow-sm">
+              <h3 className="font-semibold mb-3 text-sm text-gray-700 border-b pb-2">
+                {categoria.nombre}
+              </h3>
+              <div className="space-y-3">
+                {modulosEnCategoria.map((modulo) => {
+                  const allowedActions = moduleActions[modulo] || [];
+                  
+                  if (allowedActions.length === 0) return null;
+
+                  return (
+                    <div key={modulo} className="pb-3 border-b last:border-b-0 last:pb-0">
+                      <h4 className="text-xs font-medium mb-2 text-gray-600">{modulo}</h4>
+                      <div className="flex flex-wrap gap-3">
+                        {allowedActions.map((accion) => {
+                          const isChecked = !!(value[modulo] && value[modulo][accion]);
+                          
+                          return (
+                            <label 
+                              key={accion} 
+                              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={e => {
+                                  console.log(`Cambiando privilegio: ${modulo} -> ${accion} = ${e.target.checked}`);
+                                  onChange(modulo, accion, e.target.checked);
+                                }}
+                                disabled={disabled}
+                                className="accent-primary-dark w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                              />
+                              <span className="text-xs text-gray-700">{accion}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
       
       {/* Indicador de privilegios seleccionados */}
-      <div className="mt-2 text-xs text-gray-500">
-        {(() => {
-          let count = 0;
-          modules.forEach(mod => {
-            actions.forEach(action => {
-              if (value[mod]?.[action]) count++;
-            });
-          });
-          return `${count} de ${modules.length * actions.length} privilegios seleccionados`;
-        })()}
+      <div className="mt-4 text-xs text-gray-500 text-center">
+        {getSelectedCount()} de {getTotalPrivileges()} privilegios seleccionados
       </div>
     </div>
   );

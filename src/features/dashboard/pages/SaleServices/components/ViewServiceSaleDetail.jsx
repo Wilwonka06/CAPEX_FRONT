@@ -206,11 +206,11 @@ const ViewServiceSaleDetail = ({ isOpen, onClose, order }) => {
         
         {/* Footer */}
         <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 rounded-b-2xl flex justify-end px-6 py-3 shadow-lg">
-          <button 
-            className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-gray-600 to-gray-700 text-white text-sm font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-200 flex items-center gap-2 shadow-md" 
+          <button
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2"
             onClick={onClose}
           >
-            <i className="bi bi-x-circle"></i>
+            <i className="bi bi-check-circle"></i>
             Cerrar
           </button>
         </div>

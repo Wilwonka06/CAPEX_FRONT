@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import characteristicsService from '../API/characteristicsService';
-import Swal from 'sweetalert2';
+import ConfirmDeleteModal from '../../../../../shared/components/ConfirmDeleteModal';
 
 const CharacteristicsManager = ({ isOpen, onClose }) => {
   const [characteristics, setCharacteristics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -31,34 +33,32 @@ const CharacteristicsManager = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleDelete = async (characteristic) => {
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Deseas eliminar la característica "${characteristic.nombre}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
-    });
+  // Handler para eliminar característica - muestra modal primero
+  const handleDelete = (characteristic) => {
+    setPendingDelete(characteristic);
+    setShowDeleteModal(true);
+  };
 
-    if (result.isConfirmed) {
-      try {
-        setDeleting(characteristic.id_caracteristica);
-        const response = await characteristicsService.delete(characteristic.id_caracteristica);
-        if (response.success) {
-          toast.success('Característica eliminada exitosamente');
-          setCharacteristics(prev => prev.filter(c => c.id_caracteristica !== characteristic.id_caracteristica));
-        } else {
-          toast.error(response.message || 'Error al eliminar la característica');
-        }
-      } catch (error) {
-        console.error('Error deleting characteristic:', error);
-        toast.error(error.message || 'Error al eliminar la característica');
-      } finally {
-        setDeleting(null);
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    try {
+      setDeleting(pendingDelete.id_caracteristica);
+      const response = await characteristicsService.delete(pendingDelete.id_caracteristica);
+      if (response.success) {
+        toast.success('Característica eliminada exitosamente');
+        setCharacteristics(prev => prev.filter(c => c.id_caracteristica !== pendingDelete.id_caracteristica));
+        setShowDeleteModal(false);
+        setPendingDelete(null);
+      } else {
+        toast.error(response.message || 'Error al eliminar la característica');
       }
+    } catch (error) {
+      console.error('Error deleting characteristic:', error);
+      toast.error(error.message || 'Error al eliminar la característica');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -127,6 +127,23 @@ const CharacteristicsManager = ({ isOpen, onClose }) => {
           </button>
         </div>
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deleting) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={pendingDelete.nombre}
+          entityType="característica"
+          loading={deleting === pendingDelete.id_caracteristica}
+        />
+      )}
     </div>
   );
 };

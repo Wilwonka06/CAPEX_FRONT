@@ -356,40 +356,41 @@ export default function CreateSaleModal({
           <form id="sale-form" onSubmit={handleSubmit} className="space-y-8">
             {/* Sección de Venta */}
             <div>
-              <h3 className="text-lg font-bold text-primary mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">
                 Datos de la Venta
               </h3>
             <div className="p-4 border rounded-lg bg-gray-50">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       N° Venta
                     </label>
                     <input
                       type="text"
-                      className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                      className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-200 border-gray-200"
                       value={numeroVenta}
                       readOnly
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Fecha de Venta
                     </label>
                     <input
                       type="date"
-                      className="w-full px-3 py-2 border rounded-md text-xs"
+                      className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                       value={fechaVenta}
                       onChange={(e) => setFechaVenta(e.target.value)}
                       required
+                      max={new Date().toISOString().slice(0, 10)}
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Método de Pago
                     </label>
                     <select
-                      className="w-full px-3 py-2 border rounded-md text-sm"
+                      className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                       value={metodoPago}
                       onChange={(e) => setMetodoPago(e.target.value)}
                     >
@@ -405,19 +406,19 @@ export default function CreateSaleModal({
             </div>
             {/* Sección de Cliente */}
             <div>
-              <h3 className="text-lg font-bold text-primary mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">
                 Datos del Cliente
               </h3>
             <div className="p-4 border rounded-lg bg-gray-50">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Documento Cliente <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
                         type="text"
-                        className="w-full px-3 py-2 border rounded-md text-sm"
+                        className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                         value={clienteDoc}
                         onChange={(e) => {
                           const val = e.target.value.replace(/[^0-9]/g, '');
@@ -439,37 +440,38 @@ export default function CreateSaleModal({
                       )}
                     </div>
                     {errores.cliente && (
-                      <span className="text-xs text-red-500">
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
                         {errores.cliente}
-                      </span>
+                      </p>
                     )}
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Tipo de Documento
                     </label>
                     <input
                       type="text"
-                      className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                      className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-200 border-gray-200"
                       value={cliente.documentType || 'Cedula de ciudadania'}
                       readOnly
                     />
                 </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Nombre Completo
                     </label>
                     {clienteEncontrado ? (
                       <input
                         type="text"
-                        className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                        className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-200 border-gray-200"
                         value={cliente.nombre || `${cliente.firstName} ${cliente.lastName}`.trim() || ''}
                         readOnly
                       />
                     ) : (
                       <input
                         type="text"
-                        className={`w-full px-3 py-2 border rounded-md text-sm ${errores.nombre ? 'border-red-500' : ''}`}
+                        className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${errores.nombre ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                         value={clienteNuevo.nombre}
                         onChange={(e) => setClienteNuevo({ ...clienteNuevo, nombre: e.target.value })}
                         placeholder="Nombre completo del cliente"
@@ -477,26 +479,29 @@ export default function CreateSaleModal({
                       />
                     )}
                     {errores.nombre && (
-                      <span className="text-xs text-red-500">{errores.nombre}</span>
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        {errores.nombre}
+                      </p>
                     )}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Correo <span className="text-red-500">{!clienteEncontrado ? '*' : ''}</span>
                     </label>
                     {clienteEncontrado ? (
                       <input
                         type="email"
-                        className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                        className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-200 border-gray-200"
                         value={cliente.email}
                         readOnly
                       />
                     ) : (
                       <input
                         type="email"
-                        className={`w-full px-3 py-2 border rounded-md text-sm ${errores.correo ? 'border-red-500' : ''}`}
+                        className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${errores.correo ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                         value={clienteNuevo.correo}
                         onChange={(e) => setClienteNuevo({ ...clienteNuevo, correo: e.target.value })}
                         placeholder="correo@ejemplo.com"
@@ -504,17 +509,20 @@ export default function CreateSaleModal({
                       />
                     )}
                     {errores.correo && (
-                      <span className="text-xs text-red-500">{errores.correo}</span>
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        {errores.correo}
+                      </p>
                     )}
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Teléfono <span className="text-red-500">{!clienteEncontrado ? '*' : ''}</span>
                     </label>
                     {clienteEncontrado ? (
                       <input
                         type="text"
-                        className="w-full px-3 py-2 border rounded-md bg-gray-200 text-sm"
+                        className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-200 border-gray-200"
                         value={cliente.phone}
                         readOnly
                       />
@@ -545,7 +553,10 @@ export default function CreateSaleModal({
                       />
                     )}
                     {errores.telefono && (
-                      <span className="text-xs text-red-500">{errores.telefono}</span>
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        {errores.telefono}
+                      </p>
                     )}
                   </div>
                   {!clienteEncontrado && (
@@ -561,17 +572,17 @@ export default function CreateSaleModal({
             </div>
             {/* Sección para agregar productos */}
             <div>
-              <h3 className="text-lg font-bold text-primary mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">
                 Agregar Productos
               </h3>
               <div className="p-4 border rounded-lg bg-gray-50">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Producto <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full px-3 py-2 border rounded-md text-sm"
+                      className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                       value={productoSeleccionado}
                       onChange={(e) => setProductoSeleccionado(e.target.value)}
                     >
@@ -583,13 +594,14 @@ export default function CreateSaleModal({
                       ))}
                   </select>
                     {errores.producto && (
-                      <span className="text-xs text-red-500">
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
                         {errores.producto}
-                      </span>
+                      </p>
                     )}
                 </div>
                 <div>
-                    <label className="block text-xs font-medium text-text-main mb-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Cantidad <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -597,18 +609,19 @@ export default function CreateSaleModal({
                       name="cantidad"
                       value={formatNumber(cantidad)}
                       onChange={e => setCantidad(Number(cleanNumber(e.target.value)))}
-                      className="w-full px-3 py-2 border rounded-md text-sm"
+                      className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                     />
                     {errores.cantidad && (
-                      <span className="text-xs text-red-500">
+                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i className="bi bi-exclamation-triangle"></i>
                         {errores.cantidad}
-                      </span>
+                      </p>
                     )}
                 </div>
                 <div>
                     <button
                       type="button"
-                      className="bg-text-main text-white text-sm px-4 py-2 rounded-md hover:bg-primary-dark mt-6 w-full"
+                      className="px-4 py-2 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all font-semibold text-sm flex items-center gap-2 mt-6 w-full"
                       onClick={handleAddProduct}
                     >
                     <i className="bi bi-plus-circle mr-2"></i>
@@ -619,16 +632,17 @@ export default function CreateSaleModal({
               <div className="text-right mt-4">
                 {/* Mensaje de error si no hay productos */}
                   {errores.items && (
-                    <span className="text-xs text-red-500 mr-4">
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1 mr-4">
+                      <i className="bi bi-exclamation-triangle"></i>
                       {errores.items}
-                    </span>
+                    </p>
                   )}
                 </div>
               </div>
             </div>
             {/* Tabla de productos en la venta */}
             <div>
-              <h3 className="text-lg font-bold text-primary mb-4">
+              <h3 className="text-sm font-semibold text-gray-700">
                 Lista de Productos
               </h3>
               <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -711,8 +725,8 @@ export default function CreateSaleModal({
           </form>
         </div>
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
-          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
-          <button type="submit" form="sale-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-xs font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar Venta</button>
+          <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
+          <button type="submit" form="sale-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar Venta</button>
         </div>
       </div>
     </div>

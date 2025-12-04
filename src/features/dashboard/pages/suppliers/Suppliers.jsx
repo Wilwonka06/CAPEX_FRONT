@@ -6,6 +6,7 @@ import SupplierDetail from "./components/SupplierDetail";
 import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
 import LoadingTable from "../../../../shared/components/LoadingTable";
+import ConfirmDeleteModal from "../../../../shared/components/ConfirmDeleteModal";
 import suppliersService from "./API/suppliersService";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -20,6 +21,9 @@ const SuppliersPage = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [filteredSuppliers, setFilteredSuppliers] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const { setTitle } = useOutletContext();
 
   useEffect(() => {
@@ -136,38 +140,40 @@ const SuppliersPage = () => {
     }
   };
 
-  // Eliminar proveedor
-  const handleDeleteSupplier = async (supplierId) => {
+  // Handler para eliminar proveedor - muestra modal primero
+  const handleDeleteSupplier = (supplierId) => {
     const supplier = suppliers.find(s => s.id === supplierId);
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas eliminar el proveedor "${supplier?.nombre}"? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar'
+    if (supplier) {
+      setPendingDelete({ id: supplierId, supplier });
+      setShowDeleteModal(true);
+    }
+  };
+
+  // Handler para confirmar eliminación
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+
+    setDeletingId(pendingDelete.id);
+    const supplierPromise = (async () => {
+      await suppliersService.delete(pendingDelete.id);
+      setSuppliers(prev => prev.filter(s => s.id !== pendingDelete.id));
+      return true;
+    })();
+
+    toast.promise(supplierPromise, {
+      loading: 'Eliminando proveedor...',
+      success: 'Proveedor eliminado exitosamente',
+      error: (err) => err.response?.data?.message || err.message || 'Error al eliminar el proveedor',
     });
 
-    if (result.isConfirmed) {
-      const supplierPromise = (async () => {
-        await suppliersService.delete(supplierId);
-        setSuppliers(prev => prev.filter(s => s.id !== supplierId));
-        return true;
-      })();
-
-      toast.promise(supplierPromise, {
-        loading: 'Eliminando proveedor...',
-        success: 'Proveedor eliminado exitosamente',
-        error: (err) => err.response?.data?.message || err.message || 'Error al eliminar el proveedor',
-      });
-
-      try {
-        await supplierPromise;
-      } catch (error) {
-        // Error ya manejado por toast.promise
-      }
+    try {
+      await supplierPromise;
+      setShowDeleteModal(false);
+      setPendingDelete(null);
+    } catch (error) {
+      // Error ya manejado por toast.promise
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -289,6 +295,23 @@ const SuppliersPage = () => {
         <SupplierDetail
           supplier={selectedSupplier}
           onClose={closeModals}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteModal && pendingDelete && (
+        <ConfirmDeleteModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            if (!deletingId) {
+              setShowDeleteModal(false);
+              setPendingDelete(null);
+            }
+          }}
+          onConfirm={handleConfirmDelete}
+          itemName={pendingDelete.supplier.nombre}
+          entityType="proveedor"
+          loading={deletingId === pendingDelete.id}
         />
       )}
     </div>

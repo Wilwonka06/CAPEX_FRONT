@@ -57,18 +57,34 @@ const normalizeAppointmentToBackend = async (appointment, currentUser) => {
   // Si no hay usuario autenticado, el backend creará el usuario automáticamente
   // Necesitamos enviar los datos del cliente
   const clienteData = !id_cliente ? {
-    nombre: appointment.cliente,
-    correo: appointment.correo,
-    telefono: appointment.telefono,
-    tipoDocumento: appointment.tipoDocumento || 'CC',
+    nombre: appointment.cliente || '',
+    correo: appointment.correo || '',
+    telefono: appointment.telefono || '',
+    tipoDocumento: appointment.tipoDocumento || appointment.tipo_documento || 'CC',
     documento: appointment.documento || ''
   } : null;
+  
+  // Validar que si no hay usuario, se tengan todos los datos del cliente
+  if (!id_cliente && clienteData) {
+    if (!clienteData.nombre || !clienteData.correo || !clienteData.telefono) {
+      throw new Error('Debes proporcionar nombre, correo y teléfono para crear la cita sin estar autenticado.');
+    }
+  }
 
   // Calcular hora_entrada y hora_salida desde los servicios
   const servicios = appointment.servicios || [];
   if (servicios.length === 0) {
     throw new Error('Debe incluir al menos un servicio');
   }
+
+  // Función auxiliar para convertir hora HH:MM a HH:MM:SS
+  const formatTimeToHHMMSS = (timeStr) => {
+    if (!timeStr) return '08:00:00';
+    // Si ya tiene segundos, devolverlo tal cual
+    if (timeStr.split(':').length === 3) return timeStr;
+    // Si solo tiene HH:MM, agregar :00
+    return timeStr + ':00';
+  };
 
   // Ordenar servicios por hora de inicio
   const serviciosOrdenados = [...servicios].sort((a, b) => {
@@ -77,9 +93,9 @@ const normalizeAppointmentToBackend = async (appointment, currentUser) => {
     return (horaA[0] * 60 + horaA[1]) - (horaB[0] * 60 + horaB[1]);
   });
 
-  const hora_entrada = serviciosOrdenados[0].inicio || '08:00:00';
+  const hora_entrada = formatTimeToHHMMSS(serviciosOrdenados[0].inicio || '08:00');
   const ultimoServicio = serviciosOrdenados[serviciosOrdenados.length - 1];
-  const hora_salida = ultimoServicio.fin || calcularHoraFin(ultimoServicio.inicio, ultimoServicio.duracion);
+  const hora_salida = formatTimeToHHMMSS(ultimoServicio.fin || calcularHoraFin(ultimoServicio.inicio, ultimoServicio.duracion));
 
   // Obtener IDs de empleados para todos los servicios
   const serviciosConEmpleados = await Promise.all(
@@ -98,10 +114,13 @@ const normalizeAppointmentToBackend = async (appointment, currentUser) => {
         throw new Error(`El servicio "${s.nombre}" no tiene un profesional asignado.`);
       }
       
+      // Asegurar formato HH:MM:SS para hora_inicio
+      const horaInicioFormateada = formatTimeToHHMMSS(s.inicio || '08:00');
+      
       return {
         id_servicio: s.servicioId,
         id_empleado: id_empleado,
-        hora_inicio: s.inicio || '08:00:00',
+        hora_inicio: horaInicioFormateada,
         cantidad: s.cantidad || 1,
         observaciones: s.observaciones || ''
       };
@@ -217,24 +236,56 @@ export const addAppointment = async (appointment) => {
 
     // Validar que tenga correo si no está autenticado (necesario para crear usuario)
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (!currentUser && !appointment.correo) {
-      throw new Error('Debes proporcionar un correo electrónico para crear la cita.');
+    if (!currentUser && (!appointment.correo || !appointment.correo.trim())) {
+      throw new Error('Debes proporcionar un correo electrónico válido para crear la cita.');
     }
+
+    // Validar formato de correo si se proporciona
+    if (appointment.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(appointment.correo.trim())) {
+      throw new Error('El correo electrónico proporcionado no es válido.');
+    }
+
+    console.log('📋 Datos de cita antes de normalizar:', {
+      cliente: appointment.cliente,
+      correo: appointment.correo ? '***' : 'NO PROPORCIONADO',
+      telefono: appointment.telefono,
+      fecha: appointment.fecha,
+      serviciosCount: appointment.servicios?.length || 0,
+      tieneUsuario: !!currentUser
+    });
 
     // Convertir datos al formato del backend (ahora es async)
     const appointmentData = await normalizeAppointmentToBackend(appointment, currentUser);
+    
+    console.log('📤 Datos normalizados para enviar al backend:', {
+      tieneCita: !!appointmentData.cita,
+      tieneCliente: !!appointmentData.cliente,
+      serviciosCount: appointmentData.servicios?.length || 0,
+      clienteCorreo: appointmentData.cliente?.correo ? '***' : 'NO INCLUIDO'
+    });
 
     // Llamar al servicio del backend
     const response = await appointmentsService.create(appointmentData);
     
+    console.log('📥 Respuesta del backend:', {
+      success: response.success,
+      tieneData: !!response.data,
+      tieneId: !!response.id_cita,
+      message: response.message
+    });
+    
     // Normalizar respuesta
     if (response.success && response.data) {
-      return normalizeAppointmentFromBackend(response.data);
+      const normalized = normalizeAppointmentFromBackend(response.data);
+      console.log('✅ Cita creada exitosamente:', normalized.id);
+      return normalized;
     } else if (response.id_cita) {
-      return normalizeAppointmentFromBackend(response);
+      const normalized = normalizeAppointmentFromBackend(response);
+      console.log('✅ Cita creada exitosamente:', normalized.id);
+      return normalized;
     }
     
-    throw new Error('Error al crear la cita en el servidor.');
+    throw new Error(response.message || response.error || 'Error al crear la cita en el servidor.');
   } catch (error) {
     console.error('Error creating appointment:', error);
     throw error;
