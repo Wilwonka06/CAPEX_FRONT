@@ -332,12 +332,47 @@ const EditProduct = ({ product, onUpdate, products = [], isOpen: externalOpen = 
       const updateData = {
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion?.trim() || null,
-        precio_venta: parseFormattedNumber(formData.precio),
-        stock: formData.cantidad ? parseFormattedNumber(formData.cantidad) : 0,
-        id_categoria_producto: parseInt(formData.categoryId),
-        costo: formData.costo ? parseFormattedNumber(formData.costo) : undefined,
-        iva: formData.iva ? parseFormattedNumber(formData.iva) : undefined,
       };
+
+      // Mapear precio_venta solo si es válido
+      if (formData.precio) {
+        const precio = parseFormattedNumber(formData.precio);
+        if (!isNaN(precio) && precio > 0) {
+          updateData.precio_venta = precio;
+        }
+      }
+
+      // Mapear stock solo si es válido
+      if (formData.cantidad) {
+        const stock = parseFormattedNumber(formData.cantidad);
+        if (!isNaN(stock) && stock >= 0) {
+          updateData.stock = stock;
+        }
+      }
+
+      // Mapear categoryId solo si es válido
+      if (formData.categoryId) {
+        const categoryId = parseInt(formData.categoryId);
+        if (!isNaN(categoryId) && categoryId > 0) {
+          updateData.id_categoria_producto = categoryId;
+        }
+      }
+
+      // Mapear costo solo si tiene valor válido (no enviar si está vacío)
+      if (formData.costo && formData.costo.toString().trim() !== '') {
+        const costo = parseFormattedNumber(formData.costo);
+        if (!isNaN(costo) && costo > 0) {
+          updateData.costo = costo;
+        }
+      }
+
+      // Mapear IVA solo si tiene valor válido (puede ser 0, pero no undefined)
+      if (formData.iva !== undefined && formData.iva !== null && formData.iva.toString().trim() !== '') {
+        const iva = parseFormattedNumber(formData.iva);
+        if (!isNaN(iva) && iva >= 0 && iva <= 40) {
+          updateData.iva = iva;
+        }
+      }
 
       // SIEMPRE enviar el array de fotos, incluso si está vacío
       // Esto permite al backend saber que debe procesar las imágenes

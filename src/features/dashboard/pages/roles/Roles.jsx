@@ -7,6 +7,7 @@ import rolesService from "./API/rolesService";
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 
 const ROLES_PER_PAGE = 10;
 
@@ -69,13 +70,8 @@ const RolesPage = () => {
     loadRoles();
   }, []);
 
-  // Filtrar roles
-  const filteredRoles = roles.filter(
-    (role) =>
-      (role.name || role.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (role.description || role.descripcion || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (role.estado || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar roles usando la función helper de búsqueda universal
+  const filteredRoles = filterBySearch(roles, searchTerm);
 
   // Paginación
   const totalPages = Math.ceil(filteredRoles.length / ROLES_PER_PAGE);

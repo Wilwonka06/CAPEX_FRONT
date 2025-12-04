@@ -8,6 +8,7 @@ import EditCategory from "./components/EditCategory";
 import CategoryDetail from "./components/CategoryDetail";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 
@@ -58,21 +59,9 @@ const CatProductsPage = () => {
     setFilteredCategories(categories);
   }, [categories]);
 
-  // Filtrar categorías por término de búsqueda - BUSQUEDA COMPLETA COMO EN SUPPLIERS
+  // Filtrar categorías usando la función helper de búsqueda universal
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredCategories(categories);
-      return;
-    }
-    const lowerTerm = searchTerm.toLowerCase();
-    setFilteredCategories(
-      categories.filter(category =>
-        (category.id_categoria_producto?.toString() || '').toLowerCase().includes(lowerTerm) ||
-        (category.nombre || '').toLowerCase().includes(lowerTerm) ||
-        (category.descripcion || '').toLowerCase().includes(lowerTerm) ||
-        (category.estado === 'activo' ? "activo" : "inactivo").includes(lowerTerm)
-      )
-    );
+    setFilteredCategories(filterBySearch(categories, searchTerm));
   }, [searchTerm, categories]);
 
   // Paginación

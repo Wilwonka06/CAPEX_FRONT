@@ -11,7 +11,7 @@ import EditEmployee from "./components/EditEmployee";
 import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
-import { normalizeText } from '../../../../shared/validations';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 const EMPLOYEES_PER_PAGE = 10;
@@ -62,16 +62,8 @@ const EmployeesPage = () => {
     return () => setTitle('');
   }, [setTitle]);
 
-  // Filtrar empleados
-  const filteredEmployees = employees.filter(emp =>
-    normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
-    normalizeText(emp.documento || emp.numero_documento || emp.num_documento || '').includes(normalizeText(searchTerm)) ||
-    (emp.telefono && normalizeText(emp.telefono).includes(normalizeText(searchTerm))) ||
-    (emp.correo && normalizeText(emp.correo).includes(normalizeText(searchTerm))) ||
-    (emp.direccion && normalizeText(emp.direccion).includes(normalizeText(searchTerm))) ||
-    (emp.tipoDocumento && normalizeText(emp.tipoDocumento).includes(normalizeText(searchTerm))) ||
-    normalizeText(emp.estado).includes(normalizeText(searchTerm))
-  );
+  // Filtrar empleados usando la función helper de búsqueda universal
+  const filteredEmployees = filterBySearch(employees, searchTerm);
 
   // Paginación
   const totalPages = Math.ceil(filteredEmployees.length / EMPLOYEES_PER_PAGE);

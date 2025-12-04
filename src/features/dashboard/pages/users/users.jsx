@@ -7,6 +7,7 @@ import UserDetail from './components/UserDetail';
 import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import usersService from './API/usersService';
 import { useOutletContext } from 'react-router-dom';
 
@@ -67,24 +68,6 @@ const sortUsers = (usersArray) => {
   });
   
   return sortedUsers;
-};
-
-// Función helper para buscar recursivamente en objetos y arrays
-const searchInValue = (value, searchTerm) => {
-  if (value === null || value === undefined) return false;
-  
-  // Si es un objeto, buscar en sus valores
-  if (typeof value === 'object' && !Array.isArray(value)) {
-    return Object.values(value).some(val => searchInValue(val, searchTerm));
-  }
-  
-  // Si es un array, buscar en cada elemento
-  if (Array.isArray(value)) {
-    return value.some(item => searchInValue(item, searchTerm));
-  }
-  
-  // Para valores primitivos, convertir a string y buscar
-  return String(value).toLowerCase().includes(searchTerm);
 };
 
 const Users = () => {
@@ -175,22 +158,8 @@ const Users = () => {
       setFilteredUsers(sortedUsers);
       return;
     }
-    const lowerTerm = searchTerm.toLowerCase();
-    const filtered = users.filter(user => {
-      // Buscar recursivamente en todos los campos del usuario
-      return Object.values(user).some(val => searchInValue(val, lowerTerm));
-    });
-    console.log('🔍 [Users] Usuarios filtrados con término:', searchTerm, '->', filtered.length);
-    
-    // Verificar si el usuario objetivo está en los resultados
-    const targetInFiltered = filtered.find(u => 
-      u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com')
-    );
-    if (targetInFiltered) {
-      console.log('✅ [Users] Usuario objetivo encontrado en resultados filtrados');
-    } else if (users.some(u => u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com'))) {
-      console.warn('⚠️ [Users] Usuario objetivo existe pero fue filtrado por:', searchTerm);
-    }
+    // Usar la función helper de búsqueda universal
+    const filtered = filterBySearch(users, searchTerm);
     
     // Aplicar ordenamiento también a los resultados filtrados
     const sortedFiltered = sortUsers(filtered);
