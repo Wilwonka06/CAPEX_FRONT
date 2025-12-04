@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import GeneralCalendar from './components/GeneralCalendar';
-import SeeScheduling from './components/SeeScheduling';
+import CreateScheduling from './components/CreateScheduling';
 import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
 import { useOutletContext } from 'react-router-dom';
 import { recurringSchedulingService } from '../employees/API/employeesService';
-import AddRecurringScheduling from '../employees/components/AddRecurringScheduling';
 import { employeesService } from '../employees/API/employeesService';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
@@ -23,27 +22,13 @@ const Scheduling = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
 
-  // LOG TEMPORAL PARA DEBUG
-  useEffect(() => {
-    console.log("🔍 [Scheduling] Estado actual:");
-    console.log("  - employees:", employees);
-    console.log("  - employees.length:", employees.length);
-    console.log("  - schedulings:", schedulings);
-    console.log("  - schedulings.length:", schedulings.length);
-  }, [employees, schedulings]);
-
   // Cargar empleados y programaciones
   const loadData = async () => {
     setLoading(true);
     setError("");
     try {
-      console.log("[DEBUG] Intentando cargar empleados...");
       const employeesData = await employeesService.getAll();
-      console.log("[DEBUG] Empleados cargados:", employeesData);
-
-      console.log("[DEBUG] Intentando cargar programaciones recurrentes...");
       const schedulingsData = await recurringSchedulingService.getAll();
-      console.log("[DEBUG] Programaciones recurrentes cargadas:", schedulingsData);
 
       setEmployees(Array.isArray(employeesData) ? employeesData : []);
       setSchedulings(Array.isArray(schedulingsData) ? schedulingsData : []);
@@ -201,19 +186,16 @@ const Scheduling = () => {
                 onUpdateRecurring={handleUpdateRecurring}
                 onDeleteRecurring={handleDeleteRecurring}
               />
-              {isAddModalOpen && (
-                <SeeScheduling
-                  isOpen={isAddModalOpen}
-                  onClose={() => { setIsAddModalOpen(false); setSelectedEmployeeForModal(null); }}
-                  title={'Agregar programación recurrente'}
-                >
-                  <AddRecurringScheduling
-                    empleadoId={selectedEmployeeForModal}
-                    onSave={handleAddRecurring}
-                    onCancel={() => { setIsAddModalOpen(false); setSelectedEmployeeForModal(null); }}
-                  />
-                </SeeScheduling>
-              )}
+              <CreateScheduling
+                empleadoId={selectedEmployeeForModal}
+                employees={employees}
+                onCreate={handleAddRecurring}
+                isOpen={isAddModalOpen}
+                onClose={() => {
+                  setIsAddModalOpen(false);
+                  setSelectedEmployeeForModal(null);
+                }}
+              />
             </>
           )}
         </div>

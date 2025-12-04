@@ -25,15 +25,10 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
           rolesService.getAvailablePrivileges()
         ]);
 
-        // Ordenar permisos de forma lógica: principales primero, luego submódulos
+        // Ordenar permisos de forma lógica: solo sub-procesos (módulos individuales)
+        // Los procesos principales y Dashboard ya están filtrados en el backend
         const orderedPermissions = permissionsData.sort((a, b) => {
           const order = [
-            'Dashboard',
-            'Gestión de Usuarios',
-            'Gestión de Compras',
-            'Gestión de Servicios',
-            'Ventas',
-            'Venta de Productos',
             // Submódulos de Compras
             'Categorías de Productos',
             'Productos',
@@ -67,14 +62,19 @@ const PrivilegesTable = ({ value = {}, onChange, disabled = false }) => {
         setActions(privilegesData.map(p => p.nombre));
       } catch (error) {
         console.error('Error al cargar permisos y privilegios:', error);
-        // Fallback a valores por defecto si hay error
+        // Fallback a valores por defecto si hay error (solo sub-procesos)
         setModules([
-          "Dashboard",
-          "Gestión de Usuarios",
-          "Gestión de Compras",
-          "Gestión de Servicios",
-          "Ventas",
-          "Venta de Productos"
+          "Categorías de Productos",
+          "Productos",
+          "Proveedores",
+          "Compras",
+          "Categorías de Servicios",
+          "Servicios",
+          "Empleados",
+          "Programación",
+          "Clientes",
+          "Citas",
+          "Pedidos"
         ]);
         setActions(["Crear", "Visualizar", "Editar", "Eliminar"]);
       } finally {

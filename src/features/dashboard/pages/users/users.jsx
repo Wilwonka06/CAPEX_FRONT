@@ -12,7 +12,7 @@ import { useOutletContext } from 'react-router-dom';
 
 import { getCitasEnEjecucion } from '../SaleServices/API/CitasService';
 
-const USERS_PER_PAGE = 5;
+const USERS_PER_PAGE = 10;
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 
