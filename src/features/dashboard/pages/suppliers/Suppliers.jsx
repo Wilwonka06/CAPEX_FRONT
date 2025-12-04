@@ -7,6 +7,7 @@ import Search from "../../../../shared/Search";
 import Paginator from "../../../../shared/Paginator";
 import LoadingTable from "../../../../shared/components/LoadingTable";
 import ConfirmDeleteModal from "../../../../shared/components/ConfirmDeleteModal";
+import { filterBySearch } from "../../../../shared/utils/searchHelper";
 import suppliersService from "./API/suppliersService";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -48,25 +49,9 @@ const SuppliersPage = () => {
     }
   };
 
-  // Filtrar proveedores por término de búsqueda
+  // Filtrar proveedores usando la función helper de búsqueda universal
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredSuppliers(suppliers);
-      return;
-    }
-    const lowerTerm = searchTerm.toLowerCase();
-    setFilteredSuppliers(
-      suppliers.filter(supplier =>
-        (supplier.nit && supplier.nit.toLowerCase().includes(lowerTerm)) ||
-        (supplier.nombre && supplier.nombre.toLowerCase().includes(lowerTerm)) ||
-        (supplier.contacto && supplier.contacto.toLowerCase().includes(lowerTerm)) ||
-        (supplier.direccion && supplier.direccion.toLowerCase().includes(lowerTerm)) ||
-        (supplier.telefono && supplier.telefono.toLowerCase().includes(lowerTerm)) ||
-        (supplier.correo && supplier.correo.toLowerCase().includes(lowerTerm)) ||
-        (supplier.tipo && supplier.tipo.toLowerCase().includes(lowerTerm)) ||
-        (supplier.isActive ? 'activo' : 'inactivo').includes(lowerTerm)
-      )
-    );
+    setFilteredSuppliers(filterBySearch(suppliers, searchTerm));
   }, [searchTerm, suppliers]);
 
   // Paginación

@@ -8,6 +8,7 @@ import Paginator from "../../../../shared/Paginator";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./API/ServiceOrderService";
 import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./API/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
+import { searchInObject } from '../../../../shared/utils/searchHelper';
 import { formatNumber, formatPrice } from '../../../../shared/utils/formatters';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
@@ -80,10 +81,8 @@ const SaleServices = () => {
       }
     }
 
-    // Búsqueda general en todos los campos si no es una coincidencia exacta de ID
-    const matchesSearch = Object.values(service).some((value) =>
-      normalizeText(value).toLowerCase().includes(term.toLowerCase())
-    );
+    // Búsqueda general en todos los campos usando la función helper universal
+    const matchesSearch = searchInObject(service, searchTerm);
 
     // Filtrar por estado según el tab seleccionado
     // Normalizar el estado del servicio para comparación

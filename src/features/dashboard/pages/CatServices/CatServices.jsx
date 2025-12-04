@@ -8,6 +8,7 @@ import SearchProduct from '../../../../shared/Search';
 import Paginator from '../../../../shared/Paginator';
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 
@@ -58,13 +59,8 @@ const CatServices = () => {
     }
   };
 
-  // Filtrar categorías por término de búsqueda
-  const filteredCategories = categories.filter((cat) =>
-    (cat.id_categoria_servicio?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cat.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cat.descripcion || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cat.estado || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar categorías usando la función helper de búsqueda universal
+  const filteredCategories = filterBySearch(categories, searchTerm);
 
   // Paginación
   const totalPages = Math.ceil(filteredCategories.length / ITEMS_PER_PAGE);

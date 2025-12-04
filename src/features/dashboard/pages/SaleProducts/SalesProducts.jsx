@@ -8,6 +8,7 @@ import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { formatNumber } from '../../../../shared/utils/formatters';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import CreateSaleModal from './components/CreateSaleModal';
 import SaleDetailModal from './components/SaleDetailModal';
 import SalesTable from './components/SalesTable';
@@ -117,21 +118,8 @@ const SalesProducts = () => {
 
   // ===== FILTRAR VENTAS =====
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredSales(sales);
-      return;
-    }
-    const lowerTerm = searchTerm.toLowerCase();
-    setFilteredSales(
-      sales.filter(sale =>
-        (sale.id?.toString() || '').includes(lowerTerm) ||
-        (sale.numeroVenta || '').toLowerCase().includes(lowerTerm) ||
-        (sale.estado || '').toLowerCase().includes(lowerTerm) ||
-        (sale.fecha || '').toLowerCase().includes(lowerTerm) ||
-        (sale.valor?.toString() || '').includes(lowerTerm) ||
-        (sale.metodoPago || '').toLowerCase().includes(lowerTerm)
-      )
-    );
+    // Usar la función helper de búsqueda universal
+    setFilteredSales(filterBySearch(sales, searchTerm));
   }, [searchTerm, sales]);
 
   // ===== PAGINACIÓN =====

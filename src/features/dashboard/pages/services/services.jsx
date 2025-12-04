@@ -17,6 +17,7 @@ import SearchProduct from '../../../../shared/Search';
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 
 const SERVICES_PER_PAGE = 10;
 
@@ -99,16 +100,8 @@ const Services = () => {
     return () => setTitle("");
   }, [setTitle]);
 
-  // Filtrar servicios
-  const filteredServices = services.filter((service) =>
-    (service.id?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (service.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ((service.categoria?.nombre || service.categoria || "").toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (String(service.duracion || "").toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (String(service.precio || "").toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (service.descripcion || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (service.estado || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar servicios usando la función helper de búsqueda universal
+  const filteredServices = filterBySearch(services, searchTerm);
 
   // Paginación
   const totalPages = Math.ceil(filteredServices.length / SERVICES_PER_PAGE);

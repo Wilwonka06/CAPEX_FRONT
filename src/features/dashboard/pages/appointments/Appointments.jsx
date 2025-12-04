@@ -13,6 +13,7 @@ import AppointmentCreateModal from './components/AppointmentCreateModal';
 import toast from 'react-hot-toast';
 import Search from '../../../../shared/Search';
 import CalendarContentSkeleton from '../../../../shared/components/CalendarContentSkeleton';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import '../../../../shared/styles/calendar.css';
 
 // Colores personalizados para los estados
@@ -64,35 +65,9 @@ const Appointments = () => {
     setFilteredAppointments(appointments);
   }, [appointments]);
 
-  // Filtrar citas por término de búsqueda
+  // Filtrar citas por término de búsqueda usando la función helper universal
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredAppointments(appointments);
-      return;
-    }
-    const lowerTerm = searchTerm.toLowerCase();
-    setFilteredAppointments(
-      appointments.filter(appointment =>
-        // Buscar por nombre del cliente (usuario o cliente)
-        ((appointment.usuario?.nombre || appointment.cliente?.nombre) &&
-          (appointment.usuario?.nombre || appointment.cliente?.nombre).toLowerCase().includes(lowerTerm)) ||
-        // Buscar por fecha
-        (appointment.fecha_servicio && appointment.fecha_servicio.includes(searchTerm)) ||
-        // Buscar por estado
-        (appointment.estado && appointment.estado.toLowerCase().includes(lowerTerm)) ||
-        // Buscar por servicios
-        (appointment.servicios && appointment.servicios.some(servicio =>
-          (servicio.servicio?.nombre || servicio.nombre_servicio) &&
-          (servicio.servicio?.nombre || servicio.nombre_servicio).toLowerCase().includes(lowerTerm)
-        )) ||
-        // Buscar por teléfono del cliente
-        ((appointment.usuario?.telefono || appointment.cliente?.telefono) &&
-          (appointment.usuario?.telefono || appointment.cliente?.telefono).includes(searchTerm)) ||
-        // Buscar por correo del cliente
-        ((appointment.usuario?.correo || appointment.cliente?.correo) &&
-          (appointment.usuario?.correo || appointment.cliente?.correo).toLowerCase().includes(lowerTerm))
-      )
-    );
+    setFilteredAppointments(filterBySearch(appointments, searchTerm));
   }, [searchTerm, appointments]);
 
   // Cargar citas desde la API

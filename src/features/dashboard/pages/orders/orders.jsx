@@ -6,6 +6,7 @@ import Paginator from '../../../../shared/Paginator';
 import TableSkeleton from '../../../../shared/components/TableSkeleton';
 import Search from '../../../../shared/Search';
 import { formatNumber } from '../../../../shared/utils/formatters';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import ordersService from './API/ordersService';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -126,20 +127,8 @@ export default function OrdersPage() {
 
   // ===== FILTRAR PEDIDOS =====
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredOrders(orders);
-      return;
-    }
-    const lowerTerm = searchTerm.toLowerCase();
-    setFilteredOrders(
-      orders.filter(order =>
-        (order.fecha || '').toLowerCase().includes(lowerTerm) ||
-        (order.numeroOrden || '').toLowerCase().includes(lowerTerm) ||
-        (order.clienteNombre || '').toLowerCase().includes(lowerTerm) ||
-        (order.valor?.toString() || '').includes(lowerTerm) ||
-        (order.estado || '').toLowerCase().includes(lowerTerm)
-      )
-    );
+    // Usar la función helper de búsqueda universal
+    setFilteredOrders(filterBySearch(orders, searchTerm));
   }, [searchTerm, orders]);
 
   // ===== PAGINACIÓN =====

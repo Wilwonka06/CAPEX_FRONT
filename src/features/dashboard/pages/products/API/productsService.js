@@ -253,27 +253,59 @@ export const productsService = {
       const mappedData = {
         nombre: productData.nombre?.trim(),
         descripcion: productData.descripcion?.trim() || null,
-        precio_venta: parseFloat(productData.precio_venta || productData.precio),
-        stock: parseInt(productData.stock || productData.cantidad || 0)
       };
+
+      // Mapear precio_venta solo si es válido
+      if (productData.precio_venta !== undefined || productData.precio !== undefined) {
+        const precio = parseFloat(productData.precio_venta || productData.precio);
+        if (!isNaN(precio) && precio > 0) {
+          mappedData.precio_venta = precio;
+        }
+      }
+
+      // Mapear stock solo si es válido
+      if (productData.stock !== undefined || productData.cantidad !== undefined) {
+        const stock = parseInt(productData.stock || productData.cantidad || 0);
+        if (!isNaN(stock) && stock >= 0) {
+          mappedData.stock = stock;
+        }
+      }
 
       // Mapear categoryId si existe
       if (productData.id_categoria_producto || productData.categoryId) {
-        mappedData.id_categoria_producto = parseInt(
+        const categoryId = parseInt(
           productData.id_categoria_producto || productData.categoryId
         );
+        if (!isNaN(categoryId) && categoryId > 0) {
+          mappedData.id_categoria_producto = categoryId;
+        }
       }
 
-      // Mapear array de imÃ¡genes (mÃ¡ximo 3)
+      // Mapear costo solo si es válido
+      if (productData.costo !== undefined && productData.costo !== null && productData.costo !== '') {
+        const costo = parseFloat(productData.costo);
+        if (!isNaN(costo) && costo > 0) {
+          mappedData.costo = costo;
+        }
+      }
+
+      // Mapear IVA solo si es válido
+      if (productData.iva !== undefined && productData.iva !== null && productData.iva !== '') {
+        const iva = parseFloat(productData.iva);
+        if (!isNaN(iva) && iva >= 0 && iva <= 40) {
+          mappedData.iva = iva;
+        }
+      }
+
+      // Mapear array de imágenes (máximo 3)
       if (productData.fotos && Array.isArray(productData.fotos)) {
-        // Filtrar solo imÃ¡genes vÃ¡lidas
+        // Filtrar solo imágenes válidas
         const validImages = productData.fotos
           .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
           .slice(0, 3);
         
-        if (validImages.length > 0) {
-          mappedData.fotos = validImages;
-        }
+        // Enviar el array incluso si está vacío (para eliminar todas las imágenes)
+        mappedData.fotos = validImages;
       }
 
       // Mapear caracterÃ­sticas correctamente desde especificaciones
@@ -299,6 +331,13 @@ export const productsService = {
 
         console.log('API Service: Mapped caracterÃ­sticas:', mappedData.caracteristicas);
       }
+
+      // Limpiar campos undefined/null antes de enviar
+      Object.keys(mappedData).forEach(key => {
+        if (mappedData[key] === undefined || mappedData[key] === null || (typeof mappedData[key] === 'number' && isNaN(mappedData[key]))) {
+          delete mappedData[key];
+        }
+      });
 
       console.log('API Service: Sending update data:', mappedData);
       const response = await apiRequest.put(`${PRODUCTS_ENDPOINT}/${id}`, mappedData);
