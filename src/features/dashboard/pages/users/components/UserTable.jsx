@@ -150,13 +150,20 @@ user.estado === "Activo"
                   </button>
 
                   <button
-                    title="Eliminar"
+                    title={user.hasClientAssociations ? "No se puede eliminar: usuario tiene ventas u órdenes asociadas" : "Eliminar"}
                     onClick={() =>
                       onDelete(user.id_usuario || user.id)
                     }
-                    className="h-8 w-8 p-0 hover:bg-red-50 rounded-md flex items-center justify-center transition-colors"
+                    disabled={user.hasClientAssociations}
+                    className={`h-8 w-8 p-0 rounded-md flex items-center justify-center transition-colors ${
+                      user.hasClientAssociations 
+                        ? 'cursor-not-allowed opacity-50' 
+                        : 'hover:bg-red-50 cursor-pointer'
+                    }`}
                   >
-                    <i className="bi bi-trash text-red-500 text-[18px]"></i>
+                    <i className={`bi bi-trash text-[18px] ${
+                      user.hasClientAssociations ? 'text-gray-400' : 'text-red-500'
+                    }`}></i>
                   </button>
                 </div>
               </td>

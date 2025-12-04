@@ -266,39 +266,69 @@ const Users = () => {
 
   const handleDeleteUser = async (userId) => {
     const userToDelete = users.find(u => (u.id_usuario || u.id) === userId);
-    if (userToDelete) {
-      const result = await Swal.fire({
-        title: '¿Estás seguro?',
-        text: `¿Estás seguro de que deseas eliminar al usuario "${userToDelete.nombre || userToDelete.name}"? Esta acción no se puede deshacer.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-      });
+    if (!userToDelete) return;
 
-      if (result.isConfirmed) {
-        try {
-          await executeWithToast({
-            promiseFn: async () => {
-              const response = await usersService.delete(userId);
-              if (response.success) {
-                await loadUsers();
-                return response.data;
-              } else {
-                throw new Error(response.message || 'Error al eliminar el usuario');
-              }
-            },
-            operation: 'delete',
-            entity: 'usuario',
-            id: userId,
-            loadingMessage: 'Eliminando usuario...',
-            successMessage: 'Usuario eliminado exitosamente',
+    try {
+      // Cargar el usuario completo para verificar si tiene ventas u órdenes asociadas
+      const response = await usersService.getById(userId);
+      if (response.success && response.data) {
+        const userComplete = response.data;
+        const hasClientAssociations = userComplete.hasClientAssociations || false;
+        const clientAssociationsInfo = userComplete.clientAssociationsInfo || null;
+
+        // Si el usuario tiene ventas u órdenes asociadas, no permitir eliminación
+        if (hasClientAssociations) {
+          const message = clientAssociationsInfo?.message || 
+            'Este usuario no puede ser eliminado porque tiene ventas u órdenes de servicio asociadas.';
+          
+          await Swal.fire({
+            title: 'No se puede eliminar',
+            text: message,
+            icon: 'error',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6'
           });
-        } catch {
-          // Error ya manejado por executeWithToast
+          return;
         }
+      }
+    } catch (error) {
+      console.error('Error al verificar asociaciones del usuario:', error);
+      // Si hay error al verificar, continuar con la confirmación pero advertir
+      toast.error('No se pudo verificar si el usuario tiene ventas asociadas. Proceda con precaución.');
+    }
+
+    // Si no tiene asociaciones, proceder con la confirmación y eliminación
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `¿Estás seguro de que deseas eliminar al usuario "${userToDelete.nombre || userToDelete.name}"? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await executeWithToast({
+          promiseFn: async () => {
+            const response = await usersService.delete(userId);
+            if (response.success) {
+              await loadUsers();
+              return response.data;
+            } else {
+              throw new Error(response.message || 'Error al eliminar el usuario');
+            }
+          },
+          operation: 'delete',
+          entity: 'usuario',
+          id: userId,
+          loadingMessage: 'Eliminando usuario...',
+          successMessage: 'Usuario eliminado exitosamente',
+        });
+      } catch {
+        // Error ya manejado por executeWithToast
       }
     }
   };
