@@ -10,6 +10,156 @@ import Swal from 'sweetalert2';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { isFutureTimeToday } from '../../../../shared/utils/timeValidation';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import { apiRequest } from '../../../../shared/config/apiConfig';
+import { validateUserDocument, isValidDocumentByType } from '../../../../shared/validations';
+import { DOC_TYPES_CODES, DOC_TYPE_LABELS } from '../../../../shared/constants/documentTypes';
+
+// Componente para seleccionar horas disponibles con verificación async
+const HorasDisponiblesSelect = ({ idx, servicio, profesionales, formData, listaServicios, onTimeChange, error }) => {
+  const [horasDisponibles, setHorasDisponibles] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const cargarHoras = async () => {
+      if (!servicio.profesional || !formData.fecha || !servicio.id_empleado) {
+        setHorasDisponibles([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const idEmpleado = servicio.id_empleado;
+        const fecha = formData.fecha;
+        const duracion = servicio.duracion || 60;
+
+        // Cargar citas existentes del empleado para esa fecha
+        let citasExistentes = [];
+        try {
+          const response = await apiRequest.get(`/citas?fecha_servicio=${fecha}`);
+          if (Array.isArray(response)) {
+            citasExistentes = response;
+          } else if (response?.data && Array.isArray(response.data)) {
+            citasExistentes = response.data;
+          } else if (response?.appointments && Array.isArray(response.appointments)) {
+            citasExistentes = response.appointments;
+          }
+        } catch (error) {
+          console.warn('Error cargando citas existentes:', error);
+        }
+
+        const horas = [];
+        for (let h = 6; h <= 20; h++) {
+          for (let m = 0; m < 60; m += 15) {
+            const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            const inicioMin = h * 60 + m;
+            const finMin = inicioMin + Number(duracion);
+            const horaFin = `${Math.floor(finMin / 60).toString().padStart(2, '0')}:${(finMin % 60).toString().padStart(2, '0')}`;
+            
+            let disponible = true;
+
+            // Verificar solapamiento con otros servicios del mismo formulario
+            for (let i = 0; i < listaServicios.length; i++) {
+              if (i === idx) continue;
+              const s = listaServicios[i];
+              if (s.profesional === servicio.profesional && s.inicio && s.fin) {
+                const inicioB = parseInt(s.inicio.split(':')[0]) * 60 + parseInt(s.inicio.split(':')[1]);
+                const finB = parseInt(s.fin.split(':')[0]) * 60 + parseInt(s.fin.split(':')[1]);
+                if (inicioMin < finB && inicioB < finMin) {
+                  disponible = false;
+                  break;
+                }
+              }
+            }
+
+            // Verificar solapamiento con citas existentes
+            if (disponible && citasExistentes.length > 0) {
+              for (const cita of citasExistentes) {
+                if (cita.servicios && Array.isArray(cita.servicios)) {
+                  for (const servCita of cita.servicios) {
+                    if (servCita.id_empleado === idEmpleado && servCita.hora_inicio && servCita.hora_finalizacion) {
+                      const inicioB = parseInt(servCita.hora_inicio.split(':')[0]) * 60 + parseInt(servCita.hora_inicio.split(':')[1]);
+                      const finB = parseInt(servCita.hora_finalizacion.split(':')[0]) * 60 + parseInt(servCita.hora_finalizacion.split(':')[1]);
+                      if (inicioMin < finB && inicioB < finMin) {
+                        disponible = false;
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            // Verificar disponibilidad con programación recurrente
+            if (disponible) {
+              try {
+                const availabilityResponse = await apiRequest.get(
+                  `/programaciones-recurrentes/disponibilidad?id_usuario=${idEmpleado}&fecha=${fecha}&inicio=${hora}&fin=${horaFin}`
+                );
+                disponible = availabilityResponse?.disponible === true || availabilityResponse?.data?.disponible === true;
+              } catch (error) {
+                console.warn(`Error verificando disponibilidad para ${hora}:`, error);
+                disponible = false;
+              }
+            }
+
+            // Filtrar horas pasadas si la fecha es hoy
+            if (disponible && !isFutureTimeToday(fecha, hora)) {
+              disponible = false;
+            }
+
+            horas.push({ hora, disponible });
+          }
+        }
+        setHorasDisponibles(horas);
+      } catch (error) {
+        console.error('Error cargando horas disponibles:', error);
+        setHorasDisponibles([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarHoras();
+  }, [idx, servicio.profesional, servicio.id_empleado, servicio.duracion, formData.fecha, listaServicios]);
+
+  const hayDisponibles = horasDisponibles.some(h => h.disponible);
+
+  if (loading) {
+    return (
+      <div className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 bg-gray-50 text-gray-600 font-lato text-sm">
+        Cargando horarios disponibles...
+      </div>
+    );
+  }
+
+  if (!hayDisponibles) {
+    return (
+      <div className="w-full border-2 border-red-200 rounded-2xl px-4 py-3 bg-red-50 text-red-600 font-lato text-sm">
+        No hay horas disponibles para este profesional en esta fecha
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <select
+        className={`w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] bg-white font-lato text-gray-700 transition-all duration-300 ${error ? 'border-red-500' : ''}`}
+        value={servicio.inicio || ''}
+        onChange={e => onTimeChange(e.target.value)}
+      >
+        <option value="">Seleccionar hora</option>
+        {horasDisponibles.map(h => (
+          <option key={h.hora} value={h.hora} disabled={!h.disponible}>
+            {h.hora}{!h.disponible ? ' (No disponible)' : ''}
+          </option>
+        ))}
+      </select>
+      {error && <p className="text-red-500 text-sm mt-2 font-lato">{error}</p>}
+    </>
+  );
+};
 
 function limpiarPrecio(valor) {
   // Si el valor es null, undefined o vacío, devolver 0
@@ -41,6 +191,7 @@ const ClientAppointments = () => {
     estado: 'Agendada',
     notas: ''
   });
+  const [phoneNumber, setPhoneNumber] = useState(currentUser?.telefono || '');
   const [errors, setErrors] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -226,6 +377,7 @@ const ClientAppointments = () => {
       tipoDocumento: currentUser?.tipoDocumento || '',
       documento: currentUser?.documento || ''
     }));
+    setPhoneNumber(currentUser?.telefono || '');
   }, [currentUser]);
 
   // Filtrar citas por usuario loggeado
@@ -290,6 +442,12 @@ const ClientAppointments = () => {
     }
   };
 
+  // Validar documento según tipo
+  const validateDocument = (tipo, documento) => {
+    if (!documento) return '';
+    return validateUserDocument(tipo, documento);
+  };
+
   // Validaciones igual que admin
   const validateForm = () => {
     const newErrors = {};
@@ -300,6 +458,19 @@ const ClientAppointments = () => {
       newErrors.correo = 'El correo electrónico es requerido para crear la cita';
     } else if (formData.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
       newErrors.correo = 'El correo electrónico no es válido';
+    }
+    // Validar tipo de documento
+    if (!formData.tipoDocumento) {
+      newErrors.tipoDocumento = 'El tipo de documento es requerido';
+    }
+    // Validar documento según tipo
+    if (formData.tipoDocumento) {
+      const docError = validateDocument(formData.tipoDocumento, formData.documento);
+      if (docError) {
+        newErrors.documento = docError;
+      }
+    } else if (!formData.documento) {
+      newErrors.documento = 'El documento es requerido';
     }
     if (!formData.fecha) newErrors.fecha = 'La fecha es requerida';
     if (formData.servicios.length === 0) newErrors.servicios = 'Debe agregar al menos un servicio';
@@ -510,38 +681,6 @@ const ClientAppointments = () => {
     });
   };
 
-  // Generar opciones de hora disponibles para un servicio
-  function getHorasDisponibles(idx, profesional, duracion, listaServicios = formData.servicios) {
-    if (!profesional) return [];
-    const horas = [];
-    for (let h = 6; h <= 20; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        // Verificar si esta hora se solapa con otro servicio del mismo profesional
-        let disponible = true;
-        const inicioA = h * 60 + m;
-        const finA = inicioA + Number(duracion);
-        for (let i = 0; i < listaServicios.length; i++) {
-          if (i === idx) continue;
-          const s = listaServicios[i];
-          if (s.profesional === profesional) {
-            const inicioB = parseInt(s.inicio.split(':')[0]) * 60 + parseInt(s.inicio.split(':')[1]);
-            const finB = parseInt(s.fin.split(':')[0]) * 60 + parseInt(s.fin.split(':')[1]);
-            if (inicioA < finB && inicioB < finA) {
-              disponible = false;
-              break;
-            }
-          }
-        }
-        // Filtrar horas pasadas si la fecha es hoy
-        if (formData.fecha && !isFutureTimeToday(formData.fecha, hora)) {
-          disponible = false;
-        }
-        horas.push({ hora, disponible });
-      }
-    }
-    return horas;
-  }
 
   // Función para calcular la hora de finalización a partir de inicio y duración
   function calcularHoraFin(inicio, duracion) {
@@ -980,16 +1119,27 @@ const ClientAppointments = () => {
                     <label className="block text-sm font-semibold text-[#1E1E1E] font-lato mb-2">
                       Teléfono <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] bg-white font-lato text-gray-700 placeholder-gray-400 transition-all duration-300"
-                      value={formData.telefono}
-                      onChange={e => {
-                        setFormData(prev => ({ ...prev, telefono: e.target.value }));
+                    <PhoneInput
+                      country={'co'}
+                      value={phoneNumber}
+                      onChange={(value) => {
+                        setPhoneNumber(value);
+                        setFormData(prev => ({ ...prev, telefono: value }));
                         clearError('telefono');
                       }}
-                      placeholder="Ingresa tu número de teléfono"
-                      required
+                      onBlur={() => {
+                        if (!phoneNumber || phoneNumber.length < 7) {
+                          setErrors(prev => ({ ...prev, telefono: 'El teléfono es requerido' }));
+                        }
+                      }}
+                      inputClass={`w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] bg-white font-lato text-gray-700 placeholder-gray-400 transition-all duration-300 ${errors.telefono ? 'border-red-500' : ''}`}
+                      containerClass="w-full"
+                      inputProps={{
+                        name: 'telefono',
+                        required: true,
+                        placeholder: 'Ej: 3001234567',
+                      }}
+                      specialLabel=""
                     />
                     {errors.telefono && <p className="text-red-500 text-sm mt-2 font-lato">{errors.telefono}</p>}
                   </div>
@@ -1021,20 +1171,32 @@ const ClientAppointments = () => {
                         Tipo de documento <span className="text-red-500">*</span>
                       </label>
                       <select
-                        className={`w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] font-lato text-gray-700 transition-all duration-300 ${currentUser ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                        className={`w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] font-lato text-gray-700 transition-all duration-300 ${currentUser ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'} ${errors.tipoDocumento ? 'border-red-500' : ''}`}
                         value={formData.tipoDocumento}
                         disabled={!!currentUser}
                         readOnly={!!currentUser}
                         onChange={e => {
                           setFormData(prev => ({ ...prev, tipoDocumento: e.target.value }));
                           clearError('tipoDocumento');
+                          // Si cambia el tipo de documento, validar el documento actual
+                          if (formData.documento) {
+                            const docError = validateDocument(e.target.value, formData.documento);
+                            if (docError) {
+                              setErrors(prev => ({ ...prev, documento: docError }));
+                            } else {
+                              clearError('documento');
+                            }
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!formData.tipoDocumento) {
+                            setErrors(prev => ({ ...prev, tipoDocumento: 'El tipo de documento es requerido' }));
+                          }
                         }}
                       >
                         <option value="">Seleccionar</option>
-                        {['RC','TI','CC','TE','CE','NIT','PP','PEP','DIE','NUIP','FOREIGN_NIT'].map(code => (
-                          <option key={code} value={code}>{`${code} - ${{
-                            RC:'Registro civil',TI:'Tarjeta de identidad',CC:'Cédula de ciudadanía',TE:'Tarjeta de extranjería',CE:'Cédula de extranjería',NIT:'Número de identificación tributaria',PP:'Pasaporte',PEP:'Permiso especial de permanencia',DIE:'Documento de identificación extranjero',NUIP:'NUIP',FOREIGN_NIT:'NIT de otro país'
-                          }[code]}`}</option>
+                        {DOC_TYPES_CODES.map(code => (
+                          <option key={code} value={code}>{`${code} - ${DOC_TYPE_LABELS[code]}`}</option>
                         ))}
                       </select>
                       {errors.tipoDocumento && <p className="text-red-500 text-sm mt-2 font-lato">{errors.tipoDocumento}</p>}
@@ -1046,13 +1208,48 @@ const ClientAppointments = () => {
                       </label>
                       <input
                         type="text"
-                        className={`w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] font-lato text-gray-700 transition-all duration-300 ${currentUser ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                        className={`w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] font-lato text-gray-700 transition-all duration-300 ${currentUser ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'} ${errors.documento ? 'border-red-500' : ''}`}
                         value={formData.documento}
                         disabled={!!currentUser}
                         readOnly={!!currentUser}
                         onChange={e => {
-                          setFormData(prev => ({ ...prev, documento: e.target.value }));
-                          clearError('documento');
+                          let value = e.target.value;
+                          
+                          // Restricción para documento: solo números si no es pasaporte (PP)
+                          if (formData.tipoDocumento && formData.tipoDocumento !== 'PP') {
+                            // Permitir solo números y algunos caracteres especiales para NIT (guiones y puntos)
+                            if (formData.tipoDocumento === 'NIT') {
+                              // Permitir números, guiones y puntos para NIT
+                              value = value.replace(/[^0-9.-]/g, '');
+                            } else {
+                              // Solo números para otros tipos
+                              value = value.replace(/[^0-9]/g, '');
+                            }
+                          }
+                          
+                          setFormData(prev => ({ ...prev, documento: value }));
+                          
+                          // Validar en tiempo real si hay tipo de documento seleccionado
+                          if (formData.tipoDocumento) {
+                            const docError = validateDocument(formData.tipoDocumento, value);
+                            if (docError) {
+                              setErrors(prev => ({ ...prev, documento: docError }));
+                            } else {
+                              clearError('documento');
+                            }
+                          } else {
+                            clearError('documento');
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!formData.documento) {
+                            setErrors(prev => ({ ...prev, documento: 'El documento es requerido' }));
+                          } else if (formData.tipoDocumento) {
+                            const docError = validateDocument(formData.tipoDocumento, formData.documento);
+                            if (docError) {
+                              setErrors(prev => ({ ...prev, documento: docError }));
+                            }
+                          }
                         }}
                         placeholder="Ingresa tu número de documento"
                       />
@@ -1269,27 +1466,15 @@ const ClientAppointments = () => {
                               <div>
                                 <span className="block text-xs text-gray-500 font-lato mb-2">Hora de inicio</span>
                                 {serv.profesional ? (
-                                  (() => {
-                                    const horasDisponibles = getHorasDisponibles(idx, serv.profesional, serv.duracion);
-                                    const hayDisponibles = horasDisponibles.some(h => h.disponible);
-                                    return hayDisponibles ? (
-                                      <select
-                                        className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] bg-white font-lato text-gray-700 transition-all duration-300"
-                                        value={serv.inicio}
-                                        onChange={e => updateStartTime(idx, e.target.value)}
-                                      >
-                                        {horasDisponibles.map(h => (
-                                          <option key={h.hora} value={h.hora} disabled={!h.disponible}>
-                                            {h.hora}{!h.disponible ? ' (No disponible)' : ''}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    ) : (
-                                      <div className="w-full border-2 border-red-200 rounded-2xl px-4 py-3 bg-red-50 text-red-600 font-lato text-sm">
-                                        No hay horas disponibles para este profesional
-                                      </div>
-                                    );
-                                  })()
+                                  <HorasDisponiblesSelect
+                                      idx={idx}
+                                      servicio={serv}
+                                      profesionales={professionals}
+                                      formData={formData}
+                                      listaServicios={formData.servicios}
+                                      onTimeChange={(time) => updateStartTime(idx, time)}
+                                      error={errors[`servicio_${idx}_inicio`]}
+                                    />
                                 ) : (
                                   <input
                                     type="time"
@@ -1529,23 +1714,20 @@ const ClientAppointments = () => {
                         <div className="flex flex-col flex-1">
                           <span className="text-xs text-gray-500 mb-1">Hora de inicio</span>
                           {serv.profesional ? (
-                            (() => {
-                              const horasDisponibles = getHorasDisponibles(idx, serv.profesional, serv.duracion, rescheduleData.servicios);
-                              const hayDisponibles = horasDisponibles.some(h => h.disponible);
-                              return hayDisponibles ? (
-                                <select
-                                  className="border rounded px-2 py-1"
-                                  value={serv.inicio}
-                                  onChange={e => setRescheduleData(prev => { const servicios = [...prev.servicios]; servicios[idx].inicio = e.target.value; servicios[idx].fin = calcularHoraFin(e.target.value, servicios[idx].duracion); return { ...prev, servicios }; })}
-                                >
-                                  {horasDisponibles.map(h => (
-                                    <option key={h.hora} value={h.hora} disabled={!h.disponible}>{h.hora}{!h.disponible ? ' (No disponible)' : ''}</option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <div className="text-red-500 text-xs">No hay horas disponibles para este profesional.</div>
-                              );
-                            })()
+                            <HorasDisponiblesSelect
+                              idx={idx}
+                              servicio={serv}
+                              profesionales={professionals}
+                              formData={{ fecha: rescheduleData.fecha }}
+                              listaServicios={rescheduleData.servicios}
+                              onTimeChange={(time) => setRescheduleData(prev => { 
+                                const servicios = [...prev.servicios]; 
+                                servicios[idx].inicio = time; 
+                                servicios[idx].fin = calcularHoraFin(time, servicios[idx].duracion); 
+                                return { ...prev, servicios }; 
+                              })}
+                              error={errors[`servicio_${idx}_inicio`]}
+                            />
                           ) : (
                             <input type="time" className="border rounded px-2 py-1" value={serv.inicio} disabled />
                           )}

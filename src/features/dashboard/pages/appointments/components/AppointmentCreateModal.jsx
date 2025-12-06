@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import { isValidDocumentByType } from '@/shared/validations';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
-import { employeesService } from '@/features/dashboard/pages/employees/API/employeesService';
+import { employeesService, recurringSchedulingService } from '@/features/dashboard/pages/employees/API/employeesService';
 import ServiceSelection from './ServiceSelection';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -59,11 +59,40 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
         
         // Cargar empleados desde el backend
         const employeesData = await employeesService.getAll();
-        // Filtrar solo empleados activos y convertir a formato de profesionales
+        
+        // Obtener programaciones recurrentes activas
+        let employeesWithSchedule = new Set();
+        try {
+          const allSchedules = await recurringSchedulingService.getAll();
+          employeesWithSchedule = new Set(
+            allSchedules
+              .filter(schedule => schedule.estado === 'Activa' || schedule.estado === 'Activo')
+              .map(schedule => schedule.id_usuario || schedule.idUsuario)
+              .filter(Boolean)
+          );
+        } catch (error) {
+          console.warn('Error obteniendo programaciones:', error);
+          // Si hay error (incluyendo 401), usar Set vacío para mostrar todos los empleados activos
+          employeesWithSchedule = new Set();
+        }
+        
+        // Filtrar solo empleados activos
+        // Si hay programaciones obtenidas, filtrar solo los que tienen programación
+        // Si no se pudieron obtener programaciones, mostrar todos los empleados activos
         const normalizedProfessionals = employeesData
-          .filter(emp => emp.estado === 'Activo' || emp.estado === true)
+          .filter(emp => {
+            const isActive = emp.estado === 'Activo' || emp.estado === true;
+            if (!isActive) return false;
+            
+            // Si no se pudieron obtener programaciones, mostrar todos los activos
+            if (employeesWithSchedule.size === 0) return true;
+            
+            // Si se obtuvieron programaciones, filtrar solo los que tienen programación
+            const empId = emp.id_empleado ?? emp.id_usuario ?? emp.id;
+            return employeesWithSchedule.has(empId);
+          })
           .map(emp => ({
-            id: emp.id,
+            id: emp.id_empleado ?? emp.id_usuario ?? emp.id,
             name: emp.nombre,
             active: emp.estado === 'Activo' || emp.estado === true
           }));
