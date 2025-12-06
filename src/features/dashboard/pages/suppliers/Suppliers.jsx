@@ -4,9 +4,9 @@ import CreateSupplier from "./components/CreateSupplier";
 import EditSupplier from "./components/EditSupplier";
 import SupplierDetail from "./components/SupplierDetail";
 import Search from "../../../../shared/Search";
-import Paginator from "../../../../shared/Paginator";
 import LoadingTable from "../../../../shared/components/LoadingTable";
 import ConfirmDeleteModal from "../../../../shared/components/ConfirmDeleteModal";
+import { filterBySearch } from "../../../../shared/utils/searchHelper";
 import suppliersService from "./API/suppliersService";
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -15,7 +15,6 @@ import { useOutletContext } from 'react-router-dom';
 const SuppliersPage = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -48,41 +47,10 @@ const SuppliersPage = () => {
     }
   };
 
-  // Filtrar proveedores por término de búsqueda
+  // Filtrar proveedores usando la función helper de búsqueda universal
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredSuppliers(suppliers);
-      return;
-    }
-    const lowerTerm = searchTerm.toLowerCase();
-    setFilteredSuppliers(
-      suppliers.filter(supplier =>
-        (supplier.nit && supplier.nit.toLowerCase().includes(lowerTerm)) ||
-        (supplier.nombre && supplier.nombre.toLowerCase().includes(lowerTerm)) ||
-        (supplier.contacto && supplier.contacto.toLowerCase().includes(lowerTerm)) ||
-        (supplier.direccion && supplier.direccion.toLowerCase().includes(lowerTerm)) ||
-        (supplier.telefono && supplier.telefono.toLowerCase().includes(lowerTerm)) ||
-        (supplier.correo && supplier.correo.toLowerCase().includes(lowerTerm)) ||
-        (supplier.tipo && supplier.tipo.toLowerCase().includes(lowerTerm)) ||
-        (supplier.isActive ? 'activo' : 'inactivo').includes(lowerTerm)
-      )
-    );
+    setFilteredSuppliers(filterBySearch(suppliers, searchTerm));
   }, [searchTerm, suppliers]);
-
-  // Paginación
-  const itemsPerPage = 5;
-  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSuppliers = filteredSuppliers.slice(startIndex, startIndex + itemsPerPage);
-
-  // Resetear página al cambiar el filtro
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -154,24 +122,24 @@ const SuppliersPage = () => {
     if (!pendingDelete) return;
 
     setDeletingId(pendingDelete.id);
-    const supplierPromise = (async () => {
+      const supplierPromise = (async () => {
       await suppliersService.delete(pendingDelete.id);
       setSuppliers(prev => prev.filter(s => s.id !== pendingDelete.id));
-      return true;
-    })();
+        return true;
+      })();
 
-    toast.promise(supplierPromise, {
-      loading: 'Eliminando proveedor...',
-      success: 'Proveedor eliminado exitosamente',
-      error: (err) => err.response?.data?.message || err.message || 'Error al eliminar el proveedor',
-    });
+      toast.promise(supplierPromise, {
+        loading: 'Eliminando proveedor...',
+        success: 'Proveedor eliminado exitosamente',
+        error: (err) => err.response?.data?.message || err.message || 'Error al eliminar el proveedor',
+      });
 
-    try {
-      await supplierPromise;
+      try {
+        await supplierPromise;
       setShowDeleteModal(false);
       setPendingDelete(null);
-    } catch (error) {
-      // Error ya manejado por toast.promise
+      } catch (error) {
+        // Error ya manejado por toast.promise
     } finally {
       setDeletingId(null);
     }
@@ -255,7 +223,7 @@ const SuppliersPage = () => {
                 </div>
               ) : (
                 <SuppliersTable
-                  suppliers={paginatedSuppliers}
+                  suppliers={filteredSuppliers}
                   onEdit={(supplier) => {
                     setSelectedSupplier(supplier);
                     setShowEditModal(true);
@@ -270,13 +238,6 @@ const SuppliersPage = () => {
                 />
               )}
             </div>
-            {totalPages > 1 && !isInitialLoading && (
-              <Paginator
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
           </div>
         </div>
       </div>

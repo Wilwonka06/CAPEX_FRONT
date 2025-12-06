@@ -5,13 +5,11 @@ import EditCatServices from "./components/EditCatServices";
 import CategoryDetail from "./components/CategoryDetail";
 import CategoriesTable from "./components/CategoriesTable";
 import SearchProduct from '../../../../shared/Search';
-import Paginator from '../../../../shared/Paginator';
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
-
-const ITEMS_PER_PAGE = 10;
 
 const CatServices = () => {
   const { setTitle } = useOutletContext();
@@ -19,7 +17,6 @@ const CatServices = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [togglingId, setTogglingId] = useState(null);
 
   // Estados para modales
@@ -58,23 +55,8 @@ const CatServices = () => {
     }
   };
 
-  // Filtrar categorías por término de búsqueda
-  const filteredCategories = categories.filter((cat) =>
-    (cat.id_categoria_servicio?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cat.nombre || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cat.descripcion || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cat.estado || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Paginación
-  const totalPages = Math.ceil(filteredCategories.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  // Resetear página al cambiar búsqueda
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, categories]);
+  // Filtrar categorías usando la función helper de búsqueda universal
+  const filteredCategories = filterBySearch(categories, searchTerm);
 
   // CRUD Handlers
   const handleCreateCategory = async (newCategoryData) => {
@@ -150,31 +132,31 @@ const CatServices = () => {
     if (!pendingDelete) return;
 
     setDeletingId(pendingDelete.id);
-    const categoryPromise = (async () => {
+      const categoryPromise = (async () => {
       await serviceCategoriesService.delete(pendingDelete.id);
-      await loadCategories();
-      return true;
-    })();
+        await loadCategories();
+        return true;
+      })();
 
-    toast.promise(
-      categoryPromise,
-      {
-        loading: 'Eliminando categoría...',
-        success: 'Categoría eliminada exitosamente',
-        error: (err) => {
-          console.error("[CatServices] Error eliminando categoría:", err);
-          const backendMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message;
-          return backendMsg || "Error al eliminar categoría";
-        },
-      }
-    );
+      toast.promise(
+        categoryPromise,
+        {
+          loading: 'Eliminando categoría...',
+          success: 'Categoría eliminada exitosamente',
+          error: (err) => {
+            console.error("[CatServices] Error eliminando categoría:", err);
+            const backendMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message;
+            return backendMsg || "Error al eliminar categoría";
+          },
+        }
+      );
 
-    try {
-      await categoryPromise;
+      try {
+        await categoryPromise;
       setShowDeleteModal(false);
       setPendingDelete(null);
-    } catch (error) {
-      // Error ya manejado por toast.promise
+      } catch (error) {
+        // Error ya manejado por toast.promise
     } finally {
       setDeletingId(null);
     }
@@ -213,9 +195,6 @@ const CatServices = () => {
     setSearchTerm(e.target.value);
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
 
   const closeModals = () => {
     setShowEditModal(false);
@@ -262,7 +241,7 @@ const CatServices = () => {
 
             {/* Tabla de categorías */}
             <CategoriesTable
-              categories={paginatedCategories}
+              categories={filteredCategories}
               onToggleStatus={handleToggleStatus}
               togglingId={togglingId}
               onEdit={(category) => {
@@ -276,15 +255,6 @@ const CatServices = () => {
               }}
               loading={loading}
             />
-
-            {/* Paginación */}
-            {totalPages > 1 && !loading && (
-              <Paginator
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
           </div>
         </div>
       </div>

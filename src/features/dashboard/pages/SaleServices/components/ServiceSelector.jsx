@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiRequest } from '../../../../../shared/config/apiConfig';
-import { formatNumber, formatPrice } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatNumberInput, formatPrice, parseFormattedNumber } from '../../../../../shared/utils/formatters';
 
 const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -330,7 +330,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const totalServices = selectedServices.reduce((total, service) => total + service.subtotal, 0);
 
   const handleQuantityChange = (e) => {
-    const value = Math.max(1, parseInt(e.target.value) || 1);
+    const formatted = formatNumberInput(e.target.value, 0);
+    const value = Math.max(1, Math.floor(parseFormattedNumber(formatted)) || 1);
     setQuantity(value);
     if (errors.quantity) {
       setErrors(prev => ({ ...prev, quantity: '' }));
@@ -506,8 +507,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               Cantidad <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
-              value={quantity}
+              type="text"
+              value={formatNumber(quantity)}
               onChange={handleQuantityChange}
               className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
                 errors.quantity
@@ -515,7 +516,6 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
                   : 'border-gray-200 hover:border-gray-300'
               } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100`}
               disabled={!selectedServiceId}
-              min="1"
               placeholder="1"
             />
             {errors.quantity && (

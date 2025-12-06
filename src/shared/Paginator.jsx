@@ -8,8 +8,12 @@ const Paginator = ({
   totalItems,
   showInfo = false 
 }) => {
-  // Si solo hay una página o menos, no mostrar el paginador
-  if (totalPages <= 1) return null;
+  // Mostrar el paginador si hay 5 o más registros, independientemente de totalPages
+  // Si hay menos de 5 registros o no hay registros, no mostrar el paginador
+  if (totalItems !== undefined && totalItems < 5) return null;
+  
+  // Si no se proporciona totalItems, usar la lógica antigua (solo mostrar si hay más de una página)
+  if (totalItems === undefined && totalPages <= 1) return null;
 
   const getVisiblePages = () => {
     const delta = 2; 
@@ -81,9 +85,7 @@ const Paginator = ({
       {/* Información de resultados */}
       {hasInfo && (
         <div className="text-sm text-gray-700">
-          Mostrando <span className="font-medium text-gray-900">{startItem}</span> a{' '}
-          <span className="font-medium text-gray-900">{endItem}</span> de{' '}
-          <span className="font-medium text-gray-900">{totalItems}</span> resultados
+          Mostrando {' '} <span className="font-medium text-gray-900">{endItem}</span> resultados
         </div>
       )}
 

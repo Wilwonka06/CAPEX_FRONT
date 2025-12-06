@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { apiRequest } from '../../../../../shared/config/apiConfig';
-import { formatNumber } from '@/shared/utils/formatters';
+import { formatNumber, formatNumberInput, parseFormattedNumber } from '@/shared/utils/formatters';
 import appointmentsService from '../API/appointmentsService';
 
 // Función para convertir hora de 24h a 12h (AM/PM)
@@ -233,8 +233,8 @@ const ServiceSelection = ({
       id_empleado: null,
       inicio: '',
       fin: '',
-      duracion: parseInt(service.duration?.toString().replace(/[^\d]/g, '') || 0, 10),
-      precio: parseInt(service.price?.toString().replace(/[^\d]/g, '') || 0, 10),
+      duracion: parseFormattedNumber(service.duration?.toString() || '0') || 0,
+      precio: parseFormattedNumber(service.price?.toString() || '0') || 0,
       cantidad: 1
     };
     
@@ -551,8 +551,8 @@ const ServiceSelection = ({
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Duración (min)</label>
                   <input
-                    type="number"
-                    value={service.duracion}
+                    type="text"
+                    value={formatNumber(service.duracion, 0)}
                     disabled
                     className="w-full px-2 py-1 border rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
                   />
@@ -560,17 +560,19 @@ const ServiceSelection = ({
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
                   <input
-                    type="number"
-                    value={service.cantidad || 1}
-                    onChange={e => updateService(idx, { cantidad: parseInt(e.target.value) || 1 })}
+                    type="text"
+                    value={formatNumber(service.cantidad || 1, 0)}
+                    onChange={e => {
+                      const formatted = formatNumberInput(e.target.value, 0);
+                      updateService(idx, { cantidad: parseFormattedNumber(formatted) || 1 });
+                    }}
                     disabled={disabled}
                     className={`w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    min="1"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Precio</label>
-                  <div className="font-semibold">${formatNumber(Number(service.precio) * (Number(service.cantidad) || 1))}</div>
+                  <div className="font-semibold">${formatNumber(Number(service.precio || 0) * (Number(service.cantidad) || 1), 2)}</div>
                 </div>
               </div>
             </div>

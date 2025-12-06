@@ -8,13 +8,10 @@ import { employeesService } from "./API/employeesService";
 import EmployeesTable from "./components/EmployeesTable";
 import AddEmployee from "./components/CreateEmployee";
 import EditEmployee from "./components/EditEmployee";
-import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
-import { normalizeText } from '../../../../shared/validations';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
-
-const EMPLOYEES_PER_PAGE = 10;
 
 const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
@@ -25,7 +22,6 @@ const EmployeesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [togglingId, setTogglingId] = useState(null);
   
   // Estados de vistas/modales
@@ -62,25 +58,8 @@ const EmployeesPage = () => {
     return () => setTitle('');
   }, [setTitle]);
 
-  // Filtrar empleados
-  const filteredEmployees = employees.filter(emp =>
-    normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
-    normalizeText(emp.documento || emp.numero_documento || emp.num_documento || '').includes(normalizeText(searchTerm)) ||
-    (emp.telefono && normalizeText(emp.telefono).includes(normalizeText(searchTerm))) ||
-    (emp.correo && normalizeText(emp.correo).includes(normalizeText(searchTerm))) ||
-    (emp.direccion && normalizeText(emp.direccion).includes(normalizeText(searchTerm))) ||
-    (emp.tipoDocumento && normalizeText(emp.tipoDocumento).includes(normalizeText(searchTerm))) ||
-    normalizeText(emp.estado).includes(normalizeText(searchTerm))
-  );
-
-  // Paginación
-  const totalPages = Math.ceil(filteredEmployees.length / EMPLOYEES_PER_PAGE);
-  const startIndex = (currentPage - 1) * EMPLOYEES_PER_PAGE;
-  const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + EMPLOYEES_PER_PAGE);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, employees]);
+  // Filtrar empleados usando la función helper de búsqueda universal
+  const filteredEmployees = filterBySearch(employees, searchTerm);
 
   // Handler para cambiar estado - muestra modal primero
   const handleToggleStatus = (employeeId) => {
@@ -186,7 +165,6 @@ const EmployeesPage = () => {
   };
 
   // Handlers de navegación
-  const handlePageChange = (page) => setCurrentPage(page);
   const handleSearch = (e) => setSearchTerm(e.target.value);
   const handleCancel = () => {
     setShowAddForm(false);
@@ -241,22 +219,13 @@ const EmployeesPage = () => {
 
                 {/* Tabla de empleados */}
                 <EmployeesTable
-                  employees={paginatedEmployees}
+                  employees={filteredEmployees}
                   onToggleStatus={handleToggleStatus}
                   togglingId={togglingId}
                   onView={(emp) => navigate(`/dashboard/empleados/${emp.id || emp.id_usuario}`)}
                   onEdit={(emp) => setEditEmployee(emp)}
                   loading={loading}
                 />
-
-                {/* Paginación */}
-                {totalPages > 1 && !loading && (
-                  <Paginator
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                )}
               </>
             )}
 

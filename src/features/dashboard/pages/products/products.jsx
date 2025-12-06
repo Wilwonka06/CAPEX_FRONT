@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import ProductsTable from "./components/ProductsTable";
 import SearchProduct from '../../../../shared/Search';
-import Paginator from '../../../../shared/Paginator';
 import CreateProduct from "./components/CreateProduct";
 import CharacteristicsManager from "./components/CharacteristicsManager";
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
@@ -15,16 +14,6 @@ const ProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10,
-  });
-  const [queryParams, setQueryParams] = useState({
-    page: 1,
-    limit: 10,
-  });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isCharacteristicsManagerOpen, setIsCharacteristicsManagerOpen] = useState(false);
@@ -36,21 +25,16 @@ const ProductsPage = () => {
   const [selectedSupplier, setSelectedSupplier] = useState("");
 
   // Función para cargar productos
-  const loadProducts = async (params = queryParams) => {
+  const loadProducts = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await productsService.getAll(params);
+      // Cargar todos los productos (sin parámetros de paginación)
+      const response = await productsService.getAll();
 
       if (response.success) {
         setProducts(response.data || []);
-        setPagination({
-          currentPage: response.pagination?.currentPage || 1,
-          totalPages: response.pagination?.totalPages || 1,
-          totalItems: response.pagination?.totalItems || 0,
-          itemsPerPage: response.pagination?.itemsPerPage || 10,
-        });
       } else {
         throw new Error(response.message || 'Error al obtener productos');
       }
@@ -83,26 +67,17 @@ const ProductsPage = () => {
     return () => setTitle('');
   }, [setTitle]);
 
-  // Función para buscar productos
-  const searchProducts = async (searchTerm, filters = {}) => {
-    const searchParams = {
-      ...queryParams,
-      search: searchTerm,
-      page: 1, // Resetear a primera página
-      ...filters,
-    };
-
-    setQueryParams(searchParams);
-    await loadProducts(searchParams);
-  };
-
-  // Función para limpiar filtros
-  const clearFilters = async () => {
-    setSelectedSupplier("");
-    const newParams = { page: 1, limit: queryParams.limit };
-    setQueryParams(newParams);
-    await loadProducts(newParams);
-  };
+  // Filtrar productos localmente
+  const filteredProducts = products.filter(product => {
+    if (searchTerm && !product.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !product.codigo?.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    if (selectedSupplier && product.id_proveedor !== selectedSupplier) {
+      return false;
+    }
+    return true;
+  });
 
   // Función para crear producto
   const createProduct = async (productData) => {
@@ -117,12 +92,7 @@ const ProductsPage = () => {
 
           if (response.success) {
             // Resetear a primera página y limpiar búsqueda para que el nuevo producto sea visible
-            const refreshParams = {
-              page: 1,
-              limit: queryParams.limit || 10,
-            };
-            setQueryParams(refreshParams);
-            await loadProducts(refreshParams);
+            await loadProducts();
             return response.data;
           } else {
             throw new Error(response.message || 'Error al crear producto');
@@ -153,7 +123,7 @@ const ProductsPage = () => {
           const response = await productsService.update(id, productData);
 
           if (response.success) {
-            await loadProducts(queryParams);
+            await loadProducts();
             return response.data;
           } else {
             throw new Error(response.message || 'Error al actualizar producto');
@@ -205,21 +175,9 @@ const ProductsPage = () => {
   };
 
   // Función para cambiar página
-  const changePage = async (page) => {
-    const newParams = { ...queryParams, page };
-    setQueryParams(newParams);
-    await loadProducts(newParams);
-  };
-
   // Función para manejar la búsqueda
   const handleSearch = (e) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    if (term.trim()) {
-      searchProducts(term.trim());
-    } else {
-      clearFilters();
-    }
+    setSearchTerm(e.target.value);
   };
 
   // Función para crear un nuevo producto
@@ -274,10 +232,6 @@ const ProductsPage = () => {
     }
   };
 
-  // Función para cambiar página
-  const handlePageChange = (page) => {
-    changePage(page);
-  };
 
   // Estado de carga inicial
   const isInitialLoading = loading && products.length === 0;
@@ -324,22 +278,13 @@ const ProductsPage = () => {
                 </div>
               ) : (
                 <ProductsTable
-                  products={products}
+                  products={filteredProducts}
                   onEdit={handleEditProduct}
                   onDelete={handleDeleteProduct}
                   loading={isInitialLoading}
                 />
               )}
             </div>
-
-            {/* Paginación */}
-            {pagination.totalPages > 1 && (
-              <Paginator
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
 
           </div>
         </div>

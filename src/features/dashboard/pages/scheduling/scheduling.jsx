@@ -6,13 +6,9 @@ import { useOutletContext } from 'react-router-dom';
 import { recurringSchedulingService, novedadesService } from '../employees/API/employeesService';
 import { employeesService } from '../employees/API/employeesService';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import AddNovedadModal from '../employees/components/AddNovedadModal';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
-
-// Función para normalizar texto (remover tildes)
-const normalizeText = (text) => {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-};
 
 const Scheduling = () => {
   const { setTitle } = useOutletContext();
@@ -65,13 +61,8 @@ const Scheduling = () => {
     setSearchTerm(e.target.value);
   };
 
-  // Filtrar empleados basado en el término de búsqueda
-  const filteredEmployees = searchTerm.trim()
-    ? employees.filter(emp =>
-        normalizeText(emp.nombre).includes(normalizeText(searchTerm)) ||
-        normalizeText(emp.documento).includes(normalizeText(searchTerm))
-      )
-    : employees;
+  // Filtrar empleados usando la función helper de búsqueda universal
+  const filteredEmployees = filterBySearch(employees, searchTerm);
 
   // Abrir modal para crear programación recurrente
   const openAddRecurringModal = (empleadoId) => {

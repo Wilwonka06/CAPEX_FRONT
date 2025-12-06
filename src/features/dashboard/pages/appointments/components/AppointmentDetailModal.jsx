@@ -1,13 +1,9 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { formatNumber } from "../../../../../shared/utils/formatters";
+import { formatNumber, parseFormattedNumber, formatPrice } from "../../../../../shared/utils/formatters";
  
 import appointmentsService from "../API/appointmentsService";
 import toast from "react-hot-toast";
-
-function limpiarPrecio(valor) {
-  return Number(String(valor).replace(/[^\d]/g, "")) || 0;
-}
 
 // Colores personalizados para los estados (debe coincidir con Appointments.jsx)
 const ESTADO_COLORES = {
@@ -69,7 +65,7 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
     valorTotal = cita.servicios.reduce((acc, s) => {
       const precio = s.precio_unitario || s.precio || 0;
       const cantidad = parseInt(s.cantidad || 1);
-      return acc + limpiarPrecio(precio) * cantidad;
+      return acc + parseFormattedNumber(precio) * cantidad;
     }, 0);
   }
 
@@ -230,7 +226,7 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
           {/* Valor Total */}
           <div className="flex justify-end items-center gap-8 mb-4">
             <div className="text-lg font-bold text-text-main">
-              Valor Total: <span className="text-primary">${valorTotal}</span>
+              Valor Total: <span className="text-primary">{formatPrice(valorTotal)}</span>
             </div>
           </div>
           {errorCancel && (

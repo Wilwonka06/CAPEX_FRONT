@@ -4,15 +4,14 @@ import UserTable from './components/UserTable';
 import CreateUser from './components/CreateUser';
 import EditUser from './components/EditUser';
 import UserDetail from './components/UserDetail';
-import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
+import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import usersService from './API/usersService';
 import { useOutletContext } from 'react-router-dom';
 
 import { getCitasEnEjecucion } from '../SaleServices/API/CitasService';
 
-const USERS_PER_PAGE = 10;
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 
@@ -69,24 +68,6 @@ const sortUsers = (usersArray) => {
   return sortedUsers;
 };
 
-// Función helper para buscar recursivamente en objetos y arrays
-const searchInValue = (value, searchTerm) => {
-  if (value === null || value === undefined) return false;
-  
-  // Si es un objeto, buscar en sus valores
-  if (typeof value === 'object' && !Array.isArray(value)) {
-    return Object.values(value).some(val => searchInValue(val, searchTerm));
-  }
-  
-  // Si es un array, buscar en cada elemento
-  if (Array.isArray(value)) {
-    return value.some(item => searchInValue(item, searchTerm));
-  }
-  
-  // Para valores primitivos, convertir a string y buscar
-  return String(value).toLowerCase().includes(searchTerm);
-};
-
 const Users = () => {
   const { setTitle } = useOutletContext();
   const [users, setUsers] = useState([]);
@@ -102,10 +83,6 @@ const Users = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-
-  // Estado para paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // Default a 10 items
 
   // Cargar usuarios desde la API al iniciar
   useEffect(() => {
@@ -175,44 +152,14 @@ const Users = () => {
       setFilteredUsers(sortedUsers);
       return;
     }
-    const lowerTerm = searchTerm.toLowerCase();
-    const filtered = users.filter(user => {
-      // Buscar recursivamente en todos los campos del usuario
-      return Object.values(user).some(val => searchInValue(val, lowerTerm));
-    });
-    console.log('🔍 [Users] Usuarios filtrados con término:', searchTerm, '->', filtered.length);
-    
-    // Verificar si el usuario objetivo está en los resultados
-    const targetInFiltered = filtered.find(u => 
-      u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com')
-    );
-    if (targetInFiltered) {
-      console.log('✅ [Users] Usuario objetivo encontrado en resultados filtrados');
-    } else if (users.some(u => u.correo && u.correo.toLowerCase().includes('heieihei183@gmail.com'))) {
-      console.warn('⚠️ [Users] Usuario objetivo existe pero fue filtrado por:', searchTerm);
-    }
+    // Usar la función helper de búsqueda universal
+    const filtered = filterBySearch(users, searchTerm);
     
     // Aplicar ordenamiento también a los resultados filtrados
     const sortedFiltered = sortUsers(filtered);
     setFilteredUsers(sortedFiltered);
   }, [searchTerm, users]);
 
-  // Paginación
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Resetear página al cambiar el filtro
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, itemsPerPage]); // Resetear también si cambia itemsPerPage
-
-  const handleItemsPerPageChange = (newVal) => {
-    setItemsPerPage(newVal);
-    setCurrentPage(1);
-  };
 
   // Acciones CRUD
   const handleCreateUser = async (newUser) => {
@@ -267,13 +214,37 @@ const Users = () => {
     }
   };
 
-  // Handler para eliminar usuario - muestra modal primero
-  const handleDeleteUser = (userId) => {
+  // Handler para eliminar usuario - verifica asociaciones y muestra modal
+  const handleDeleteUser = async (userId) => {
     const userToDelete = users.find(u => (u.id_usuario || u.id) === userId);
-    if (userToDelete) {
-      setPendingDelete({ id: userId, user: userToDelete });
-      setShowDeleteModal(true);
+    if (!userToDelete) return;
+
+    try {
+      // Cargar el usuario completo para verificar si tiene ventas u órdenes asociadas
+      const response = await usersService.getById(userId);
+      if (response.success && response.data) {
+        const userComplete = response.data;
+        const hasClientAssociations = userComplete.hasClientAssociations || false;
+        const clientAssociationsInfo = userComplete.clientAssociationsInfo || null;
+
+        // Si el usuario tiene ventas u órdenes asociadas, no permitir eliminación
+        if (hasClientAssociations) {
+          const message = clientAssociationsInfo?.message || 
+            'Este usuario no puede ser eliminado porque tiene ventas u órdenes de servicio asociadas.';
+          
+          showError(message, { id: 'user-delete-error' });
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar asociaciones del usuario:', error);
+      // Si hay error al verificar, continuar con la confirmación pero advertir
+      showError('No se pudo verificar si el usuario tiene ventas asociadas. Proceda con precaución.', { id: 'user-verify-warning' });
     }
+
+    // Si no tiene asociaciones, proceder con el modal de confirmación
+    setPendingDelete({ id: userId, user: userToDelete });
+    setShowDeleteModal(true);
   };
 
   // Handler para confirmar eliminación
@@ -460,7 +431,7 @@ const Users = () => {
                 </div>
               ) : (
                 <UserTable
-                  users={paginatedUsers}
+                  users={filteredUsers}
                   onView={openDetail}
                   onEdit={openEdit}
                   onDelete={handleDeleteUser}
@@ -469,17 +440,6 @@ const Users = () => {
                 />
               )}
             </div>
-            {filteredUsers.length > 0 && (
-              <Paginator
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                totalItems={filteredUsers.length}
-                onItemsPerPageChange={handleItemsPerPageChange}
-                pageSizeOptions={[5, 10, 20, 50, 100]}
-              />
-            )}
           </div>
         </div>
       </div>

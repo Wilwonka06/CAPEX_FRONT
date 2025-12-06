@@ -460,7 +460,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                   <input
                     type="text"
                     name="duracion"
-                    value={formData.duracion}
+                    value={formatNumber(formData.duracion)}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
@@ -486,7 +486,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                   <input
                     type="text"
                     name="precio"
-                    value={formData.precio}
+                    value={formatNumber(formData.precio)}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
@@ -496,7 +496,7 @@ const AddServices = ({ onClose, onAdd, services = [], categories = [] }) => {
                         : "border-gray-200 hover:border-gray-300"
                     } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
                     required
-                    placeholder="Ej: 50000"
+                    placeholder="Ej: 50.000"
                   />
                   {errors.precio && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -527,4 +527,4 @@ AddServices.propTypes = {
 };
 
 export default AddServices;
-import { formatNumberInput, parseFormattedNumber } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatNumberInput, parseFormattedNumber } from '../../../../../shared/utils/formatters';
