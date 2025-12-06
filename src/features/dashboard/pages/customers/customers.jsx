@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import CustomerTable from "./components/CustomerTable";
 import SearchCustomer from '../../../../shared/Search';
-import Paginator from '../../../../shared/Paginator';
 import CreateCustomer from "./components/CreateCustomer";
 import EditCustomer from "./components/EditCustomer";
 import CustomerDetail from "./components/CustomerDetail";
@@ -16,16 +15,6 @@ const CustomersPage = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10,
-  });
-  const [queryParams, setQueryParams] = useState({
-    page: 1,
-    limit: 10,
-  });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -40,21 +29,16 @@ const CustomersPage = () => {
   const { setTitle } = useOutletContext();
 
   // Función para cargar clientes
-  const loadCustomers = async (params = queryParams) => {
+  const loadCustomers = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await customersService.getAll(params);
+      // Cargar todos los clientes (sin parámetros de paginación)
+      const response = await customersService.getAll();
 
       if (response.success) {
         setCustomers(response.data || []);
-        setPagination({
-          currentPage: response.page || 1,
-          totalPages: response.totalPages || 1,
-          totalItems: response.total || 0,
-          itemsPerPage: response.limit || 10,
-        });
       } else {
         throw new Error(response.message || 'Error al obtener clientes');
       }
@@ -76,25 +60,17 @@ const CustomersPage = () => {
     return () => setTitle('');
   }, [setTitle]);
 
-  // Función para buscar clientes
-  const searchCustomers = async (searchTerm, filters = {}) => {
-    const searchParams = {
-      ...queryParams,
-      search: searchTerm,
-      page: 1, // Resetear a primera página
-      ...filters,
-    };
-
-    setQueryParams(searchParams);
-    await loadCustomers(searchParams);
-  };
-
-  // Función para limpiar filtros
-  const clearFilters = async () => {
-    const newParams = { page: 1, limit: queryParams.limit };
-    setQueryParams(newParams);
-    await loadCustomers(newParams);
-  };
+  // Filtrar clientes localmente
+  const filteredCustomers = customers.filter(customer => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (customer.nombre || '').toLowerCase().includes(searchLower) ||
+      (customer.documentNumber || '').toLowerCase().includes(searchLower) ||
+      (customer.email || '').toLowerCase().includes(searchLower) ||
+      (customer.phone || '').toLowerCase().includes(searchLower)
+    );
+  });
 
   // Función para crear cliente
   const createCustomer = async (customerData) => {
@@ -108,12 +84,7 @@ const CustomersPage = () => {
           const response = await customersService.create(customerData);
 
           if (response.success) {
-            const refreshParams = {
-              page: 1,
-              limit: queryParams.limit || 10,
-            };
-            setQueryParams(refreshParams);
-            await loadCustomers(refreshParams);
+            await loadCustomers();
             return response.data;
           } else {
             throw new Error(response.message || 'Error al crear cliente');
@@ -144,7 +115,7 @@ const CustomersPage = () => {
           const response = await customersService.update(id, customerData);
 
           if (response.success) {
-            await loadCustomers(queryParams);
+            await loadCustomers();
             return response.data;
           } else {
             throw new Error(response.message || 'Error al actualizar cliente');
@@ -195,22 +166,9 @@ const CustomersPage = () => {
     }
   };
 
-  // Función para cambiar página
-  const changePage = async (page) => {
-    const newParams = { ...queryParams, page };
-    setQueryParams(newParams);
-    await loadCustomers(newParams);
-  };
-
   // Función para manejar la búsqueda
   const handleSearch = (e) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    if (term.trim()) {
-      searchCustomers(term.trim());
-    } else {
-      clearFilters();
-    }
+    setSearchTerm(e.target.value);
   };
 
   // Función para crear un nuevo cliente
@@ -290,7 +248,7 @@ const CustomersPage = () => {
           const response = await customersService.changeStatus(customerId, nextStatus);
           
           if (response.success) {
-            await loadCustomers(queryParams);
+            await loadCustomers();
             return response;
           }
           throw new Error('Error al cambiar estado');
@@ -310,10 +268,6 @@ const CustomersPage = () => {
     }
   };
 
-  // Función para cambiar página
-  const handlePageChange = (page) => {
-    changePage(page);
-  };
 
   // Estado de carga inicial
   const isInitialLoading = loading && customers.length === 0;
@@ -362,7 +316,7 @@ const CustomersPage = () => {
                 </div>
               ) : (
                 <CustomerTable
-                  customers={customers}
+                  customers={filteredCustomers}
                   onView={handleViewCustomer}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteCustomer}
@@ -371,15 +325,6 @@ const CustomersPage = () => {
                 />
               )}
             </div>
-
-            {/* Paginación */}
-            {pagination.totalPages > 1 && (
-              <Paginator
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
           </div>
         </div>
       </div>
@@ -390,7 +335,7 @@ const CustomersPage = () => {
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={async () => {
-            await loadCustomers({ page: 1, limit: queryParams.limit });
+            await loadCustomers();
             setIsCreateModalOpen(false);
           }}
           customers={customers}
@@ -418,7 +363,7 @@ const CustomersPage = () => {
             setSelectedCustomer(null);
           }}
           onSuccess={async () => {
-            await loadCustomers(queryParams);
+            await loadCustomers();
             setIsEditModalOpen(false);
             setSelectedCustomer(null);
           }}

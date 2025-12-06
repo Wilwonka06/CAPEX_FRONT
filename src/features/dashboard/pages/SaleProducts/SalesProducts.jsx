@@ -4,7 +4,6 @@ import productsService from '../products/API/productsService';
 import salesService from './API/salesService';
 import usersService from '../users/API/usersService';
 import Search from '../../../../shared/Search';
-import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { formatNumber } from '../../../../shared/utils/formatters';
@@ -31,7 +30,6 @@ const SalesProducts = () => {
 
   // Estados UI
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -41,7 +39,6 @@ const SalesProducts = () => {
   const [deletingId, setDeletingId] = useState(null);
   
   const { setTitle } = useOutletContext();
-  const itemsPerPage = 5;
 
   // ===== CARGAR DATOS INICIALES =====
   useEffect(() => {
@@ -122,19 +119,7 @@ const SalesProducts = () => {
     setFilteredSales(filterBySearch(sales, searchTerm));
   }, [searchTerm, sales]);
 
-  // ===== PAGINACIÓN =====
-  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSales = filteredSales.slice(startIndex, startIndex + itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
   // ===== MANEJADORES =====
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -204,36 +189,36 @@ const SalesProducts = () => {
     if (!pendingDelete) return;
 
     setDeletingId(pendingDelete.id);
-    setLoading(true);
-    
-    const salePromise = (async () => {
-      const response = await salesService.changeStatus(pendingDelete.id, 'Cancelado');
+      setLoading(true);
       
-      if (response.success) {
-        await loadSales(); // Recargar lista
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al cancelar la venta');
-      }
-    })();
+      const salePromise = (async () => {
+      const response = await salesService.changeStatus(pendingDelete.id, 'Cancelado');
+        
+        if (response.success) {
+          await loadSales(); // Recargar lista
+          return response.data;
+        } else {
+          throw new Error(response.message || 'Error al cancelar la venta');
+        }
+      })();
 
-    toast.promise(salePromise, {
-      loading: 'Cancelando venta...',
-      success: 'Venta cancelada exitosamente',
-      error: (err) => {
-        console.error('Error canceling sale:', err);
-        return err.response?.data?.message || err.message || 'Error al cancelar la venta';
-      },
-    });
+      toast.promise(salePromise, {
+        loading: 'Cancelando venta...',
+        success: 'Venta cancelada exitosamente',
+        error: (err) => {
+          console.error('Error canceling sale:', err);
+          return err.response?.data?.message || err.message || 'Error al cancelar la venta';
+        },
+      });
 
-    try {
-      await salePromise;
+      try {
+        await salePromise;
       setShowDeleteModal(false);
       setPendingDelete(null);
-    } catch (error) {
-      // Error ya manejado por toast.promise
-    } finally {
-      setLoading(false);
+      } catch (error) {
+        // Error ya manejado por toast.promise
+      } finally {
+        setLoading(false);
       setDeletingId(null);
     }
   };
@@ -363,9 +348,6 @@ const SalesProducts = () => {
                   onView={() => {}}
                   onAnnul={() => {}}
                   onDownload={() => {}}
-                  currentPage={1}
-                  totalPages={1}
-                  onPageChange={() => {}}
                   loading={true}
                 />
               ) : filteredSales.length === 0 ? (
@@ -380,7 +362,7 @@ const SalesProducts = () => {
               ) : (
                 <>
                   <SalesTable
-                    sales={paginatedSales}
+                    sales={filteredSales}
                     customers={customers}
                     onView={handleViewSale}
                     onAnnul={handleDeleteSale}
@@ -412,22 +394,8 @@ const SalesProducts = () => {
                         toast.error(e.message || 'Error al descargar factura');
                       }
                     }}
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
                     loading={false}
                   />
-
-                {/* Paginación */}
-                {totalPages > 1 && (
-                  <div className="mt-6">
-                    <Paginator
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                    />
-                  </div>
-                )}
                 </>
               )}
             </div>

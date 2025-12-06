@@ -4,7 +4,7 @@ import productsService from "../../products/API/productsService";
 import suppliersService from "../../suppliers/API/suppliersService";
 import CreateSupplier from "../../suppliers/components/CreateSupplier";
 import CreateProduct from "../../products/components/CreateProduct";
-import { formatNumber, formatPercentage, parseFormattedNumber } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatNumberInput, formatPrice, formatPercentage, parseFormattedNumber } from "../../../../../shared/utils/formatters";
 
 export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   const [productsList, setProductsList] = useState([]);
@@ -119,9 +119,10 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   }, [productoSeleccionado, productsSelect]);
 
   useEffect(() => {
-    const c = parseFloat(costo);
+    const c = parseFormattedNumber(costo);
     if (isFinite(c) && c > 0) {
-      setPrecioVenta((c * 1.2).toFixed(2));
+      const precioCalculado = (c * 1.2);
+      setPrecioVenta(formatNumber(precioCalculado, 2));
     } else {
       setPrecioVenta("");
     }
@@ -138,7 +139,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
 
     // Calcular subtotal (sin IVA)
     const newSubtotal = itemsCompra.reduce(
-      (acc, item) => acc + ((item.costo || 0) * (parseInt(item.cantidad) || 0)),
+      (acc, item) => acc + ((item.costo || 0) * (Math.floor(parseFormattedNumber(item.cantidad)) || 0)),
       0
     );
 
@@ -151,21 +152,10 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     setTotal(newSubtotal + newTotalIva);
   }, [itemsCompra, ivaGeneral]);
 
-  // Función para formatear números usando el estándar del proyecto
-  const formatPrice = (num) => {
-    return formatNumber(num);
-  };
-
-  const cleanNumber = (str) => {
-    if (!str) return "";
-    return str.toString().replace(/[^0-9.]/g, "");
-  };
-
-  const handleNumberInput = (e, setter) => {
+  const handleNumberInput = (e, setter, decimals = 0) => {
     const value = e.target.value;
-    if (value === "" || /^\d*\.?\d*$/.test(value)) {
-      setter(value);
-    }
+    const formatted = formatNumberInput(value, decimals);
+    setter(formatted);
   };
 
   const handleAddProduct = () => {
@@ -179,13 +169,17 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     if (!productoSeleccionado) {
       nuevosErrores.producto = "Seleccione un producto.";
     }
-    if (!cantidad || Number(cantidad) <= 0) {
+    const cantidadNum = parseFormattedNumber(cantidad);
+    const costoNum = parseFormattedNumber(costo);
+    const precioVentaNum = parseFormattedNumber(precioVenta);
+    
+    if (!cantidad || cantidadNum <= 0) {
       nuevosErrores.cantidad = "La cantidad debe ser mayor a 0.";
     }
-    if (costo === "" || Number(costo) < 0) {
+    if (costo === "" || costoNum < 0) {
       nuevosErrores.costo = "El costo no puede ser negativo.";
     }
-    if (precioVenta === "" || Number(precioVenta) < 0) {
+    if (precioVenta === "" || precioVentaNum < 0) {
       nuevosErrores.precioVenta = "El precio de venta no puede ser negativo.";
     }
 
@@ -202,12 +196,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       return;
     }
 
-    const costoNum = parseFloat(costo);
-    const cantidadNum = parseInt(cantidad);
-    const precioVentaNum = parseFloat(precioVenta);
+    // Reutilizar las variables ya declaradas arriba
+    const cantidadNumFinal = Math.floor(cantidadNum);
     
     // Calcular subtotal sin IVA
-    const subtotalItem = costoNum * cantidadNum;
+    const subtotalItem = costoNum * cantidadNumFinal;
     
     // Calcular IVA del item usando el IVA general
     const ivaDecimal = ivaGeneral / 100;
@@ -219,7 +212,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     const newItem = {
       ...producto,
       codigo: `P${producto.id.toString().padStart(3, "0")}`,
-      cantidad: cantidadNum,
+      cantidad: cantidadNumFinal,
       costo: costoNum,
       precioVenta: precioVentaNum,
       iva: ivaGeneral,
@@ -236,7 +229,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
   };
 
   const handleUpdateCantidad = (index, nuevaCantidad) => {
-    const cantidadNum = parseInt(nuevaCantidad) || 0;
+    const cantidadNum = Math.floor(parseFormattedNumber(nuevaCantidad)) || 0;
     setItemsCompra((prev) =>
       prev.map((item, i) => {
         if (i === index) {
@@ -277,10 +270,12 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
     }
 
     try {
-      const ivaRateDecimal = (parseFloat(ivaGeneral) || 0) > 1 ? (parseFloat(ivaGeneral) / 100) : (parseFloat(ivaGeneral) || 0);
+      // IVA con formato numérico
+      const ivaValue = parseFormattedNumber(ivaGeneral) || 0;
+      const ivaRateDecimal = ivaValue > 1 ? (ivaValue / 100) : ivaValue;
       const ivaAmount = itemsCompra.reduce((acc, item) => {
-        const precio = parseFloat(item.costo || 0);
-        const cantidad = parseInt(item.cantidad || 0);
+        const precio = parseFormattedNumber(item.costo || 0);
+        const cantidad = Math.floor(parseFormattedNumber(item.cantidad || 0));
         return acc + (precio * cantidad * ivaRateDecimal);
       }, 0);
 
@@ -449,8 +444,12 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                 <input
                   type="text"
                   className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
-                  value={ivaGeneral}
-                  onChange={(e) => handleNumberInput(e, (val) => setIvaGeneral(parseFloat(val) || 0))}
+                  value={formatNumber(ivaGeneral, 0)}
+                  onChange={(e) => {
+                    const formatted = formatNumberInput(e.target.value, 0);
+                    setIvaGeneral(parseFormattedNumber(formatted) || 0);
+                  }}
+                  placeholder="19"
                 />
               </div>
             </div>
@@ -523,9 +522,9 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   </label>
                   <input
                     type="text"
-                    value={cantidad}
+                    value={formatNumber(cantidad)}
                     onChange={(e) => {
-                      handleNumberInput(e, setCantidad);
+                      handleNumberInput(e, setCantidad, 0);
                       if (errores.cantidad) {
                         setErrores(prev => {
                           const newErrores = { ...prev };
@@ -555,9 +554,9 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                   </label>
                   <input
                     type="text"
-                    value={costo}
+                    value={formatNumber(costo, 2)}
                     onChange={(e) => {
-                      handleNumberInput(e, setCosto);
+                      handleNumberInput(e, setCosto, 2);
                       if (errores.costo) {
                         setErrores(prev => {
                           const newErrores = { ...prev };
@@ -572,7 +571,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         : 'border-gray-200 hover:border-gray-300'
                     } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100`}
                     disabled={!proveedorId}
-                    placeholder="0.00"
+                    placeholder="0,00"
                   />
                   {errores.costo && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -583,14 +582,14 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                 </div>
                 <div className="space-y-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Precio Venta (auto 20%)
+                    Precio (auto 20%)
                   </label>
                   <input
                     type="text"
-                    value={precioVenta}
+                    value={formatNumber(precioVenta, 2)}
                     readOnly
                     className="w-full px-3 py-2 border-2 rounded-xl text-sm bg-gray-100 border-gray-200"
-                    placeholder="0.00"
+                    placeholder="0,00"
                   />
                   {errores.precioVenta && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -638,24 +637,22 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         <tr key={index}>
                           <td className="py-2 px-3">{item.codigo}</td>
                           <td className="py-2 px-3">{item.nombre}</td>
-                          <td className="py-2 px-3">${formatPrice(item.costo || 0)}</td>
-                          <td className="py-2 px-3">${formatPrice(item.precioVenta || 0)}</td>
+                          <td className="py-2 px-3">{formatPrice(item.costo || 0)}</td>
+                          <td className="py-2 px-3">{formatPrice(item.precioVenta || 0)}</td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
                               className="w-20 px-2 py-1 border rounded-md"
-                              value={item.cantidad}
+                              value={formatNumber(item.cantidad)}
                               onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === "" || /^\d+$/.test(val)) {
-                                  handleUpdateCantidad(index, val);
-                                }
+                                const formatted = formatNumberInput(e.target.value, 0);
+                                handleUpdateCantidad(index, formatted);
                               }}
                             />
                           </td>
                           <td className="py-2 px-3">{formatPercentage(item.iva || 0)}</td>
                           <td className="py-2 px-3">
-                        ${formatPrice(((item.costo || 0) * (item.cantidad || 0)))}
+                        {formatPrice(((item.costo || 0) * (item.cantidad || 0)))}
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
@@ -682,14 +679,14 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Subtotal:</td>
                         <td className="py-2 px-3 font-bold" colSpan="2">
-                          ${formatPrice(subtotal || 0)}
+                          {formatPrice(subtotal || 0)}
                         </td>
                       </tr>
                       <tr>
                         <td colSpan="4"></td>
                         <td className="py-2 px-3 font-bold text-right">Total IVA:</td>
                         <td className="py-2 px-3 font-bold" colSpan="2">
-                          ${formatPrice(totalIva || 0)}
+                          {formatPrice(totalIva || 0)}
                         </td>
                       </tr>
                       <tr>
@@ -698,7 +695,7 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
                           Total:
                         </td>
                         <td className="py-2 px-3 font-bold text-primary" colSpan="2">
-                          ${formatPrice(total || 0)}
+                          {formatPrice(total || 0)}
                         </td>
                       </tr>
                     </tfoot>

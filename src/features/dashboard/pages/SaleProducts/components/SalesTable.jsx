@@ -1,11 +1,8 @@
 import PropTypes from "prop-types";
 import TableSkeleton from "../../../../../shared/components/TableSkeleton";
-import Paginator from "../../../../../shared/Paginator";
 import { formatPrice } from "../../../../../shared/utils/formatters";
 
-export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, currentPage, totalPages, onPageChange, loading = false }) {
-  const formatNumber = (num) => formatPrice(num).replace('$','');
-
+export default function SalesTable({ sales, customers = [], onView, onAnnul, onDownload, loading = false }) {
   if (loading) {
     return <TableSkeleton columns={5} rows={5} hasAvatar={false} hasActions={true} />;
   }
@@ -59,14 +56,6 @@ export default function SalesTable({ sales, customers = [], onView, onAnnul, onD
           )}
         </tbody>
       </table>
-      {/* Paginador */}
-      {totalPages > 1 && (
-        <Paginator
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
-        />
-      )}
     </div>
   );
 }
@@ -77,7 +66,5 @@ SalesTable.propTypes = {
   onView: PropTypes.func.isRequired,
   onAnnul: PropTypes.func.isRequired,
   onDownload: PropTypes.func.isRequired,
-  currentPage: PropTypes.number.isRequired,
-  totalPages: PropTypes.number.isRequired,
-  onPageChange: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
 };

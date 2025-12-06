@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import OrderDetailModal from "./components/OrderDetailModal";
 import EditOrderModal from "./components/EditOrderModal";
-import Paginator from '../../../../shared/Paginator';
 import TableSkeleton from '../../../../shared/components/TableSkeleton';
 import Search from '../../../../shared/Search';
 import { formatNumber } from '../../../../shared/utils/formatters';
@@ -85,13 +84,11 @@ export default function OrdersPage() {
 
   // Estados UI
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [detailOrder, setDetailOrder] = useState(null);
   const [editOrder, setEditOrder] = useState(null);
   const [filteredOrders, setFilteredOrders] = useState([]);
 
   const { setTitle } = useOutletContext();
-  const itemsPerPage = 5;
 
   // ===== CARGAR DATOS INICIALES =====
   useEffect(() => {
@@ -130,15 +127,6 @@ export default function OrdersPage() {
     // Usar la función helper de búsqueda universal
     setFilteredOrders(filterBySearch(orders, searchTerm));
   }, [searchTerm, orders]);
-
-  // ===== PAGINACIÓN =====
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
 
   // ===== MANEJADORES =====
   const handleUpdateEstado = async (id, nuevoEstado) => {
@@ -207,22 +195,12 @@ export default function OrdersPage() {
                 </p>
               </div>
             ) : (
-              <>
-                <OrdersTable
-                  orders={paginatedOrders}
-                  onView={setDetailOrder}
-                  onEdit={setEditOrder}
-                  loading={loading}
-                />
-
-                {totalPages > 1 && (
-                  <Paginator
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                )}
-              </>
+              <OrdersTable
+                orders={filteredOrders}
+                onView={setDetailOrder}
+                onEdit={setEditOrder}
+                loading={loading}
+              />
             )}
           </div>
         </div>

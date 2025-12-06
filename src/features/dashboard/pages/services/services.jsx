@@ -12,14 +12,11 @@ import ServicesTable from './components/ServicesTable';
 import AddServices from './components/CreateService';
 import EditServices from "./components/EditServices";
 import ServiceDetail from './components/ServiceDetail';
-import Paginator from "../../../../shared/Paginator";
 import SearchProduct from '../../../../shared/Search';
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
-
-const SERVICES_PER_PAGE = 10;
 
 const Services = () => {
   const { setTitle } = useOutletContext();
@@ -29,7 +26,6 @@ const Services = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [togglingId, setTogglingId] = useState(null);
   
@@ -103,15 +99,6 @@ const Services = () => {
   // Filtrar servicios usando la función helper de búsqueda universal
   const filteredServices = filterBySearch(services, searchTerm);
 
-  // Paginación
-  const totalPages = Math.ceil(filteredServices.length / SERVICES_PER_PAGE);
-  const startIndex = (currentPage - 1) * SERVICES_PER_PAGE;
-  const paginatedServices = filteredServices.slice(startIndex, startIndex + SERVICES_PER_PAGE);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, services]);
-
   // Handler para crear servicio
   const handleAddService = async (newServiceData) => {
     const servicePromise = (async () => {
@@ -179,25 +166,25 @@ const Services = () => {
     if (!pendingDelete) return;
 
     setDeletingId(pendingDelete.id);
-    try {
-      await executeWithToast({
-        promiseFn: async () => {
+      try {
+        await executeWithToast({
+          promiseFn: async () => {
           await servicesService.delete(pendingDelete.id);
-          await loadData();
-          return true;
-        },
-        operation: 'delete',
-        entity: 'servicio',
+            await loadData();
+            return true;
+          },
+          operation: 'delete',
+          entity: 'servicio',
         id: pendingDelete.id,
-        loadingMessage: 'Eliminando servicio...',
-        successMessage: 'Servicio eliminado exitosamente',
+          loadingMessage: 'Eliminando servicio...',
+          successMessage: 'Servicio eliminado exitosamente',
         onSuccess: () => {
           setShowDeleteModal(false);
           setPendingDelete(null);
         },
-      });
-    } catch {
-      // Error ya manejado por executeWithToast
+        });
+      } catch {
+        // Error ya manejado por executeWithToast
     } finally {
       setDeletingId(null);
     }
@@ -246,8 +233,7 @@ const Services = () => {
     }
   };
 
-  // Handlers de paginación y búsqueda
-  const handlePageChange = (page) => setCurrentPage(page);
+  // Handler de búsqueda
   const handleSearch = (e) => setSearchTerm(e.target.value);
   
   // Handler para cerrar modales
@@ -298,7 +284,7 @@ const Services = () => {
 
             {/* Tabla de servicios */}
             <ServicesTable
-              services={paginatedServices}
+              services={filteredServices}
               onToggleStatus={handleToggleStatus}
               togglingId={togglingId}
               onView={(service) => {
@@ -312,15 +298,6 @@ const Services = () => {
               onDelete={handleDeleteService}
               loading={loading}
             />
-            
-            {/* Paginación */}
-            {totalPages > 1 && !loading && (
-              <Paginator
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
           </div>
         </div>
       </div>

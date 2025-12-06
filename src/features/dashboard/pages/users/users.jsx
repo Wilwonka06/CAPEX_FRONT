@@ -4,7 +4,6 @@ import UserTable from './components/UserTable';
 import CreateUser from './components/CreateUser';
 import EditUser from './components/EditUser';
 import UserDetail from './components/UserDetail';
-import Paginator from '../../../../shared/Paginator';
 import LoadingTable from '../../../../shared/components/LoadingTable';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
@@ -13,7 +12,6 @@ import { useOutletContext } from 'react-router-dom';
 
 import { getCitasEnEjecucion } from '../SaleServices/API/CitasService';
 
-const USERS_PER_PAGE = 10;
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 
 
@@ -85,10 +83,6 @@ const Users = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-
-  // Estado para paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // Default a 10 items
 
   // Cargar usuarios desde la API al iniciar
   useEffect(() => {
@@ -166,22 +160,6 @@ const Users = () => {
     setFilteredUsers(sortedFiltered);
   }, [searchTerm, users]);
 
-  // Paginación
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Resetear página al cambiar el filtro
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, itemsPerPage]); // Resetear también si cambia itemsPerPage
-
-  const handleItemsPerPageChange = (newVal) => {
-    setItemsPerPage(newVal);
-    setCurrentPage(1);
-  };
 
   // Acciones CRUD
   const handleCreateUser = async (newUser) => {
@@ -453,7 +431,7 @@ const Users = () => {
                 </div>
               ) : (
                 <UserTable
-                  users={paginatedUsers}
+                  users={filteredUsers}
                   onView={openDetail}
                   onEdit={openEdit}
                   onDelete={handleDeleteUser}
@@ -462,17 +440,6 @@ const Users = () => {
                 />
               )}
             </div>
-            {filteredUsers.length > 0 && (
-              <Paginator
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                totalItems={filteredUsers.length}
-                onItemsPerPageChange={handleItemsPerPageChange}
-                pageSizeOptions={[5, 10, 20, 50, 100]}
-              />
-            )}
           </div>
         </div>
       </div>

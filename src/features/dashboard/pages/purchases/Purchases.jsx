@@ -19,12 +19,6 @@ export default function Shopping() {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10,
-  });
 
   // Estados para UI
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,25 +38,15 @@ export default function Shopping() {
   }, [setTitle]);
 
   // Función para cargar compras
-  const loadPurchases = async (params = {}) => {
+  const loadPurchases = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await purchasesService.getAll({
-        page: pagination.currentPage,
-        limit: pagination.itemsPerPage,
-        search: searchTerm,
-        ...params,
-      });
+      // Cargar todas las compras (sin parámetros de paginación)
+      const response = await purchasesService.getAll();
 
       if (response.success) {
         setPurchases(response.data || []);
-        setPagination({
-          currentPage: response.pagination?.currentPage || 1,
-          totalPages: response.pagination?.totalPages || 1,
-          totalItems: response.pagination?.totalItems || 0,
-          itemsPerPage: response.pagination?.itemsPerPage || 10,
-        });
       } else {
         throw new Error(response.message || 'Error al cargar compras');
       }
@@ -101,14 +85,18 @@ export default function Shopping() {
   // Función para manejar búsqueda
   const handleSearch = (term) => {
     setSearchTerm(term);
-    loadPurchases({ search: term, page: 1 });
   };
 
-  // Función para cambiar página
-  const handlePageChange = (page) => {
-    setPagination(prev => ({ ...prev, currentPage: page }));
-    loadPurchases({ page });
-  };
+  // Filtrar compras localmente
+  const filteredPurchases = purchases.filter(purchase => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (purchase.numero_compra || '').toLowerCase().includes(searchLower) ||
+      (purchase.proveedor?.nombre || '').toLowerCase().includes(searchLower) ||
+      (purchase.estado || '').toLowerCase().includes(searchLower)
+    );
+  });
 
   // Descargar reporte de compras
   const handleDownloadReport = async () => {
@@ -208,12 +196,9 @@ export default function Shopping() {
                 </div>
               ) : (
                 <PurchasesTable
-                  purchases={purchases}
+                  purchases={filteredPurchases}
                   onView={setDetailCompra}
                   onAnnul={handleCancelPurchase}
-                  currentPage={pagination.currentPage}
-                  totalPages={pagination.totalPages}
-                  onPageChange={handlePageChange}
                   loading={loading}
                 />
               )}
