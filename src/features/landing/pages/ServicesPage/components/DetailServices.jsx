@@ -19,7 +19,7 @@ const DetailServices = ({ service, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in" onClick={handleBackdropClick}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative overflow-hidden animate-scale-in">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl relative overflow-hidden animate-scale-in max-h-[90vh] flex flex-col">
         {/* Elementos decorativos de fondo */}
         <div className="absolute top-0 left-0 w-32 h-32 bg-[#FACC15]/10 rounded-full blur-2xl"></div>
         <div className="absolute bottom-0 right-0 w-24 h-24 bg-[#FACC15]/15 rounded-full blur-xl"></div>
@@ -35,10 +35,10 @@ const DetailServices = ({ service, onClose }) => {
           </svg>
         </button>
 
-        <div className="flex flex-col lg:flex-row min-h-[600px]">
+        <div className="flex flex-col lg:flex-row flex-grow overflow-y-auto min-h-0">
           {/* Sección de imagen */}
-          <div className="lg:w-1/2 relative">
-            <div className="h-64 lg:h-full relative overflow-hidden">
+          <div className="lg:w-1/2 relative flex-shrink-0 lg:sticky lg:top-0">
+            <div className="h-64 lg:h-[90vh] min-h-[300px] relative overflow-hidden">
               {(typeof service.imagen === 'string' && service.imagen.startsWith('data:image')) ? (
                 <img
                   src={service.imagen}
@@ -77,7 +77,7 @@ const DetailServices = ({ service, onClose }) => {
           </div>
 
           {/* Sección de contenido */}
-          <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-between relative">
+          <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-between mb-10 relative flex-shrink-0">
             {/* Información principal */}
             <div className="mb-8">
               <h2 className="text-3xl lg:text-4xl font-bold text-[#1E1E1E] mb-4 font-nunito leading-tight">
@@ -149,7 +149,7 @@ const DetailServices = ({ service, onClose }) => {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 mb-5">
                 <button
                   onClick={onClose}
                   className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-300 font-poppins text-sm"
