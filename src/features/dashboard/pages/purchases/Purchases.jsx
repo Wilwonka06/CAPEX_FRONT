@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import SearchProduct from '../../../../shared/Search';
-import CreatePurchaseModal from './components/CreatePurchase';
-import PurchaseDetailModal from './components/PurchaseDetail';
-import PurchasesTable from './components/PurchasesTable';
-import LoadingTable from '../../../../shared/components/LoadingTable';
-import { formatNumber } from '../../../../shared/utils/formatters';
-import productsService from '../products/API/productsService';
-import purchasesService from './API/purchasesService';
-import suppliersService from '../suppliers/API/suppliersService';
-import Swal from 'sweetalert2';
-import { useOutletContext } from 'react-router-dom';
+import SearchProduct from "../../../../shared/Search";
+import CreatePurchaseModal from "./components/CreatePurchase";
+import PurchaseDetailModal from "./components/PurchaseDetail";
+import PurchasesTable from "./components/PurchasesTable";
+import LoadingTable from "../../../../shared/components/LoadingTable";
+import { formatNumber } from "../../../../shared/utils/formatters";
+import productsService from "../products/API/productsService";
+import purchasesService from "./API/purchasesService";
+import suppliersService from "../suppliers/API/suppliersService";
+import Swal from "sweetalert2";
+import { useOutletContext } from "react-router-dom";
+import Paginator from "../../../../shared/Paginator";
 
 export default function Shopping() {
   // Estados para productos
@@ -30,11 +31,11 @@ export default function Shopping() {
 
   // Cargar compras, proveedores y productos al montar
   useEffect(() => {
-    setTitle('Módulo de Compras');
+    setTitle("Módulo de Compras");
     loadPurchases();
     loadSuppliers();
     loadProducts();
-    return () => setTitle('');
+    return () => setTitle("");
   }, [setTitle]);
 
   // Función para cargar compras
@@ -48,11 +49,11 @@ export default function Shopping() {
       if (response.success) {
         setPurchases(response.data || []);
       } else {
-        throw new Error(response.message || 'Error al cargar compras');
+        throw new Error(response.message || "Error al cargar compras");
       }
     } catch (err) {
       setError(err.message);
-      console.error('Error loading purchases:', err);
+      console.error("Error loading purchases:", err);
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ export default function Shopping() {
         // suppliers se mantiene como estado local si es necesario
       }
     } catch (err) {
-      console.error('Error loading suppliers:', err);
+      console.error("Error loading suppliers:", err);
     }
   };
 
@@ -78,7 +79,7 @@ export default function Shopping() {
         setProducts(response.data || []);
       }
     } catch (err) {
-      console.error('Error loading products:', err);
+      console.error("Error loading products:", err);
     }
   };
 
@@ -88,52 +89,65 @@ export default function Shopping() {
   };
 
   // Filtrar compras localmente
-  const filteredPurchases = purchases.filter(purchase => {
+  const filteredPurchases = purchases.filter((purchase) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
-      (purchase.numero_compra || '').toLowerCase().includes(searchLower) ||
-      (purchase.proveedor?.nombre || '').toLowerCase().includes(searchLower) ||
-      (purchase.estado || '').toLowerCase().includes(searchLower)
+      (purchase.numero_compra || "").toLowerCase().includes(searchLower) ||
+      (purchase.proveedor?.nombre || "").toLowerCase().includes(searchLower) ||
+      (purchase.estado || "").toLowerCase().includes(searchLower)
     );
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, purchases]);
+  const totalItems = filteredPurchases.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pagePurchases = filteredPurchases.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   // Descargar reporte de compras
   const handleDownloadReport = async () => {
     try {
       await purchasesService.generateReport({
-        format: 'excel',
-        startDate: '2024-01-01',
-        endDate: new Date().toISOString().split('T')[0],
+        format: "excel",
+        startDate: "2024-01-01",
+        endDate: new Date().toISOString().split("T")[0],
       });
 
       // El servicio ya maneja la descarga del archivo
-      console.log('Report downloaded successfully');
+      console.log("Report downloaded successfully");
     } catch (error) {
-      console.error('Error downloading report:', error);
+      console.error("Error downloading report:", error);
     }
   };
 
   // Función para cancelar compra con confirmación
   const handleCancelPurchase = async (id) => {
-    const compra = purchases.find(c => c.id === id);
+    const compra = purchases.find((c) => c.id === id);
     const result = await Swal.fire({
-      title: '¿Estás seguro?',
+      title: "¿Estás seguro?",
       text: `¿Estás seguro de que deseas cancelar la compra #${compra?.id}? Esta acción no se puede deshacer.`,
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, cancelar',
-      cancelButtonText: 'Cancelar'
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, cancelar",
+      cancelButtonText: "Cancelar",
     });
 
     if (result.isConfirmed) {
       try {
-        await purchasesService.cancel(id, 'Cancelada por usuario');
+        await purchasesService.cancel(id, "Cancelada por usuario");
         await loadPurchases(); // Recargar lista
       } catch (error) {
-        console.error('Error canceling purchase:', error);
+        console.error("Error canceling purchase:", error);
       }
     }
   };
@@ -145,7 +159,7 @@ export default function Shopping() {
       setIsCreateOpen(false);
       await loadPurchases(); // Recargar lista
     } catch (error) {
-      console.error('Error creating purchase:', error);
+      console.error("Error creating purchase:", error);
     }
   };
 
@@ -183,7 +197,9 @@ export default function Shopping() {
                       <i className="bi bi-exclamation-triangle text-red-400"></i>
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-red-800">Error al cargar compras</h3>
+                      <h3 className="text-sm font-medium text-red-800">
+                        Error al cargar compras
+                      </h3>
                       <p className="text-sm text-red-700 mt-1">{error}</p>
                       <button
                         onClick={() => loadPurchases()}
@@ -195,12 +211,21 @@ export default function Shopping() {
                   </div>
                 </div>
               ) : (
-                <PurchasesTable
-                  purchases={filteredPurchases}
-                  onView={setDetailCompra}
-                  onAnnul={handleCancelPurchase}
-                  loading={loading}
-                />
+                <>
+                  <PurchasesTable
+                    purchases={pagePurchases}
+                    onView={setDetailCompra}
+                    onAnnul={handleCancelPurchase}
+                    loading={loading}
+                  />
+                  <Paginator
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={totalItems}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -214,10 +239,10 @@ export default function Shopping() {
         products={products}
       />
       {/* Modal de detalle de compra */}
-      <PurchaseDetailModal 
-        compra={detailCompra} 
-        isOpen={!!detailCompra} 
-        onClose={() => setDetailCompra(null)} 
+      <PurchaseDetailModal
+        compra={detailCompra}
+        isOpen={!!detailCompra}
+        onClose={() => setDetailCompra(null)}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
+import Paginator from '../../../../shared/Paginator';
 
 const RolesPage = () => {
   const [roles, setRoles] = useState([]);
@@ -71,6 +72,16 @@ const RolesPage = () => {
     ...role,
     name: role.name ?? role.nombre ?? '',
   }));
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roles]);
+  const totalItems = filteredRoles.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageRoles = filteredRoles.slice(startIndex, startIndex + itemsPerPage);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -213,11 +224,18 @@ const RolesPage = () => {
 
             {/* Tabla de roles */}
             <RolesTable 
-              roles={filteredRoles}
+              roles={pageRoles}
               onEdit={canEdit ? handleEditRole : null}
               onDelete={canDelete ? handleDeleteRole : null}
               onStatusChange={canEdit ? handleStatusChange : null}
               loading={loading}
+            />
+            <Paginator
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
             />
           </div>
         </div>

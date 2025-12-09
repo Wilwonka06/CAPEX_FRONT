@@ -8,12 +8,7 @@ const Paginator = ({
   totalItems,
   showInfo = false 
 }) => {
-  // Mostrar el paginador si hay 5 o más registros, independientemente de totalPages
-  // Si hay menos de 5 registros o no hay registros, no mostrar el paginador
-  if (totalItems !== undefined && totalItems < 5) return null;
-  
-  // Si no se proporciona totalItems, usar la lógica antigua (solo mostrar si hay más de una página)
-  if (totalItems === undefined && totalPages <= 1) return null;
+  if (!totalPages || totalPages <= 1) return null;
 
   const getVisiblePages = () => {
     const delta = 2; 

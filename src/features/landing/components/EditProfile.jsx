@@ -1,13 +1,16 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidPassword } from '../../../shared/validations';
+import { authService } from '../../auth/services/authServices';
+import { useAuth } from '../../../shared/contexts/AuthContext';
 
 const tiposDocumento = ['Cédula', 'Pasaporte', 'RUT', 'DNI'];
 
 const EditProfile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef();
-  const user = JSON.parse(localStorage.getItem('currentUser')) || {};
+  const { currentUser } = useAuth();
+  const user = currentUser || (JSON.parse(localStorage.getItem('currentUser')) || {});
   const [form, setForm] = useState({
     nombre: user.nombre || '',
     tipoDocumento: user.tipoDocumento || tiposDocumento[0],
@@ -39,7 +42,7 @@ const EditProfile = () => {
     }
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -65,34 +68,32 @@ const EditProfile = () => {
         return;
       }
     }
-    // Actualizar usuario en localStorage
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const idx = usuarios.findIndex(u => u.correo === user.correo);
-    if (idx === -1) {
-      setError('Usuario no encontrado.');
-      return;
-    }
-    const updatedUser = {
-      ...usuarios[idx],
+
+    const profileData = {
       nombre: form.nombre,
-      tipoDocumento: form.tipoDocumento,
+      tipo_documento: form.tipoDocumento,
       documento: form.documento,
-      fechaNacimiento: form.fechaNacimiento,
       correo: form.correo,
       telefono: form.telefono,
       direccion: form.direccion,
       foto: form.foto,
-      avatarCompressed: form.foto || usuarios[idx].avatarCompressed,
+      ...(form.password ? { contrasena: form.password } : {})
     };
-    if (form.password) {
-      updatedUser.password = form.password;
+
+    try {
+      const response = await authService.editProfile(profileData);
+      if (response && response.success && response.data) {
+        localStorage.setItem('currentUser', JSON.stringify(response.data));
+        window.dispatchEvent(new Event('user-auth-changed'));
+        setSuccess('¡Datos actualizados correctamente!');
+        setTimeout(() => navigate(-1), 1200);
+      } else {
+        setError('No se pudo actualizar el perfil.');
+      }
+    } catch (err) {
+      const backendMsg = err?.response?.data?.message;
+      setError(backendMsg || 'Error al actualizar el perfil');
     }
-    usuarios[idx] = updatedUser;
-    localStorage.setItem('usuarios', JSON.stringify(usuarios));
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    window.dispatchEvent(new Event('user-auth-changed'));
-    setSuccess('¡Datos actualizados correctamente!');
-    setTimeout(() => navigate(-1), 1200);
   };
 
   return (
