@@ -10,6 +10,7 @@ import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
+import Paginator from '../../../../shared/Paginator';
 
 const CatServices = () => {
   const { setTitle } = useOutletContext();
@@ -57,6 +58,16 @@ const CatServices = () => {
 
   // Filtrar categorías usando la función helper de búsqueda universal
   const filteredCategories = filterBySearch(categories, searchTerm);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categories]);
+  const totalItems = filteredCategories.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
 
   // CRUD Handlers
   const handleCreateCategory = async (newCategoryData) => {
@@ -241,7 +252,7 @@ const CatServices = () => {
 
             {/* Tabla de categorías */}
             <CategoriesTable
-              categories={filteredCategories}
+              categories={pageCategories}
               onToggleStatus={handleToggleStatus}
               togglingId={togglingId}
               onEdit={(category) => {
@@ -254,6 +265,13 @@ const CatServices = () => {
                 setShowDetailModal(true);
               }}
               loading={loading}
+            />
+            <Paginator
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
             />
           </div>
         </div>

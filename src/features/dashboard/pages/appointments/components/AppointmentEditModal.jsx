@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import { isValidDocumentByType } from '@/shared/validations';
@@ -8,7 +7,6 @@ import { employeesService, recurringSchedulingService } from '@/features/dashboa
 import ServiceSelection from './ServiceSelection';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 
 // Estados posibles de la cita

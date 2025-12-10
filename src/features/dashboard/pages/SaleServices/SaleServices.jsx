@@ -13,6 +13,7 @@ import { formatNumber, formatPrice } from '../../../../shared/utils/formatters';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import Paginator from '../../../../shared/Paginator';
 
 const SaleServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -120,6 +121,16 @@ const SaleServices = () => {
 
     return matchesSearch && matchesTab;
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, tab, services]);
+  const totalItems = filteredServices.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
   const handleViewClick = useCallback((order) => {
     setSelectedOrder(order);
@@ -368,7 +379,7 @@ const SaleServices = () => {
                         </td>
                       </tr>
                     ) : filteredServices.length > 0 ? (
-                      filteredServices.map((service) => (
+                      pageServices.map((service) => (
                       <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="py-3 px-4 font-medium text-gray-800">{service.clientName}</td>
                       <td className="py-3 px-4 text-gray-600">{(service.servicios || []).map(s => s.name).join(", ")}</td>
@@ -431,6 +442,13 @@ const SaleServices = () => {
               </table>
             </div>
             )}
+            <Paginator
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+            />
           </div>
         </div>
       </div>

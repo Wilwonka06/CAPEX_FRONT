@@ -1,5 +1,8 @@
 // AddEmployee.jsx - Corregido para guardar programaciones correctamente
 import React, { useState, useEffect } from 'react';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import { HOURS_12 } from '../../../../../shared/utils/timeFormat';
 import { DOC_TYPES_CODES, DOC_TYPE_LABELS, toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 import toast from 'react-hot-toast';
 import { 
@@ -29,6 +32,25 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [section1Disabled, setSection1Disabled] = useState(false);
+  const [scheduleDraft, setScheduleDraft] = useState({
+    dias_semana: [1,2,3,4,5],
+    bloques_horarios: [
+      { inicio: '09:00 AM', fin: '12:00 PM' },
+      { inicio: '01:00 PM', fin: '05:00 PM' }
+    ],
+    observaciones: ''
+  });
+
+  useEffect(() => {
+    const stored = localStorage.getItem('newEmployeeDraft');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setForm(prev => ({ ...prev, ...parsed }));
+      } catch {}
+    }
+  }, []);
 
   const isFormValid = () => {
     return form.nombre.trim() &&
@@ -46,18 +68,25 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
     return Object.keys(newErrors).length === 0;
   };
 
+  const isValidByCountry = (value, country) => {
+    const digits = String(value).replace(/[^0-9]/g, '');
+    const cc = country?.countryCode || '';
+    const lengthMap = {
+      us: [10], ca: [10], mx: [10], co: [10], br: [10,11], ar: [10], es: [9], pe: [9], cl: [9], ve: [10], ec: [9], gb: [10,11], fr: [9,10], de: [10,11]
+    };
+    const allowed = lengthMap[cc];
+    if (allowed) return allowed.includes(digits.length);
+    return digits.length >= 7 && digits.length <= 15;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // Validación para campos numéricos (documento y teléfono)
-    if (name === 'documento' || name === 'telefono') {
+    if (name === 'documento') {
       const numericValue = value.replace(/[^\d]/g, '');
       setForm(prev => ({ ...prev, [name]: numericValue }));
     } else {
       setForm(prev => ({ ...prev, [name]: value }));
     }
-
-    // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -89,8 +118,6 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
       case 'telefono':
         if (!value.trim()) {
           error = 'El teléfono es obligatorio';
-        } else if (value.length < 7 || value.length > 15) {
-          error = 'El teléfono debe tener entre 7 y 15 dígitos';
         }
         break;
       default:
@@ -219,6 +246,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   className={`w-full border-2 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
                     errors.nombre ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={section1Disabled}
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <i className="bi bi-person text-lg"></i>
@@ -238,6 +266,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   onChange={handleChange}
                   onBlur={handleBlur}
                   className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] transition-all appearance-none bg-white font-lato"
+                  disabled={section1Disabled}
                 >
                   {DOC_TYPES_CODES.map(code => (
                     <option key={code} value={code}>{`${code} - ${DOC_TYPE_LABELS[code]}`}</option>
@@ -270,6 +299,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   className={`w-full border-2 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
                     errors.documento ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={section1Disabled}
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <i className="bi bi-hash text-lg"></i>
@@ -283,18 +313,25 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                 <i className="bi bi-telephone mr-2 text-[#FACC15]"></i>Teléfono *
               </label>
               <div className="relative">
-                <input
-                  type="text"
-                  name="telefono"
+                <PhoneInput
+                  country={'co'}
                   value={form.telefono}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  onKeyDown={isNumberInputValid}
-                  placeholder="Ingrese el número de teléfono"
-                  maxLength={15}
-                  className={`w-full border-2 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
-                    errors.telefono ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  onChange={(value, country) => {
+                    setForm(prev => ({ ...prev, telefono: value }));
+                    const valid = isValidByCountry(value, country);
+                    setErrors(prev => ({ ...prev, telefono: valid ? '' : 'Formato inválido para el país seleccionado' }));
+                  }}
+                  onBlur={() => {
+                    if (!form.telefono) {
+                      setErrors(prev => ({ ...prev, telefono: 'El teléfono es obligatorio' }));
+                    }
+                  }}
+                  enableSearch
+                  preferredCountries={[]}
+                  inputClass={`w-full border-2 rounded-xl px-4 py-3 bg-white font-lato text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] transition-all duration-200 ${errors.telefono ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  containerClass="w-full pl-12"
+                  inputProps={{ name: 'telefono', required: true, placeholder: 'Ej: 3001234567', disabled: section1Disabled }}
+                  specialLabel=""
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <i className="bi bi-telephone text-lg"></i>
@@ -318,6 +355,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   className={`w-full border-2 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
                     errors.correo ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={section1Disabled}
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <i className="bi bi-envelope text-lg"></i>
@@ -341,6 +379,7 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                   className={`w-full border-2 rounded-xl px-4 py-3 pl-12 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all font-lato ${
                     errors.direccion ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
+                  disabled={section1Disabled}
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <i className="bi bi-geo-alt text-lg"></i>
@@ -380,38 +419,118 @@ const AddEmployee = ({ onCancel, onSave, schedulings, setSchedulings, employees 
                 onClick={() => {
                   const formErrors = validateEmployeeForm(form, employees);
                   setErrors(formErrors);
-
                   if (Object.keys(formErrors).length === 0) {
-                    let telefonoFormateado = form.telefono;
-                    if (telefonoFormateado && !telefonoFormateado.startsWith('+')) {
-                      telefonoFormateado = '+' + telefonoFormateado;
-                    }
-
-                    const newEmployee = {
-                      nombre: form.nombre,
-                      tipo_documento: toBackendDocCode(form.tipoDocumento),
-                      documento: form.documento,
-                      telefono: telefonoFormateado,
-                      correo: form.correo,
-                      direccion: form.direccion,
-                      estado: 'Activo', // Siempre se crea como Activo por defecto
-                    };
-
-                    onSave(newEmployee);
-                    setForm(initialForm);
-                    setErrors({});
+                    localStorage.setItem('newEmployeeDraft', JSON.stringify(form));
+                    setSection1Disabled(true);
+                    setStep(2);
                   }
                 }}
-                className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                className="px-6 py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 rounded-xl transition-all duration-300 font-semibold font-lato flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                 disabled={!isFormValid()}
               >
-                <i className="bi bi-person-check"></i>
-                Guardar sin Programación
+                <i className="bi bi-arrow-right"></i>
+                Continuar
               </button>
 
               
             </div>
           </form>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-[#1E1E1E] font-nunito mb-2">Programación y Horarios</h3>
+            <p className="text-sm text-gray-600 font-lato">Configura disponibilidad semanal y bloques de horario</p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-[#1E1E1E] font-lato mb-2">Días de la semana</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[{value:1,label:'Lunes'},{value:2,label:'Martes'},{value:3,label:'Miércoles'},{value:4,label:'Jueves'},{value:5,label:'Viernes'},{value:6,label:'Sábado'},{value:0,label:'Domingo'}].map(d => (
+                  <label key={d.value} className="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl hover:border-[#FACC15] hover:bg-yellow-50 transition-all cursor-pointer">
+                    <input type="checkbox" checked={scheduleDraft.dias_semana.includes(d.value)} onChange={(e) => {
+                      setScheduleDraft(prev => ({
+                        ...prev,
+                        dias_semana: e.target.checked ? [...prev.dias_semana, d.value] : prev.dias_semana.filter(x => x !== d.value)
+                      }));
+                    }} />
+                    <span className="text-sm">{d.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[#1E1E1E] font-lato mb-2">Bloques horarios</label>
+              <div className="space-y-3">
+                {scheduleDraft.bloques_horarios.map((b, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <select value={b.inicio} onChange={(e)=>{
+                      const val = e.target.value;
+                      setScheduleDraft(prev => {
+                        const arr = [...prev.bloques_horarios];
+                        arr[idx] = { ...arr[idx], inicio: val };
+                        return { ...prev, bloques_horarios: arr };
+                      });
+                    }} className="border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15]">
+                      {HOURS_12.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <span className="text-gray-500">a</span>
+                    <select value={b.fin} onChange={(e)=>{
+                      const val = e.target.value;
+                      setScheduleDraft(prev => {
+                        const arr = [...prev.bloques_horarios];
+                        arr[idx] = { ...arr[idx], fin: val };
+                        return { ...prev, bloques_horarios: arr };
+                      });
+                    }} className="border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15]">
+                      {HOURS_12.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <button type="button" className="p-2 text-red-600 rounded-lg hover:bg-red-50" onClick={()=>{
+                      setScheduleDraft(prev => ({ ...prev, bloques_horarios: prev.bloques_horarios.filter((_,i)=>i!==idx) }));
+                    }}>Eliminar</button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="mt-3 px-3 py-2 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#FACC15]" onClick={()=>{
+                setScheduleDraft(prev => ({ ...prev, bloques_horarios: [...prev.bloques_horarios, { inicio: '09:00 AM', fin: '05:00 PM' }] }));
+              }}>Agregar bloque</button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[#1E1E1E] font-lato mb-2">Observaciones</label>
+              <textarea rows="3" value={scheduleDraft.observaciones} onChange={(e)=>setScheduleDraft(prev => ({ ...prev, observaciones: e.target.value }))} className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15]" />
+            </div>
+
+            <div className="flex justify-between pt-6 border-t border-gray-100">
+              <button type="button" className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold text-xs flex items-center gap-2" onClick={()=>{ setSection1Disabled(false); setStep(1); }}>
+                <i className="bi bi-arrow-left"></i>
+                Regresar
+              </button>
+              <button type="button" className="px-6 py-3 bg-text-main hover:bg-primary-dark text-white rounded-xl transition-all duration-300 font-semibold text-xs flex items-center gap-2" onClick={()=>{
+                const telefono = form.telefono && !form.telefono.startsWith('+') ? '+' + form.telefono : form.telefono;
+                const schedulingPayload = { ...scheduleDraft };
+                setSchedulings(prev => Array.isArray(prev) ? [...prev, schedulingPayload] : [schedulingPayload]);
+                const newEmployee = {
+                  nombre: form.nombre,
+                  tipo_documento: toBackendDocCode(form.tipoDocumento),
+                  documento: form.documento,
+                  telefono,
+                  correo: form.correo,
+                  direccion: form.direccion,
+                  estado: 'Activo',
+                };
+                onSave(newEmployee);
+                localStorage.removeItem('newEmployeeDraft');
+              }}>
+                <i className="bi bi-check-circle"></i>
+                Crear empleado
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

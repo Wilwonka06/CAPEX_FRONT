@@ -17,6 +17,7 @@ import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatu
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
+import Paginator from '../../../../shared/Paginator';
 
 const Services = () => {
   const { setTitle } = useOutletContext();
@@ -98,6 +99,16 @@ const Services = () => {
 
   // Filtrar servicios usando la función helper de búsqueda universal
   const filteredServices = filterBySearch(services, searchTerm);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, services]);
+  const totalItems = filteredServices.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
   // Handler para crear servicio
   const handleAddService = async (newServiceData) => {
@@ -284,7 +295,7 @@ const Services = () => {
 
             {/* Tabla de servicios */}
             <ServicesTable
-              services={filteredServices}
+              services={pageServices}
               onToggleStatus={handleToggleStatus}
               togglingId={togglingId}
               onView={(service) => {
@@ -297,6 +308,13 @@ const Services = () => {
               }}
               onDelete={handleDeleteService}
               loading={loading}
+            />
+            <Paginator
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
             />
           </div>
         </div>

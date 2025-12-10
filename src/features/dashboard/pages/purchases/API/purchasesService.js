@@ -160,8 +160,14 @@ export const purchasesService = {
    */
   generateReport: async (params = {}) => {
     try {
-      // Obtener los últimos 100 registros de compras
-      const purchasesResponse = await apiRequest.get(`${PURCHASES_ENDPOINT}?limit=100&sort=fecha_registro:desc`);
+      // Obtener los últimos 100 registros de compras (con filtros opcionales)
+      const qs = [];
+      if (params.startDate) qs.push(`fecha_inicio=${encodeURIComponent(params.startDate)}`);
+      if (params.endDate) qs.push(`fecha_fin=${encodeURIComponent(params.endDate)}`);
+      qs.push('limit=100');
+      qs.push('sort=fecha_registro:desc');
+      const url = `${PURCHASES_ENDPOINT}?${qs.join('&')}`;
+      const purchasesResponse = await apiRequest.get(url);
 
       if (!purchasesResponse.success) {
         throw new Error('Error al obtener datos de compras');
@@ -172,62 +178,97 @@ export const purchasesService = {
       // Crear el archivo Excel con estructura específica
       const XLSX = await import('xlsx');
 
-      // Preparar datos para el Excel - Solo nombres de campos y registros
-      const worksheetData = [
-        ['ID Compra', 'Fecha Registro', 'Fecha Compra', 'Proveedor', 'NIT', 'IVA General', 'Total', 'Estado']
-      ];
-
-      // Agregar datos de compras con todos los campos relevantes
+      // Hoja 1: Compras generales con validación
+      const comprasHeaders = ['ID Compra', 'Fecha Registro', 'Fecha Compra', 'Proveedor', 'NIT', 'IVA General', 'Total', 'Estado', 'Validación'];
+      const comprasRows = [comprasHeaders];
       purchases.forEach(purchase => {
         const id = purchase.id || purchase.id_compra || '';
         const fechaRegistro = purchase.fechaRegistro || purchase.fecha_registro || '';
         const fechaCompra = purchase.fechaCompra || purchase.fecha_compra || '';
         const proveedorNombre = (purchase.proveedor && (purchase.proveedor.nombre || purchase.proveedor)) || '';
-        const proveedorNit = (purchase.proveedor && purchase.proveedor.nit) || purchase.nit || 'N/A';
+        const proveedorNit = (purchase.proveedor && purchase.proveedor.nit) || purchase.nit || '';
         const ivaMonto = (purchase.iva !== undefined && purchase.iva !== null) ? purchase.iva : (purchase.ivaGeneral || purchase.iva_general || 0);
         const total = parseFloat(purchase.total || 0);
         const estado = purchase.estado || 'Registrada';
-
-        worksheetData.push([
-          id,
-          fechaRegistro,
-          fechaCompra,
-          proveedorNombre,
-          proveedorNit,
-          ivaMonto,
-          total,
-          estado
-        ]);
+        const valid = (id && fechaCompra && proveedorNombre && Number.isFinite(total)) ? 'OK' : 'FALTAN CAMPOS';
+        comprasRows.push([id, fechaRegistro, fechaCompra, proveedorNombre, proveedorNit, ivaMonto, total, estado, valid]);
       });
 
-      // Crear libro de trabajo
       const workbook = XLSX.utils.book_new();
+      const wsCompras = XLSX.utils.aoa_to_sheet(comprasRows);
+      wsCompras['!cols'] = [
+        { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }
+      ];
+      for (let r = 1; r < comprasRows.length; r++) {
+        const g = `G${r + 0}`; // Total
+        const f = `F${r + 0}`; // IVA
+        if (wsCompras[g] && typeof wsCompras[g].v === 'number') { wsCompras[g].t = 'n'; wsCompras[g].z = '#,##0.00'; }
+        if (wsCompras[f] && typeof wsCompras[f].v === 'number') { wsCompras[f].t = 'n'; wsCompras[f].z = '#,##0.00'; }
+      }
+      XLSX.utils.book_append_sheet(workbook, wsCompras, 'Compras');
 
-      // Crear hoja de trabajo
-      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+      // Hoja 2: Detalle de compras por producto
+      const detalleHeaders = ['ID Compra', 'Fecha Compra', 'Producto ID', 'Código', 'Nombre', 'Cantidad', 'Costo Unitario', 'Subtotal'];
+      const detalleRows = [detalleHeaders];
+      purchases.forEach(purchase => {
+        const id = purchase.id || purchase.id_compra || '';
+        const fechaCompra = purchase.fechaCompra || purchase.fecha_compra || '';
+        const detalles = Array.isArray(purchase.detalles) ? purchase.detalles : [];
+        detalles.forEach(d => {
+          const pid = d.id_producto || d.producto?.id || '';
+          const codigo = pid ? `P${pid.toString().padStart(3, '0')}` : '';
+          const nombre = d.producto?.nombre || d.nombre || 'N/A';
+          const cantidad = parseInt(d.cantidad || 0);
+          const costo = parseFloat(d.precio_unitario || 0);
+          const subtotal = parseFloat(d.subtotal || (costo * cantidad));
+          detalleRows.push([id, fechaCompra, pid, codigo, nombre, cantidad, costo, subtotal]);
+        });
+      });
+      const wsDetalle = XLSX.utils.aoa_to_sheet(detalleRows);
+      wsDetalle['!cols'] = [
+        { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 14 }
+      ];
+      for (let r = 1; r < detalleRows.length; r++) {
+        ['F', 'G', 'H'].forEach(col => {
+          const addr = `${col}${r + 0}`;
+          if (wsDetalle[addr] && typeof wsDetalle[addr].v === 'number') {
+            wsDetalle[addr].t = 'n';
+            wsDetalle[addr].z = col === 'F' ? '#,##0' : '#,##0.00';
+          }
+        });
+      }
+      XLSX.utils.book_append_sheet(workbook, wsDetalle, 'Detalle_Compras');
 
-      // Estilos para el encabezado
-      const headerStyle = {
-        font: { bold: true },
-        fill: { fgColor: { rgb: "FFFF00" } }, // Amarillo
-        alignment: { horizontal: "center" }
-      };
-
-      // Aplicar estilos al encabezado (primera fila)
-      worksheet['A1'] = { v: worksheetData[0][0], s: headerStyle };
-      worksheet['B1'] = { v: worksheetData[0][1], s: headerStyle };
-      worksheet['C1'] = { v: worksheetData[0][2], s: headerStyle };
-      worksheet['D1'] = { v: worksheetData[0][3], s: headerStyle };
-      worksheet['E1'] = { v: worksheetData[0][4], s: headerStyle };
-      worksheet['F1'] = { v: worksheetData[0][5], s: headerStyle };
-      worksheet['G1'] = { v: worksheetData[0][6], s: headerStyle };
-      worksheet['H1'] = { v: worksheetData[0][7], s: headerStyle };
-
-      // Agregar imagen del logo (si está disponible)
-      // Nota: XLSX no soporta imágenes fácilmente, se puede agregar manualmente
-
-      // Agregar hoja al libro
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Compras');
+      // Hoja 3: Resumen por producto (compras)
+      const resumenMap = new Map();
+      detalleRows.slice(1).forEach(row => {
+        const codigo = row[3];
+        const nombre = row[4];
+        const cantidad = Number(row[5]) || 0;
+        const subtotal = Number(row[7]) || 0;
+        const key = codigo || nombre;
+        const cur = resumenMap.get(key) || { codigo, nombre, cantidad: 0, monto: 0, compras: 0 };
+        cur.cantidad += cantidad;
+        cur.monto += subtotal;
+        cur.compras += 1;
+        resumenMap.set(key, cur);
+      });
+      const resumenHeaders = ['Código', 'Nombre', 'Cantidad Comprada', 'Monto', 'Nº Compras'];
+      const resumenRows = [resumenHeaders, ...Array.from(resumenMap.values()).map(r => [r.codigo, r.nombre, r.cantidad, r.monto, r.compras])];
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows);
+      wsResumen['!cols'] = [
+        { wch: 12 }, { wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 12 }
+      ];
+      for (let r = 1; r < resumenRows.length; r++) {
+        ['C', 'D', 'E'].forEach(col => {
+          const addr = `${col}${r + 0}`;
+          if (wsResumen[addr] && typeof wsResumen[addr].v === 'number') {
+            wsResumen[addr].t = 'n';
+            wsResumen[addr].z = col === 'D' ? '#,##0.00' : '#,##0';
+          }
+        });
+      }
+      XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen_Compras');
 
       // Generar archivo
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
@@ -236,14 +277,14 @@ export const purchasesService = {
       });
 
       // Descargar archivo
-      const url = window.URL.createObjectURL(blob);
+      const fileUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = fileUrl;
       link.download = `reporte_compras_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(fileUrl);
 
       return { success: true, message: 'Reporte generado exitosamente' };
     } catch (error) {
