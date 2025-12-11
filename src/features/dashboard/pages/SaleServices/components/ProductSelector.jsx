@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { apiRequest } from '../../../../../shared/config/apiConfig';
-import { formatNumber, formatPrice } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatNumberInput, formatPrice, parseFormattedNumber } from '../../../../../shared/utils/formatters';
 
 const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -145,7 +145,8 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const totalProducts = selectedProducts.reduce((total, product) => total + product.subtotal, 0);
 
   const handleQuantityChange = (e) => {
-    const value = Math.max(1, parseInt(e.target.value) || 1);
+    const formatted = formatNumberInput(e.target.value, 0);
+    const value = Math.max(1, Math.floor(parseFormattedNumber(formatted)) || 1);
     setQuantity(value);
     if (errors.quantity) {
       setErrors(prev => ({ ...prev, quantity: '' }));
@@ -225,8 +226,8 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
               Cantidad <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
-              value={quantity}
+              type="text"
+              value={formatNumber(quantity)}
               onChange={handleQuantityChange}
               className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
                 errors.quantity
@@ -234,7 +235,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                   : 'border-gray-200 hover:border-gray-300'
               } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100`}
               disabled={!selectedProductId}
-              min="1"
               placeholder="1"
             />
             {errors.quantity && (

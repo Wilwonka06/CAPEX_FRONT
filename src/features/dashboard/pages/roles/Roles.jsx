@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import RolesTable from "./components/RolesTable";
-import Paginator from "../../../../shared/Paginator";
 import CreateRole from "./components/CreateRole";
 import ConfirmDeleteModal from "../../../../shared/components/ConfirmDeleteModal";
 import rolesService from "./API/rolesService";
@@ -8,15 +7,13 @@ import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
-
-const ROLES_PER_PAGE = 10;
+import Paginator from '../../../../shared/Paginator';
 
 const RolesPage = () => {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { hasPrivilege } = useAuth();
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,26 +68,20 @@ const RolesPage = () => {
   }, []);
 
   // Filtrar roles usando la función helper de búsqueda universal
-  const filteredRoles = filterBySearch(roles, searchTerm);
-
-  // Paginación
-  const totalPages = Math.ceil(filteredRoles.length / ROLES_PER_PAGE);
-  const paginatedRoles = filteredRoles.slice(
-    (currentPage - 1) * ROLES_PER_PAGE,
-    currentPage * ROLES_PER_PAGE
-  ).map(role => ({
+  const filteredRoles = filterBySearch(roles, searchTerm).map(role => ({
     ...role,
     name: role.name ?? role.nombre ?? '',
   }));
 
-  // Resetear página al cambiar el filtro
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, roles]);
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
+  const totalItems = filteredRoles.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageRoles = filteredRoles.slice(startIndex, startIndex + itemsPerPage);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -153,24 +144,24 @@ const RolesPage = () => {
     if (!pendingDelete) return;
 
     setDeletingId(pendingDelete.id);
-    const rolePromise = (async () => {
+      const rolePromise = (async () => {
       await rolesService.delete(pendingDelete.id);
-      await loadRoles();
-      return true;
-    })();
+        await loadRoles();
+        return true;
+      })();
 
-    toast.promise(rolePromise, {
-      loading: 'Eliminando rol...',
-      success: 'Rol eliminado exitosamente',
-      error: (err) => err.message || 'Error al eliminar el rol',
-    });
+      toast.promise(rolePromise, {
+        loading: 'Eliminando rol...',
+        success: 'Rol eliminado exitosamente',
+        error: (err) => err.message || 'Error al eliminar el rol',
+      });
 
-    try {
-      await rolePromise;
+      try {
+        await rolePromise;
       setShowDeleteModal(false);
       setPendingDelete(null);
-    } catch (error) {
-      // Error ya manejado por toast.promise
+      } catch (error) {
+        // Error ya manejado por toast.promise
     } finally {
       setDeletingId(null);
     }
@@ -233,24 +224,19 @@ const RolesPage = () => {
 
             {/* Tabla de roles */}
             <RolesTable 
-              roles={paginatedRoles}
+              roles={pageRoles}
               onEdit={canEdit ? handleEditRole : null}
               onDelete={canDelete ? handleDeleteRole : null}
               onStatusChange={canEdit ? handleStatusChange : null}
               loading={loading}
             />
-
-            {/* Paginación */}
-            {!loading && totalPages > 1 && (
-              <Paginator 
-                currentPage={currentPage} 
-                totalPages={totalPages} 
-                onPageChange={handlePageChange}
-                itemsPerPage={ROLES_PER_PAGE}
-                totalItems={filteredRoles.length}
-                showInfo={true}
-              />
-            )}
+            <Paginator
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+            />
           </div>
         </div>
         

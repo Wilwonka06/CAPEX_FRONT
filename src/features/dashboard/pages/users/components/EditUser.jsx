@@ -441,7 +441,7 @@ const EditUserModal = ({ onClose, onEdit, user, users }) => {
         </div>
         <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-xs hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"><i className="bi bi-x-circle"></i>Cancelar</button>
-          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-accent text-white text-xs font-semibold hover:from-primary-dark hover:to-accent-light transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.values(error).some(Boolean)}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
+          <button type="submit" form="edit-user-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2" disabled={Object.values(error).some(Boolean)}><i className="bi bi-check-circle"></i>Guardar Cambios</button>
         </div>
       </div>
     </div>

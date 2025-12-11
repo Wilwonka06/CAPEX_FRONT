@@ -4,10 +4,9 @@ import productsService from '../products/API/productsService';
 import salesService from './API/salesService';
 import usersService from '../users/API/usersService';
 import Search from '../../../../shared/Search';
-import Paginator from '../../../../shared/Paginator';
-import LoadingTable from '../../../../shared/components/LoadingTable';
+// import LoadingTable from '../../../../shared/components/LoadingTable';
 import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
-import { formatNumber } from '../../../../shared/utils/formatters';
+// import { formatNumber } from '../../../../shared/utils/formatters';
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import CreateSaleModal from './components/CreateSaleModal';
 import SaleDetailModal from './components/SaleDetailModal';
@@ -15,33 +14,33 @@ import SalesTable from './components/SalesTable';
 import { generateProductInvoicePDF } from '../../../../shared/utils/invoicePdf';
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
+import Paginator from '../../../../shared/Paginator';
 
 const SalesProducts = () => {
   // ===== ESTADOS PRINCIPALES =====
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // Estado para productos
   const [products, setProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(true);
+  // const [productsLoading, setProductsLoading] = useState(true);
   const [customers, setCustomers] = useState([]);
 
   // Los clientes ahora se buscan dinámicamente desde el backend
 
   // Estados UI
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filteredSales, setFilteredSales] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   
   const { setTitle } = useOutletContext();
-  const itemsPerPage = 5;
 
   // ===== CARGAR DATOS INICIALES =====
   useEffect(() => {
@@ -56,7 +55,7 @@ const SalesProducts = () => {
   const loadSales = async () => {
     try {
       setLoading(true);
-      setError(null);
+      // reset error state
 
       const response = await salesService.getAll({
         page: 1,
@@ -69,7 +68,7 @@ const SalesProducts = () => {
         throw new Error(response.message || 'Error al cargar ventas');
       }
     } catch (err) {
-      setError(err.message);
+      // error state unused
       console.error('Error loading sales:', err);
       toast.error(err.message || 'Error al cargar las ventas');
     } finally {
@@ -80,7 +79,7 @@ const SalesProducts = () => {
   // Cargar productos
   const loadProducts = async () => {
     try {
-      setProductsLoading(true);
+      // setProductsLoading(true);
       const response = await productsService.getAll({ limit: 100 });
       if (response.success) {
         setProducts(response.data || []);
@@ -89,7 +88,7 @@ const SalesProducts = () => {
       console.error('Error loading products:', error);
       toast.error('Error al cargar productos');
     } finally {
-      setProductsLoading(false);
+      // setProductsLoading(false);
     }
   };
 
@@ -122,19 +121,16 @@ const SalesProducts = () => {
     setFilteredSales(filterBySearch(sales, searchTerm));
   }, [searchTerm, sales]);
 
-  // ===== PAGINACIÓN =====
-  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSales = filteredSales.slice(startIndex, startIndex + itemsPerPage);
-
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, sales]);
+
+  const totalItems = filteredSales.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageSales = filteredSales.slice(startIndex, startIndex + itemsPerPage);
 
   // ===== MANEJADORES =====
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -160,7 +156,7 @@ const SalesProducts = () => {
       if (response.success) {
         setShowCreateModal(false);
         await loadSales(); // Recargar lista
-        try { window.dispatchEvent(new Event('sales-updated')); } catch {}
+      try { window.dispatchEvent(new Event('sales-updated')); } catch { void 0 }
         return response.data;
       } else {
         throw new Error(response.message || 'Error al crear la venta');
@@ -178,8 +174,8 @@ const SalesProducts = () => {
 
     try {
       await salePromise;
-    } catch (error) {
-      // Error ya manejado por toast.promise
+    } catch {
+      void 0
     } finally {
       setLoading(false);
     }
@@ -204,36 +200,36 @@ const SalesProducts = () => {
     if (!pendingDelete) return;
 
     setDeletingId(pendingDelete.id);
-    setLoading(true);
-    
-    const salePromise = (async () => {
-      const response = await salesService.changeStatus(pendingDelete.id, 'Cancelado');
+      setLoading(true);
       
-      if (response.success) {
-        await loadSales(); // Recargar lista
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al cancelar la venta');
-      }
-    })();
+      const salePromise = (async () => {
+      const response = await salesService.changeStatus(pendingDelete.id, 'Cancelado');
+        
+        if (response.success) {
+          await loadSales(); // Recargar lista
+          return response.data;
+        } else {
+          throw new Error(response.message || 'Error al cancelar la venta');
+        }
+      })();
 
-    toast.promise(salePromise, {
-      loading: 'Cancelando venta...',
-      success: 'Venta cancelada exitosamente',
-      error: (err) => {
-        console.error('Error canceling sale:', err);
-        return err.response?.data?.message || err.message || 'Error al cancelar la venta';
-      },
-    });
+      toast.promise(salePromise, {
+        loading: 'Cancelando venta...',
+        success: 'Venta cancelada exitosamente',
+        error: (err) => {
+          console.error('Error canceling sale:', err);
+          return err.response?.data?.message || err.message || 'Error al cancelar la venta';
+        },
+      });
 
-    try {
-      await salePromise;
+      try {
+        await salePromise;
       setShowDeleteModal(false);
       setPendingDelete(null);
-    } catch (error) {
-      // Error ya manejado por toast.promise
-    } finally {
-      setLoading(false);
+      } catch {
+        void 0
+      } finally {
+        setLoading(false);
       setDeletingId(null);
     }
   };
@@ -255,48 +251,112 @@ const SalesProducts = () => {
       // Crear el archivo Excel con estructura específica
       const XLSX = await import('xlsx');
 
-      // Preparar datos para el Excel - Solo nombres de campos y registros
-      const worksheetData = [
-        ['ID Venta', 'Número Venta', 'Fecha', 'Cliente', 'Método Pago', 'Estado', 'Valor Total']
-      ];
-
-      // Agregar datos de ventas con todos los campos relevantes
+      // Hoja 1: Ventas generales con validación
+      const ventasHeaders = ['ID Venta', 'Número Venta', 'Fecha', 'Cliente', 'Método Pago', 'Estado', 'Valor Total', 'Validación'];
+      const ventasRows = [ventasHeaders];
       sales.forEach(sale => {
-        worksheetData.push([
-          sale.id_venta_producto || sale.id || '',
-          `VEN-${(sale.id_venta_producto || sale.id || 0).toString().padStart(6, '0')}`,
-          sale.fecha || '',
-          sale.usuario?.nombre || `Usuario ${sale.id_usuario}` || '',
-          sale.metodoPago || 'No especificado',
-          sale.estado || '',
-          parseFloat(sale.total || 0)
-        ]);
+        const id = sale.id || sale.id_venta_producto || '';
+        const numero = sale.numeroVenta || `VEN-${(id || 0).toString().padStart(6, '0')}`;
+        const fecha = sale.fecha || '';
+        const cliente = sale.customer?.nombre || sale.usuario?.nombre || (sale.id_usuario ? `Usuario ${sale.id_usuario}` : '');
+        const metodo = sale.metodoPago || 'No especificado';
+        const estado = sale.estado || '';
+        const total = parseFloat(sale.valor ?? sale.total ?? 0);
+        const valid = (id && numero && fecha && estado && Number.isFinite(total)) ? 'OK' : 'FALTAN CAMPOS';
+        ventasRows.push([id, numero, fecha, cliente, metodo, estado, total, valid]);
       });
 
       // Crear libro de trabajo
       const workbook = XLSX.utils.book_new();
 
-      // Crear hoja de trabajo
-      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+      // Crear hoja Ventas_Productos
+      const wsVentas = XLSX.utils.aoa_to_sheet(ventasRows);
+      wsVentas['!cols'] = [
+        { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }
+      ];
+      // Formato numérico para Valor Total
+      for (let r = 1; r < ventasRows.length; r++) {
+        const addr = `G${r + 0}`; // Columna G
+        if (wsVentas[addr] && typeof wsVentas[addr].v === 'number') {
+          wsVentas[addr].t = 'n';
+          wsVentas[addr].z = '#,##0.00';
+        }
+      }
 
-      // Estilos para el encabezado
-      const headerStyle = {
-        font: { bold: true },
-        fill: { fgColor: { rgb: "FFFF00" } }, // Amarillo
-        alignment: { horizontal: "center" }
-      };
+      // Aplicar encabezados (amarillo) - compatibilidad básica
+      wsVentas['A1'] = { v: ventasHeaders[0] };
+      wsVentas['B1'] = { v: ventasHeaders[1] };
+      wsVentas['C1'] = { v: ventasHeaders[2] };
+      wsVentas['D1'] = { v: ventasHeaders[3] };
+      wsVentas['E1'] = { v: ventasHeaders[4] };
+      wsVentas['F1'] = { v: ventasHeaders[5] };
+      wsVentas['G1'] = { v: ventasHeaders[6] };
+      wsVentas['H1'] = { v: ventasHeaders[7] };
 
-      // Aplicar estilos al encabezado (primera fila)
-      worksheet['A1'] = { v: worksheetData[0][0], s: headerStyle };
-      worksheet['B1'] = { v: worksheetData[0][1], s: headerStyle };
-      worksheet['C1'] = { v: worksheetData[0][2], s: headerStyle };
-      worksheet['D1'] = { v: worksheetData[0][3], s: headerStyle };
-      worksheet['E1'] = { v: worksheetData[0][4], s: headerStyle };
-      worksheet['F1'] = { v: worksheetData[0][5], s: headerStyle };
-      worksheet['G1'] = { v: worksheetData[0][6], s: headerStyle };
+      XLSX.utils.book_append_sheet(workbook, wsVentas, 'Ventas_Productos');
 
-      // Agregar hoja al libro
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Ventas_Productos');
+      // Hoja 2: Detalle de productos por venta
+      const detalleHeaders = ['ID Venta', 'Fecha', 'Producto ID', 'Código', 'Nombre', 'Cantidad', 'Precio Unitario', 'Subtotal'];
+      const detalleRows = [detalleHeaders];
+      sales.forEach(sale => {
+        const id = sale.id || sale.id_venta_producto || '';
+        const fecha = sale.fecha || '';
+        const productos = Array.isArray(sale.productos) ? sale.productos : (sale.detalles || []);
+        productos.forEach(p => {
+          const pid = p.id || p.id_producto || '';
+          const codigo = p.codigo || (pid ? `P${pid.toString().padStart(3, '0')}` : '');
+          const nombre = p.nombre || p.producto?.nombre || 'N/A';
+          const cantidad = parseInt(p.cantidad || 0);
+          const precio = parseFloat(p.precio ?? p.precio_unitario ?? 0);
+          const subtotal = parseFloat(p.subtotal ?? (precio * cantidad));
+          detalleRows.push([id, fecha, pid, codigo, nombre, cantidad, precio, subtotal]);
+        });
+      });
+      const wsDetalle = XLSX.utils.aoa_to_sheet(detalleRows);
+      wsDetalle['!cols'] = [
+        { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 10 }, { wch: 14 }, { wch: 14 }
+      ];
+      for (let r = 1; r < detalleRows.length; r++) {
+        ['F', 'G', 'H'].forEach(col => {
+          const addr = `${col}${r + 0}`;
+          if (wsDetalle[addr] && typeof wsDetalle[addr].v === 'number') {
+            wsDetalle[addr].t = 'n';
+            wsDetalle[addr].z = col === 'F' ? '#,##0' : '#,##0.00';
+          }
+        });
+      }
+      XLSX.utils.book_append_sheet(workbook, wsDetalle, 'Detalle_Ventas');
+
+      // Hoja 3: Resumen por producto
+      const resumenMap = new Map();
+      detalleRows.slice(1).forEach(row => {
+        const codigo = row[3];
+        const nombre = row[4];
+        const cantidad = Number(row[5]) || 0;
+        const subtotal = Number(row[7]) || 0;
+        const key = codigo || nombre;
+        const cur = resumenMap.get(key) || { codigo, nombre, cantidad: 0, ingresos: 0, ventas: 0 };
+        cur.cantidad += cantidad;
+        cur.ingresos += subtotal;
+        cur.ventas += 1;
+        resumenMap.set(key, cur);
+      });
+      const resumenHeaders = ['Código', 'Nombre', 'Cantidad Vendida', 'Ingresos', 'Nº Ventas'];
+      const resumenRows = [resumenHeaders, ...Array.from(resumenMap.values()).map(r => [r.codigo, r.nombre, r.cantidad, r.ingresos, r.ventas])];
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows);
+      wsResumen['!cols'] = [
+        { wch: 12 }, { wch: 30 }, { wch: 16 }, { wch: 16 }, { wch: 12 }
+      ];
+      for (let r = 1; r < resumenRows.length; r++) {
+        ['C', 'D', 'E'].forEach(col => {
+          const addr = `${col}${r + 0}`;
+          if (wsResumen[addr] && typeof wsResumen[addr].v === 'number') {
+            wsResumen[addr].t = 'n';
+            wsResumen[addr].z = col === 'D' ? '#,##0.00' : '#,##0';
+          }
+        });
+      }
+      XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen_por_Producto');
 
       // Generar archivo
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
@@ -363,9 +423,6 @@ const SalesProducts = () => {
                   onView={() => {}}
                   onAnnul={() => {}}
                   onDownload={() => {}}
-                  currentPage={1}
-                  totalPages={1}
-                  onPageChange={() => {}}
                   loading={true}
                 />
               ) : filteredSales.length === 0 ? (
@@ -380,7 +437,7 @@ const SalesProducts = () => {
               ) : (
                 <>
                   <SalesTable
-                    sales={paginatedSales}
+                    sales={pageSales}
                     customers={customers}
                     onView={handleViewSale}
                     onAnnul={handleDeleteSale}
@@ -412,22 +469,15 @@ const SalesProducts = () => {
                         toast.error(e.message || 'Error al descargar factura');
                       }
                     }}
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
                     loading={false}
                   />
-
-                {/* Paginación */}
-                {totalPages > 1 && (
-                  <div className="mt-6">
-                    <Paginator
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                    />
-                  </div>
-                )}
+                  <Paginator
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={totalItems}
+                  />
                 </>
               )}
             </div>

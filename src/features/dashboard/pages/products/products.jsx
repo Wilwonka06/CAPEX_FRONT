@@ -1,33 +1,27 @@
 import { useState, useEffect } from "react";
 import ProductsTable from "./components/ProductsTable";
-import SearchProduct from '../../../../shared/Search';
-import Paginator from '../../../../shared/Paginator';
+import SearchProduct from "../../../../shared/Search";
 import CreateProduct from "./components/CreateProduct";
 import CharacteristicsManager from "./components/CharacteristicsManager";
-import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal';
+import ConfirmDeleteModal from "../../../../shared/components/ConfirmDeleteModal";
 import productsService from "./API/productsService";
 import suppliersService from "../suppliers/API/suppliersService";
-import { useOutletContext } from 'react-router-dom';
-import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
+import { useOutletContext } from "react-router-dom";
+import {
+  executeWithToast,
+  showError,
+} from "../../../../shared/utils/toastHelpers";
+import Paginator from "../../../../shared/Paginator";
 
 const ProductsPage = () => {
   // Estados para productos
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 10,
-  });
-  const [queryParams, setQueryParams] = useState({
-    page: 1,
-    limit: 10,
-  });
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [isCharacteristicsManagerOpen, setIsCharacteristicsManagerOpen] = useState(false);
+  const [isCharacteristicsManagerOpen, setIsCharacteristicsManagerOpen] =
+    useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -36,27 +30,22 @@ const ProductsPage = () => {
   const [selectedSupplier, setSelectedSupplier] = useState("");
 
   // Función para cargar productos
-  const loadProducts = async (params = queryParams) => {
+  const loadProducts = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await productsService.getAll(params);
+      // Cargar todos los productos (sin parámetros de paginación)
+      const response = await productsService.getAll();
 
       if (response.success) {
         setProducts(response.data || []);
-        setPagination({
-          currentPage: response.pagination?.currentPage || 1,
-          totalPages: response.pagination?.totalPages || 1,
-          totalItems: response.pagination?.totalItems || 0,
-          itemsPerPage: response.pagination?.itemsPerPage || 10,
-        });
       } else {
-        throw new Error(response.message || 'Error al obtener productos');
+        throw new Error(response.message || "Error al obtener productos");
       }
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching products:', err);
+      console.error("Error fetching products:", err);
     } finally {
       setLoading(false);
     }
@@ -79,30 +68,37 @@ const ProductsPage = () => {
   }, []);
 
   useEffect(() => {
-    setTitle('Módulo de Productos');
-    return () => setTitle('');
+    setTitle("Módulo de Productos");
+    return () => setTitle("");
   }, [setTitle]);
 
-  // Función para buscar productos
-  const searchProducts = async (searchTerm, filters = {}) => {
-    const searchParams = {
-      ...queryParams,
-      search: searchTerm,
-      page: 1, // Resetear a primera página
-      ...filters,
-    };
+  // Filtrar productos localmente
+  const filteredProducts = products.filter((product) => {
+    if (
+      searchTerm &&
+      !product.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      !product.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) {
+      return false;
+    }
+    if (selectedSupplier && product.id_proveedor !== selectedSupplier) {
+      return false;
+    }
+    return true;
+  });
 
-    setQueryParams(searchParams);
-    await loadProducts(searchParams);
-  };
-
-  // Función para limpiar filtros
-  const clearFilters = async () => {
-    setSelectedSupplier("");
-    const newParams = { page: 1, limit: queryParams.limit };
-    setQueryParams(newParams);
-    await loadProducts(newParams);
-  };
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedSupplier, products]);
+  const totalItems = filteredProducts.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageProducts = filteredProducts.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   // Función para crear producto
   const createProduct = async (productData) => {
@@ -112,29 +108,24 @@ const ProductsPage = () => {
     try {
       await executeWithToast({
         promiseFn: async () => {
-          console.log('ProductsPage: Creating product with data:', productData);
+          console.log("ProductsPage: Creating product with data:", productData);
           const response = await productsService.create(productData);
 
           if (response.success) {
             // Resetear a primera página y limpiar búsqueda para que el nuevo producto sea visible
-            const refreshParams = {
-              page: 1,
-              limit: queryParams.limit || 10,
-            };
-            setQueryParams(refreshParams);
-            await loadProducts(refreshParams);
+            await loadProducts();
             return response.data;
           } else {
-            throw new Error(response.message || 'Error al crear producto');
+            throw new Error(response.message || "Error al crear producto");
           }
         },
-        operation: 'create',
-        entity: 'producto',
-        loadingMessage: 'Creando producto...',
-        successMessage: 'Producto creado exitosamente',
+        operation: "create",
+        entity: "producto",
+        loadingMessage: "Creando producto...",
+        successMessage: "Producto creado exitosamente",
       });
     } catch (err) {
-      setError(err.message || 'Error al crear producto');
+      setError(err.message || "Error al crear producto");
       throw err;
     } finally {
       setLoading(false);
@@ -149,24 +140,29 @@ const ProductsPage = () => {
     try {
       await executeWithToast({
         promiseFn: async () => {
-          console.log('ProductsPage: Updating product', id, 'with data:', productData);
+          console.log(
+            "ProductsPage: Updating product",
+            id,
+            "with data:",
+            productData
+          );
           const response = await productsService.update(id, productData);
 
           if (response.success) {
-            await loadProducts(queryParams);
+            await loadProducts();
             return response.data;
           } else {
-            throw new Error(response.message || 'Error al actualizar producto');
+            throw new Error(response.message || "Error al actualizar producto");
           }
         },
-        operation: 'update',
-        entity: 'producto',
+        operation: "update",
+        entity: "producto",
         id,
-        loadingMessage: 'Actualizando producto...',
-        successMessage: 'Producto actualizado exitosamente',
+        loadingMessage: "Actualizando producto...",
+        successMessage: "Producto actualizado exitosamente",
       });
     } catch (err) {
-      setError(err.message || 'Error al actualizar producto');
+      setError(err.message || "Error al actualizar producto");
       throw err;
     } finally {
       setLoading(false);
@@ -187,17 +183,17 @@ const ProductsPage = () => {
             await loadProducts();
             return true;
           } else {
-            throw new Error(response.message || 'Error al eliminar producto');
+            throw new Error(response.message || "Error al eliminar producto");
           }
         },
-        operation: 'delete',
-        entity: 'producto',
+        operation: "delete",
+        entity: "producto",
         id,
-        loadingMessage: 'Eliminando producto...',
-        successMessage: 'Producto eliminado exitosamente',
+        loadingMessage: "Eliminando producto...",
+        successMessage: "Producto eliminado exitosamente",
       });
     } catch (err) {
-      setError(err.message || 'Error al eliminar producto');
+      setError(err.message || "Error al eliminar producto");
       throw err;
     } finally {
       setLoading(false);
@@ -205,21 +201,9 @@ const ProductsPage = () => {
   };
 
   // Función para cambiar página
-  const changePage = async (page) => {
-    const newParams = { ...queryParams, page };
-    setQueryParams(newParams);
-    await loadProducts(newParams);
-  };
-
   // Función para manejar la búsqueda
   const handleSearch = (e) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    if (term.trim()) {
-      searchProducts(term.trim());
-    } else {
-      clearFilters();
-    }
+    setSearchTerm(e.target.value);
   };
 
   // Función para crear un nuevo producto
@@ -229,7 +213,7 @@ const ProductsPage = () => {
       // La lista se recarga automáticamente en createProduct
     } catch (error) {
       // El error ya se maneja en la función createProduct
-      console.error('Error creating product:', error);
+      console.error("Error creating product:", error);
       // Re-lanzar el error para que CreateProduct pueda manejarlo si es necesario
       throw error;
     }
@@ -242,7 +226,7 @@ const ProductsPage = () => {
       // La lista se recarga automáticamente en updateProduct
     } catch (error) {
       // El error ya se maneja en la función updateProduct
-      console.error('Error updating product:', error);
+      console.error("Error updating product:", error);
       // Re-lanzar el error para que EditProduct pueda manejarlo si es necesario
       throw error;
     }
@@ -250,7 +234,7 @@ const ProductsPage = () => {
 
   // Handler para eliminar producto - muestra modal primero
   const handleDeleteProduct = (productId) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     if (product) {
       setPendingDelete({ id: productId, product });
       setShowDeleteModal(true);
@@ -268,15 +252,10 @@ const ProductsPage = () => {
       setPendingDelete(null);
     } catch (error) {
       // El error ya se maneja en la función
-      console.error('Error deleting product:', error);
+      console.error("Error deleting product:", error);
     } finally {
       setDeletingId(null);
     }
-  };
-
-  // Función para cambiar página
-  const handlePageChange = (page) => {
-    changePage(page);
   };
 
   // Estado de carga inicial
@@ -290,7 +269,10 @@ const ProductsPage = () => {
           {/* Header con gradiente */}
           <div className="p-6">
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <SearchProduct searchTerm={searchTerm} handleSearch={handleSearch} />
+              <SearchProduct
+                searchTerm={searchTerm}
+                handleSearch={handleSearch}
+              />
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsCharacteristicsManagerOpen(true)}
@@ -300,7 +282,10 @@ const ProductsPage = () => {
                   <i className="bi bi-gear mr-2"></i>
                   Características
                 </button>
-                <CreateProduct onCreate={handleCreateProduct} products={products} />
+                <CreateProduct
+                  onCreate={handleCreateProduct}
+                  products={products}
+                />
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
@@ -311,7 +296,9 @@ const ProductsPage = () => {
                       <i className="bi bi-exclamation-triangle text-red-400"></i>
                     </div>
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-red-800">Error al cargar productos</h3>
+                      <h3 className="text-sm font-medium text-red-800">
+                        Error al cargar productos
+                      </h3>
                       <p className="text-sm text-red-700 mt-1">{error}</p>
                       <button
                         onClick={() => loadProducts()}
@@ -323,30 +310,29 @@ const ProductsPage = () => {
                   </div>
                 </div>
               ) : (
-                <ProductsTable
-                  products={products}
-                  onEdit={handleEditProduct}
-                  onDelete={handleDeleteProduct}
-                  loading={isInitialLoading}
-                />
+                <>
+                  <ProductsTable
+                    products={pageProducts}
+                    onEdit={handleEditProduct}
+                    onDelete={handleDeleteProduct}
+                    loading={isInitialLoading}
+                  />
+                  <Paginator
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={totalItems}
+                  />
+                </>
               )}
             </div>
-
-            {/* Paginación */}
-            {pagination.totalPages > 1 && (
-              <Paginator
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
-
           </div>
         </div>
       </div>
-      <CharacteristicsManager 
-        isOpen={isCharacteristicsManagerOpen} 
-        onClose={() => setIsCharacteristicsManagerOpen(false)} 
+      <CharacteristicsManager
+        isOpen={isCharacteristicsManagerOpen}
+        onClose={() => setIsCharacteristicsManagerOpen(false)}
       />
 
       {/* Modal de confirmación de eliminación */}

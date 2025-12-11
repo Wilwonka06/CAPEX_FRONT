@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import CategoryTable from "./components/CategoryTable";
 import SearchProduct from '../../../../shared/Search';
-import Paginator from '../../../../shared/Paginator';
 import CreateCategory from "./components/CreateCategory";
 import categoriesService from './API/categoriesService';
 import EditCategory from "./components/EditCategory";
@@ -11,12 +10,10 @@ import ConfirmDeleteModal from '../../../../shared/components/ConfirmDeleteModal
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
-
-const CATEGORIES_PER_PAGE = 10;
+import Paginator from '../../../../shared/Paginator';
 
 const CatProductsPage = () => {
   const [categories, setCategories] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   // Cargar categorías al montar
@@ -64,17 +61,15 @@ const CatProductsPage = () => {
     setFilteredCategories(filterBySearch(categories, searchTerm));
   }, [searchTerm, categories]);
 
-  // Paginación
-  const totalPages = Math.ceil(filteredCategories.length / CATEGORIES_PER_PAGE);
-  const paginatedCategories = filteredCategories.slice(
-    (currentPage - 1) * CATEGORIES_PER_PAGE,
-    currentPage * CATEGORIES_PER_PAGE
-  );
-
-  // Resetear página al cambiar el filtro
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, categories]);
+  const totalItems = filteredCategories.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
 
   // Acciones CRUD
   const handleCreateCategory = async (newCategory) => {
@@ -147,31 +142,31 @@ const CatProductsPage = () => {
     if (!pendingDelete) return;
 
     setDeletingId(pendingDelete.id);
-    const categoryPromise = (async () => {
+      const categoryPromise = (async () => {
       const response = await categoriesService.delete(pendingDelete.id);
-      if (response.success) {
-        await loadCategories(); // Recargar lista
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Error al eliminar la categoría');
-      }
-    })();
+        if (response.success) {
+          await loadCategories(); // Recargar lista
+          return response.data;
+        } else {
+          throw new Error(response.message || 'Error al eliminar la categoría');
+        }
+      })();
 
-    toast.promise(categoryPromise, {
-      loading: 'Eliminando categoría...',
-      success: 'Categoría eliminada exitosamente',
-      error: (err) => {
-        console.error('Error deleting category:', err);
-        return err.response?.data?.message || err.message || 'Error al eliminar la categoría';
-      },
-    });
+      toast.promise(categoryPromise, {
+        loading: 'Eliminando categoría...',
+        success: 'Categoría eliminada exitosamente',
+        error: (err) => {
+          console.error('Error deleting category:', err);
+          return err.response?.data?.message || err.message || 'Error al eliminar la categoría';
+        },
+      });
 
-    try {
-      await categoryPromise;
+      try {
+        await categoryPromise;
       setShowDeleteModal(false);
       setPendingDelete(null);
-    } catch (error) {
-      // Error ya manejado por toast.promise
+      } catch (error) {
+        // Error ya manejado por toast.promise
     } finally {
       setDeletingId(null);
     }
@@ -224,9 +219,6 @@ const CatProductsPage = () => {
     }
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -261,7 +253,7 @@ const CatProductsPage = () => {
             {/* Tabla de categorías */}
             <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
               <CategoryTable
-                categories={paginatedCategories}
+                categories={pageCategories}
                 onToggleStatus={handleToggleStatus}
                 onEdit={(category) => {
                   setSelectedCategory(category);
@@ -274,16 +266,14 @@ const CatProductsPage = () => {
                 }}
                 loading={loading}
               />
-            </div>
-
-            {/* Paginación */}
-            {totalPages > 1 && !loading && (
               <Paginator
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={handlePageChange}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={totalItems}
               />
-            )}
+            </div>
           </div>
         </div>
       </div>

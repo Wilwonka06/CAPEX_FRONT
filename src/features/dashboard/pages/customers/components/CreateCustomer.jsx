@@ -4,7 +4,6 @@ import customersService from "../API/customersService"
 import { validateCustomer, isNumberInputValid } from "../../../../../shared/validations.js"
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 
 const initialFormData = {
   documentType: "",

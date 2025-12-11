@@ -4,7 +4,6 @@ import customersService from "../API/customersService"
 import { validateCustomer, isNumberInputValid } from "../../../../../shared/validations"
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 
 export default function EditCustomer({ isOpen, onClose, onSuccess, customer, customers = [] }) {
   const [formData, setFormData] = useState({

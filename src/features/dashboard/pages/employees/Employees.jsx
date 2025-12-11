@@ -6,15 +6,13 @@ import { employeesService } from "./API/employeesService";
 
 // Importar componentes
 import EmployeesTable from "./components/EmployeesTable";
+import Paginator from "../../../../shared/Paginator";
 import AddEmployee from "./components/CreateEmployee";
 import EditEmployee from "./components/EditEmployee";
-import Paginator from "../../../../shared/Paginator";
 import Search from "../../../../shared/Search";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
 import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
-
-const EMPLOYEES_PER_PAGE = 10;
 
 const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
@@ -25,7 +23,6 @@ const EmployeesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [togglingId, setTogglingId] = useState(null);
   
   // Estados de vistas/modales
@@ -33,6 +30,9 @@ const EmployeesPage = () => {
   const [editEmployee, setEditEmployee] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
+  const [newSchedulings, setNewSchedulings] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Cargar empleados y programaciones
   const loadData = async () => {
@@ -65,14 +65,14 @@ const EmployeesPage = () => {
   // Filtrar empleados usando la función helper de búsqueda universal
   const filteredEmployees = filterBySearch(employees, searchTerm);
 
-  // Paginación
-  const totalPages = Math.ceil(filteredEmployees.length / EMPLOYEES_PER_PAGE);
-  const startIndex = (currentPage - 1) * EMPLOYEES_PER_PAGE;
-  const paginatedEmployees = filteredEmployees.slice(startIndex, startIndex + EMPLOYEES_PER_PAGE);
-
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, employees]);
+
+  const totalItems = filteredEmployees.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageEmployees = filteredEmployees.slice(startIndex, startIndex + itemsPerPage);
 
   // Handler para cambiar estado - muestra modal primero
   const handleToggleStatus = (employeeId) => {
@@ -178,7 +178,6 @@ const EmployeesPage = () => {
   };
 
   // Handlers de navegación
-  const handlePageChange = (page) => setCurrentPage(page);
   const handleSearch = (e) => setSearchTerm(e.target.value);
   const handleCancel = () => {
     setShowAddForm(false);
@@ -233,22 +232,20 @@ const EmployeesPage = () => {
 
                 {/* Tabla de empleados */}
                 <EmployeesTable
-                  employees={paginatedEmployees}
+                  employees={pageEmployees}
                   onToggleStatus={handleToggleStatus}
                   togglingId={togglingId}
                   onView={(emp) => navigate(`/dashboard/empleados/${emp.id || emp.id_usuario}`)}
                   onEdit={(emp) => setEditEmployee(emp)}
                   loading={loading}
                 />
-
-                {/* Paginación */}
-                {totalPages > 1 && !loading && (
-                  <Paginator
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                )}
+                <Paginator
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  itemsPerPage={itemsPerPage}
+                  totalItems={totalItems}
+                />
               </>
             )}
 
@@ -258,8 +255,8 @@ const EmployeesPage = () => {
                 <AddEmployee
                   onCancel={handleCancel}
                   onSave={handleAddEmployee}
-                  schedulings={[]}
-                  setSchedulings={() => {}}
+                  schedulings={newSchedulings}
+                  setSchedulings={setNewSchedulings}
                   employees={employees}
                   onEditScheduling={() => {}}
                 />

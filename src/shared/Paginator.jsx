@@ -8,8 +8,7 @@ const Paginator = ({
   totalItems,
   showInfo = false 
 }) => {
-  // Si solo hay una página o menos, no mostrar el paginador
-  if (totalPages <= 1) return null;
+  if (!totalPages || totalPages <= 1) return null;
 
   const getVisiblePages = () => {
     const delta = 2; 
@@ -81,9 +80,7 @@ const Paginator = ({
       {/* Información de resultados */}
       {hasInfo && (
         <div className="text-sm text-gray-700">
-          Mostrando <span className="font-medium text-gray-900">{startItem}</span> a{' '}
-          <span className="font-medium text-gray-900">{endItem}</span> de{' '}
-          <span className="font-medium text-gray-900">{totalItems}</span> resultados
+          Mostrando {' '} <span className="font-medium text-gray-900">{endItem}</span> resultados
         </div>
       )}
 

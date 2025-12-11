@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { formatNumberInput, parseFormattedNumber } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatNumberInput, parseFormattedNumber } from '../../../../../shared/utils/formatters';
 import PropTypes from "prop-types";
 import toast from "react-hot-toast";
 import {
@@ -372,7 +372,7 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                   <input
                     type="text"
                     name="duracion"
-                    value={formData.duracion}
+                    value={formatNumber(formData.duracion)}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
@@ -389,13 +389,13 @@ const EditServices = ({ onClose, service, onEdit, categories = [], services = []
                   <input
                     type="text"
                     name="precio"
-                    value={formData.precio}
+                    value={formatNumber(formData.precio)}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-text-main text-sm ${errors.precio ? 'border-red-500' : 'border-gray-300'}`}
                     required
-                    placeholder="Ej: 50000"
+                    placeholder="Ej: 50.000"
                   />
                   {errors.precio && <p className="text-xs text-red-500 mt-1">{errors.precio}</p>}
                 </div>

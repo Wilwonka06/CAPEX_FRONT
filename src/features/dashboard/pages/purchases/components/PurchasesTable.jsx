@@ -1,9 +1,8 @@
 import PropTypes from "prop-types";
 import { formatNumber } from "../../../../../shared/utils/formatters";
 import TableSkeleton from "../../../../../shared/components/TableSkeleton";
-import Paginator from "../../../../../shared/Paginator";
 
-export default function PurchasesTable({ purchases, onView, onAnnul, currentPage, totalPages, onPageChange, loading = false }) {
+export default function PurchasesTable({ purchases, onView, onAnnul, loading = false }) {
   if (loading) {
     return <TableSkeleton columns={5} rows={5} hasAvatar={false} hasActions={true} />;
   }
@@ -69,14 +68,6 @@ export default function PurchasesTable({ purchases, onView, onAnnul, currentPage
         </tbody>
       </table>
       </div>
-      {/* Paginador */}
-      {totalPages > 1 && purchases.length > 0 && (
-        <Paginator
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
-        />
-      )}
     </>
   );
 }
@@ -85,7 +76,5 @@ PurchasesTable.propTypes = {
   purchases: PropTypes.array.isRequired,
   onView: PropTypes.func.isRequired,
   onAnnul: PropTypes.func.isRequired,
-  currentPage: PropTypes.number.isRequired,
-  totalPages: PropTypes.number.isRequired,
-  onPageChange: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
 };

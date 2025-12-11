@@ -4,7 +4,7 @@ import ViewServiceSaleDetail from "./components/ViewServiceSaleDetail";
 import EditServiceOrder from "./components/EditServiceOrder";
 import AnularServiceOrder from "./components/AnularServiceOrder";
 import Search from "../../../../shared/Search";
-import Paginator from "../../../../shared/Paginator";
+import TableSkeleton from "../../../../shared/components/TableSkeleton";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./API/ServiceOrderService";
 import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./API/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
@@ -13,10 +13,10 @@ import { formatNumber, formatPrice } from '../../../../shared/utils/formatters';
 import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import Paginator from '../../../../shared/Paginator';
 
 const SaleServices = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -26,7 +26,6 @@ const SaleServices = () => {
   const [services, setServices] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const itemsPerPage = 10;
   const [tab, setTab] = useState("En ejecucion");
   const { setTitle } = useOutletContext();
 
@@ -123,28 +122,15 @@ const SaleServices = () => {
     return matchesSearch && matchesTab;
   });
 
-  // Cálculo de paginación basado en servicios filtrados
-  const totalPages = Math.max(1, Math.ceil(filteredServices.length / itemsPerPage));
-
-  // Para paginar los servicios
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
-
-  // Ajusta currentPage si es mayor que totalPages
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [services, totalPages, currentPage]);
-
-  // Resetear página cuando se cambie de tab
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   useEffect(() => {
     setCurrentPage(1);
-  }, [tab]);
-
-  const handlePageChange = useCallback((page) => {
-    setCurrentPage(page);
-  }, []);
+  }, [searchTerm, tab, services]);
+  const totalItems = filteredServices.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
   const handleViewClick = useCallback((order) => {
     setSelectedOrder(order);
@@ -296,7 +282,6 @@ const SaleServices = () => {
   const handleSearch = useCallback(async (e) => {
     const termino = e.target.value;
     setSearchTerm(termino);
-    setCurrentPage(1);
 
     // Si hay término de búsqueda, buscar en el backend
     if (termino.trim()) {
@@ -369,38 +354,33 @@ const SaleServices = () => {
             </div>
 
             {/* Tabla de órdenes de servicio */}
-            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
-              <table className="min-w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Cliente</th>
-                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Servicios</th>
-                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Fecha</th>
-                    <th className="py-3 px-4 text-left font-semibold text-gray-700">Total</th>
-                    <th className="py-3 px-4 text-center font-semibold text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {initialLoading ? (
+            {initialLoading ? (
+              <TableSkeleton columns={4} rows={5} hasActions={true} />
+            ) : (
+              <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td colSpan="5" className="text-center py-8">
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                          <span className="ml-2 text-gray-600">Cargando ventas de servicio...</span>
-                        </div>
-                      </td>
+                      <th className="py-3 px-4 text-left font-semibold text-gray-700">Cliente</th>
+                      <th className="py-3 px-4 text-left font-semibold text-gray-700">Servicios</th>
+                      <th className="py-3 px-4 text-left font-semibold text-gray-700">Fecha</th>
+                      <th className="py-3 px-4 text-left font-semibold text-gray-700">Total</th>
+                      <th className="py-3 px-4 text-center font-semibold text-gray-700">Acciones</th>
                     </tr>
-                  ) : loading ? (
-                    <tr>
-                      <td colSpan="5" className="text-center py-8">
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                          <span className="ml-2 text-gray-600">Buscando...</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : paginatedServices.length > 0 ? paginatedServices.map((service) => (
-                    <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {loading ? (
+                      <tr>
+                        <td colSpan="5" className="text-center py-8">
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                            <span className="ml-2 text-gray-600">Buscando...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredServices.length > 0 ? (
+                      pageServices.map((service) => (
+                      <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="py-3 px-4 font-medium text-gray-800">{service.clientName}</td>
                       <td className="py-3 px-4 text-gray-600">{(service.servicios || []).map(s => s.name).join(", ")}</td>
                       <td className="py-3 px-4 text-gray-600">{service.date}</td>
@@ -444,7 +424,8 @@ const SaleServices = () => {
                         </div>
                       </td>
                     </tr>
-                  )) : (
+                      ))
+                    ) : (
                     <tr>
                       <td colSpan="5" className="text-center py-8 text-gray-500">
                         <div className="flex flex-col items-center">
@@ -460,22 +441,14 @@ const SaleServices = () => {
                 </tbody>
               </table>
             </div>
-
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="mt-6">
-                <Paginator
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                />
-              </div>
             )}
-
-            {/* Información de paginación */}
-            <div className="mt-4 text-center text-sm text-gray-600">
-              {/* Mostrando {Math.min(filteredServices.length, startIndex + 1)} a {Math.min(filteredServices.length, startIndex + itemsPerPage)} de {filteredServices.length} órdenes. */}
-            </div>
+            <Paginator
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+            />
           </div>
         </div>
       </div>

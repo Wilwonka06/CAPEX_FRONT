@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getAllServices } from "./api/servicesApi";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Footer from "../../../../shared/components/Footer";
 import { formatPrice } from "../../../../shared/utils/formatters";
 import LoadingSpinner from "../../components/LoadingSpinner";
@@ -21,6 +22,7 @@ const ServicesPage = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState(null);
+  const navigate = useNavigate();
 
   // =======================
   // Cargar servicios desde la API
@@ -211,7 +213,7 @@ const ServicesPage = () => {
             {filteredServices.slice(0, 20).map((servicio, idx) => (
               <div
                 key={servicio.id}
-                className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden cursor-pointer"
+                className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden cursor-pointer flex flex-col h-full"
                 onClick={() => setSelectedService(servicio)}
                 style={{ animationDelay: `${idx * 50}ms` }}
               >
@@ -237,12 +239,12 @@ const ServicesPage = () => {
                 </div>
 
                 {/* Info del servicio */}
-                <div className="p-6 flex flex-col gap-3">
+                <div className="p-6 flex flex-col gap-3 flex-grow">
                   <h3 className="font-bold text-lg text-[#1E1E1E] group-hover:text-[#FACC15] transition-colors duration-300 line-clamp-2 font-nunito leading-tight">
                     {servicio.name}
                   </h3>
 
-                  <p className="text-sm text-gray-600 line-clamp-2 font-lato leading-relaxed">
+                  <p className="text-sm text-gray-600 line-clamp-2 font-lato leading-relaxed flex-grow">
                     {servicio.description}
                   </p>
 
@@ -286,12 +288,11 @@ const ServicesPage = () => {
                   </div>
 
                   <button
-                    onClick={() => {
-                      // Aquí iría la lógica para agendar cita
-                      // Por ahora solo mostramos un mensaje
-                      alert('Funcionalidad de agendar cita próximamente disponible');
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/landing/citas?service=${servicio.id}`);
                     }}
-                    className="w-full py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-[#1E1E1E] font-bold rounded-full hover:from-[#F59E0B] hover:to-[#D97706] transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-poppins border-2 border-transparent hover:border-[#FACC15]/30"
+                    className="w-full py-3 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-[#1E1E1E] font-bold rounded-full hover:from-[#F59E0B] hover:to-[#D97706] transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-poppins border-2 border-transparent hover:border-[#FACC15]/30 mt-auto"
                   >
                     <i className="bi bi-calendar-check mr-2"></i>
                     Agendar Cita

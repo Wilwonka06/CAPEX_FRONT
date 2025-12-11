@@ -15,7 +15,7 @@ import {
 } from '../../../../../shared/utils/imagesUploadHelper';
 import toast from 'react-hot-toast';
 import productsService from '../API/productsService';
-import { formatNumber, cleanNumber, parseFormattedNumber } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatNumberInput, cleanNumber, parseFormattedNumber } from '../../../../../shared/utils/formatters';
 
 const MAX_IMAGES = 3;
 
@@ -126,10 +126,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
       if (name === 'costo') {
-        const c = parseFloat(value);
-        const m = parseFloat(marginPct) / 100;
+        const c = parseFormattedNumber(value);
+        const m = parseFormattedNumber(marginPct) / 100;
         if (isFinite(c) && c > 0 && isFinite(m)) {
-          next.precio = (c * (1 + m)).toFixed(2);
+          next.precio = formatNumber(c * (1 + m), 2);
         } else {
           next.precio = "";
         }
@@ -139,10 +139,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
   };
 
   useEffect(() => {
-    const c = parseFloat(formData.costo);
-    const m = parseFloat(marginPct) / 100;
+    const c = parseFormattedNumber(formData.costo);
+    const m = parseFormattedNumber(marginPct) / 100;
     if (isFinite(c) && c > 0 && isFinite(m)) {
-      setFormData(prev => ({ ...prev, precio: (c * (1 + m)).toFixed(2) }));
+      setFormData(prev => ({ ...prev, precio: formatNumber(c * (1 + m), 2) }));
     }
   }, [marginPct]);
 
@@ -561,7 +561,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                           type="text"
                           name="costo"
                           value={formatNumber(formData.costo)}
-                          onChange={e => handleChange({ target: { name: 'costo', value: cleanNumber(e.target.value) } })}
+                          onChange={e => {
+                            const formatted = formatNumberInput(e.target.value, 2);
+                            handleChange({ target: { name: 'costo', value: formatted } });
+                          }}
                           className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
                           required
                           onKeyDown={isNumberInputValid}
@@ -612,8 +615,8 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                         name="marginPct"
                         value={formatNumber(marginPct)}
                         onChange={e => {
-                          const val = cleanNumber(e.target.value);
-                          if (val === "" || /^\d*\.?\d*$/.test(val)) setMarginPct(val);
+                          const formatted = formatNumberInput(e.target.value, 0);
+                          setMarginPct(formatted);
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
                         placeholder="20"
@@ -629,7 +632,10 @@ const CreateProduct = ({ onCreate, products = [], isOpen: externalOpen = undefin
                         type="text"
                         name="cantidad"
                         value={formatNumber(formData.cantidad)}
-                        onChange={e => handleChange({ target: { name: 'cantidad', value: cleanNumber(e.target.value) } })}
+                        onChange={e => {
+                          const formatted = formatNumberInput(e.target.value, 0);
+                          handleChange({ target: { name: 'cantidad', value: formatted } });
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent text-gray-800 text-xs transition-all duration-200"
                         placeholder="0"
                       />

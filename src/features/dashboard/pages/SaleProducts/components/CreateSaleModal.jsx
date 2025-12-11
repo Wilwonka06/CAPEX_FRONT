@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import productsService from "../../products/API/productsService";
 import usersService from "../../users/API/usersService";
-import { formatNumber, formatNumberInput, parseFormattedNumber } from "../../../../../shared/utils/formatters";
+import { formatNumber, formatNumberInput, parseFormattedNumber, cleanNumber } from "../../../../../shared/utils/formatters";
 import toast from "react-hot-toast";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 
 const paymentMethods = ["Efectivo", "Transferencia bancaria"];
 
@@ -211,7 +209,8 @@ export default function CreateSaleModal({
     
     const stockDisponible = producto.cantidad - cantidadEnVenta;
     
-    if (cantidad > stockDisponible) {
+    const cantidadNum = Math.floor(parseFormattedNumber(cantidad)) || 0;
+    if (cantidadNum > stockDisponible) {
       setErrores({
         cantidad: `Stock insuficiente. Solo hay ${stockDisponible} unidades disponibles.`
       });
@@ -220,7 +219,7 @@ export default function CreateSaleModal({
 
     setItemsVenta((prev) => [
       ...prev,
-      { ...producto, cantidad: Number(cantidad), precio: formatNumberInput(String(producto.precio || producto.precio_venta || 0)) },
+      { ...producto, cantidad: cantidadNum, precio: formatNumberInput(String(producto.precio || producto.precio_venta || 0)) },
     ]);
     setProductoSeleccionado("");
     setCantidad(1);
@@ -608,7 +607,10 @@ export default function CreateSaleModal({
                       type="text"
                       name="cantidad"
                       value={formatNumber(cantidad)}
-                      onChange={e => setCantidad(Number(cleanNumber(e.target.value)))}
+                      onChange={e => {
+                        const formatted = formatNumberInput(e.target.value, 0);
+                        setCantidad(Math.floor(parseFormattedNumber(formatted)) || 1);
+                      }}
                       className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
                     />
                     {errores.cantidad && (

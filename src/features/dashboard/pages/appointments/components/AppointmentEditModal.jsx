@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
-
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
 import { isValidDocumentByType } from '@/shared/validations';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
-import { employeesService } from '@/features/dashboard/pages/employees/API/employeesService';
+import { employeesService, recurringSchedulingService } from '@/features/dashboard/pages/employees/API/employeesService';
 import ServiceSelection from './ServiceSelection';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';
 
 // Estados posibles de la cita
@@ -24,10 +22,7 @@ const APPOINTMENT_STATES = [
 ];
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
-
-function limpiarPrecio(valor) {
-  return Number(String(valor).replace(/[^\d]/g, '')) || 0;
-}
+import { parseFormattedNumber, formatPrice } from '../../../../../shared/utils/formatters';
 
 
 const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
@@ -56,11 +51,40 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       try {
         // Cargar empleados desde el backend
         const employeesData = await employeesService.getAll();
-        // Filtrar solo empleados activos y convertir a formato de profesionales
+        
+        // Obtener programaciones recurrentes activas
+        let employeesWithSchedule = new Set();
+        try {
+          const allSchedules = await recurringSchedulingService.getAll();
+          employeesWithSchedule = new Set(
+            allSchedules
+              .filter(schedule => schedule.estado === 'Activa' || schedule.estado === 'Activo')
+              .map(schedule => schedule.id_usuario || schedule.idUsuario)
+              .filter(Boolean)
+          );
+        } catch (error) {
+          console.warn('Error obteniendo programaciones:', error);
+          // Si hay error (incluyendo 401), usar Set vacío para mostrar todos los empleados activos
+          employeesWithSchedule = new Set();
+        }
+        
+        // Filtrar solo empleados activos
+        // Si hay programaciones obtenidas, filtrar solo los que tienen programación
+        // Si no se pudieron obtener programaciones, mostrar todos los empleados activos
         const normalizedProfessionals = employeesData
-          .filter(emp => emp.estado === 'Activo' || emp.estado === true)
+          .filter(emp => {
+            const isActive = emp.estado === 'Activo' || emp.estado === true;
+            if (!isActive) return false;
+            
+            // Si no se pudieron obtener programaciones, mostrar todos los activos
+            if (employeesWithSchedule.size === 0) return true;
+            
+            // Si se obtuvieron programaciones, filtrar solo los que tienen programación
+            const empId = emp.id_empleado ?? emp.id_usuario ?? emp.id;
+            return employeesWithSchedule.has(empId);
+          })
           .map(emp => ({
-            id: emp.id,
+            id: emp.id_empleado ?? emp.id_usuario ?? emp.id,
             name: emp.nombre,
             active: emp.estado === 'Activo' || emp.estado === true
           }));
@@ -424,7 +448,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       .sort((a, b) => horaAMinutos(b) - horaAMinutos(a));
     
     const duracion = formData.servicios.reduce((acc, s) => acc + Number(s.duracion || 0) * (Number(s.cantidad) || 1), 0);
-    const total = formData.servicios.reduce((acc, s) => acc + (limpiarPrecio(s.precio) * (Number(s.cantidad) || 1)), 0);
+    const total = formData.servicios.reduce((acc, s) => acc + (parseFormattedNumber(s.precio || 0) * (Number(s.cantidad) || 1)), 0);
     
     return {
       duracion,
@@ -1115,7 +1139,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Valor total</label>
-                <input type="text" value={`$${resumen.total}`} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
+                <input type="text" value={formatPrice(resumen.total)} readOnly className="w-full px-2 py-1 border rounded-md bg-gray-100" />
               </div>
             </div>
           </form>
