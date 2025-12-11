@@ -5,8 +5,6 @@ import { formatNumber, formatPrice } from '../../../../../shared/utils/formatter
 const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [selectedTime, setSelectedTime] = useState("");
   const [availableProducts, setAvailableProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -75,48 +73,12 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
   useEffect(() => {
     if (selectedProductId) {
       setQuantity(1);
-      setSelectedTime("");
-      setErrors(prev => ({ ...prev, product: '', quantity: '', time: '' }));
+      setErrors(prev => ({ ...prev, product: '', quantity: '' }));
     } else {
       setQuantity(1);
-      setSelectedTime("");
     }
   }, [selectedProductId]);
 
-  // Generar horarios disponibles para productos (horario comercial)
-  const generateAvailableTimeSlots = () => {
-    const slots = [];
-    const now = new Date();
-    const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-    const isToday = selectedDateObj.toDateString() === now.toDateString();
-
-    // Horario comercial: 8:00 AM - 6:00 PM
-    const startHour = 8;
-    const endHour = 18;
-
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-
-        // Si es hoy, no mostrar horas pasadas
-        if (isToday) {
-          const slotTime = new Date();
-          slotTime.setHours(hour, minute, 0, 0);
-          if (slotTime <= now) continue;
-        }
-
-        slots.push({
-          time: timeString,
-          display: timeString,
-          available: true
-        });
-      }
-    }
-
-    return slots;
-  };
-
-  const availableTimeSlots = generateAvailableTimeSlots();
 
   const cargarProductos = async () => {
     setRetrying(true);
@@ -138,9 +100,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
 
     if (!selectedProductId) {
       newErrors.product = "Seleccione un producto.";
-    }
-    if (!selectedTime) {
-      newErrors.time = "Seleccione una hora.";
     }
     if (quantity <= 0) {
       newErrors.quantity = "La cantidad debe ser mayor a 0.";
@@ -169,8 +128,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
       category: productoNormalizado.categoria,
       quantity: quantity,
       subtotal: productoNormalizado.precio * quantity,
-      deliveryDate: selectedDate,
-      deliveryTime: selectedTime,
       uniqueId: Date.now()
     };
 
@@ -179,7 +136,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
     // Reset form
     setSelectedProductId("");
     setQuantity(1);
-    setSelectedTime("");
   };
 
   const removeProduct = (uniqueId) => {
@@ -193,21 +149,6 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
     setQuantity(value);
     if (errors.quantity) {
       setErrors(prev => ({ ...prev, quantity: '' }));
-    }
-  };
-
-  const handleDateChange = (e) => {
-    setSelectedDate(e.target.value);
-    setSelectedTime(""); // Reset time when date changes
-    if (errors.date) {
-      setErrors(prev => ({ ...prev, date: '' }));
-    }
-  };
-
-  const handleTimeChange = (e) => {
-    setSelectedTime(e.target.value);
-    if (errors.time) {
-      setErrors(prev => ({ ...prev, time: '' }));
     }
   };
 
@@ -233,29 +174,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
         <h3 className="text-sm font-semibold text-gray-700">
           Agregar Productos
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Fecha de entrega <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
-                errors.date
-                  ? 'border-red-500 bg-red-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white`}
-              min={new Date().toISOString().split('T')[0]}
-            />
-            {errors.date && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <i className="bi bi-exclamation-triangle"></i>
-                {errors.date}
-              </p>
-            )}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Producto <span className="text-red-500">*</span>
@@ -277,7 +196,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 const normalized = normalizarProducto(product);
                 return (
                   <option key={normalized.id} value={normalized.id}>
-                    {normalized.nombre} - ${formatPrice(normalized.precio)}
+                    {normalized.nombre} - {formatPrice(normalized.precio)}
                   </option>
                 );
               })}
@@ -291,33 +210,15 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
           </div>
           <div className="space-y-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Hora de entrega <span className="text-red-500">*</span>
+              Precio Unitario
             </label>
-            <select
-              className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${
-                errors.time
-                  ? 'border-red-500 bg-red-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed`}
-              value={selectedTime}
-              onChange={handleTimeChange}
+            <input
+              type="text"
+              value={selectedProductId ? formatPrice(availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.precio || availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.costo || 0) : ''}
+              readOnly
               disabled={!selectedProductId}
-            >
-              <option value="">
-                {!selectedProductId ? "Seleccione producto primero" : "Seleccionar hora"}
-              </option>
-              {availableTimeSlots.map(slot => (
-                <option key={slot.time} value={slot.time}>
-                  {slot.display}
-                </option>
-              ))}
-            </select>
-            {errors.time && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <i className="bi bi-exclamation-triangle"></i>
-                {errors.time}
-              </p>
-            )}
+              className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 bg-gray-100 text-gray-700 cursor-not-allowed"
+            />
           </div>
           <div className="space-y-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -356,16 +257,10 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Precio unitario</label>
-                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-black text-sm">
-                  ${formatPrice(availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.precio || availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.costo || 0)}
+                <label className="block text-xs font-medium text-gray-700 mb-1">Subtotal</label>
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-green-600">
+                  {formatPrice((availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.precio || availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.costo || 0) * quantity)}
                 </div>
-              </div>
-            </div>
-            <div className="mt-4 border-t pt-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Subtotal</label>
-              <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-bold text-green-600">
-                ${formatPrice((availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.precio || availableProducts.find(p => (p.id_producto || p.id) === parseInt(selectedProductId))?.costo || 0) * quantity)}
               </div>
             </div>
           </div>
@@ -394,8 +289,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Producto</th>
-                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Fecha entrega</th>
-                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Hora entrega</th>
+                  <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Precio Unitario</th>
                   <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Cantidad</th>
                   <th className="px-2 py-2 text-left border-r text-xs font-medium text-gray-700">Subtotal</th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-700">Acciones</th>
@@ -405,18 +299,7 @@ const ProductSelector = ({ selectedProducts, onProductsChange }) => {
                 {selectedProducts.map((product) => (
                   <tr key={product.uniqueId} className="border-t hover:bg-gray-50">
                     <td className="px-2 py-2 border-r">{product.name}</td>
-                    <td className="px-2 py-2 border-r">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                        <i className="bi bi-calendar mr-1"></i>
-                        {product.deliveryDate}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 border-r">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                        <i className="bi bi-clock mr-1"></i>
-                        {product.deliveryTime}
-                      </span>
-                    </td>
+                    <td className="px-2 py-2 border-r">{formatPrice(product.price || 0)}</td>
                     <td className="px-2 py-2 border-r text-center">{formatNumber(product.quantity)}</td>
                     <td className="px-2 py-2 border-r">{formatPrice(product.subtotal || 0)}</td>
                     <td className="px-2 py-2 text-center">
