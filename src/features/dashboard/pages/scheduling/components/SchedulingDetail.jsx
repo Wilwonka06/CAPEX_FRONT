@@ -53,7 +53,7 @@ const SchedulingDetail = ({ scheduling, isOpen, onClose, onEdit, onDelete, canEd
         </div>
 
         {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(90vh - 180px)' }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Información Principal */}
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 md:col-span-2">

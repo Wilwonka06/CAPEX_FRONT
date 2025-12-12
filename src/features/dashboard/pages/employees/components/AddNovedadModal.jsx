@@ -66,6 +66,14 @@ const AddNovedadModal = ({ programaciones, onSave, onCancel, editing = null, sho
 
     if (!form.fecha) {
       newErrors.fecha = 'La fecha es requerida';
+    } else if (programacionSeleccionada && programacionSeleccionada.fecha_inicio) {
+      // Validar que la fecha no sea antes de la fecha de inicio de la programación
+      const fechaNovedad = new Date(form.fecha + 'T00:00:00');
+      const fechaInicio = new Date(programacionSeleccionada.fecha_inicio + 'T00:00:00');
+      
+      if (fechaNovedad < fechaInicio) {
+        newErrors.fecha = `La fecha no puede ser anterior a la fecha de inicio de la programación (${programacionSeleccionada.fecha_inicio})`;
+      }
     }
 
     if (!form.tipo) {
@@ -191,9 +199,15 @@ const AddNovedadModal = ({ programaciones, onSave, onCancel, editing = null, sho
             name="fecha"
             value={form.fecha}
             onChange={handleChange}
+            min={programacionSeleccionada?.fecha_inicio || undefined}
             className={`w-full border rounded px-3 py-2 ${errors.fecha ? 'border-red-500' : ''}`}
             required
           />
+          {programacionSeleccionada?.fecha_inicio && (
+            <p className="text-xs text-gray-500 mt-1">
+              Fecha mínima: {programacionSeleccionada.fecha_inicio}
+            </p>
+          )}
           {errors.fecha && (
             <p className="text-red-500 text-xs mt-1">{errors.fecha}</p>
           )}
@@ -287,7 +301,7 @@ const AddNovedadModal = ({ programaciones, onSave, onCancel, editing = null, sho
             value={form.motivo}
             onChange={handleChange}
             rows="3"
-            className="w-full border rounded px-3 py-2"
+            className="w-full border rounded px-3 py-2 resize-none"
             placeholder="Describe el motivo de la novedad..."
           />
         </div>

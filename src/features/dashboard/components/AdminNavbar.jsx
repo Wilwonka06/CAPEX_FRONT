@@ -58,27 +58,23 @@ const AdminNavbar = ({ title }) => {
         {currentUser && (
           <div className="relative">
             <button
-              className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-              onClick={() => setShowProfileMenu((v) => !v)}
-              title={currentUser.nombre}
-            >
-              {currentUser.foto || currentUser.avatar ? (
-                <img
-                  src={currentUser.foto || currentUser.avatar}
-                  alt="avatar"
-                  className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-200"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-text-main to-text-main flex items-center justify-center">
-                  <i className="bi bi-person text-yellow-500 text-sm"></i>
-                </div>
-              )}
-              <i
-                className={`bi bi-chevron-${
-                  showProfileMenu ? "up" : "down"
-                } text-gray-500 transition-transform duration-200`}
-              ></i>
-            </button>
+                                    className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:ring-offset-2"
+                                    onClick={() => setShowProfileMenu(v => !v)}
+                                    title={currentUser.nombre}
+                                >
+                                    {currentUser.foto || currentUser.avatar ? (
+                                        <img
+                                            src={currentUser.foto || currentUser.avatar}
+                                            alt="avatar"
+                                            className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-200"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FACC15] to-yellow-400 flex items-center justify-center">
+                                            <i className="bi bi-person text-white text-sm"></i>
+                                        </div>
+                                    )}
+                                    <i className={`bi bi-chevron-${showProfileMenu ? 'up' : 'down'} text-gray-500 transition-transform duration-200`}></i>
+                                </button>
             {showProfileMenu && (
               <DashboardProfileMenu
                 user={currentUser}

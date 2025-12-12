@@ -26,8 +26,10 @@ export const employeesService = {
         : EMPLOYEES_ENDPOINT;
 
       const response = await apiRequest.get(url);
-      const employeesData = response?.success ? response.data : response;
-      return Array.isArray(employeesData) ? employeesData : [];
+      // axios devuelve response.data, así que necesitamos verificar response.data.success
+      const responseData = response?.data || response;
+      const employeesData = responseData?.success ? responseData.data : responseData;
+      return Array.isArray(employeesData) ? employeesData : (employeesData?.data || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
       throw error;

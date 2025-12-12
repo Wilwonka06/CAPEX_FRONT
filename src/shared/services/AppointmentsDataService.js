@@ -19,6 +19,7 @@ const normalizeAppointmentFromBackend = (cita) => {
   return {
     id: cita.id_cita,
     id_cita: cita.id_cita,
+    id_cliente: cita.id_cliente || cita.usuario?.id_usuario || cita.cliente?.id_usuario || null,
     cliente: cita.usuario?.nombre || cita.cliente?.nombre || '',
     telefono: cita.usuario?.telefono || cita.cliente?.telefono || '',
     tipoDocumento: cita.usuario?.tipo_documento || cita.cliente?.tipo_documento || '',
@@ -68,6 +69,15 @@ const normalizeAppointmentToBackend = async (appointment, currentUser) => {
   if (!id_cliente && clienteData) {
     if (!clienteData.nombre || !clienteData.correo || !clienteData.telefono) {
       throw new Error('Debes proporcionar nombre, correo y teléfono para crear la cita sin estar autenticado.');
+    }
+  }
+  
+  // Si hay usuario autenticado, validar que tenga los datos básicos
+  if (id_cliente) {
+    // Asegurar que los datos del cliente estén presentes (aunque el backend usará el ID)
+    // Esto es para compatibilidad y validación
+    if (!appointment.cliente || !appointment.telefono) {
+      throw new Error('Faltan datos del cliente. Por favor, verifica que todos los campos estén completos.');
     }
   }
 
@@ -136,6 +146,8 @@ const normalizeAppointmentToBackend = async (appointment, currentUser) => {
     hora_entrada: hora_entrada
   };
   
+  // Siempre incluir id_cliente si hay usuario autenticado
+  // El backend lo usará directamente sin necesidad de crear usuario
   if (id_cliente) {
     citaData.id_cliente = id_cliente;
   }
@@ -145,8 +157,9 @@ const normalizeAppointmentToBackend = async (appointment, currentUser) => {
     servicios: serviciosConEmpleados
   };
   
-  // Si no hay usuario autenticado, agregar datos del cliente
-  if (clienteData) {
+  // Solo agregar datos del cliente si NO hay usuario autenticado
+  // Cuando hay usuario autenticado, el backend obtiene los datos del token
+  if (!id_cliente && clienteData) {
     result.cliente = clienteData;
   }
   
@@ -206,9 +219,17 @@ export const getAppointments = async (filters = {}) => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
     if (currentUser?.id_usuario || currentUser?.id) {
       filters.id_cliente = currentUser.id_usuario || currentUser.id;
+      console.log('🔍 Filtrando citas por id_cliente:', filters.id_cliente);
     }
 
     const response = await appointmentsService.getAll(filters);
+    
+    console.log('📥 Respuesta de citas del backend:', {
+      success: response.success,
+      tieneData: !!response.data,
+      citasCount: response.data?.citas?.length || 0,
+      esArray: Array.isArray(response)
+    });
     
     // Normalizar respuesta del backend
     let appointments = [];
@@ -218,9 +239,14 @@ export const getAppointments = async (filters = {}) => {
       appointments = response.map(normalizeAppointmentFromBackend);
     }
 
+    console.log('✅ Citas normalizadas:', {
+      count: appointments.length,
+      ids: appointments.map(a => ({ id: a.id, id_cliente: a.id_cliente }))
+    });
+
     return appointments;
   } catch (error) {
-    console.error('Error fetching appointments from API:', error);
+    console.error('❌ Error fetching appointments from API:', error);
     // Retornar array vacío en caso de error
     return [];
   }

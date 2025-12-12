@@ -278,7 +278,7 @@ const EditScheduling = ({ scheduling, onUpdate, isOpen: externalOpen = undefined
         </div>
 
         {/* Contenido con scroll */}
-        <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
+        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(90vh - 180px)' }}>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Bloques Horarios */}
       <div className="space-y-4 md:col-span-2">

@@ -46,6 +46,7 @@ const ServiceSelection = ({
   const [loading, setLoading] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const [occupiedHours, setOccupiedHours] = useState({}); // { employeeId: { hora: true } }
+  const [employeeSchedules, setEmployeeSchedules] = useState({}); // { employeeId: { min: 'HH:MM', max: 'HH:MM', bloques: [...] } }
   const serviceInputRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -103,6 +104,125 @@ const ServiceSelection = ({
     }
   };
 
+  // Cargar horario del empleado para una fecha específica
+  const cargarHorarioEmpleado = async (idEmpleado, fechaServicio) => {
+    if (!idEmpleado || !fechaServicio) {
+      setEmployeeSchedules(prev => ({ ...prev, [idEmpleado]: null }));
+      return;
+    }
+
+    try {
+      console.log(`📅 Cargando horario para empleado ${idEmpleado} en fecha ${fechaServicio}`);
+      const horario = await appointmentsService.getEmployeeSchedule(idEmpleado, fechaServicio);
+      console.log(`✅ Respuesta del horario:`, horario);
+      
+      // Verificar que horario sea un objeto válido
+      if (!horario || typeof horario !== 'object' || Array.isArray(horario)) {
+        console.warn('⚠️ Formato de respuesta inesperado para horario:', horario);
+        setEmployeeSchedules(prev => ({ ...prev, [idEmpleado]: null }));
+        return;
+      }
+      
+      // Si el empleado no tiene programación, establecer null sin error
+      if (!horario || (!horario.bloques_horarios && !horario.tiene_novedad)) {
+        console.log(`ℹ️ Empleado ${idEmpleado} no tiene programación para ${fechaServicio}`);
+        setEmployeeSchedules(prev => ({ ...prev, [idEmpleado]: null }));
+        return;
+      }
+
+      // Verificar si hay novedad de Ausencia o Suspensión
+      if (horario.tiene_novedad && (horario.tipo_novedad === 'Ausencia' || horario.tipo_novedad === 'Suspension')) {
+        // Si hay ausencia o suspensión, no hay bloques disponibles
+        console.log(`⚠️ Empleado ${idEmpleado} tiene ${horario.tipo_novedad} para ${fechaServicio}`);
+        setEmployeeSchedules(prev => ({ 
+          ...prev, 
+          [idEmpleado]: { 
+            min: null, 
+            max: null, 
+            bloques: [],
+            tiene_novedad: true,
+            tipo_novedad: horario.tipo_novedad,
+            motivo: horario.motivo
+          } 
+        }));
+        return;
+      }
+      
+      if (horario.bloques_horarios && Array.isArray(horario.bloques_horarios) && horario.bloques_horarios.length > 0) {
+        // Encontrar el min y max de todos los bloques
+        let minHora = '23:59';
+        let maxHora = '00:00';
+        
+        horario.bloques_horarios.forEach(bloque => {
+          if (bloque.inicio && bloque.fin) {
+            const inicioMin = horaAMinutos(bloque.inicio);
+            const finMin = horaAMinutos(bloque.fin);
+            const minActual = horaAMinutos(minHora);
+            const maxActual = horaAMinutos(maxHora);
+            
+            if (inicioMin < minActual) {
+              minHora = bloque.inicio.substring(0, 5); // Asegurar formato HH:MM
+            }
+            if (finMin > maxActual) {
+              maxHora = bloque.fin.substring(0, 5); // Asegurar formato HH:MM
+            }
+          }
+        });
+        
+        console.log(`✅ Horario cargado para empleado ${idEmpleado}: ${minHora} - ${maxHora}`);
+        setEmployeeSchedules(prev => ({ 
+          ...prev, 
+          [idEmpleado]: { 
+            min: minHora, 
+            max: maxHora, 
+            bloques: horario.bloques_horarios,
+            tiene_novedad: horario.tiene_novedad || false,
+            tipo_novedad: horario.tipo_novedad || null,
+            motivo: horario.motivo || null
+          } 
+        }));
+      } else {
+        console.log(`ℹ️ Empleado ${idEmpleado} no tiene bloques horarios para ${fechaServicio}`);
+        setEmployeeSchedules(prev => ({ ...prev, [idEmpleado]: null }));
+      }
+    } catch (error) {
+      // Si es un 404, verificar si es porque no hay programación o porque la ruta no existe
+      if (error?.response?.status === 404) {
+        const errorMessage = error.response?.data?.message || error.response?.data?.error || '';
+        
+        // Si el mensaje indica que la ruta no existe, es un error del sistema
+        if (errorMessage.toLowerCase().includes('ruta no encontrada') || 
+            errorMessage.toLowerCase().includes('route not found') ||
+            error.response?.data?.path) {
+          console.error(`❌ Error del sistema: Ruta no encontrada para obtener horario del empleado`);
+          console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            url: error.config?.url,
+            baseURL: error.config?.baseURL
+          });
+          // No establecer null, dejar que el usuario vea que hay un error
+          return;
+        }
+        
+        // Si es un 404 normal (empleado sin programación), es esperado
+        console.log(`ℹ️ Empleado ${idEmpleado} no tiene programación para ${fechaServicio} (404)`);
+        setEmployeeSchedules(prev => ({ ...prev, [idEmpleado]: null }));
+      } else {
+        console.error(`❌ Error loading employee schedule for ${idEmpleado} on ${fechaServicio}:`, error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          url: error.config?.url,
+          baseURL: error.config?.baseURL
+        });
+        setEmployeeSchedules(prev => ({ ...prev, [idEmpleado]: null }));
+      }
+    }
+  };
+
   // Cargar horarios ocupados para un empleado en una fecha específica
   const cargarHorariosOcupados = async (idEmpleado, fechaServicio) => {
     if (!idEmpleado || !fechaServicio) {
@@ -117,32 +237,61 @@ const ServiceSelection = ({
         fecha_hasta: fechaServicio
       });
 
-      const citas = response?.data || [];
+      // Manejar diferentes estructuras de respuesta del API
+      let citas = [];
+      
+      // El backend devuelve: { success: true, data: { citas: [...], pagination: {...} } }
+      if (response?.success && response?.data) {
+        if (response.data.citas && Array.isArray(response.data.citas)) {
+          citas = response.data.citas;
+        } else if (Array.isArray(response.data)) {
+          citas = response.data;
+        }
+      } 
+      // Si la respuesta es directamente un array
+      else if (Array.isArray(response)) {
+        citas = response;
+      } 
+      // Si response.data es directamente un array
+      else if (response?.data && Array.isArray(response.data)) {
+        citas = response.data;
+      }
+      // Otras estructuras posibles
+      else if (response?.citas && Array.isArray(response.citas)) {
+        citas = response.citas;
+      } else if (response?.data?.results && Array.isArray(response.data.results)) {
+        citas = response.data.results;
+      } else if (response?.data?.items && Array.isArray(response.data.items)) {
+        citas = response.data.items;
+      }
+
       const horasOcupadas = {};
 
-      // Procesar cada cita y sus servicios
-      citas.forEach(cita => {
-        // Excluir la cita actual si estamos editando
-        if (excludeCitaId && cita.id_cita === excludeCitaId) return;
+      // Procesar cada cita y sus servicios solo si citas es un array válido
+      if (Array.isArray(citas)) {
+        citas.forEach(cita => {
+          // Excluir la cita actual si estamos editando
+          if (excludeCitaId && cita.id_cita === excludeCitaId) return;
 
-        if (cita.servicios && Array.isArray(cita.servicios)) {
-          cita.servicios.forEach(servicio => {
-            // Solo considerar servicios del empleado seleccionado
-            if (servicio.id_empleado === idEmpleado && servicio.hora_inicio && servicio.hora_finalizacion) {
-              const inicioMin = horaAMinutos(servicio.hora_inicio);
-              const finMin = horaAMinutos(servicio.hora_finalizacion);
-              
-              // Marcar todas las horas ocupadas en ese rango
-              for (let min = inicioMin; min < finMin; min += 15) {
-                const h = Math.floor(min / 60);
-                const m = min % 60;
-                const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                horasOcupadas[hora] = true;
+          if (cita.servicios && Array.isArray(cita.servicios)) {
+            cita.servicios.forEach(servicio => {
+              // Solo considerar servicios del empleado seleccionado
+              if (servicio.id_empleado === idEmpleado && servicio.hora_inicio && servicio.hora_finalizacion) {
+                const inicioMin = horaAMinutos(servicio.hora_inicio);
+                const finMin = horaAMinutos(servicio.hora_finalizacion);
+                
+                // Marcar todas las horas ocupadas en ese rango
+                for (let min = inicioMin; min < finMin; min += 15) {
+                  const h = Math.floor(min / 60);
+                  const m = min % 60;
+                  const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                  horasOcupadas[hora] = true;
+                }
               }
-            }
-          });
-        }
-      });
+            });
+          }
+        });
+      }
 
       setOccupiedHours(prev => ({ ...prev, [idEmpleado]: horasOcupadas }));
     } catch (error) {
@@ -156,11 +305,12 @@ const ServiceSelection = ({
     cargarServicios();
   }, []);
 
-  // Cargar horarios ocupados cuando cambia la fecha o un empleado
+  // Cargar horarios ocupados y horarios de empleados cuando cambia la fecha o un empleado
   useEffect(() => {
     if (fecha) {
       const empleadosUnicos = [...new Set(servicios.map(s => s.id_empleado).filter(Boolean))];
       empleadosUnicos.forEach(idEmpleado => {
+        cargarHorarioEmpleado(idEmpleado, fecha);
         cargarHorariosOcupados(idEmpleado, fecha);
       });
     }
@@ -261,8 +411,9 @@ const ServiceSelection = ({
       servicioActualizado.inicio = '';
       servicioActualizado.fin = '';
       
-      // Cargar horarios ocupados para el nuevo empleado
+      // Cargar horario y horarios ocupados para el nuevo empleado
       if (profesional?.id && fecha) {
+        cargarHorarioEmpleado(profesional.id, fecha);
         cargarHorariosOcupados(profesional.id, fecha);
       }
     }
@@ -271,6 +422,7 @@ const ServiceSelection = ({
     if (updates.id_empleado !== undefined) {
       servicioActualizado.id_empleado = updates.id_empleado;
       if (updates.id_empleado && fecha) {
+        cargarHorarioEmpleado(updates.id_empleado, fecha);
         cargarHorariosOcupados(updates.id_empleado, fecha);
       }
     }
@@ -288,9 +440,37 @@ const ServiceSelection = ({
     onServicesChange(nuevosServicios);
   };
 
+  // Verificar si una hora está dentro del horario del empleado
+  const verificarHoraEnHorario = (hora, idEmpleado, duracion) => {
+    if (!hora || !idEmpleado || !duracion) return false;
+    
+    const horario = employeeSchedules[idEmpleado];
+    if (!horario || !horario.bloques || horario.bloques.length === 0) return false;
+    
+    const inicioMin = horaAMinutos(hora);
+    const finMin = inicioMin + Number(duracion);
+    
+    // Verificar si el rango [inicio, fin] está completamente dentro de algún bloque
+    for (const bloque of horario.bloques) {
+      const bloqueInicio = horaAMinutos(bloque.inicio);
+      const bloqueFin = horaAMinutos(bloque.fin);
+      
+      if (inicioMin >= bloqueInicio && finMin <= bloqueFin) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   // Verificar si una hora está ocupada
   const verificarHoraOcupada = (hora, idEmpleado, duracion, index) => {
     if (!hora || !idEmpleado || !duracion) return false;
+    
+    // Primero verificar que esté dentro del horario del empleado
+    if (!verificarHoraEnHorario(hora, idEmpleado, duracion)) {
+      return true; // No está en el horario disponible
+    }
     
     const inicioMin = horaAMinutos(hora);
     const finMin = inicioMin + Number(duracion);
@@ -322,36 +502,6 @@ const ServiceSelection = ({
     return false;
   };
 
-  // Obtener horas disponibles para un servicio
-  const getHorasDisponibles = (index, profesional, duracion) => {
-    if (!profesional) return [];
-    
-    const servicio = servicios[index];
-    const idEmpleado = servicio?.id_empleado;
-    if (!idEmpleado) return [];
-    
-    const horas = [];
-    const hoyISO = new Date().toISOString().slice(0, 10);
-    const esHoy = fecha === hoyISO;
-    const ahora = new Date();
-    const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
-    
-    for (let h = 6; h <= 20; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        const disponible = !verificarHoraOcupada(hora, idEmpleado, duracion, index) && 
-                          (!esHoy || (h * 60 + m) > ahoraMin);
-        
-        horas.push({ 
-          hora, 
-          horaDisplay: convertirHoraA12Horas(hora),
-          disponible 
-        });
-      }
-    }
-    
-    return horas;
-  };
 
   const handleFocus = () => {
     setIsServiceDropdownOpen(true);
@@ -516,28 +666,67 @@ const ServiceSelection = ({
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Hora inicio</label>
-                  <select
-                    value={service.inicio || ''}
-                    onChange={e => updateService(idx, { inicio: e.target.value })}
-                    className={`w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    disabled={!service.profesional || !service.id_empleado || disabled}
-                  >
-                    <option value="">Seleccionar hora</option>
-                    {getHorasDisponibles(idx, service.profesional, service.duracion).map(opt => (
-                      <option 
-                        key={opt.hora} 
-                        value={opt.hora} 
-                        disabled={!opt.disponible}
-                        style={!opt.disponible ? { color: '#aaa' } : {}}
-                      >
-                        {opt.horaDisplay} {!opt.disponible ? ' (ocupada)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {service.profesional && service.id_empleado && service.inicio && 
-                   verificarHoraOcupada(service.inicio, service.id_empleado, service.duracion, idx) && (
-                    <span className="text-xs text-red-500 block mt-1">Hora no disponible</span>
-                  )}
+                  {(() => {
+                    const horario = service.id_empleado ? employeeSchedules[service.id_empleado] : null;
+                    const tieneNovedad = horario?.tiene_novedad && (horario.tipo_novedad === 'Ausencia' || horario.tipo_novedad === 'Suspension');
+                    const minTime = horario?.min || '06:00';
+                    const maxTime = horario?.max || '20:00';
+                    const horaInvalida = service.inicio && service.id_empleado && service.duracion && 
+                                       verificarHoraOcupada(service.inicio, service.id_empleado, service.duracion, idx);
+                    
+                    return (
+                      <>
+                        <input
+                          type="time"
+                          value={service.inicio || ''}
+                          onChange={e => updateService(idx, { inicio: e.target.value })}
+                          min={tieneNovedad ? undefined : minTime}
+                          max={tieneNovedad ? undefined : maxTime}
+                          step="900"
+                          className={`w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+                            disabled || !service.profesional || !service.id_empleado || tieneNovedad
+                              ? 'bg-gray-100 cursor-not-allowed' 
+                              : horaInvalida 
+                                ? 'border-red-500 bg-red-50' 
+                                : ''
+                          }`}
+                          disabled={!service.profesional || !service.id_empleado || disabled || tieneNovedad}
+                          title={
+                            tieneNovedad 
+                              ? `El empleado tiene una ${horario.tipo_novedad === 'Ausencia' ? 'ausencia' : 'suspensión'} registrada para esta fecha`
+                              : horario 
+                                ? `Horario disponible: ${minTime} - ${maxTime}` 
+                                : 'Seleccione un empleado primero'
+                          }
+                        />
+                        {tieneNovedad && (
+                          <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                            <span className="text-xs text-yellow-800 font-semibold block">
+                              <i className="bi bi-exclamation-triangle mr-1"></i>
+                              El empleado tiene una {horario.tipo_novedad === 'Ausencia' ? 'ausencia' : 'suspensión'} registrada para esta fecha
+                            </span>
+                            {horario.motivo && (
+                              <span className="text-xs text-yellow-700 block mt-1">
+                                Motivo: {horario.motivo}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {!tieneNovedad && horario && (
+                          <span className="text-xs text-gray-500 block mt-1">
+                            Horario disponible: {minTime} - {maxTime}
+                          </span>
+                        )}
+                        {!tieneNovedad && service.profesional && service.id_empleado && service.inicio && horaInvalida && (
+                          <span className="text-xs text-red-500 block mt-1">
+                            {!verificarHoraEnHorario(service.inicio, service.id_empleado, service.duracion) 
+                              ? 'Hora fuera del horario del empleado' 
+                              : 'Hora no disponible (ocupada)'}
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Hora finalización</label>
