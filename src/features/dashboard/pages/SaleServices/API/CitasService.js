@@ -76,9 +76,9 @@ export const getCitasEnEjecucion = async () => {
           duracion: service.duracion,
           fecha_programada: service.fecha_programada
         }],
-        totalServices: service.precio_unitario * service.cantidad,
+        totalServices: (service.precio_unitario || 0) * (service.cantidad || 1),
         totalProducts: 0,
-        totalGeneral: service.precio_unitario * service.cantidad
+        totalGeneral: (service.precio_unitario || 0) * (service.cantidad || 1)
       };
     });
 
@@ -156,9 +156,9 @@ export const getCitaById = async (serviceDetailId) => {
         duration: service.duracion,
         fecha_programada: service.fecha_programada
       }],
-      totalServices: service.precio_unitario * service.cantidad,
+      totalServices: (service.precio_unitario || 0) * (service.cantidad || 1),
       totalProducts: 0,
-      totalGeneral: service.precio_unitario * service.cantidad
+      totalGeneral: (service.precio_unitario || 0) * (service.cantidad || 1)
     };
   } catch (error) {
     console.error('Error al obtener orden:', error);
