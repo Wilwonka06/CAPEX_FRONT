@@ -52,7 +52,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
 
   // Helpers para errores separados - solo servicios son obligatorios
   // Solo mostrar error cuando se intente enviar el formulario, no cuando se escriba en otros campos
-  const showServiceError = showErrors && (!selectedServices || selectedServices.length === 0);
+  const showServiceError = showErrors && ((!selectedServices || selectedServices.length === 0) || errors.items);
 
 
 
@@ -308,6 +308,11 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
       const error = validateField(field, formData[field]);
       if (error) fieldErrors[field] = error;
     });
+
+    // Validar que haya al menos un servicio seleccionado
+    if (!selectedServices || selectedServices.length === 0) {
+      fieldErrors.items = 'Debe agregar al menos un servicio';
+    }
 
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
@@ -596,7 +601,7 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
               {showServiceError && (
                 <p className="text-red-500 text-xs flex items-center gap-1">
                   <i className="bi bi-exclamation-triangle"></i>
-                  Debes agregar al menos un servicio
+                  {errors.items || 'Debes agregar al menos un servicio'}
                 </p>
               )}
             </div>
@@ -644,12 +649,12 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
         </div>
 
         {/* Botones */}
-        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+        <div className="rounded-b-2xl flex justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button
             type="button"
             onClick={handleClose}
             disabled={loading}
-            className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
           >
             <i className="bi bi-x-circle"></i>
             Cancelar
@@ -657,15 +662,18 @@ const CreateServiceOrder = ({ isOpen, onClose, onCreated, services }) => {
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-bold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
-                <i className="bi bi-arrow-clockwise animate-spin mr-2"></i>
-                Creando...
+                <span className="animate-spin h-4 w-4 border-2 border-gray-800 border-t-transparent rounded-full"></span>
+                Guardando...
               </>
             ) : (
-              'Crear Orden'
+              <>
+                <i className="bi bi-check-circle-fill"></i>
+                Crear Orden
+              </>
             )}
           </button>
         </div>

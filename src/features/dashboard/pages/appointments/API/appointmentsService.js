@@ -19,6 +19,8 @@ export const appointmentsService = {
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
       if (params.fecha_servicio) queryParams.append('fecha_servicio', params.fecha_servicio);
+      if (params.fecha_desde) queryParams.append('fecha_desde', params.fecha_desde);
+      if (params.fecha_hasta) queryParams.append('fecha_hasta', params.fecha_hasta);
       if (params.estado) queryParams.append('estado', params.estado);
       if (params.id_cliente) queryParams.append('id_cliente', params.id_cliente);
 

@@ -543,7 +543,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       fieldErrors.dineroProporcionado = 'Solo se puede registrar dinero proporcionado cuando el estado es "Pagado"';
     }
 
-    // Validar que el dinero proporcionado sea igual al total general cuando el estado es "Pagado"
+    // Validar que el dinero proporcionado sea mayor o igual al total general cuando el estado es "Pagado"
     if (formData.status === 'Pagado') {
       if (!dineroProporcionado || dineroProporcionado === 0) {
         fieldErrors.dineroProporcionado = 'El dinero proporcionado es requerido cuando el estado es "Pagado"';
@@ -552,10 +552,9 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
         const dineroRedondeado = Math.round(dineroProporcionado * 100) / 100;
         const totalRedondeado = Math.round(totalGeneral * 100) / 100;
         
-        // Comparar con tolerancia de 0.01 para evitar problemas de precisión de punto flotante
-        const diferencia = Math.abs(dineroRedondeado - totalRedondeado);
-        if (diferencia > 0.01) {
-          fieldErrors.dineroProporcionado = `El dinero proporcionado (${formatPrice(dineroProporcionado)}) debe ser igual al total general (${formatPrice(totalGeneral)})`;
+        // Verificar que el dinero proporcionado sea mayor o igual al total general
+        if (dineroRedondeado < totalRedondeado) {
+          fieldErrors.dineroProporcionado = `El dinero proporcionado (${formatPrice(dineroProporcionado)}) debe ser mayor o igual al total general (${formatPrice(totalGeneral)})`;
         }
       }
     }
@@ -590,11 +589,18 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       // Obtener el id_cita del order o de los servicios
       const citaId = order.citaId || order.id_cita || selectedServices[0]?.id_cita || null;
       
+      // Obtener la fecha de la orden - puede venir de diferentes campos
+      const orderDate = order.date || 
+                       order.fecha_programada || 
+                       selectedServices[0]?.fecha_programada || 
+                       new Date().toISOString().split('T')[0];
+      
       const orderData = {
         ...formData,
         id: order.id,
         id_cliente: clienteId,
         nombre_cliente: formData.nombre.trim(),
+        date: orderDate, // Incluir la fecha para crear nuevos servicios
         servicios: selectedServices,
         productos: selectedProducts,
         totalServices,
@@ -792,7 +798,7 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             scrollBehavior: 'auto' // Evitar animaciones de scroll
           }}
         >
-      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6">
+      <form id="edit-service-order-form" onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6">
         {/* Datos del Cliente */}
         <div>
           <h3 className="text-sm font-semibold text-black mb-3">Datos del Cliente</h3>
@@ -1023,9 +1029,10 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             </div>
           </div>
         </div>
+      </form>
 
         {/* Botones */}
-        <div className="flex justify-end space-x-3 pt-4">
+        <div className="rounded-b-2xl flex justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button
             type="button"
             onClick={handleClose}
@@ -1037,8 +1044,9 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
           </button>
           <button
             type="submit"
+            form="edit-service-order-form"
             disabled={loading}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-bold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-bold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -1053,7 +1061,6 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             )}
           </button>
         </div>
-      </form>
         </div>
       </div>
     </div>

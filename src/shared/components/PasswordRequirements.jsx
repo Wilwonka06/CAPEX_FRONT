@@ -16,7 +16,7 @@ const PasswordRequirements = ({ password }) => {
       uppercase: /[A-Z]/.test(pwd),
       lowercase: /[a-z]/.test(pwd),
       number: /\d/.test(pwd),
-      special: /[@$!%*?&]/.test(pwd)
+      special: /[@$!%*?&#]/.test(pwd)
     });
   }, [password]);
 
@@ -44,7 +44,7 @@ const PasswordRequirements = ({ password }) => {
         </li>
         <li className={`flex items-center gap-2 ${requirements.special ? 'text-green-600' : 'text-gray-500'}`}>
           <i className={`bi ${requirements.special ? 'bi-check-circle-fill' : 'bi-x-circle'}`}></i>
-          <span>Al menos un carácter especial (@$!%*?&)</span>
+          <span>Al menos un carácter especial (@$!%*?&#)</span>
         </li>
       </ul>
       {allMet && (

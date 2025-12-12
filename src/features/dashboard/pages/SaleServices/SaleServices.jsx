@@ -6,7 +6,7 @@ import AnularServiceOrder from "./components/AnularServiceOrder";
 import Search from "../../../../shared/Search";
 import TableSkeleton from "../../../../shared/components/TableSkeleton";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./API/ServiceOrderService";
-import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./API/CitasService";
+import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita, getCitaById } from "./API/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
 import { searchInObject } from '../../../../shared/utils/searchHelper';
 import { formatNumber, formatPrice } from '../../../../shared/utils/formatters';
@@ -23,6 +23,7 @@ const SaleServices = () => {
   const [isAnularModalOpen, setIsAnularModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
   const [services, setServices] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -132,9 +133,22 @@ const SaleServices = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const pageServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
-  const handleViewClick = useCallback((order) => {
-    setSelectedOrder(order);
-    setIsViewModalOpen(true);
+  const handleViewClick = useCallback(async (order) => {
+    setViewLoading(true);
+    try {
+      // Fetch complete service details for viewing
+      const completeOrder = await getCitaById(order.id);
+      setSelectedOrder(completeOrder);
+      setIsViewModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching service details:', error);
+      toast.error('Error al cargar los detalles de la orden');
+      // Fallback to cached data if fetch fails
+      setSelectedOrder(order);
+      setIsViewModalOpen(true);
+    } finally {
+      setViewLoading(false);
+    }
   }, []);
 
   // handleEditClick abre directamente el modal de edición
@@ -253,12 +267,8 @@ const SaleServices = () => {
 
     const orderPromise = (async () => {
       await anularServiceOrder(orderId);
-      // Actualizar el estado local
-      setServices(prev => prev.map(service =>
-        service.id === orderId
-          ? { ...service, status: "Anulado" }
-          : service
-      ));
+      // Recargar la lista desde el backend para obtener datos actualizados
+      await cargarCitas();
       setIsAnularModalOpen(false);
       setSelectedOrder(null);
       return true;
@@ -458,8 +468,9 @@ const SaleServices = () => {
         <CreateServiceOrder
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          onCreated={(newOrder) => {
-            setServices(prev => [...prev, newOrder]);
+          onCreated={async (newOrder) => {
+            // Recargar la lista desde el backend para obtener datos actualizados
+            await cargarCitas();
             toast.success('Orden de servicio creada exitosamente');
           }}
           services={services}
@@ -470,38 +481,9 @@ const SaleServices = () => {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           order={selectedOrder}
-          onEdited={(updatedOrder) => {
-            console.log('🔄 Callback onEdited llamado con:', updatedOrder);
-            
-            // Actualizar la orden en la lista con el estado correcto inmediatamente
-            setServices(prev => {
-              const updated = prev.map(order => {
-                if (order.id === updatedOrder.id) {
-                  // Asegurar que el estado se mapee correctamente
-                  const newStatus = updatedOrder.status || order.status;
-                  console.log('🔄 Actualizando orden en lista local:', {
-                    id: order.id,
-                    estadoAnterior: order.status,
-                    estadoNuevo: newStatus,
-                    updatedOrder: updatedOrder
-                  });
-                  return { ...order, ...updatedOrder, status: newStatus };
-                }
-                return order;
-              });
-              
-              console.log('📋 Lista actualizada:', updated.map(o => ({ id: o.id, status: o.status })));
-              return updated;
-            });
-            
-            // NO recargar desde el backend inmediatamente porque el backend no está guardando el estado
-            // En su lugar, confiar en la actualización local
-            // Si el usuario recarga la página, entonces se cargará desde el backend
-            // setTimeout(() => {
-            //   console.log('🔄 Recargando órdenes desde el backend...');
-            //   cargarCitas();
-            // }, 1000);
-            
+          onEdited={async (updatedOrder) => {
+            // Recargar la lista desde el backend para obtener datos actualizados
+            await cargarCitas();
             setSelectedOrder(null);
             toast.success('Orden de servicio actualizada exitosamente');
           }}

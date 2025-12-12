@@ -9,20 +9,34 @@
  * Convierte datos del frontend al formato del backend
  */
 const normalizeOrderToBackend = (orderData) => {
-  const serviceDetails = (orderData.servicios || []).map(service => ({
-    id_empleado: service.employee?.id || service.id_empleado,
-    id_servicio: service.servicioId || service.id_servicio,
-    id_cliente: orderData.id_cliente,
-    id_cita: orderData.citaId || null,
-    precio_unitario: parseFloat(service.price || 0),
-    cantidad: parseInt(service.quantity || 1),
-    hora_inicio: service.hora_inicio || '08:00:00',
-    hora_finalizacion: service.hora_finalizacion || service.hora_fin || '09:00:00',
-    duracion: parseInt(service.duracion || 60),
-    fecha_programada: orderData.date || new Date().toISOString().split('T')[0],
-    estado: 'En proceso',
-    observaciones: service.observaciones || orderData.observaciones || ''
-  }));
+  const serviceDetails = (orderData.servicios || []).map(service => {
+    // Convertir tiempos a formato HH:MM:SS
+    const startTime = service.startTime || service.hora_inicio || '08:00:00';
+    const endTime = service.endTime || service.hora_finalizacion || service.hora_fin || '09:00:00';
+
+    // Asegurar formato HH:MM:SS
+    const formatTimeToSeconds = (timeStr) => {
+      if (timeStr.length === 5) { // HH:MM format
+        return timeStr + ':00'; // Add seconds
+      }
+      return timeStr; // Already in HH:MM:SS format
+    };
+
+    return {
+      id_empleado: service.employee?.id || service.employee?.id_usuario || service.id_empleado,
+      id_servicio: service.servicioId || service.id_servicio || service.id,
+      id_cliente: orderData.id_cliente,
+      id_cita: orderData.citaId || null,
+      precio_unitario: parseFloat(service.price || 0),
+      cantidad: parseInt(service.quantity || 1),
+      hora_inicio: formatTimeToSeconds(startTime),
+      hora_finalizacion: formatTimeToSeconds(endTime),
+      duracion: parseInt(service.duration || service.duracion || 60),
+      fecha_programada: orderData.date || new Date().toISOString().split('T')[0],
+      estado: 'En ejecución', // Cambiar a formato aceptado por backend
+      observaciones: service.observaciones || orderData.observaciones || ''
+    };
+  });
 
   return serviceDetails;
 };
@@ -39,25 +53,29 @@ export const createServiceOrder = async (orderData, orders) => {
 
     // Validación centralizada
     const validation = validateServiceOrder(orderData, orders, totalGeneral, orderData.status || 'En ejecucion');
-    
+
     if (!validation.isValid) {
       const firstError = Object.values(validation.errors)[0];
       throw new Error(firstError);
     }
 
+
     // Convertir datos al formato del backend
     const serviceDetails = normalizeOrderToBackend(orderData);
 
+    // Log para depuración
+    console.log('📋 Datos normalizados para backend:', serviceDetails);
+
     // Crear cada detalle de servicio en el backend
     const createdServices = await Promise.all(
-      serviceDetails.map(serviceDetail => 
+      serviceDetails.map(serviceDetail =>
         apiRequest.post(SERVICE_DETAILS_ENDPOINT, serviceDetail)
       )
     );
 
     // Obtener el primer servicio creado para usar como referencia
     const firstService = createdServices[0]?.data || createdServices[0];
-    
+
     // Calcular devolución
     const dineroProporcionado = orderData.dineroProporcionado || 0;
     const devolucion = Math.max(0, dineroProporcionado - totalGeneral);
@@ -84,6 +102,10 @@ export const createServiceOrder = async (orderData, orders) => {
     };
   } catch (error) {
     console.error('Error creating service order:', error);
+    if (error.response && error.response.data && error.response.data.errors) {
+      console.error('Validation errors:', error.response.data.errors);
+      throw new Error('Error de validación: ' + JSON.stringify(error.response.data.errors));
+    }
     throw error;
   }
 };
@@ -131,7 +153,74 @@ export const editServiceOrder = async (orderData, orders) => {
         })[0];
         // Agregar el estado al nuevo servicio
         newServiceDetail.estado = estadoBackend;
-        return apiRequest.post(SERVICE_DETAILS_ENDPOINT, newServiceDetail);
+        
+        // Validar que los campos requeridos estén presentes
+        if (!newServiceDetail.id_cliente) {
+          console.error('❌ Error: id_cliente es requerido para crear un nuevo servicio', {
+            service: service,
+            orderData: { id_cliente: orderData.id_cliente }
+          });
+          throw new Error('El ID del cliente es requerido para crear un nuevo servicio');
+        }
+        if (!newServiceDetail.id_empleado) {
+          console.error('❌ Error: id_empleado es requerido para crear un nuevo servicio', {
+            service: service,
+            serviceEmployee: service.employee,
+            serviceIdEmpleado: service.id_empleado,
+            newServiceDetail: newServiceDetail
+          });
+          throw new Error(`El ID del empleado es requerido para crear un nuevo servicio. El servicio "${service.name || 'sin nombre'}" no tiene un empleado asignado. Por favor, asegúrate de que el servicio tenga un empleado asignado antes de guardar.`);
+        }
+        if (!newServiceDetail.id_servicio) {
+          console.error('❌ Error: id_servicio es requerido para crear un nuevo servicio', {
+            service: service,
+            serviceServicioId: service.servicioId,
+            serviceIdServicio: service.id_servicio
+          });
+          throw new Error('El ID del servicio es requerido para crear un nuevo servicio');
+        }
+        
+        console.log('📤 Creando nuevo servicio:', {
+          newServiceDetail: newServiceDetail,
+          serviceOriginal: service,
+          orderData: {
+            id_cliente: orderData.id_cliente,
+            date: orderData.date,
+            citaId: orderData.citaId
+          }
+        });
+        return apiRequest.post(SERVICE_DETAILS_ENDPOINT, newServiceDetail)
+          .then(response => {
+            console.log('✅ Nuevo servicio creado exitosamente:', response);
+            return response;
+          })
+          .catch(error => {
+            const errorMessage = error.response?.data?.message || 
+                               error.response?.data?.error || 
+                               error.message || 
+                               'Error desconocido al crear servicio';
+            const validationErrors = error.response?.data?.errors || 
+                                   error.response?.data?.validation || 
+                                   null;
+            
+            console.error('❌ Error al crear nuevo servicio:', {
+              error: error,
+              message: errorMessage,
+              validationErrors: validationErrors,
+              response: error.response?.data,
+              newServiceDetail: newServiceDetail,
+              serviceOriginal: service
+            });
+            
+            // Crear un error más descriptivo
+            const descriptiveError = new Error(
+              validationErrors 
+                ? `Error de validación: ${JSON.stringify(validationErrors)}` 
+                : errorMessage
+            );
+            descriptiveError.response = error.response;
+            throw descriptiveError;
+          });
       } else {
         // Actualizar servicio existente
         const updateData = {
@@ -181,31 +270,38 @@ export const editServiceOrder = async (orderData, orders) => {
     const updateResults = await Promise.all(updatePromises);
     console.log('✅ Todos los servicios actualizados:', updateResults);
 
-    // Si el estado es "Pagada", también actualizar el estado de la cita relacionada
-    if (estadoBackend === 'Pagada' && orderData.citaId) {
-      try {
-        console.log('🔄 Actualizando estado de cita relacionada:', {
-          citaId: orderData.citaId,
-          nuevoEstado: 'Pagada'
-        });
-        
-        // Actualizar el estado de la cita a "Pagada"
-        await appointmentsService.update(orderData.citaId, {
-          cita: {
-            estado: 'Pagada'
-          }
-        });
-        
-        console.log('✅ Estado de cita actualizado exitosamente a "Pagada"');
-      } catch (error) {
-        console.error('❌ Error al actualizar el estado de la cita:', error);
-        // No lanzar error para no interrumpir el flujo, solo registrar
-      }
-    }
-
     // Calcular devolución
     const dineroProporcionado = orderData.dineroProporcionado || 0;
     const devolucion = Math.max(0, dineroProporcionado - totalGeneral);
+
+    // Si el estado es "Pagada" y hay una cita relacionada, actualizar el estado y el dinero proporcionado
+    if (estadoBackend === 'Pagada' && orderData.citaId) {
+      try {
+        console.log('🔄 Actualizando cita relacionada con estado Pagada:', {
+          citaId: orderData.citaId,
+          nuevoEstado: 'Pagada',
+          dineroProporcionado: dineroProporcionado,
+          totalGeneral: totalGeneral,
+          devolucion: devolucion
+        });
+        
+        // Actualizar el estado de la cita a "Pagada" y el dinero proporcionado
+        await appointmentsService.update(orderData.citaId, {
+          cita: {
+            estado: 'Pagada',
+            dinero_proporcionado: dineroProporcionado
+          }
+        });
+        
+        console.log('✅ Cita actualizada exitosamente:', {
+          estado: 'Pagada',
+          dineroProporcionado: dineroProporcionado
+        });
+      } catch (error) {
+        console.error('❌ Error al actualizar la cita:', error);
+        // No lanzar error para no interrumpir el flujo, solo registrar
+      }
+    }
 
     // Retorna la orden editada con el estado correcto
     return { 
@@ -213,6 +309,7 @@ export const editServiceOrder = async (orderData, orders) => {
       totalServices,
       totalProducts,
       totalGeneral,
+      dineroProporcionado: dineroProporcionado, // Asegurar que el dinero proporcionado se incluya en la respuesta
       devolucion,
       status: orderData.status // Asegurar que el estado se incluya en la respuesta
     };

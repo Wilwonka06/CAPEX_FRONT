@@ -52,7 +52,7 @@ const RegisterPage = () => {
         if (!value.trim()) return 'Campo obligatorio';
         return '';
       case 'password':
-        return value ? (isValidPassword(value) ? '' : 'Contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo (@$!%?&)') : 'Campo obligatorio';
+        return value ? (isValidPassword(value) ? '' : 'Contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo (@$!%?&#)') : 'Campo obligatorio';
       case 'confirmPassword':
         return validatePasswordConfirmation(form.password, value).confirmarContrasena || '';
       default:
