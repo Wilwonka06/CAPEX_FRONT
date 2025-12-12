@@ -328,12 +328,59 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
           console.log('🔍 Buscando datos del cliente por ID:', order.id_cliente);
           const clientData = await loadClientData(order.id_cliente);
           if (clientData) {
-            console.log('✅ Cliente encontrado:', clientData);
+            console.log('✅ Cliente encontrado por ID:', clientData);
             clienteNombre = clientData.nombre || clienteNombre;
             clienteDocumento = clientData.documento || clienteDocumento;
             clienteTelefono = clientData.telefono || clienteTelefono;
             clienteCorreo = clientData.correo || clienteCorreo;
             clienteTipoDoc = clientData.tipo_documento || clienteTipoDoc;
+          }
+        }
+        
+        // Si tenemos documento pero no los demás datos, buscar por documento
+        if (clienteDocumento && (!clienteNombre || !clienteTelefono || !clienteCorreo)) {
+          console.log('🔍 Buscando cliente por documento:', clienteDocumento);
+          try {
+            const searchResponse = await usersService.getAll({ documento: clienteDocumento });
+            if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+              const clientByDoc = searchResponse.data.find(u => {
+                const userDoc = u.documento?.toString().trim() || '';
+                return userDoc === clienteDocumento.toString().trim();
+              });
+              if (clientByDoc) {
+                console.log('✅ Cliente encontrado por documento:', clientByDoc);
+                clienteNombre = clientByDoc.nombre || clienteNombre;
+                clienteDocumento = clientByDoc.documento || clienteDocumento;
+                clienteTelefono = clientByDoc.telefono || clienteTelefono;
+                clienteCorreo = clientByDoc.correo || clienteCorreo;
+                clienteTipoDoc = clientByDoc.tipo_documento || clienteTipoDoc;
+              }
+            }
+          } catch (error) {
+            console.error('Error buscando cliente por documento:', error);
+          }
+        }
+        
+        // Si aún no tenemos el documento pero tenemos el nombre, intentar buscar por nombre
+        if (clienteNombre && !clienteDocumento) {
+          console.log('🔍 Buscando cliente por nombre:', clienteNombre);
+          try {
+            const searchResponse = await usersService.getAll({ nombre: clienteNombre });
+            if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
+              const clientByName = searchResponse.data.find(u => 
+                (u.nombre || '').toLowerCase().trim() === clienteNombre.toLowerCase().trim()
+              );
+              if (clientByName) {
+                console.log('✅ Cliente encontrado por nombre:', clientByName);
+                clienteNombre = clientByName.nombre || clienteNombre;
+                clienteDocumento = clientByName.documento || clienteDocumento;
+                clienteTelefono = clientByName.telefono || clienteTelefono;
+                clienteCorreo = clientByName.correo || clienteCorreo;
+                clienteTipoDoc = clientByName.tipo_documento || clienteTipoDoc;
+              }
+            }
+          } catch (error) {
+            console.error('Error buscando cliente por nombre:', error);
           }
         }
         
@@ -385,7 +432,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
         
         setSelectedServices(serviciosConTiempos);
         setSelectedProducts(order.productos || []);
-        setClienteEncontrado(false);
+        // Marcar cliente como encontrado si tenemos datos del cliente (orden existente)
+        setClienteEncontrado(!!(clienteNombre && clienteDocumento));
         setBuscandoCliente(false);
         
         // Limpiar errores y touched al cargar
@@ -759,8 +807,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.tipoDocumento}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                disabled={clienteEncontrado}
-                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
+                disabled={true}
+                className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 bg-gray-100 cursor-not-allowed focus:outline-none transition-all"
               >
                 {DOC_TYPES_CODES.map(code => (
                   <option key={code} value={code}>
@@ -778,28 +826,17 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
               <label className="block text-xs font-medium text-black mb-1">
                 Número de Documento <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="documento"
-                  value={formData.documento}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  className="w-full px-3 py-2 pr-10 border-2 rounded-xl text-sm border-gray-200 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white"
-                  placeholder="Número de documento"
-                  maxLength={20}
-                />
-                {buscandoCliente && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <i className="bi bi-arrow-repeat animate-spin text-primary"></i>
-                  </div>
-                )}
-                {!buscandoCliente && clienteEncontrado && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-600">
-                    <i className="bi bi-check-circle-fill"></i>
-                  </div>
-                )}
-              </div>
+              <input
+                type="text"
+                name="documento"
+                value={formData.documento}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                readOnly={true}
+                className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 bg-gray-100 cursor-not-allowed focus:outline-none transition-all"
+                placeholder="Número de documento"
+                maxLength={20}
+              />
               {(touched.documento || showErrors) && errors.documento && (
                 <p className="text-red-600 text-xs mt-1">{errors.documento}</p>
               )}
@@ -816,8 +853,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.nombre}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                readOnly={clienteEncontrado}
-                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
+                readOnly={true}
+                className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 bg-gray-100 cursor-not-allowed focus:outline-none transition-all"
                 placeholder="Nombre completo del cliente"
               />
               {(touched.nombre || showErrors) && errors.nombre && (
@@ -836,8 +873,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.telefono}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                readOnly={clienteEncontrado}
-                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
+                readOnly={true}
+                className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 bg-gray-100 cursor-not-allowed focus:outline-none transition-all"
                 placeholder="Número de teléfono"
                 maxLength={15}
               />
@@ -857,8 +894,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
                 value={formData.correo}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                readOnly={clienteEncontrado}
-                className={`w-full px-3 py-2 border-2 rounded-xl text-sm ${clienteEncontrado ? 'border-gray-200 bg-gray-100 cursor-not-allowed' : 'border-gray-200 hover:border-gray-300 bg-white'} focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all`}
+                readOnly={true}
+                className="w-full px-3 py-2 border-2 rounded-xl text-sm border-gray-200 bg-gray-100 cursor-not-allowed focus:outline-none transition-all"
                 placeholder="correo@ejemplo.com"
               />
               {(touched.correo || showErrors) && errors.correo && (
