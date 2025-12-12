@@ -341,10 +341,31 @@ export const appointmentsService = {
         throw new Error('ID del empleado y fecha son requeridos');
       }
 
-      const response = await apiRequest.get(`/programaciones/usuario/${employeeId}?fecha=${date}`);
-      return response;
+      // Asegurar que employeeId y date sean strings válidos
+      const employeeIdStr = String(employeeId).trim();
+      const dateStr = String(date).trim();
+      
+      if (!employeeIdStr || !dateStr) {
+        throw new Error('ID del empleado y fecha son requeridos');
+      }
+
+      const url = `/programaciones-recurrentes/horario-fecha?id_usuario=${encodeURIComponent(employeeIdStr)}&fecha=${encodeURIComponent(dateStr)}`;
+      console.log(`📡 Requesting employee schedule: ${url}`);
+      
+      const response = await apiRequest.get(url);
+      
+      // El backend devuelve el objeto directamente, no envuelto en { success: true, data: ... }
+      // axios devuelve response.data, así que devolvemos response.data directamente
+      return response.data || response;
     } catch (error) {
       console.error(`Error fetching schedule for employee ${employeeId} on ${date}:`, error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
       throw error;
     }
   },

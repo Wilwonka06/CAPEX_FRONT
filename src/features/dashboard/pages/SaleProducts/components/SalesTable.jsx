@@ -37,7 +37,7 @@ export default function SalesTable({ sales, customers = [], onView, onAnnul, onD
                     <button className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md flex items-center justify-center transition-colors" title="Ver detalle" onClick={() => onView(sale)}>
                       <i className="bi bi-eye text-primary text-[18px]"></i>
                     </button>
-                    {sale.estado !== 'Cancelada' && (
+                    {sale.estado !== 'Cancelado' && sale.estado !== 'Cancelada' && (
                       <button className="h-8 w-8 p-0 hover:bg-red-50 rounded-md flex items-center justify-center transition-colors" title="Cancelar" onClick={() => onAnnul(sale.id)}>
                         <i className="bi bi-x-octagon text-red-500 text-[18px]"></i>
                       </button>

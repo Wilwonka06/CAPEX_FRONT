@@ -11,6 +11,15 @@ import { recurringSchedulingService } from "../../employees/API/employeesService
 import esLocale from "@fullcalendar/core/locales/es";
 import "../../../../../shared/styles/calendar.css";
 
+// Función helper para obtener el rango por defecto del mes actual
+const getDefaultViewRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  end.setHours(23, 59, 59, 999); // Asegurar que incluya todo el último día
+  return { start, end };
+};
+
 const GeneralCalendar = ({
   employees = [],
   schedulings = [],
@@ -28,8 +37,9 @@ const GeneralCalendar = ({
   const [editingData, setEditingData] = useState(null);
 
   // Estado para los eventos del calendario y rango visible
+  // Inicializar con un rango por defecto para que los eventos se carguen inmediatamente
   const [calendarEvents, setCalendarEvents] = useState([]);
-  const [viewRange, setViewRange] = useState({ start: null, end: null });
+  const [viewRange, setViewRange] = useState(getDefaultViewRange());
 
   // Cargar eventos desde programaciones recurrentes
   const loadEvents = () => {
@@ -114,6 +124,13 @@ const GeneralCalendar = ({
     loadEvents();
   }, [employees, schedulings, viewRange]);
 
+  // Cerrar modal de detalle cuando se abre el modal de edición
+  useEffect(() => {
+    if (editFormOpen && modalOpen) {
+      setModalOpen(false);
+    }
+  }, [editFormOpen]);
+
   const handleEventClick = (info) => {
     setModalType("edit");
     setSelectedEvent(info.event);
@@ -183,6 +200,8 @@ const GeneralCalendar = ({
       return;
     }
 
+    // Cerrar el modal de detalle cuando se abre el de edición
+    setModalOpen(false);
     setEditingData(scheduling);
     setEditFormOpen(true);
   };
@@ -218,7 +237,11 @@ const GeneralCalendar = ({
         eventClick={handleEventClick}
         dateClick={handleDateClick}
         datesSet={(arg) => {
-          setViewRange({ start: arg.start, end: arg.end });
+          // Actualizar el rango cuando el calendario cambia de vista
+          // Esto asegura que los eventos se recarguen cuando el usuario navega
+          if (arg.start && arg.end) {
+            setViewRange({ start: arg.start, end: arg.end });
+          }
         }}
         height="auto"
         buttonText={{

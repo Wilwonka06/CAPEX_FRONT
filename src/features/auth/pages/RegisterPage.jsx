@@ -8,7 +8,6 @@ import PasswordRequirements from '../../../shared/components/PasswordRequirement
 import authService from '../services/authServices';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import './register-phone-input.css';
 
 import { getDocOptions } from '../../../shared/constants/documentTypes';
 
@@ -330,8 +329,7 @@ const RegisterPage = () => {
                             Teléfono <span className="text-red-500">*</span>
                           </label>
                           <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                            </div>
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10"></div>
                             <PhoneInput
                               country={'co'}
                               value={numero}
@@ -344,8 +342,8 @@ const RegisterPage = () => {
                                 const err = validate('telefono', numero);
                                 setError(prev => ({ ...prev, telefono: err }));
                               }}
-                              inputClass="w-full"
-                              containerClass={`w-full phone-input-register ${error.telefono ? 'error' : ''}`}
+                              inputClass={`w-full border-2 rounded-xl px-4 py-3 bg-white font-lato text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ffb76b] focus:border-[#ffb76b] transition-all duration-200 ${error.telefono ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}
+                              containerClass="w-full"
                               inputProps={{
                                 name: 'telefono',
                                 required: true,

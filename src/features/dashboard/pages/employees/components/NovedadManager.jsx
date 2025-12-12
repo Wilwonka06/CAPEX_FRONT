@@ -37,7 +37,13 @@ const NovedadManager = ({ empleadoId }) => {
         novedadesService.getByUsuario(empleadoId),
         recurringSchedulingService.getByUser(empleadoId)
       ]);
-      setNovedades(novedadesData);
+      // Normalizar IDs: asegurar que todas las novedades tengan tanto 'id' como 'id_novedad'
+      const normalizedNovedades = (novedadesData || []).map(nov => ({
+        ...nov,
+        id: nov.id || nov.id_novedad,
+        id_novedad: nov.id_novedad || nov.id
+      }));
+      setNovedades(normalizedNovedades);
       setProgramaciones(programacionesData);
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -201,7 +207,14 @@ const NovedadManager = ({ empleadoId }) => {
             <AddNovedadModal
               editing={editingNovedad}
               programaciones={programaciones}
-              onSave={(data) => handleEdit(editingNovedad.id, data)}
+              onSave={(data) => {
+                const novedadId = editingNovedad.id || editingNovedad.id_novedad;
+                if (!novedadId) {
+                  toast.error('Error: No se pudo identificar el ID de la novedad');
+                  return;
+                }
+                handleEdit(novedadId, data);
+              }}
               onCancel={() => setEditingNovedad(null)}
             />
           )}
@@ -221,7 +234,7 @@ const NovedadManager = ({ empleadoId }) => {
           ) : (
             <div className="space-y-4">
               {filteredNovedades.map((nov) => (
-                <div key={nov.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+                <div key={nov.id || nov.id_novedad} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-4">
@@ -276,12 +289,20 @@ const NovedadManager = ({ empleadoId }) => {
                             <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide font-lato">Fecha</span>
                           </div>
                           <p className="text-gray-800 font-bold font-mono text-base">
-                            {new Date(nov.fecha).toLocaleDateString('es-ES', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
+                            {nov.fecha ? (() => {
+                              // Corregir problema de timezone: usar la fecha directamente sin conversión de timezone
+                              const fechaParts = nov.fecha.split('-');
+                              if (fechaParts.length === 3) {
+                                const fechaLocal = new Date(parseInt(fechaParts[0]), parseInt(fechaParts[1]) - 1, parseInt(fechaParts[2]));
+                                return fechaLocal.toLocaleDateString('es-ES', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                });
+                              }
+                              return nov.fecha;
+                            })() : 'Fecha no disponible'}
                           </p>
                         </div>
 
@@ -331,7 +352,7 @@ const NovedadManager = ({ empleadoId }) => {
                         <i className="bi bi-pencil-square text-lg"></i>
                       </button>
                       <button
-                        onClick={() => handleDelete(nov.id)}
+                        onClick={() => handleDelete(nov.id || nov.id_novedad)}
                         className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-200"
                         title="Eliminar"
                       >

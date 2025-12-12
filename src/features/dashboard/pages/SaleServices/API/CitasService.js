@@ -385,9 +385,18 @@ const transformarServiciosAVentaServicio = (grupo) => {
   // Si no hay id_cita, usar el primer id_detalle_servicio como fallback
   const idFinal = citaId || primerServicio.id_detalle_servicio;
 
+  // Obtener datos del cliente del grupo o del primer servicio
+  const cliente = grupo.cliente || primerServicio.cliente || primerServicio.usuario || {};
+  
   return {
     id: idFinal,
-    clientName: grupo.cliente?.nombre || primerServicio.cliente?.nombre || primerServicio.usuario?.nombre || 'Cliente no especificado',
+    clientName: cliente.nombre || 'Cliente no especificado',
+    nombre: cliente.nombre || 'Cliente no especificado',
+    documento: cliente.documento || '',
+    telefono: cliente.telefono || '',
+    correo: cliente.correo || cliente.email || '',
+    tipoDocumento: cliente.tipo_documento || 'CC',
+    tipo_documento: cliente.tipo_documento || 'CC',
     status: estado, // Usar el estado ya mapeado correctamente
     date: formatearFecha(fecha),
     time: formatearHora(hora),
@@ -417,7 +426,10 @@ const transformarServiciosAVentaServicio = (grupo) => {
     citaId: primerServicio.id_cita,
     id_cliente: primerServicio.id_cliente,
     observaciones: primerServicio.observaciones || '',
-    fechaCreacion: primerServicio.fecha_creacion
+    fechaCreacion: primerServicio.fecha_creacion,
+    // Datos del cliente para facilitar la edición
+    cliente: cliente,
+    usuario: cliente
   };
 };
 

@@ -11,7 +11,6 @@ import {
 } from "../../../../../shared/validations";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
-import "../../users/components/phoneinput-search.css";
 import PropTypes from "prop-types";
 
 const CreateSupplier = ({

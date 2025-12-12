@@ -55,17 +55,13 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
-    // Obtener nombre del rol
     const roleName = typeof currentUser.rol === 'string'
       ? currentUser.rol
       : currentUser.rol?.nombre || '';
-
-    // Si el usuario es Administrador, tiene todos los privilegios
-    const isAdmin = roleName.toLowerCase() === 'administrador' || roleName.toLowerCase() === 'admin';
-
-    if (isAdmin) {
-      return true;
-    }
+    const rolesList = Array.isArray(currentUser.roles) ? currentUser.roles.map(r => (typeof r === 'string' ? r : r?.nombre || '')) : [];
+    const normalizedRoles = [roleName, ...rolesList].filter(Boolean).map(r => r.toLowerCase());
+    const isAdmin = normalizedRoles.includes('administrador') || normalizedRoles.includes('admin');
+    if (isAdmin) { return true; }
 
     // Verificar si existen privilegios
     if (!currentUser.privileges) {

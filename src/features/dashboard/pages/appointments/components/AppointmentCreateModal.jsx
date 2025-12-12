@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-
 import PropTypes from 'prop-types';
 import appointmentsService from '../API/appointmentsService';
-import { isValidDocumentByType } from '@/shared/validations';
+import { isValidDocumentByType, formatNIT } from '@/shared/validations';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
 import { employeesService, recurringSchedulingService } from '@/features/dashboard/pages/employees/API/employeesService';
 import ServiceSelection from './ServiceSelection';
 import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';
+import { useAuth } from '@/shared/contexts/AuthContext';
 
 // Estados posibles de la cita (solo para crear)
 const APPOINTMENT_STATES = [
@@ -22,6 +20,9 @@ import { parseFormattedNumber, formatPrice } from '../../../../../shared/utils/f
 
 
 const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
+  // Obtener usuario actual
+  const { currentUser } = useAuth();
+  
   // Estados
   const [professionals, setProfessionals] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -58,20 +59,47 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
         dataLoadedRef.current = true;
         
         // Cargar empleados desde el backend
-        const employeesData = await employeesService.getAll();
+        let employeesData = [];
+        try {
+          const response = await employeesService.getAll();
+          console.log('📋 Respuesta de employeesService.getAll():', response);
+          
+          // Manejar diferentes estructuras de respuesta
+          if (Array.isArray(response)) {
+            employeesData = response;
+          } else if (response?.data && Array.isArray(response.data)) {
+            employeesData = response.data;
+          } else if (response?.success && Array.isArray(response.data)) {
+            employeesData = response.data;
+          } else {
+            console.warn('⚠️ Formato de respuesta inesperado:', response);
+            employeesData = [];
+          }
+          
+          console.log('👥 Empleados procesados:', employeesData.length, employeesData);
+        } catch (error) {
+          console.error('❌ Error al cargar empleados:', error);
+          toast.error('Error al cargar empleados. Por favor, intenta nuevamente.');
+          employeesData = [];
+        }
         
         // Obtener programaciones recurrentes activas
         let employeesWithSchedule = new Set();
         try {
           const allSchedules = await recurringSchedulingService.getAll();
+          const schedulesArray = Array.isArray(allSchedules) 
+            ? allSchedules 
+            : (allSchedules?.data || []);
+          
           employeesWithSchedule = new Set(
-            allSchedules
+            schedulesArray
               .filter(schedule => schedule.estado === 'Activa' || schedule.estado === 'Activo')
               .map(schedule => schedule.id_usuario || schedule.idUsuario)
               .filter(Boolean)
           );
+          console.log('📅 Empleados con programación:', employeesWithSchedule.size);
         } catch (error) {
-          console.warn('Error obteniendo programaciones:', error);
+          console.warn('⚠️ Error obteniendo programaciones:', error);
           // Si hay error (incluyendo 401), usar Set vacío para mostrar todos los empleados activos
           employeesWithSchedule = new Set();
         }
@@ -81,6 +109,7 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
         // Si no se pudieron obtener programaciones, mostrar todos los empleados activos
         const normalizedProfessionals = employeesData
           .filter(emp => {
+            if (!emp) return false;
             const isActive = emp.estado === 'Activo' || emp.estado === true;
             if (!isActive) return false;
             
@@ -93,12 +122,14 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
           })
           .map(emp => ({
             id: emp.id_empleado ?? emp.id_usuario ?? emp.id,
-            name: emp.nombre,
+            name: emp.nombre || emp.name || 'Sin nombre',
             active: emp.estado === 'Activo' || emp.estado === true
           }));
+        
+        console.log('✅ Profesionales normalizados:', normalizedProfessionals.length, normalizedProfessionals);
         setProfessionals(normalizedProfessionals);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('❌ Error loading data:', error);
         toast.error('Error al cargar profesionales');
         // En caso de error, usar arrays vacíos
         setProfessionals([]);
@@ -223,20 +254,59 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
 
   // Validación en tiempo real para campos individuales
   const handleFieldChange = (field, value) => {
-    // Actualizar el valor del campo
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Limpiar error si existe
-    clearError(field);
-
-    // Autocompletar al salir del documento
-    if (field === 'documento' && value && value.length >= 6) {
-      lookupClientByDocument(value);
+    // Si cambia el tipo de documento, limpiar el documento para evitar conflictos
+    if (field === 'tipoDocumento') {
+      setFormData(prev => ({ ...prev, [field]: value, documento: '' }));
+      clearError('documento');
+      clearError('tipoDocumento');
+      return;
     }
+
+    // Manejo especial para el campo documento según el tipo
+    if (field === 'documento') {
+      let processedValue = value;
+      
+      // Aplicar restricciones según el tipo de documento
+      if (formData.tipoDocumento === 'NIT') {
+        // Permitir números, guiones y puntos para NIT
+        processedValue = value.replace(/[^0-9.-]/g, '');
+        // Formatear NIT automáticamente
+        processedValue = formatNIT(processedValue);
+      } else if (formData.tipoDocumento === 'PP') {
+        // Permitir letras y números para pasaporte
+        processedValue = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      } else {
+        // Solo números para otros tipos de documento
+        processedValue = value.replace(/[^0-9]/g, '');
+      }
+      
+      setFormData(prev => ({ ...prev, [field]: processedValue }));
+      clearError(field);
+      
+      // Autocompletar al tener suficiente longitud
+      if (processedValue && processedValue.length >= 6) {
+        // Para NIT, usar solo números para la búsqueda
+        const searchValue = formData.tipoDocumento === 'NIT' 
+          ? processedValue.replace(/[.-]/g, '') 
+          : processedValue;
+        lookupClientByDocument(searchValue);
+      }
+      
+      // Validar en tiempo real si el campo ya fue tocado
+      if (touchedFields[field] && formData.tipoDocumento) {
+        setTimeout(() => {
+          validateField(field);
+        }, 300);
+      }
+      return;
+    }
+
+    // Para otros campos, comportamiento normal
+    setFormData(prev => ({ ...prev, [field]: value }));
+    clearError(field);
 
     // Validar en tiempo real solo si el campo ya fue tocado
     if (touchedFields[field]) {
-      // Usar un timeout para no validar en cada keystroke
       setTimeout(() => {
         validateField(field);
       }, 300);
@@ -478,10 +548,40 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
       if (serviciosSinProfesional.length > 0) {
         newErrors.servicios = 'Todos los servicios deben tener un profesional asignado';
       } else {
+        // Validar que un empleado no se autoagende
+        if (currentUser) {
+          const currentUserId = currentUser.id_usuario || currentUser.id;
+          const currentUserRoleId = currentUser.roleId || currentUser.role?.id_rol;
+          const currentUserRoleName = currentUser.rol?.nombre || currentUser.roleName || '';
+          
+          // Verificar si el usuario actual es un empleado (roleId === 2 o rol === 'empleado')
+          const isEmployee = currentUserRoleId === 2 || 
+                           currentUserRoleName.toLowerCase() === 'empleado' ||
+                           currentUserRoleName.toLowerCase() === 'employee';
+          
+          if (isEmployee) {
+            // Verificar si está intentando agendarse a sí mismo
+            const selfAppointment = formData.servicios.some(s => {
+              const empleadoId = s.id_empleado;
+              return empleadoId && String(empleadoId) === String(currentUserId);
+            });
+            
+            if (selfAppointment) {
+              newErrors.servicios = 'No puedes agendarte una cita a ti mismo. Por favor, selecciona otro profesional.';
+            }
+          }
+        }
+        
         const haySolapamiento = haySolapamientoServicios(formData.servicios);
         console.log('Verificando solapamiento:', haySolapamiento, 'Servicios:', formData.servicios);
         if (haySolapamiento) {
           newErrors.servicios = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
+        }
+        
+        // Validar que los servicios tengan hora de inicio cuando hay profesional
+        const serviciosSinHora = formData.servicios.filter(s => s.profesional && s.id_empleado && !s.inicio);
+        if (serviciosSinHora.length > 0) {
+          newErrors.servicios = 'Todos los servicios deben tener una hora de inicio asignada.';
         }
       }
     }
@@ -827,7 +927,15 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento <span className="text-red-500">*</span></label>
                 <select
                   value={formData.tipoDocumento}
-                  onChange={e => handleFieldChange('tipoDocumento', e.target.value)}
+                  onChange={e => {
+                    handleFieldChange('tipoDocumento', e.target.value);
+                    // Si ya hay un documento ingresado, validarlo con el nuevo tipo
+                    if (formData.documento && touchedFields.documento) {
+                      setTimeout(() => {
+                        validateField('documento');
+                      }, 100);
+                    }
+                  }}
                   onFocus={() => clearError('tipoDocumento')}
                   onBlur={() => handleFieldBlur('tipoDocumento')}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.tipoDocumento && errors.tipoDocumento ? 'border-red-500' : 'border-gray-300'}`}
@@ -846,17 +954,33 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
                 <input
                   type="text"
                   value={formData.documento}
-                  onChange={e => {
-                    const val = e.target.value.replace(/[^0-9]/g, '');
-                    handleFieldChange('documento', val);
-                  }}
+                  onChange={e => handleFieldChange('documento', e.target.value)}
                   onFocus={() => clearError('documento')}
                   onBlur={() => handleFieldBlur('documento')}
-                  maxLength={15}
+                  maxLength={
+                    formData.tipoDocumento === 'NIT' ? 20 : 
+                    formData.tipoDocumento === 'PP' ? 12 : 
+                    formData.tipoDocumento === 'TE' || formData.tipoDocumento === 'CE' ? 20 : 
+                    15
+                  }
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 ${touchedFields.documento && errors.documento ? 'border-red-500' : 'border-gray-300'}`}
-                  placeholder="Número de documento (6-15 dígitos)"
+                  placeholder={
+                    !formData.tipoDocumento || formData.tipoDocumento === '' 
+                      ? 'Seleccione primero el tipo de documento' 
+                      : formData.tipoDocumento === 'NIT' 
+                        ? 'Ej: 800.000.000-9' 
+                        : formData.tipoDocumento === 'PP' 
+                          ? 'Letras y números (ej: AB123456789)' 
+                          : formData.tipoDocumento === 'TE' || formData.tipoDocumento === 'CE'
+                            ? '6-20 dígitos'
+                            : '6-10 dígitos'
+                  }
+                  disabled={!formData.tipoDocumento || formData.tipoDocumento === ''}
                 />
                 {touchedFields.documento && errors.documento && <p className="text-red-500 text-xs mt-1">{errors.documento}</p>}
+                {formData.tipoDocumento && formData.documento && !errors.documento && (
+                  <p className="text-green-600 text-xs mt-1">✓ Formato válido</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del cliente <span className="text-red-500">*</span></label>
@@ -1002,6 +1126,3 @@ AppointmentCreateModal.propTypes = {
 };
 
 export default AppointmentCreateModal;
-
-
-

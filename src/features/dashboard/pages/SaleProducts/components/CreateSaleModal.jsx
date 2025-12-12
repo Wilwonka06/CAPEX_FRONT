@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import productsService from "../../products/API/productsService";
 import usersService from "../../users/API/usersService";
 import { formatNumber, formatNumberInput, parseFormattedNumber, cleanNumber } from "../../../../../shared/utils/formatters";
 import toast from "react-hot-toast";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 
 const paymentMethods = ["Efectivo", "Transferencia bancaria"];
 

@@ -4,7 +4,6 @@ import Swal from 'sweetalert2';
 import { isDuplicateSupplierEmail, isValidEmail, isValidNIT, isValidPhone, isValidSupplierType, isValidColombianNIT, isValidDocumentNumber, formatNIT } from "../../../../../shared/validations";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import '../../users/components/phoneinput-search.css';
 
 const EditSupplier = ({ supplier, isOpen, onClose, onSave, suppliers }) => {
   const [formData, setFormData] = useState({

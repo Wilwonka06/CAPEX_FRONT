@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidPassword } from '../validations';
+import { authService } from '../../features/auth/services/authServices';
 
 const tiposDocumento = ['Cedula de ciudadania', 'Cedula de extranjeria', 'Tarjeta de identidad', 'Pasaporte', 'NIT'];
 
@@ -32,6 +33,7 @@ const EditProfilePage = () => {
   const [success, setSuccess] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isEmailEditable, setIsEmailEditable] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -98,57 +100,83 @@ const EditProfilePage = () => {
     return roleRedirects[role?.toLowerCase()] || '/landing';
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setIsSubmitting(true);
 
+    // Validar contraseña si se está cambiando
     if (isChangingPassword && (form.password || form.confirmPassword)) {
       if (!isValidPassword(form.password)) {
         setError('La contraseña no es válida.');
+        setIsSubmitting(false);
         return;
       }
       if (form.password !== form.confirmPassword) {
         setError('Las contraseñas no coinciden.');
+        setIsSubmitting(false);
         return;
       }
     }
 
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const idx = usuarios.findIndex(u => u.correo === user.correo);
-    
-    if (idx === -1) {
-      setError('Usuario no encontrado.');
-      return;
+    try {
+      // Preparar datos para enviar al backend
+      const profileData = {
+        nombre: `${form.firstName} ${form.lastName}`.trim(),
+        tipo_documento: form.tipo_documento,
+        documento: form.documento,
+        correo: form.correo,
+        telefono: form.telefono,
+        direccion: form.direccion,
+        foto: form.foto,
+      };
+
+      // Agregar contraseña solo si se está cambiando
+      if (isChangingPassword && form.password) {
+        profileData.contrasena = form.password;
+      }
+
+      // Llamar al servicio de autenticación para actualizar el perfil
+      const response = await authService.editProfile(profileData);
+
+      if (response && response.success && response.data) {
+        // Actualizar el usuario en localStorage con los datos del servidor
+        localStorage.setItem('currentUser', JSON.stringify(response.data));
+        window.dispatchEvent(new Event('user-auth-changed'));
+        
+        setSuccess('¡Datos actualizados correctamente!');
+        
+        setTimeout(() => {
+          const updatedUser = response.data;
+          const role = updatedUser.rol?.nombre || updatedUser.rol || 
+                      (Array.isArray(updatedUser.roles) ? updatedUser.roles[0] : updatedUser.roles);
+          const redirectPath = getRoleRedirect(role);
+          navigate(redirectPath, { replace: true });
+        }, 1200);
+      } else {
+        setError('No se pudo actualizar el perfil.');
+      }
+    } catch (err) {
+      console.error('Error al actualizar perfil:', err);
+      
+      // Extraer mensaje de error del backend
+      let errorMessage = 'Error al actualizar el perfil';
+      
+      if (err?.response?.data) {
+        // El backend devolvió una respuesta estructurada
+        errorMessage = err.response.data.message || err.response.data.error || errorMessage;
+      } else if (err?.response?.status === 400) {
+        // Error 400 sin datos - puede ser un problema de validación
+        errorMessage = 'Error de validación. Verifica que todos los campos sean correctos.';
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const updatedUser = {
-      ...usuarios[idx],
-      nombre: `${form.firstName} ${form.lastName}`.trim(),
-      tipo_documento: form.tipo_documento,
-      documento: form.documento,
-      correo: form.correo,
-      telefono: form.telefono,
-      direccion: form.direccion,
-      foto: form.foto,
-    };
-
-    if (isChangingPassword && form.password) {
-      updatedUser.password = form.password;
-    }
-
-    usuarios[idx] = updatedUser;
-    localStorage.setItem('usuarios', JSON.stringify(usuarios));
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    window.dispatchEvent(new Event('user-auth-changed'));
-    
-    setSuccess('¡Datos actualizados correctamente!');
-    
-    setTimeout(() => {
-      const role = updatedUser.rol || (Array.isArray(updatedUser.roles) ? updatedUser.roles[0] : updatedUser.roles);
-      const redirectPath = getRoleRedirect(role);
-      navigate(redirectPath, { replace: true });
-    }, 1200);
   };
 
   return (
@@ -401,10 +429,20 @@ const EditProfilePage = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-dark transition-colors shadow-sm flex items-center gap-2"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-dark transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save
-              <i className="bi bi-arrow-right"></i>
+              {isSubmitting ? (
+                <>
+                  <i className="bi bi-arrow-repeat animate-spin"></i>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  Save
+                  <i className="bi bi-arrow-right"></i>
+                </>
+              )}
             </button>
           </div>
         </form>

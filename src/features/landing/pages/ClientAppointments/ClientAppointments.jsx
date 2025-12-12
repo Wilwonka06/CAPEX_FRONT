@@ -14,7 +14,7 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { apiRequest } from '../../../../shared/config/apiConfig';
 import { validateUserDocument, isValidDocumentByType } from '../../../../shared/validations';
-import { DOC_TYPES_CODES, DOC_TYPE_LABELS } from '../../../../shared/constants/documentTypes';
+import { DOC_TYPES_CODES, DOC_TYPE_LABELS, codeFromLabel } from '../../../../shared/constants/documentTypes';
 
 // Componente para seleccionar horas disponibles con verificación async
 const HorasDisponiblesSelect = ({ idx, servicio, profesionales, formData, listaServicios, onTimeChange, error }) => {
@@ -180,11 +180,21 @@ const ClientAppointments = () => {
   const [services, setServices] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [loading, setLoading] = useState(false);
+  // Función helper para obtener el código del tipo de documento desde el usuario
+  const getTipoDocumentoCode = (user) => {
+    if (!user) return '';
+    // El backend puede devolver tipo_documento (nombre completo) o tipoDocumento (código)
+    const tipoDoc = user.tipo_documento || user.tipoDocumento || '';
+    if (!tipoDoc) return '';
+    // Convertir nombre completo a código si es necesario
+    return codeFromLabel(tipoDoc);
+  };
+
   const [formData, setFormData] = useState({
     cliente: currentUser?.nombre || '',
     telefono: currentUser?.telefono || '',
     correo: currentUser?.correo || '',
-    tipoDocumento: currentUser?.tipoDocumento || '',
+    tipoDocumento: getTipoDocumentoCode(currentUser),
     documento: currentUser?.documento || '',
     fecha: '',
     servicios: [],
@@ -374,17 +384,33 @@ const ClientAppointments = () => {
       cliente: currentUser?.nombre || '',
       telefono: currentUser?.telefono || '',
       correo: currentUser?.correo || prev.correo || '', // Mantener correo si ya estaba ingresado
-      tipoDocumento: currentUser?.tipoDocumento || '',
+      tipoDocumento: getTipoDocumentoCode(currentUser),
       documento: currentUser?.documento || ''
     }));
     setPhoneNumber(currentUser?.telefono || '');
   }, [currentUser]);
 
   // Filtrar citas por usuario loggeado
-  const myAppointments = appointments.filter(a =>
-    a.tipoDocumento === currentUser?.tipoDocumento &&
-    a.documento === currentUser?.documento
-  );
+  const myAppointments = appointments.filter(a => {
+    // Si hay usuario autenticado, usar id_cliente (más confiable)
+    if (currentUser) {
+      const userId = currentUser.id_usuario || currentUser.id;
+      const appointmentClientId = a.id_cliente;
+      
+      // Si la cita tiene id_cliente, comparar directamente
+      if (appointmentClientId && userId) {
+        return String(appointmentClientId) === String(userId);
+      }
+      
+      // Fallback: comparar por tipo de documento y documento (para compatibilidad)
+      const userTipoDoc = getTipoDocumentoCode(currentUser);
+      const appointmentTipoDoc = a.tipoDocumento || codeFromLabel(a.tipo_documento || '');
+      return appointmentTipoDoc === userTipoDoc && a.documento === currentUser?.documento;
+    }
+    
+    // Si no hay usuario autenticado, no mostrar citas
+    return false;
+  });
 
   // Buscador general (mejorado para incluir servicios)
   const filteredAppointments = myAppointments.filter(a => {
@@ -480,6 +506,31 @@ const ClientAppointments = () => {
       if (!s.inicio) newErrors[`servicio_${idx}_inicio`] = 'La hora de inicio es obligatoria';
       if (!s.duracion) newErrors[`servicio_${idx}_duracion`] = 'La duración es obligatoria';
     });
+    
+    // Validar que un empleado no se autoagende
+    if (currentUser) {
+      const currentUserId = currentUser.id_usuario || currentUser.id;
+      const currentUserRoleId = currentUser.roleId || currentUser.role?.id_rol;
+      const currentUserRoleName = currentUser.rol?.nombre || currentUser.roleName || '';
+      
+      // Verificar si el usuario actual es un empleado (roleId === 2 o rol === 'empleado')
+      const isEmployee = currentUserRoleId === 2 || 
+                       currentUserRoleName.toLowerCase() === 'empleado' ||
+                       currentUserRoleName.toLowerCase() === 'employee';
+      
+      if (isEmployee) {
+        // Verificar si está intentando agendarse a sí mismo
+        const selfAppointment = formData.servicios.some(s => {
+          const empleadoId = s.id_empleado;
+          return empleadoId && String(empleadoId) === String(currentUserId);
+        });
+        
+        if (selfAppointment) {
+          newErrors.servicios = 'No puedes agendarte una cita a ti mismo. Por favor, selecciona otro profesional.';
+        }
+      }
+    }
+    
     if (haySolapamientoServicios(formData.servicios)) newErrors.servicios = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
     // Validar que no haya dos servicios con la misma hora de inicio
     const horasInicio = formData.servicios.map(s => s.inicio);
@@ -494,6 +545,14 @@ const ClientAppointments = () => {
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
+    
+    // Validar que haya servicios antes de enviar
+    if (!formData.servicios || formData.servicios.length === 0) {
+      showError('Debes agregar al menos un servicio para crear la cita', 'no-services-error');
+      setErrors(prev => ({ ...prev, servicios: 'Debes agregar al menos un servicio' }));
+      return;
+    }
+    
     if (!validateForm()) return;
 
     setLoading(true);
@@ -503,7 +562,7 @@ const ClientAppointments = () => {
         cliente: currentUser?.nombre || '',
         telefono: currentUser?.telefono || '',
         correo: currentUser?.correo || '',
-        tipoDocumento: currentUser?.tipoDocumento || '',
+        tipoDocumento: getTipoDocumentoCode(currentUser),
         documento: currentUser?.documento || '',
         fecha: '',
         servicios: [],

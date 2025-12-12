@@ -66,12 +66,17 @@ const Scheduling = () => {
 
   // Abrir modal para crear programación recurrente
   const openAddRecurringModal = (empleadoId) => {
+    // Cerrar cualquier otro modal abierto
+    setIsNovedadModalOpen(false);
     setSelectedEmployeeForModal(empleadoId || null);
     setIsAddModalOpen(true);
   };
 
   // Abrir modal para crear novedad
   const openNovedadModal = () => {
+    // Cerrar cualquier otro modal abierto
+    setIsAddModalOpen(false);
+    setSelectedEmployeeForModal(null);
     setIsNovedadModalOpen(true);
   };
 
@@ -241,14 +246,14 @@ const Scheduling = () => {
                   <div className="w-full max-w-4xl mx-4 max-h-[95vh] overflow-hidden">
                     <div className="bg-white rounded-3xl shadow-2xl relative flex flex-col overflow-hidden transform transition-all duration-300 scale-100">
                       {/* Header mejorado */}
-                      <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white rounded-t-3xl flex items-center justify-between px-8 py-5 shadow-xl">
+                      <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-3xl flex items-center justify-between px-8 py-5 shadow-xl">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/30">
                             <i className="bi bi-calendar-plus text-2xl"></i>
                           </div>
                           <div>
                             <h2 className="text-2xl font-bold m-0">Crear Nueva Novedad</h2>
-                            <p className="text-blue-100 text-sm m-0 mt-1">Registra cambios en la programación de empleados</p>
+                            <p className="text-white/90 text-sm m-0 mt-1">Registra cambios en la programación de empleados</p>
                           </div>
                         </div>
                         <button
@@ -261,7 +266,7 @@ const Scheduling = () => {
                       </div>
 
                       {/* Contenido con mejor diseño */}
-                      <div className="overflow-y-auto overflow-x-hidden p-8 flex-1 bg-gradient-to-br from-gray-50 to-blue-50/30">
+                      <div className="overflow-y-auto overflow-x-hidden p-8 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 200px)' }}>
                         <div className="max-w-3xl mx-auto">
                           <AddNovedadModal
                             programaciones={schedulings}
@@ -272,8 +277,8 @@ const Scheduling = () => {
                         </div>
                       </div>
 
-                      {/* Footer mejorado */}
-                      <div className="rounded-b-3xl flex justify-end gap-3 px-8 py-5 bg-white border-t border-gray-100 shadow-lg">
+                      {/* Footer mejorado - sticky para que siempre sea visible */}
+                      <div className="sticky bottom-0 rounded-b-3xl flex justify-end gap-3 px-8 py-5 bg-white border-t border-gray-100 shadow-lg z-10">
                         <button
                           type="button"
                           onClick={() => setIsNovedadModalOpen(false)}
@@ -285,7 +290,7 @@ const Scheduling = () => {
                         <button
                           type="submit"
                           form="novedad-form"
-                          className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                         >
                           <i className="bi bi-plus-circle text-lg"></i>
                           Crear Novedad

@@ -289,7 +289,7 @@ const CreateScheduling = ({ onCreate, empleadoId, employees = [], isOpen: extern
             </div>
 
             {/* Contenido con scroll */}
-            <div className="overflow-y-auto p-6 flex-1 bg-gray-50">
+            <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(90vh - 180px)' }}>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Selección de Empleado (si no viene predefinido) */}
       {!empleadoId && employees.length > 0 && (
