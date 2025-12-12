@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { apiRequest } from '../config/apiConfig';
 
 // Valor por defecto del contexto para evitar errores cuando no está disponible
@@ -42,8 +43,7 @@ export const AuthProvider = ({ children }) => {
   const [authChecked, setAuthChecked] = useState(false);
   const initialCheckDone = useRef(false);
 
-  // Rutas públicas donde NO se debe verificar autenticación
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  
 
   /**
    * ✅ CORREGIDO: Verificar privilegios con nombres correctos
@@ -87,12 +87,37 @@ export const AuthProvider = ({ children }) => {
     // Obtener el nombre de la acción en español
     const spanishAction = actionMap[action] || action;
 
-    // ✅ USAR EL NOMBRE DEL MÓDULO DIRECTAMENTE
-    const modulePrivileges = currentUser.privileges?.[module];
+    // ✅ Alias y dependencias de módulos para resolver acceso indirecto
+    const moduleAliasMap = {
+      'Dashboard': ['Ventas', 'Compras', 'Empleados', 'Gestión de Servicios', 'Venta de Productos', 'Citas'],
+      'Productos': ['Venta de Productos', 'Compras'],
+      'Proveedores': ['Compras'],
+      'Categorías de Productos': ['Productos', 'Compras'],
+      'Servicios': ['Gestión de Servicios'],
+      'Categorías de Servicios': ['Gestión de Servicios'],
+      'Programación': ['Empleados', 'Gestión de Servicios'],
+      'Usuarios': ['Gestión de Usuarios'],
+      'Clientes': ['Ventas'],
+      'Pedidos': ['Ventas', 'Venta de Productos'],
+      'Ventas': ['Ventas'],
+      'Venta de Productos': ['Venta de Productos', 'Ventas'],
+      'Citas': ['Citas', 'Ventas']
+    };
 
+    // ✅ Usar el nombre del módulo directamente si existe
+    let modulePrivileges = currentUser.privileges?.[module];
+
+    // Si no existe, intentar resolver por alias/dependencias
     if (!modulePrivileges) {
-      console.warn(`⚠️ Módulo "${module}" no encontrado en privilegios del usuario`);
-      return false;
+      const aliases = moduleAliasMap[module] || [];
+      const resolvedKey = aliases.find(key => currentUser.privileges?.[key]);
+      if (resolvedKey) {
+        modulePrivileges = currentUser.privileges[resolvedKey];
+        console.log(`🔁 Resolviendo módulo "${module}" por alias/dependencia → "${resolvedKey}"`);
+      } else {
+        console.warn(`⚠️ Módulo "${module}" no encontrado en privilegios del usuario`);
+        return false;
+      }
     }
 
     // Verificar si tiene la acción específica (probar con ambos nombres)
@@ -266,7 +291,7 @@ export const AuthProvider = ({ children }) => {
 
     // Limpiar datos locales
     localStorage.removeItem('currentUser');
-    try { localStorage.removeItem('authToken'); } catch { }
+    try { localStorage.removeItem('authToken'); } catch { void 0 }
     setCurrentUser(null);
 
     // Emitir evento de cambio
@@ -364,4 +389,8 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node
 };

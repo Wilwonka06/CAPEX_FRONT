@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf'
 import logoSrc from '../images/Logo.png'
 import { companyInfo as defaultCompany } from '../config/companyInfo'
+import { executeWithToast } from './toastHelpers'
 
 const toCurrency = (n) => {
   const v = parseFloat(n || 0)
@@ -211,4 +212,16 @@ export async function generateProductInvoicePDF({ sale, customer, company, theme
   doc.text('Gracias por su compra', pageW - 10, footerY + 12, { align: 'right' })
 
   doc.save(fileName || `factura_${sale?.numeroVenta || 'venta'}.pdf`)
+}
+
+export async function generateProductInvoicePDFWithToast(options) {
+  return executeWithToast({
+    operation: 'download',
+    entity: 'factura',
+    loadingMessage: 'Generando factura...',
+    successMessage: 'Factura generada exitosamente',
+    promiseFn: async () => {
+      return generateProductInvoicePDF(options);
+    }
+  });
 }

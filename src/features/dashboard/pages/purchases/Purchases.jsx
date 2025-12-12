@@ -3,10 +3,11 @@ import SearchProduct from "../../../../shared/Search";
 import CreatePurchaseModal from "./components/CreatePurchase";
 import PurchaseDetailModal from "./components/PurchaseDetail";
 import PurchasesTable from "./components/PurchasesTable";
-import LoadingTable from "../../../../shared/components/LoadingTable";
-import { formatNumber } from "../../../../shared/utils/formatters";
+// import LoadingTable from "../../../../shared/components/LoadingTable";
+// import { formatNumber } from "../../../../shared/utils/formatters";
 import productsService from "../products/API/productsService";
 import purchasesService from "./API/purchasesService";
+import { executeWithToast } from "../../../../shared/utils/toastHelpers";
 import suppliersService from "../suppliers/API/suppliersService";
 import Swal from "sweetalert2";
 import { useOutletContext } from "react-router-dom";
@@ -25,7 +26,7 @@ export default function Shopping() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [detailCompra, setDetailCompra] = useState(null);
-  const [suppliers] = useState([]);
+  // const [suppliers] = useState([]);
 
   const { setTitle } = useOutletContext();
 
@@ -115,16 +116,22 @@ export default function Shopping() {
   // Descargar reporte de compras
   const handleDownloadReport = async () => {
     try {
-      await purchasesService.generateReport({
-        format: "excel",
-        startDate: "2024-01-01",
-        endDate: new Date().toISOString().split("T")[0],
+      await executeWithToast({
+        promiseFn: async () => {
+          const r = await purchasesService.generateReport({
+            format: "excel",
+            startDate: "2024-01-01",
+            endDate: new Date().toISOString().split("T")[0],
+          });
+          return r;
+        },
+        operation: "process",
+        entity: "reporte de compras",
+        loadingMessage: "Generando reporte...",
+        successMessage: "Reporte generado exitosamente",
       });
-
-      // El servicio ya maneja la descarga del archivo
-      console.log("Report downloaded successfully");
     } catch (error) {
-      console.error("Error downloading report:", error);
+      console.error("Error generating report:", error);
     }
   };
 
@@ -144,8 +151,18 @@ export default function Shopping() {
 
     if (result.isConfirmed) {
       try {
-        await purchasesService.cancel(id, "Cancelada por usuario");
-        await loadPurchases(); // Recargar lista
+        await executeWithToast({
+          promiseFn: async () => {
+            const resp = await purchasesService.cancel(id, "Cancelada por usuario");
+            await loadPurchases();
+            return resp;
+          },
+          operation: "update",
+          entity: "compra",
+          id,
+          loadingMessage: "Cancelando compra...",
+          successMessage: "Compra cancelada exitosamente",
+        });
       } catch (error) {
         console.error("Error canceling purchase:", error);
       }
@@ -155,9 +172,21 @@ export default function Shopping() {
   // Función para crear una nueva compra
   const handleCreatePurchase = async (newPurchase) => {
     try {
-      await purchasesService.create(newPurchase);
-      setIsCreateOpen(false);
-      await loadPurchases(); // Recargar lista
+      await executeWithToast({
+        promiseFn: async () => {
+          const response = await purchasesService.create(newPurchase);
+          if (response.success) {
+            setIsCreateOpen(false);
+            await loadPurchases();
+            return response.data;
+          }
+          throw new Error(response.message || "Error al crear la compra");
+        },
+        operation: "create",
+        entity: "compra",
+        loadingMessage: "Registrando compra...",
+        successMessage: "Compra registrada exitosamente",
+      });
     } catch (error) {
       console.error("Error creating purchase:", error);
     }
