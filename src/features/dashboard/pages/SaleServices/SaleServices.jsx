@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import CreateServiceOrder from "./components/CreateServiceOrder";
 import ViewServiceSaleDetail from "./components/ViewServiceSaleDetail";
 import EditServiceOrder from "./components/EditServiceOrder";
@@ -62,8 +62,9 @@ const SaleServices = () => {
     cargarCitas();
   }, []);
 
-  // Filtrar servicios basado en la búsqueda y el tab
-  const filteredServices = services.filter((service) => {
+  // Memoizar el filtrado para evitar recalcular en cada render
+  const filteredServices = useMemo(() => {
+    return services.filter((service) => {
     // Si el término de búsqueda es un número, verificar si coincide exactamente con el ID
     const term = normalizeText(searchTerm);
     const isNumericSearch = /^\d+$/.test(term);
@@ -121,7 +122,8 @@ const SaleServices = () => {
       : false;
 
     return matchesSearch && matchesTab;
-  });
+    });
+  }, [searchTerm, tab, services]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -134,20 +136,22 @@ const SaleServices = () => {
   const pageServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
   const handleViewClick = useCallback(async (order) => {
-    setViewLoading(true);
-    try {
-      // Fetch complete service details for viewing
-      const completeOrder = await getCitaById(order.id);
-      setSelectedOrder(completeOrder);
-      setIsViewModalOpen(true);
-    } catch (error) {
-      console.error('Error fetching service details:', error);
-      toast.error('Error al cargar los detalles de la orden');
-      // Fallback to cached data if fetch fails
-      setSelectedOrder(order);
-      setIsViewModalOpen(true);
-    } finally {
-      setViewLoading(false);
+    // Usar la orden en caché directamente (ya tiene todos los datos)
+    // Solo cargar productos si no están cargados
+    setSelectedOrder(order);
+    setIsViewModalOpen(true);
+    
+    // Cargar productos en background si no están cargados
+    if ((!order.productos || order.productos.length === 0) && order.citaId) {
+      setViewLoading(true);
+      try {
+        const completeOrder = await getCitaById(order.id, order);
+        setSelectedOrder(completeOrder);
+      } catch (error) {
+        // Si falla, mantener la orden original
+      } finally {
+        setViewLoading(false);
+      }
     }
   }, []);
 
@@ -159,6 +163,13 @@ const SaleServices = () => {
 
   // handleAnularClick ahora pide confirmación y actualiza en el backend
   const handleAnularClick = async (orderId) => {
+    // Buscar la orden completa para obtener el citaId
+    const order = services.find(s => s.id === orderId);
+    if (!order) {
+      toast.error('Orden no encontrada');
+      return;
+    }
+
     const result = await Swal.fire({
       title: '¿Estás seguro?',
       text: `¿Estás seguro de que deseas anular la venta de servicio #${orderId}? Esta acción no se puede deshacer.`,
@@ -173,19 +184,16 @@ const SaleServices = () => {
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        // Actualizar estado en el backend
-        await actualizarEstadoCita(orderId, 'Anulado');
+        // Usar anularServiceOrder que actualiza todos los servicios de la orden
+        // Pasar la orden completa para evitar llamadas adicionales
+        const idToUse = order.citaId || orderId;
+        await anularServiceOrder(idToUse, order);
 
-        // Actualizar estado local
-        setServices(prev => prev.map(service =>
-          service.id === orderId
-            ? { ...service, status: "Anulado" }
-            : service
-        ));
-        toast.success('Venta de servicio anulada exitosamente');
+        // Recargar las órdenes desde el backend para obtener el estado actualizado
+        await cargarCitas();
       } catch (error) {
         console.error('Error al anular venta de servicio:', error);
-        toast.error('Error al anular la venta de servicio');
+        // El error ya se muestra en el toast de anularServiceOrder
       } finally {
         setLoading(false);
       }
@@ -365,7 +373,7 @@ const SaleServices = () => {
 
             {/* Tabla de órdenes de servicio */}
             {initialLoading ? (
-              <TableSkeleton columns={4} rows={5} hasActions={true} />
+              <TableSkeleton columns={5} rows={5} hasActions={true} />
             ) : (
               <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
                 <table className="min-w-full text-xs">
@@ -373,6 +381,7 @@ const SaleServices = () => {
                     <tr>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Cliente</th>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Servicios</th>
+                      <th className="py-3 px-4 text-left font-semibold text-gray-700">Productos</th>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Fecha</th>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Total</th>
                       <th className="py-3 px-4 text-center font-semibold text-gray-700">Acciones</th>
@@ -381,7 +390,7 @@ const SaleServices = () => {
                   <tbody className="divide-y divide-gray-200">
                     {loading ? (
                       <tr>
-                        <td colSpan="5" className="text-center py-8">
+                        <td colSpan="6" className="text-center py-8">
                           <div className="flex items-center justify-center">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                             <span className="ml-2 text-gray-600">Buscando...</span>
@@ -392,7 +401,32 @@ const SaleServices = () => {
                       pageServices.map((service) => (
                       <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="py-3 px-4 font-medium text-gray-800">{service.clientName}</td>
-                      <td className="py-3 px-4 text-gray-600">{(service.servicios || []).map(s => s.name).join(", ")}</td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {(service.servicios || []).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {(service.servicios || []).map((s, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
+                                {s.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Sin servicios</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {(service.productos || []).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {(service.productos || []).map((p, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md bg-purple-50 text-purple-700 text-xs font-medium">
+                                {p.name} ({p.quantity})
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Sin productos</span>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-gray-600">{service.date}</td>
                       <td className="py-3 px-4 font-semibold text-green-600">{formatPrice(service.totalGeneral || 0)}</td>
                       <td className="py-3 px-3">
@@ -437,7 +471,7 @@ const SaleServices = () => {
                       ))
                     ) : (
                     <tr>
-                      <td colSpan="5" className="text-center py-8 text-gray-500">
+                      <td colSpan="6" className="text-center py-8 text-gray-500">
                         <div className="flex flex-col items-center">
                           <i className="bi bi-calendar-x text-4xl text-gray-300 mb-2"></i>
                           <p className="text-sm">No hay ventas de servicio para mostrar</p>

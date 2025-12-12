@@ -35,10 +35,16 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
   const cursorPositionRef = useRef(0);
   const wasDineroFocusedRef = useRef(false);
 
-  // Calcular totales
-  const totalServices = selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0);
-  const totalProducts = selectedProducts.reduce((total, product) => total + (product.subtotal || 0), 0);
-  const totalGeneral = totalServices + totalProducts;
+  // Memoizar cálculos de totales para evitar recalcular en cada render
+  const totalServices = useMemo(() => 
+    selectedServices.reduce((total, service) => total + (service.subtotal || 0), 0),
+    [selectedServices]
+  );
+  const totalProducts = useMemo(() => 
+    selectedProducts.reduce((total, product) => total + (product.subtotal || 0), 0),
+    [selectedProducts]
+  );
+  const totalGeneral = useMemo(() => totalServices + totalProducts, [totalServices, totalProducts]);
 
   // Buscar cliente por documento y autocompletar (con debounce)
   const searchTimeoutRef = useRef(null);
@@ -452,13 +458,15 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       const orderData = {
         ...formData,
         servicios: selectedServices,
-        productos: selectedProducts
+        productos: selectedProducts,
+        // Parsear el dinero proporcionado antes de validar
+        dineroProporcionado: formData.dineroProporcionado ? parseFormattedNumber(formData.dineroProporcionado) : null
       };
       
       const validation = validateServiceOrder(orderData, services, totalGeneral, formData.status);
       setErrors(validation.errors);
     }
-  }, [selectedServices.length, selectedProducts.length, totalGeneral, services, isOpen]);
+  }, [selectedServices.length, selectedProducts.length, totalGeneral, services, isOpen, formData.dineroProporcionado, formData.status]);
 
   // Helpers para errores separados - solo servicios son obligatorios
   // Solo mostrar error cuando se intente enviar el formulario, no cuando se escriba en otros campos
@@ -520,6 +528,8 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('🔄 handleSubmit iniciado');
+    
     setShowErrors(true);
     setTouched({
       tipoDocumento: true,
@@ -536,6 +546,11 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       const error = validateField(field, formData[field]);
       if (error) fieldErrors[field] = error;
     });
+
+    // Validar que haya al menos un servicio seleccionado
+    if (!selectedServices || selectedServices.length === 0) {
+      fieldErrors.items = 'Debe agregar al menos un servicio';
+    }
 
     // Validar que si hay dinero proporcionado, el estado debe ser "Pagado"
     const dineroProporcionado = parseFormattedNumber(formData.dineroProporcionado);
@@ -559,14 +574,20 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
       }
     }
 
+    console.log('📋 Errores de validación:', fieldErrors);
+    
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors);
+      console.log('❌ Validación fallida, retornando');
       return;
     }
     
-    if (Object.keys(errors).length > 0 || loading) {
+    if (loading) {
+      console.log('⏳ Ya está cargando, retornando');
       return;
     }
+    
+    console.log('✅ Validación pasada, iniciando guardado...');
 
     try {
       setLoading(true);
@@ -628,10 +649,19 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
         status: updatedOrder.status,
         updatedOrder: updatedOrder
       });
-      if (onEdited) onEdited(updatedOrder);
-      if (onClose) onClose();
+      
+      if (onEdited) {
+        await onEdited(updatedOrder);
+      }
+      if (onClose) {
+        onClose();
+      }
     } catch (err) {
       console.error('Error al editar orden:', err);
+      // Mostrar error al usuario
+      const errorMessage = err.response?.data?.message || err.message || 'Error al guardar los cambios';
+      setErrors({ submit: errorMessage });
+      // Mantener el modal abierto para que el usuario pueda corregir
     } finally {
       setLoading(false);
     }
@@ -1029,6 +1059,16 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
             </div>
           </div>
         </div>
+        
+        {/* Mensaje de error general */}
+        {errors.submit && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <p className="text-red-600 text-sm flex items-center gap-2">
+              <i className="bi bi-exclamation-triangle"></i>
+              {errors.submit}
+            </p>
+          </div>
+        )}
       </form>
 
         {/* Botones */}

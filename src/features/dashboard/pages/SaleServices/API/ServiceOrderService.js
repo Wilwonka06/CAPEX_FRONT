@@ -5,6 +5,7 @@
  import appointmentsService from '../../appointments/API/appointmentsService';
 
  const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
+ const SALES_PRODUCTS_ENDPOINT = '/ventas-productos';
 
 /**
  * Convierte datos del frontend al formato del backend
@@ -240,16 +241,26 @@ export const editServiceOrder = async (orderData, orders) => {
           estado: estadoBackend // Agregar el estado a la actualización
         };
         
-        console.log(`📡 Actualizando servicio ${service.id} con estado:`, {
-          serviceId: service.id,
+        // Obtener el ID correcto del servicio (puede ser id_detalle_servicio o id)
+        const serviceId = service.id_detalle_servicio || service.id;
+        
+        if (!serviceId) {
+          console.error('❌ Error: No se encontró ID del servicio para actualizar:', service);
+          throw new Error('El servicio no tiene un ID válido para actualizar');
+        }
+        
+        console.log(`📡 Actualizando servicio ${serviceId} con estado:`, {
+          serviceId: serviceId,
+          serviceIdOriginal: service.id,
+          serviceIdDetalleServicio: service.id_detalle_servicio,
           estado: estadoBackend,
           updateData: updateData
         });
         
-        return apiRequest.put(`${SERVICE_DETAILS_ENDPOINT}/${service.id}`, updateData)
+        return apiRequest.put(`${SERVICE_DETAILS_ENDPOINT}/${serviceId}`, updateData)
           .then(response => {
             const estadoRecibido = response.data?.estado || response.data?.data?.estado || response.estado;
-            console.log(`✅ Servicio ${service.id} actualizado exitosamente:`, {
+            console.log(`✅ Servicio ${serviceId} actualizado exitosamente:`, {
               response: response,
               data: response.data,
               dataData: response.data?.data,
@@ -266,7 +277,14 @@ export const editServiceOrder = async (orderData, orders) => {
             return response;
           })
           .catch(error => {
-            console.error(`❌ Error al actualizar servicio ${service.id}:`, error);
+            console.error(`❌ Error al actualizar servicio ${serviceId}:`, {
+              serviceId: serviceId,
+              serviceIdOriginal: service.id,
+              serviceIdDetalleServicio: service.id_detalle_servicio,
+              error: error,
+              errorMessage: error.message,
+              errorResponse: error.response?.data
+            });
             throw error;
           });
       }
@@ -274,6 +292,63 @@ export const editServiceOrder = async (orderData, orders) => {
 
     const updateResults = await Promise.all(updatePromises);
     console.log('✅ Todos los servicios actualizados:', updateResults);
+
+    // Guardar productos si hay productos y hay una cita asociada
+    if (orderData.productos && orderData.productos.length > 0 && orderData.citaId) {
+      try {
+        console.log('🛒 Guardando productos asociados a la cita:', {
+          citaId: orderData.citaId,
+          productos: orderData.productos.length
+        });
+
+        // Buscar si ya existe una venta de productos asociada a esta cita
+        const ventasExistentes = await apiRequest.get(`${SALES_PRODUCTS_ENDPOINT}/cita/${orderData.citaId}`);
+        
+        let ventaProductoId = null;
+        if (ventasExistentes.success && ventasExistentes.data && ventasExistentes.data.length > 0) {
+          // Usar la primera venta encontrada
+          ventaProductoId = ventasExistentes.data[0].id_venta_producto || ventasExistentes.data[0].id;
+          console.log('📦 Venta de productos existente encontrada:', ventaProductoId);
+          
+          // Actualizar la venta existente con los nuevos productos
+          const productosData = orderData.productos.map(producto => ({
+            id_producto: producto.id || producto.id_producto,
+            cantidad: producto.quantity || producto.cantidad,
+            precio_unitario: producto.price || producto.precio || producto.precio_unitario
+          }));
+
+          await apiRequest.put(`${SALES_PRODUCTS_ENDPOINT}/${ventaProductoId}`, {
+            fecha: orderData.date || new Date().toISOString().split('T')[0],
+            id_usuario: orderData.id_cliente,
+            productos: productosData
+          });
+          
+          console.log('✅ Venta de productos actualizada exitosamente');
+        } else {
+          // Crear nueva venta de productos asociada a la cita
+          const productosData = orderData.productos.map(producto => ({
+            id_producto: producto.id || producto.id_producto,
+            cantidad: producto.quantity || producto.cantidad,
+            precio_unitario: producto.price || producto.precio || producto.precio_unitario
+          }));
+
+          const nuevaVenta = await apiRequest.post(SALES_PRODUCTS_ENDPOINT, {
+            fecha: orderData.date || new Date().toISOString().split('T')[0],
+            id_usuario: orderData.id_cliente,
+            id_cita: orderData.citaId,
+            productos: productosData
+          });
+
+          if (nuevaVenta.success) {
+            console.log('✅ Venta de productos creada exitosamente:', nuevaVenta.data);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error al guardar productos:', error);
+        // No lanzar error para no interrumpir el flujo, solo registrar
+        // Los productos se mostrarán en la respuesta aunque no se hayan guardado en el backend
+      }
+    }
 
     // Calcular devolución
     const dineroProporcionado = orderData.dineroProporcionado || 0;
@@ -311,6 +386,8 @@ export const editServiceOrder = async (orderData, orders) => {
     // Retorna la orden editada con el estado correcto
     return { 
       ...orderData,
+      servicios: orderData.servicios, // Incluir servicios actualizados
+      productos: orderData.productos || [], // Incluir productos (importante para que se muestren en la vista)
       totalServices,
       totalProducts,
       totalGeneral,
@@ -357,8 +434,9 @@ export const deleteServiceOrder = async (orderId, orders) => {
 
 /**
  * Anula una orden de servicio (cambia estado a "Cancelada por el usuario")
+ * Optimizado: usa los servicios ya cargados en lugar de hacer llamadas adicionales
  */
-export const anularServiceOrder = async (orderId) => {
+export const anularServiceOrder = async (orderId, order = null) => {
   return executeWithToast({
     operation: 'update',
     entity: 'orden de servicio',
@@ -366,30 +444,74 @@ export const anularServiceOrder = async (orderId) => {
     loadingMessage: 'Anulando orden de servicio...',
     successMessage: 'Orden anulada exitosamente',
     promiseFn: async () => {
-    if (!orderId) {
-      throw new Error("ID de orden requerido");
-    }
+      if (!orderId) {
+        throw new Error("ID de orden requerido");
+      }
 
-    // Obtener la orden para encontrar todos sus servicios
-    // Nota: En una implementación real, necesitarías obtener la orden primero
-    // Por ahora, asumimos que orderId es el id_cita o id_detalle_servicio
-    
-    // Si es un id_cita, obtener todos los servicios de esa cita
-    const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/cita/${orderId}`);
-    const services = response.data || response;
-    const serviceArray = Array.isArray(services) ? services : [services];
+      // Si tenemos la orden con servicios, usarla directamente
+      let serviciosParaActualizar = [];
+      
+      if (order && order.servicios && order.servicios.length > 0) {
+        // Usar los servicios de la orden ya cargada
+        serviciosParaActualizar = order.servicios;
+      } else {
+        // Si no tenemos la orden, obtener el servicio individual y actualizarlo
+        try {
+          const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/${orderId}`);
+          const service = response.data || response;
+          serviciosParaActualizar = [service];
+        } catch (error) {
+          // Si falla, intentar obtener todos los servicios y filtrar
+          try {
+            const allServicesResponse = await apiRequest.get(SERVICE_DETAILS_ENDPOINT);
+            if (allServicesResponse.success && allServicesResponse.data) {
+              let allServices = [];
+              if (Array.isArray(allServicesResponse.data)) {
+                allServices = allServicesResponse.data;
+              } else if (allServicesResponse.data.data && Array.isArray(allServicesResponse.data.data)) {
+                allServices = allServicesResponse.data.data;
+              }
+              
+              // Buscar servicios por id_cita o por id
+              const citaId = order?.citaId;
+              if (citaId) {
+                serviciosParaActualizar = allServices.filter(s => {
+                  const sCitaId = s.id_cita ? (typeof s.id_cita === 'number' ? s.id_cita : parseInt(s.id_cita)) : null;
+                  return sCitaId === citaId;
+                });
+              } else {
+                // Si no hay citaId, buscar por id_detalle_servicio
+                serviciosParaActualizar = allServices.filter(s => {
+                  const sId = s.id_detalle_servicio || s.id;
+                  return sId === orderId || sId === parseInt(orderId);
+                });
+              }
+            }
+          } catch (altError) {
+            throw new Error('No se pudieron obtener los servicios para anular');
+          }
+        }
+      }
 
-    // Actualizar estado de cada servicio
-    const updatePromises = serviceArray.map(service => {
-      const serviceId = service.id_detalle_servicio || service.id;
-      return apiRequest.patch(`${SERVICE_DETAILS_ENDPOINT}/${serviceId}/status`, {
-        estado: 'Cancelada por el usuario'
+      if (serviciosParaActualizar.length === 0) {
+        throw new Error('No se encontraron servicios para anular');
+      }
+
+      // Actualizar estado de cada servicio
+      const updatePromises = serviciosParaActualizar.map(service => {
+        const serviceId = service.id_detalle_servicio || service.id;
+        if (!serviceId) {
+          console.warn('Servicio sin ID válido:', service);
+          return Promise.resolve();
+        }
+        return apiRequest.patch(`${SERVICE_DETAILS_ENDPOINT}/${serviceId}/status`, {
+          estado: 'Cancelada por el usuario'
+        });
       });
-    });
 
-    await Promise.all(updatePromises);
+      await Promise.all(updatePromises);
 
-    return { success: true, message: "Orden anulada exitosamente" };
+      return { success: true, message: "Orden anulada exitosamente" };
     }
   });
 };

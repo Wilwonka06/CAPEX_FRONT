@@ -929,10 +929,20 @@ export function hasServiceOrderItems(servicios = [], productos = []) {
 
 // Valida dinero proporcionado para órdenes pagadas
 export function isValidMoneyProvided(dineroProporcionado, totalGeneral) {
-  if (dineroProporcionado === null || dineroProporcionado === undefined || isNaN(dineroProporcionado)) {
+  if (dineroProporcionado === null || dineroProporcionado === undefined) {
     return false;
   }
-  return parseFloat(dineroProporcionado) >= totalGeneral;
+  
+  // Convertir a número si es string
+  const dineroNum = typeof dineroProporcionado === 'number' 
+    ? dineroProporcionado 
+    : parseFloat(dineroProporcionado);
+  
+  if (isNaN(dineroNum) || dineroNum <= 0) {
+    return false;
+  }
+  
+  return dineroNum >= totalGeneral;
 }
 
 // Validación completa de orden de servicio
