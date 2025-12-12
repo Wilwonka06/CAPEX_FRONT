@@ -17,6 +17,24 @@ const generateToastId = (operation, entity, id = '') => {
 };
 
 /**
+ * Registra eventos de notificación en memoria y sessionStorage
+ */
+const _toastEvents = [];
+const logToastEvent = (type, payload) => {
+  const entry = {
+    ts: new Date().toISOString(),
+    type,
+    ...payload,
+  };
+  _toastEvents.push(entry);
+  try {
+    const prev = JSON.parse(sessionStorage.getItem('__toastEvents') || '[]');
+    prev.push(entry);
+    sessionStorage.setItem('__toastEvents', JSON.stringify(prev.slice(-200)));
+  } catch { 0; }
+};
+
+/**
  * Mensajes estandarizados para operaciones CRUD
  */
 const MESSAGES = {
@@ -107,27 +125,38 @@ export const executeWithToast = async ({
   const toastId = generateToastId(operation, entity, id);
   
   // Descartar cualquier toast anterior con el mismo ID
-  toast.dismiss(toastId);
+  try { toast.dismiss(toastId); } catch { 0; }
 
   // Mensaje de carga
   const loading = loadingMessage || `${MESSAGES.loading[operation]} ${entity}...`;
   
   // Crear el toast de loading
-  const loadingToastId = toast.loading(loading, { id: toastId });
+  let loadingToastId = null;
+  try {
+    loadingToastId = toast.loading(loading, { id: toastId });
+    logToastEvent('loading', { id: toastId, operation, entity, message: loading });
+  } catch (e) {
+    console.warn('Toast loading failed:', e);
+  }
 
   try {
     // Ejecutar la promesa
     const result = await promiseFn();
 
     // Descartar el loading
-    toast.dismiss(loadingToastId);
+    try { if (loadingToastId) toast.dismiss(loadingToastId); } catch { 0; }
 
     // Mensaje de éxito
     const success = typeof successMessage === 'function'
       ? successMessage(result)
       : successMessage || `${entity} ${MESSAGES.success[operation]}`;
     
-    toast.success(success, { id: toastId, duration: 4000 });
+    try {
+      toast.success(success, { id: toastId, duration: 4000 });
+      logToastEvent('success', { id: toastId, operation, entity, message: success });
+    } catch (e) {
+      console.warn('Toast success failed:', e);
+    }
 
     // Ejecutar callback de éxito si existe
     if (onSuccess) {
@@ -137,13 +166,18 @@ export const executeWithToast = async ({
     return result;
   } catch (error) {
     // Descartar el loading
-    toast.dismiss(loadingToastId);
+    try { if (loadingToastId) toast.dismiss(loadingToastId); } catch { 0; }
 
     // Extraer mensaje de error
     const errorMessage = extractErrorMessage(error);
     
     // Mostrar error
-    toast.error(errorMessage, { id: toastId, duration: 5000 });
+    try {
+      toast.error(errorMessage, { id: toastId, duration: 5000 });
+      logToastEvent('error', { id: toastId, operation, entity, message: errorMessage });
+    } catch (e) {
+      console.warn('Toast error failed:', e);
+    }
 
     // Ejecutar callback de error si existe
     if (onError) {

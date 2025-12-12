@@ -1,5 +1,6 @@
 // Servicio para órdenes de servicio con conexión al backend
  import apiRequest from '../../../../../shared/config/apiConfig';
+ import { executeWithToast } from '../../../../../shared/utils/toastHelpers';
  import { validateServiceOrder } from '../../../../../shared/validations';
  import appointmentsService from '../../appointments/API/appointmentsService';
 
@@ -45,7 +46,12 @@ const normalizeOrderToBackend = (orderData) => {
  * Crea una nueva orden de servicio
  */
 export const createServiceOrder = async (orderData, orders) => {
-  try {
+  return executeWithToast({
+    operation: 'create',
+    entity: 'orden de servicio',
+    loadingMessage: 'Creando orden de servicio...',
+    successMessage: 'Orden creada exitosamente',
+    promiseFn: async () => {
     // Calcular total general
     const totalServices = (orderData.servicios || []).reduce((sum, service) => sum + (service.subtotal || 0), 0);
     const totalProducts = (orderData.productos || []).reduce((sum, product) => sum + (product.subtotal || 0), 0);
@@ -100,21 +106,20 @@ export const createServiceOrder = async (orderData, orders) => {
         employee: orderData.servicios[idx]?.employee
       }))
     };
-  } catch (error) {
-    console.error('Error creating service order:', error);
-    if (error.response && error.response.data && error.response.data.errors) {
-      console.error('Validation errors:', error.response.data.errors);
-      throw new Error('Error de validación: ' + JSON.stringify(error.response.data.errors));
     }
-    throw error;
-  }
+  });
 };
 
 /**
  * Edita una orden de servicio existente
  */
 export const editServiceOrder = async (orderData, orders) => {
-  try {
+  return executeWithToast({
+    operation: 'update',
+    entity: 'orden de servicio',
+    loadingMessage: 'Actualizando orden de servicio...',
+    successMessage: 'Orden actualizada exitosamente',
+    promiseFn: async () => {
     // Calcular total general
     const totalServices = (orderData.servicios || []).reduce((sum, service) => sum + (service.subtotal || 0), 0);
     const totalProducts = (orderData.productos || []).reduce((sum, product) => sum + (product.subtotal || 0), 0);
@@ -313,17 +318,21 @@ export const editServiceOrder = async (orderData, orders) => {
       devolucion,
       status: orderData.status // Asegurar que el estado se incluya en la respuesta
     };
-  } catch (error) {
-    console.error('Error editing service order:', error);
-    throw error;
-  }
+    }
+  });
 };
 
 /**
  * Elimina una orden de servicio
  */
 export const deleteServiceOrder = async (orderId, orders) => {
-  try {
+  return executeWithToast({
+    operation: 'delete',
+    entity: 'orden de servicio',
+    id: orderId,
+    loadingMessage: 'Eliminando orden de servicio...',
+    successMessage: 'Orden eliminada exitosamente',
+    promiseFn: async () => {
     // Obtener todos los servicios de la orden
     const order = orders.find(o => o.id === orderId);
     if (!order) {
@@ -342,17 +351,21 @@ export const deleteServiceOrder = async (orderId, orders) => {
     
     // Retorna la lista filtrada
     return orders.filter(order => order.id !== orderId);
-  } catch (error) {
-    console.error('Error deleting service order:', error);
-    throw error;
-  }
+    }
+  });
 };
 
 /**
  * Anula una orden de servicio (cambia estado a "Cancelada por el usuario")
  */
 export const anularServiceOrder = async (orderId) => {
-  try {
+  return executeWithToast({
+    operation: 'update',
+    entity: 'orden de servicio',
+    id: orderId,
+    loadingMessage: 'Anulando orden de servicio...',
+    successMessage: 'Orden anulada exitosamente',
+    promiseFn: async () => {
     if (!orderId) {
       throw new Error("ID de orden requerido");
     }
@@ -377,8 +390,6 @@ export const anularServiceOrder = async (orderId) => {
     await Promise.all(updatePromises);
 
     return { success: true, message: "Orden anulada exitosamente" };
-  } catch (error) {
-    console.error('Error anulando service order:', error);
-    throw error;
-  }
+    }
+  });
 };
