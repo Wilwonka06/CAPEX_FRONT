@@ -10,7 +10,6 @@ import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita, getCitaById } f
 import { normalizeText } from '../../../../shared/normalizers.js';
 import { searchInObject } from '../../../../shared/utils/searchHelper';
 import { formatNumber, formatPrice } from '../../../../shared/utils/formatters';
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Paginator from '../../../../shared/Paginator';
@@ -161,44 +160,16 @@ const SaleServices = () => {
     setIsEditModalOpen(true);
   }, []);
 
-  // handleAnularClick ahora pide confirmación y actualiza en el backend
-  const handleAnularClick = async (orderId) => {
-    // Buscar la orden completa para obtener el citaId
+  // handleAnularClick abre el modal de confirmación
+  const handleAnularClick = useCallback((orderId) => {
     const order = services.find(s => s.id === orderId);
     if (!order) {
       toast.error('Orden no encontrada');
       return;
     }
-
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas anular la venta de servicio #${orderId}? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, anular',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        // Usar anularServiceOrder que actualiza todos los servicios de la orden
-        // Pasar la orden completa para evitar llamadas adicionales
-        const idToUse = order.citaId || orderId;
-        await anularServiceOrder(idToUse, order);
-
-        // Recargar las órdenes desde el backend para obtener el estado actualizado
-        await cargarCitas();
-      } catch (error) {
-        console.error('Error al anular venta de servicio:', error);
-        // El error ya se muestra en el toast de anularServiceOrder
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
+    setSelectedOrder(order);
+    setIsAnularModalOpen(true);
+  }, [services]);
 
 
 
@@ -270,11 +241,14 @@ const SaleServices = () => {
   };
 
   // Anular orden usando servicio
-  const handleAnularOrder = async (orderId) => {
+  const handleAnularOrder = useCallback(async () => {
+    if (!selectedOrder) return;
+    
     setLoading(true);
 
     const orderPromise = (async () => {
-      await anularServiceOrder(orderId);
+      const idToUse = selectedOrder.citaId || selectedOrder.id;
+      await anularServiceOrder(idToUse, selectedOrder);
       // Recargar la lista desde el backend para obtener datos actualizados
       await cargarCitas();
       setIsAnularModalOpen(false);
@@ -295,7 +269,7 @@ const SaleServices = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedOrder]);
 
   const handleSearch = useCallback(async (e) => {
     const termino = e.target.value;
