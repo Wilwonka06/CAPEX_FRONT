@@ -29,10 +29,14 @@ const mapSupplierFromBackend = (supplier) => {
 const mapSupplierToBackend = (supplier) => {
   // Limpiar el teléfono: remover guiones y espacios, dejar solo + y números
   const cleanPhone = supplier.telefono?.replace(/[-\s]/g, '').trim();
+  const tipo = supplier.tipo?.toUpperCase();
+  const nitValue = tipo === 'J'
+    ? supplier.nit?.trim()?.replace(/\./g, '')
+    : supplier.numeroDocumento?.trim()?.replace(/\s/g, '');
 
   return {
-    nit: supplier.nit?.trim()?.replace(/\./g, ''),
-    tipo_proveedor: supplier.tipo?.toUpperCase(),
+    nit: nitValue,
+    tipo_proveedor: tipo,
     nombre: supplier.nombre?.trim(),
     contacto: supplier.contacto?.trim(),
     direccion: supplier.direccion?.trim(),
@@ -131,11 +135,18 @@ getActive: async () => {
   create: async (supplierData) => {
     try {
       // Validaciones básicas
-      if (!supplierData.nit || supplierData.nit.trim() === '') {
-        throw new Error('El NIT del proveedor es requerido');
-      }
       if (!supplierData.tipo) {
         throw new Error('El tipo de proveedor es requerido');
+      }
+      const tipo = supplierData.tipo.toUpperCase();
+      if (tipo === 'J') {
+        if (!supplierData.nit || supplierData.nit.trim() === '') {
+          throw new Error('El NIT del proveedor es requerido');
+        }
+      } else if (tipo === 'N') {
+        if (!supplierData.numeroDocumento || supplierData.numeroDocumento.trim() === '') {
+          throw new Error('El número de documento es requerido');
+        }
       }
       if (!supplierData.nombre || supplierData.nombre.trim() === '') {
         throw new Error('El nombre del proveedor es requerido');

@@ -686,19 +686,19 @@ export function truncateText(text, maxLength = 30) {
 
 // Previene que se ingrese la letra 'e', 'E', '+', '-' en campos numéricos
 export function isNumberInputValid(e) {
-  if (["e", "E", "+", "-", "."].includes(e.key)) {
+  if (["e", "E", "+", "-"].includes(e.key)) {
     e.preventDefault();
   }
 }
 
 // Solo números enteros positivos
 export function isValidNumber(value) {
-  return /^\d*$/.test(value);
+  return /^[\d.]*$/.test(value);
 }
 
 // Números decimales positivos (máximo un punto)
 export function isValidDecimal(value) {
-  return /^\d*(\.\d{0,2})?$/.test(value);
+  return /^\d*(?:[.,]\d{0,2})?$/.test(value);
 }
 
 // ===== VALIDACIONES DE ROLES =====

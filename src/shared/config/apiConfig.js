@@ -5,7 +5,7 @@ import { showError } from '../utils/toastUtils';
 /*   ? (localStorage.getItem('apiBaseUrl') || 'http://localhost:3000/api') */
 /*   : 'https://capex-back.onrender.com/api'; */
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'https://capex-back.onrender.com/api';
 
 // Log de configuración en desarrollo
 if (import.meta.env.DEV) {

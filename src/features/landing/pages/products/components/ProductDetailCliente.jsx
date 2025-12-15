@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import CartToast from '../../../components/CartToast';
 import cartIcon from '../../../../../shared/images/cart.png';
 import { useCartToast } from '../../../components/CartToastContext';
-import { formatNumber } from '../../../../../shared/utils/formatters';
+import { formatNumber, formatNumberInput, parseFormattedNumber } from '../../../../../shared/utils/formatters';
+import { isNumberInputValid } from '../../../../../shared/validations';
 
 // Componente para navegación de imágenes
 const ImageCarousel = ({ images, productName }) => {
@@ -169,11 +170,14 @@ const ProductDetailCliente = ({ product, recommended = [] }) => {
                     tabIndex={-1}
                   >-</button>
                   <input
-                    type="number"
-                    min={1}
-                    max={product.cantidad || 99}
-                    value={quantity}
-                    onChange={e => setQuantity(Math.max(1, Math.min(Number(e.target.value), product.cantidad || 99)))}
+                    type="text"
+                    value={formatNumber(quantity)}
+                    onChange={e => {
+                      const formatted = formatNumberInput(e.target.value, 0);
+                      const val = parseFormattedNumber(formatted) || 1;
+                      setQuantity(Math.max(1, Math.min(val, product.cantidad || 99)));
+                    }}
+                    onKeyDown={isNumberInputValid}
                     className="w-8 text-center border-0 focus:ring-0 text-base bg-transparent outline-none"
                     style={{ appearance: 'textfield' }}
                   />

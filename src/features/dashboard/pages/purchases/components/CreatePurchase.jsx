@@ -312,10 +312,19 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
       <CreateSupplier
         isOpen={true}
         onClose={() => setOpenSupplierModal(false)}
-        onCreate={(nuevoProveedor) => {
-          setLocalSuppliers((prev) => [nuevoProveedor, ...suppliersSelect]);
-          setProveedorId(nuevoProveedor.id);
-          setOpenSupplierModal(false);
+        onCreate={async (nuevoProveedor) => {
+          try {
+            const cleanedSupplier = {
+              ...nuevoProveedor,
+              telefono: nuevoProveedor.telefono.replace(/-/g, "")
+            };
+            const createdSupplier = await suppliersService.create(cleanedSupplier);
+            setLocalSuppliers((prev) => [createdSupplier, ...suppliersSelect]);
+            setProveedorId(createdSupplier.id);
+            setOpenSupplierModal(false);
+          } catch (error) {
+            toast.error(error.message || "Error al crear el proveedor");
+          }
         }}
         suppliers={suppliersSelect}
       />
