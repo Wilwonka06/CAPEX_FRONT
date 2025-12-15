@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import CreateServiceOrder from "./components/CreateServiceOrder";
 import ViewServiceSaleDetail from "./components/ViewServiceSaleDetail";
 import EditServiceOrder from "./components/EditServiceOrder";
@@ -6,11 +6,10 @@ import AnularServiceOrder from "./components/AnularServiceOrder";
 import Search from "../../../../shared/Search";
 import TableSkeleton from "../../../../shared/components/TableSkeleton";
 import { createServiceOrder, editServiceOrder, anularServiceOrder } from "./API/ServiceOrderService";
-import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita } from "./API/CitasService";
+import { getCitasEnEjecucion, buscarCitas, actualizarEstadoCita, getCitaById } from "./API/CitasService";
 import { normalizeText } from '../../../../shared/normalizers.js';
 import { searchInObject } from '../../../../shared/utils/searchHelper';
 import { formatNumber, formatPrice } from '../../../../shared/utils/formatters';
-import Swal from 'sweetalert2';
 import { useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Paginator from '../../../../shared/Paginator';
@@ -23,6 +22,7 @@ const SaleServices = () => {
   const [isAnularModalOpen, setIsAnularModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [viewLoading, setViewLoading] = useState(false);
   const [services, setServices] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -61,8 +61,9 @@ const SaleServices = () => {
     cargarCitas();
   }, []);
 
-  // Filtrar servicios basado en la búsqueda y el tab
-  const filteredServices = services.filter((service) => {
+  // Memoizar el filtrado para evitar recalcular en cada render
+  const filteredServices = useMemo(() => {
+    return services.filter((service) => {
     // Si el término de búsqueda es un número, verificar si coincide exactamente con el ID
     const term = normalizeText(searchTerm);
     const isNumericSearch = /^\d+$/.test(term);
@@ -120,7 +121,8 @@ const SaleServices = () => {
       : false;
 
     return matchesSearch && matchesTab;
-  });
+    });
+  }, [searchTerm, tab, services]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -132,9 +134,24 @@ const SaleServices = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const pageServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
 
-  const handleViewClick = useCallback((order) => {
+  const handleViewClick = useCallback(async (order) => {
+    // Usar la orden en caché directamente (ya tiene todos los datos)
+    // Solo cargar productos si no están cargados
     setSelectedOrder(order);
     setIsViewModalOpen(true);
+    
+    // Cargar productos en background si no están cargados
+    if ((!order.productos || order.productos.length === 0) && order.citaId) {
+      setViewLoading(true);
+      try {
+        const completeOrder = await getCitaById(order.id, order);
+        setSelectedOrder(completeOrder);
+      } catch (error) {
+        // Si falla, mantener la orden original
+      } finally {
+        setViewLoading(false);
+      }
+    }
   }, []);
 
   // handleEditClick abre directamente el modal de edición
@@ -143,40 +160,16 @@ const SaleServices = () => {
     setIsEditModalOpen(true);
   }, []);
 
-  // handleAnularClick ahora pide confirmación y actualiza en el backend
-  const handleAnularClick = async (orderId) => {
-    const result = await Swal.fire({
-      title: '¿Estás seguro?',
-      text: `¿Estás seguro de que deseas anular la venta de servicio #${orderId}? Esta acción no se puede deshacer.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, anular',
-      cancelButtonText: 'Cancelar'
-    });
-
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        // Actualizar estado en el backend
-        await actualizarEstadoCita(orderId, 'Anulado');
-
-        // Actualizar estado local
-        setServices(prev => prev.map(service =>
-          service.id === orderId
-            ? { ...service, status: "Anulado" }
-            : service
-        ));
-        toast.success('Venta de servicio anulada exitosamente');
-      } catch (error) {
-        console.error('Error al anular venta de servicio:', error);
-        toast.error('Error al anular la venta de servicio');
-      } finally {
-        setLoading(false);
-      }
+  // handleAnularClick abre el modal de confirmación
+  const handleAnularClick = useCallback((orderId) => {
+    const order = services.find(s => s.id === orderId);
+    if (!order) {
+      toast.error('Orden no encontrada');
+      return;
     }
-  };
+    setSelectedOrder(order);
+    setIsAnularModalOpen(true);
+  }, [services]);
 
 
 
@@ -248,17 +241,16 @@ const SaleServices = () => {
   };
 
   // Anular orden usando servicio
-  const handleAnularOrder = async (orderId) => {
+  const handleAnularOrder = useCallback(async () => {
+    if (!selectedOrder) return;
+    
     setLoading(true);
 
     const orderPromise = (async () => {
-      await anularServiceOrder(orderId);
-      // Actualizar el estado local
-      setServices(prev => prev.map(service =>
-        service.id === orderId
-          ? { ...service, status: "Anulado" }
-          : service
-      ));
+      const idToUse = selectedOrder.citaId || selectedOrder.id;
+      await anularServiceOrder(idToUse, selectedOrder);
+      // Recargar la lista desde el backend para obtener datos actualizados
+      await cargarCitas();
       setIsAnularModalOpen(false);
       setSelectedOrder(null);
       return true;
@@ -277,7 +269,7 @@ const SaleServices = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedOrder]);
 
   const handleSearch = useCallback(async (e) => {
     const termino = e.target.value;
@@ -355,7 +347,7 @@ const SaleServices = () => {
 
             {/* Tabla de órdenes de servicio */}
             {initialLoading ? (
-              <TableSkeleton columns={4} rows={5} hasActions={true} />
+              <TableSkeleton columns={5} rows={5} hasActions={true} />
             ) : (
               <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm bg-white">
                 <table className="min-w-full text-xs">
@@ -363,6 +355,7 @@ const SaleServices = () => {
                     <tr>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Cliente</th>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Servicios</th>
+                      <th className="py-3 px-4 text-left font-semibold text-gray-700">Productos</th>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Fecha</th>
                       <th className="py-3 px-4 text-left font-semibold text-gray-700">Total</th>
                       <th className="py-3 px-4 text-center font-semibold text-gray-700">Acciones</th>
@@ -371,7 +364,7 @@ const SaleServices = () => {
                   <tbody className="divide-y divide-gray-200">
                     {loading ? (
                       <tr>
-                        <td colSpan="5" className="text-center py-8">
+                        <td colSpan="6" className="text-center py-8">
                           <div className="flex items-center justify-center">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                             <span className="ml-2 text-gray-600">Buscando...</span>
@@ -382,7 +375,32 @@ const SaleServices = () => {
                       pageServices.map((service) => (
                       <tr key={service.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="py-3 px-4 font-medium text-gray-800">{service.clientName}</td>
-                      <td className="py-3 px-4 text-gray-600">{(service.servicios || []).map(s => s.name).join(", ")}</td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {(service.servicios || []).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {(service.servicios || []).map((s, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
+                                {s.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Sin servicios</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {(service.productos || []).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {(service.productos || []).map((p, idx) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md bg-purple-50 text-purple-700 text-xs font-medium">
+                                {p.name} ({p.quantity})
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Sin productos</span>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-gray-600">{service.date}</td>
                       <td className="py-3 px-4 font-semibold text-green-600">{formatPrice(service.totalGeneral || 0)}</td>
                       <td className="py-3 px-3">
@@ -427,7 +445,7 @@ const SaleServices = () => {
                       ))
                     ) : (
                     <tr>
-                      <td colSpan="5" className="text-center py-8 text-gray-500">
+                      <td colSpan="6" className="text-center py-8 text-gray-500">
                         <div className="flex flex-col items-center">
                           <i className="bi bi-calendar-x text-4xl text-gray-300 mb-2"></i>
                           <p className="text-sm">No hay ventas de servicio para mostrar</p>
@@ -458,8 +476,9 @@ const SaleServices = () => {
         <CreateServiceOrder
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          onCreated={(newOrder) => {
-            setServices(prev => [...prev, newOrder]);
+          onCreated={async (newOrder) => {
+            // Recargar la lista desde el backend para obtener datos actualizados
+            await cargarCitas();
             toast.success('Orden de servicio creada exitosamente');
           }}
           services={services}
@@ -470,38 +489,9 @@ const SaleServices = () => {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           order={selectedOrder}
-          onEdited={(updatedOrder) => {
-            console.log('🔄 Callback onEdited llamado con:', updatedOrder);
-            
-            // Actualizar la orden en la lista con el estado correcto inmediatamente
-            setServices(prev => {
-              const updated = prev.map(order => {
-                if (order.id === updatedOrder.id) {
-                  // Asegurar que el estado se mapee correctamente
-                  const newStatus = updatedOrder.status || order.status;
-                  console.log('🔄 Actualizando orden en lista local:', {
-                    id: order.id,
-                    estadoAnterior: order.status,
-                    estadoNuevo: newStatus,
-                    updatedOrder: updatedOrder
-                  });
-                  return { ...order, ...updatedOrder, status: newStatus };
-                }
-                return order;
-              });
-              
-              console.log('📋 Lista actualizada:', updated.map(o => ({ id: o.id, status: o.status })));
-              return updated;
-            });
-            
-            // NO recargar desde el backend inmediatamente porque el backend no está guardando el estado
-            // En su lugar, confiar en la actualización local
-            // Si el usuario recarga la página, entonces se cargará desde el backend
-            // setTimeout(() => {
-            //   console.log('🔄 Recargando órdenes desde el backend...');
-            //   cargarCitas();
-            // }, 1000);
-            
+          onEdited={async (updatedOrder) => {
+            // Recargar la lista desde el backend para obtener datos actualizados
+            await cargarCitas();
             setSelectedOrder(null);
             toast.success('Orden de servicio actualizada exitosamente');
           }}

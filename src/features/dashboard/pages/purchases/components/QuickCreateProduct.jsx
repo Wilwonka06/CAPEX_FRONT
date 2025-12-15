@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { formatNumber, formatNumberInput, parseFormattedNumber } from "../../../../../shared/utils/formatters";
+import { isNumberInputValid } from "../../../../../shared/validations";
 
 export default function QuickCreateProduct({ isOpen, onClose, onCreate }) {
   const [nombre, setNombre] = useState("");
@@ -17,9 +19,9 @@ export default function QuickCreateProduct({ isOpen, onClose, onCreate }) {
     const nuevoProducto = {
       id: Date.now(),
       nombre,
-      precio: parseFloat(costo),
-      precioVenta: precioVenta ? parseFloat(precioVenta) : parseFloat(costo),
-      cantidad: parseInt(cantidad),
+      precio: parseFormattedNumber(costo),
+      precioVenta: precioVenta ? parseFormattedNumber(precioVenta) : parseFormattedNumber(costo),
+      cantidad: Math.floor(parseFormattedNumber(cantidad)),
     };
     onCreate(nuevoProducto);
     onClose();
@@ -33,28 +35,55 @@ export default function QuickCreateProduct({ isOpen, onClose, onCreate }) {
           <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-plus-circle text-lg"></i></div><h2 className="text-xl font-bold m-0">Nuevo Producto</h2></div>
           <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
-        <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
-          <form onSubmit={handleSubmit} id="quick-product-form" className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium mb-1">Nombre *</label>
-            <input type="text" className="w-full px-3 py-2 border rounded-md text-sm" value={nombre} onChange={e => setNombre(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Costo *</label>
-            <input type="number" className="w-full px-3 py-2 border rounded-md text-sm" value={costo} onChange={e => setCosto(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Precio Venta</label>
-            <input type="number" className="w-full px-3 py-2 border rounded-md text-sm" value={precioVenta} onChange={e => setPrecioVenta(e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Cantidad *</label>
-            <input type="number" className="w-full px-3 py-2 border rounded-md text-sm" value={cantidad} onChange={e => setCantidad(e.target.value)} />
-          </div>
-          {error && <div className="text-xs text-red-500">{error}</div>}
-          </form>
+      <div className="overflow-y-auto p-6 flex-1 bg-gray-50" style={{ maxHeight: 'calc(95vh - 120px)' }}>
+        <form onSubmit={handleSubmit} id="quick-product-form" className="space-y-4">
+        <div>
+          <label className="block text-xs font-medium mb-1">Nombre *</label>
+          <input type="text" className="w-full px-3 py-2 border rounded-md text-sm" value={nombre} onChange={e => setNombre(e.target.value)} />
         </div>
-        <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
+        <div>
+          <label className="block text-xs font-medium mb-1">Costo *</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border rounded-md text-sm"
+            value={formatNumber(costo, 2)}
+            onChange={e => {
+              const formatted = formatNumberInput(e.target.value, 2);
+              setCosto(formatted);
+            }}
+            onKeyDown={isNumberInputValid}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1">Precio Venta</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border rounded-md text-sm"
+            value={formatNumber(precioVenta, 2)}
+            onChange={e => {
+              const formatted = formatNumberInput(e.target.value, 2);
+              setPrecioVenta(formatted);
+            }}
+            onKeyDown={isNumberInputValid}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1">Cantidad *</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border rounded-md text-sm"
+            value={formatNumber(cantidad)}
+            onChange={e => {
+              const formatted = formatNumberInput(e.target.value, 0);
+              setCantidad(formatted);
+            }}
+            onKeyDown={isNumberInputValid}
+          />
+        </div>
+        {error && <div className="text-xs text-red-500">{error}</div>}
+        </form>
+      </div>
+      <div className="rounded-b-2xl flex justify-end px-6 py-3 bg-gray-50 border-t border-gray-200">
           <button type="button" className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm hover:bg-gray-50 transition-all duration-200 flex items-center gap-2" onClick={onClose}><i className="bi bi-x-circle"></i>Cancelar</button>
           <button type="submit" form="quick-product-form" className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 ml-2"><i className="bi bi-check-circle"></i>Guardar</button>
         </div>

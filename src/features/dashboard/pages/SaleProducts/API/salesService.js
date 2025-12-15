@@ -1,4 +1,5 @@
 import apiRequest from '../../../../../shared/config/apiConfig';
+import { executeWithToast } from '../../../../../shared/utils/toastHelpers';
 
 /**
  * Servicio de Ventas - Consumo directo de API
@@ -120,51 +121,52 @@ class SalesService {
    * @returns {Promise<Object>} Venta creada
    */
   async create(saleData) {
-    try {
-      if (!saleData.fecha) throw new Error('La fecha es requerida');
-      if (!saleData.id_usuario) throw new Error('El ID del usuario es requerido');
-      if (!saleData.productos?.length) {
-        throw new Error('La venta debe tener al menos un producto');
-      }
-
-      // Mapear estructura frontend a backend
-      const ventaData = {
-        fecha: saleData.fecha,
-        id_usuario: saleData.id_usuario || saleData.clienteId,
-        productos: saleData.productos.map(p => ({
-          id_producto: p.id || p.id_producto,
-          cantidad: p.cantidad,
-          precio_unitario: p.precio || p.precio_unitario
-        }))
-      };
-
-      const response = await apiRequest.post(SALES_ENDPOINT, ventaData);
-      
-      // Mapear respuesta
-      if (response.success && response.data) {
-        const venta = response.data;
-        response.data = {
-          id: venta.id_venta_producto,
-          numeroVenta: `VEN-${venta.id_venta_producto.toString().padStart(5, '0')}`,
-          fecha: venta.fecha,
-          clienteId: venta.id_usuario,
-          valor: parseFloat(venta.total || 0),
-          estado: venta.estado || 'Pendiente',
-          productos: (venta.detalles || []).map(det => ({
-            id: det.id_producto,
-            codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
-            nombre: det.producto?.nombre || 'N/A',
-            cantidad: det.cantidad,
-            precio: parseFloat(det.precio_unitario || 0),
-            subtotal: parseFloat(det.subtotal || 0)
+    return executeWithToast({
+      operation: 'create',
+      entity: 'venta',
+      loadingMessage: 'Registrando venta...',
+      successMessage: (result) => {
+        const numero = result?.data?.numeroVenta || '';
+        return numero ? `Venta ${numero} creada exitosamente` : 'Venta creada exitosamente';
+      },
+      promiseFn: async () => {
+        if (!saleData.fecha) throw new Error('La fecha es requerida');
+        if (!saleData.id_usuario) throw new Error('El ID del usuario es requerido');
+        if (!saleData.productos?.length) {
+          throw new Error('La venta debe tener al menos un producto');
+        }
+        const ventaData = {
+          fecha: saleData.fecha,
+          id_usuario: saleData.id_usuario || saleData.clienteId,
+          productos: saleData.productos.map(p => ({
+            id_producto: p.id || p.id_producto,
+            cantidad: p.cantidad,
+            precio_unitario: p.precio || p.precio_unitario
           }))
         };
+        const response = await apiRequest.post(SALES_ENDPOINT, ventaData);
+        if (response.success && response.data) {
+          const venta = response.data;
+          response.data = {
+            id: venta.id_venta_producto,
+            numeroVenta: `VEN-${venta.id_venta_producto.toString().padStart(5, '0')}`,
+            fecha: venta.fecha,
+            clienteId: venta.id_usuario,
+            valor: parseFloat(venta.total || 0),
+            estado: venta.estado || 'Pendiente',
+            productos: (venta.detalles || []).map(det => ({
+              id: det.id_producto,
+              codigo: `P${det.id_producto.toString().padStart(3, '0')}`,
+              nombre: det.producto?.nombre || 'N/A',
+              cantidad: det.cantidad,
+              precio: parseFloat(det.precio_unitario || 0),
+              subtotal: parseFloat(det.subtotal || 0)
+            }))
+          };
+        }
+        return this._handleResponse(response);
       }
-
-      return this._handleResponse(response);
-    } catch (error) {
-      return this._handleError('Error creating sale', error);
-    }
+    });
   }
 
   /**
@@ -174,28 +176,28 @@ class SalesService {
    * @returns {Promise<Object>} Venta actualizada
    */
   async update(id, saleData) {
-    try {
-      if (!id) throw new Error('ID de la venta es requerido');
-
-      const updateData = {};
-      if (saleData.estado) updateData.estado = saleData.estado;
-      if (saleData.fecha) updateData.fecha = saleData.fecha;
-      if (saleData.productos) {
-        updateData.productos = saleData.productos.map(p => ({
-          id_producto: p.id || p.id_producto,
-          cantidad: p.cantidad,
-          precio_unitario: p.precio || p.precio_unitario
-        }));
+    return executeWithToast({
+      operation: 'update',
+      entity: 'venta',
+      id,
+      loadingMessage: 'Actualizando venta...',
+      successMessage: 'Venta actualizada exitosamente',
+      promiseFn: async () => {
+        if (!id) throw new Error('ID de la venta es requerido');
+        const updateData = {};
+        if (saleData.estado) updateData.estado = saleData.estado;
+        if (saleData.fecha) updateData.fecha = saleData.fecha;
+        if (saleData.productos) {
+          updateData.productos = saleData.productos.map(p => ({
+            id_producto: p.id || p.id_producto,
+            cantidad: p.cantidad,
+            precio_unitario: p.precio || p.precio_unitario
+          }));
+        }
+        const response = await apiRequest.put(`${SALES_ENDPOINT}/${id}`, updateData);
+        return this._handleResponse(response);
       }
-
-      const response = await apiRequest.put(
-        `${SALES_ENDPOINT}/${id}`,
-        updateData
-      );
-      return this._handleResponse(response);
-    } catch (error) {
-      return this._handleError(`Error updating sale`, error);
-    }
+    });
   }
 
   /**
@@ -205,18 +207,19 @@ class SalesService {
    * @returns {Promise<Object>} Venta con estado actualizado
    */
   async changeStatus(id, estado) {
-    try {
-      if (!id) throw new Error('ID de la venta es requerido');
-      if (!estado) throw new Error('El estado es requerido');
-
-      const response = await apiRequest.patch(
-        `${SALES_ENDPOINT}/${id}/estado`,
-        { estado }
-      );
-      return this._handleResponse(response);
-    } catch (error) {
-      return this._handleError('Error changing sale status', error);
-    }
+    return executeWithToast({
+      operation: 'update',
+      entity: 'venta',
+      id,
+      loadingMessage: 'Cambiando estado de la venta...',
+      successMessage: 'Estado de la venta actualizado',
+      promiseFn: async () => {
+        if (!id) throw new Error('ID de la venta es requerido');
+        if (!estado) throw new Error('El estado es requerido');
+        const response = await apiRequest.patch(`${SALES_ENDPOINT}/${id}/estado`, { estado });
+        return this._handleResponse(response);
+      }
+    });
   }
 
   /**
@@ -312,14 +315,18 @@ class SalesService {
    * @returns {Promise<Object>} Confirmación
    */
   async delete(id) {
-    try {
-      if (!id) throw new Error('ID de la venta es requerido');
-
-      const response = await apiRequest.delete(`${SALES_ENDPOINT}/${id}`);
-      return this._handleResponse(response);
-    } catch (error) {
-      return this._handleError('Error deleting sale', error);
-    }
+    return executeWithToast({
+      operation: 'delete',
+      entity: 'venta',
+      id,
+      loadingMessage: 'Eliminando venta...',
+      successMessage: 'Venta eliminada exitosamente',
+      promiseFn: async () => {
+        if (!id) throw new Error('ID de la venta es requerido');
+        const response = await apiRequest.delete(`${SALES_ENDPOINT}/${id}`);
+        return this._handleResponse(response);
+      }
+    });
   }
 
   /**

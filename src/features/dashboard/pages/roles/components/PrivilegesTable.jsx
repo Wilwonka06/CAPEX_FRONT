@@ -33,7 +33,7 @@ const moduleActions = {
 // Configuración de categorías y sus módulos
 const categories = [
   {
-    nombre: 'Gestión de Usuarios',
+    nombre: 'Configuración',
     modulos: ['Usuarios', 'Roles']
   },
   {

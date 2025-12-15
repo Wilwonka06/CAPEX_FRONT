@@ -1,4 +1,5 @@
 import apiRequest from '../../../../../shared/config/apiConfig';
+import { executeWithToast } from '../../../../../shared/utils/toastHelpers';
 
 const PRODUCTS_ENDPOINT = '/productos';
 
@@ -178,210 +179,169 @@ export const productsService = {
    * Crear un nuevo producto
    */
   create: async (productData) => {
-    try {
-      console.log('API Service: Received productData:', productData);
-
-      // Validaciones bÃ¡sicas
-      if (!productData.nombre) {
-        throw new Error('El nombre del producto es requerido');
-      }
-      if (!productData.precio_venta && !productData.precio) {
-        throw new Error('El precio es requerido');
-      }
-      if (!productData.id_categoria_producto && !productData.categoryId) {
-        throw new Error('La categorÃ­a es requerida');
-      }
-
-      // Mapeo para el backend
-      const mappedData = {
-        nombre: productData.nombre.trim(),
-        descripcion: productData.descripcion?.trim() || null,
-        id_categoria_producto: parseInt(productData.id_categoria_producto || productData.categoryId),
-        precio_venta: parseFloat(productData.precio_venta || productData.precio),
-        stock: parseInt(productData.stock || productData.cantidad || 0),
-        costo: parseFloat(productData.costo || 0),
-        iva: parseFloat(productData.iva || 0)
-      };
-
-      // Enviar array de imÃ¡genes (mÃ¡ximo 3)
-      if (productData.fotos && Array.isArray(productData.fotos) && productData.fotos.length > 0) {
-        // Filtrar solo imÃ¡genes vÃ¡lidas (base64 o URLs de Cloudinary)
-        const validImages = productData.fotos
-          .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
-          .slice(0, 3); // MÃ¡ximo 3 imÃ¡genes
-        
-        if (validImages.length > 0) {
-          mappedData.fotos = validImages;
+    return executeWithToast({
+      operation: 'create',
+      entity: 'producto',
+      loadingMessage: 'Creando producto...',
+      successMessage: 'Producto creado exitosamente',
+      promiseFn: async () => {
+        if (!productData.nombre) {
+          throw new Error('El nombre del producto es requerido');
         }
+        if (!productData.precio_venta && !productData.precio) {
+          throw new Error('El precio es requerido');
+        }
+        if (!productData.id_categoria_producto && !productData.categoryId) {
+          throw new Error('La categoría es requerida');
+        }
+        const mappedData = {
+          nombre: productData.nombre.trim(),
+          descripcion: productData.descripcion?.trim() || null,
+          id_categoria_producto: parseInt(productData.id_categoria_producto || productData.categoryId),
+          precio_venta: parseFloat(productData.precio_venta || productData.precio),
+          stock: parseInt(productData.stock || productData.cantidad || 0),
+          costo: parseFloat(productData.costo || 0),
+          iva: parseFloat(productData.iva || 0)
+        };
+        if (productData.fotos && Array.isArray(productData.fotos) && productData.fotos.length > 0) {
+          const validImages = productData.fotos
+            .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
+            .slice(0, 3);
+          if (validImages.length > 0) {
+            mappedData.fotos = validImages;
+          }
+        }
+        if (productData.caracteristicas && Array.isArray(productData.caracteristicas)) {
+          mappedData.caracteristicas = productData.caracteristicas
+            .filter(c => c.nombre && c.valor && c.nombre.trim() !== '' && c.valor.trim() !== '')
+            .map(c => ({ nombre: c.nombre.trim(), valor: c.valor.trim() }));
+        }
+        const response = await apiRequest.post(PRODUCTS_ENDPOINT, mappedData);
+        return response;
       }
-
-      // Mapear caracterÃ­sticas
-      if (productData.caracteristicas && Array.isArray(productData.caracteristicas)) {
-        mappedData.caracteristicas = productData.caracteristicas
-          .filter(c => c.nombre && c.valor && c.nombre.trim() !== '' && c.valor.trim() !== '')
-          .map(c => ({
-            nombre: c.nombre.trim(),
-            valor: c.valor.trim()
-          }));
-
-        console.log('API Service: Mapped caracterÃ­sticas:', mappedData.caracteristicas);
-      }
-
-      console.log('API Service: Sending mappedData to backend:', mappedData);
-      const response = await apiRequest.post(PRODUCTS_ENDPOINT, mappedData);
-      console.log('API Service: Response received:', response);
-      return response;
-    } catch (error) {
-      console.error('Error creating product:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      throw error;
-    }
+    });
   },
 
   /**
    * Actualizar un producto existente
    */
   update: async (id, productData) => {
-    try {
-      if (!id) {
-        throw new Error('ID del producto es requerido');
-      }
-
-      console.log('API Service: Updating product', id, 'with data:', productData);
-
-      // Mapeo para el backend
-      const mappedData = {
-        nombre: productData.nombre?.trim(),
-        descripcion: productData.descripcion?.trim() || null,
-      };
-
-      // Mapear precio_venta solo si es válido
-      if (productData.precio_venta !== undefined || productData.precio !== undefined) {
-        const precio = parseFloat(productData.precio_venta || productData.precio);
-        if (!isNaN(precio) && precio > 0) {
-          mappedData.precio_venta = precio;
+    return executeWithToast({
+      operation: 'update',
+      entity: 'producto',
+      id,
+      loadingMessage: 'Actualizando producto...',
+      successMessage: 'Producto actualizado exitosamente',
+      promiseFn: async () => {
+        if (!id) {
+          throw new Error('ID del producto es requerido');
         }
-      }
-
-      // Mapear stock solo si es válido
-      if (productData.stock !== undefined || productData.cantidad !== undefined) {
-        const stock = parseInt(productData.stock || productData.cantidad || 0);
-        if (!isNaN(stock) && stock >= 0) {
-          mappedData.stock = stock;
+        const mappedData = {
+          nombre: productData.nombre?.trim(),
+          descripcion: productData.descripcion?.trim() || null,
+        };
+        if (productData.precio_venta !== undefined || productData.precio !== undefined) {
+          const precio = parseFloat(productData.precio_venta || productData.precio);
+          if (!isNaN(precio) && precio > 0) {
+            mappedData.precio_venta = precio;
+          }
         }
-      }
-
-      // Mapear categoryId si existe
-      if (productData.id_categoria_producto || productData.categoryId) {
-        const categoryId = parseInt(
-          productData.id_categoria_producto || productData.categoryId
-        );
-        if (!isNaN(categoryId) && categoryId > 0) {
-          mappedData.id_categoria_producto = categoryId;
+        if (productData.stock !== undefined || productData.cantidad !== undefined) {
+          const stock = parseInt(productData.stock || productData.cantidad || 0);
+          if (!isNaN(stock) && stock >= 0) {
+            mappedData.stock = stock;
+          }
         }
-      }
-
-      // Mapear costo solo si es válido
-      if (productData.costo !== undefined && productData.costo !== null && productData.costo !== '') {
-        const costo = parseFloat(productData.costo);
-        if (!isNaN(costo) && costo > 0) {
-          mappedData.costo = costo;
+        if (productData.id_categoria_producto || productData.categoryId) {
+          const categoryId = parseInt(productData.id_categoria_producto || productData.categoryId);
+          if (!isNaN(categoryId) && categoryId > 0) {
+            mappedData.id_categoria_producto = categoryId;
+          }
         }
-      }
-
-      // Mapear IVA solo si es válido
-      if (productData.iva !== undefined && productData.iva !== null && productData.iva !== '') {
-        const iva = parseFloat(productData.iva);
-        if (!isNaN(iva) && iva >= 0 && iva <= 40) {
-          mappedData.iva = iva;
+        if (productData.costo !== undefined && productData.costo !== null && productData.costo !== '') {
+          const costo = parseFloat(productData.costo);
+          if (!isNaN(costo) && costo > 0) {
+            mappedData.costo = costo;
+          }
         }
-      }
-
-      // Mapear array de imágenes (máximo 3)
-      if (productData.fotos && Array.isArray(productData.fotos)) {
-        // Filtrar solo imágenes válidas
-        const validImages = productData.fotos
-          .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
-          .slice(0, 3);
-        
-        // Enviar el array incluso si está vacío (para eliminar todas las imágenes)
-        mappedData.fotos = validImages;
-      }
-
-      // Mapear caracterÃ­sticas correctamente desde especificaciones
-      if (productData.especificaciones && Array.isArray(productData.especificaciones)) {
-        mappedData.caracteristicas = productData.especificaciones
-          .filter(e => {
-            const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
-            return nombre && e.valor && nombre.trim() !== '' && e.valor.trim() !== '';
-          })
-          .map(e => ({
-            nombre: (e.concepto === "otro" ? e.otroConcepto : e.concepto).trim(),
-            valor: e.valor.trim()
-          }));
-
-        console.log('API Service: Mapped caracterÃ­sticas from especificaciones:', mappedData.caracteristicas);
-      } else if (productData.caracteristicas && Array.isArray(productData.caracteristicas)) {
-        mappedData.caracteristicas = productData.caracteristicas
-          .filter(c => c.nombre && c.valor && c.nombre.trim() !== '' && c.valor.trim() !== '')
-          .map(c => ({
-            nombre: c.nombre.trim(),
-            valor: c.valor.trim()
-          }));
-
-        console.log('API Service: Mapped caracterÃ­sticas:', mappedData.caracteristicas);
-      }
-
-      // Limpiar campos undefined/null antes de enviar
-      Object.keys(mappedData).forEach(key => {
-        if (mappedData[key] === undefined || mappedData[key] === null || (typeof mappedData[key] === 'number' && isNaN(mappedData[key]))) {
-          delete mappedData[key];
+        if (productData.iva !== undefined && productData.iva !== null && productData.iva !== '') {
+          const iva = parseFloat(productData.iva);
+          if (!isNaN(iva) && iva >= 0 && iva <= 40) {
+            mappedData.iva = iva;
+          }
         }
-      });
-
-      console.log('API Service: Sending update data:', mappedData);
-      const response = await apiRequest.put(`${PRODUCTS_ENDPOINT}/${id}`, mappedData);
-      return response;
-    } catch (error) {
-      console.error(`Error updating product ${id}:`, error);
-      throw error;
-    }
+        if (productData.fotos && Array.isArray(productData.fotos)) {
+          const validImages = productData.fotos
+            .filter(img => img && (img.startsWith('data:image') || img.includes('cloudinary.com')))
+            .slice(0, 3);
+          mappedData.fotos = validImages;
+        }
+        if (productData.especificaciones && Array.isArray(productData.especificaciones)) {
+          mappedData.caracteristicas = productData.especificaciones
+            .filter(e => {
+              const nombre = e.concepto === "otro" ? e.otroConcepto : e.concepto;
+              return nombre && e.valor && nombre.trim() !== '' && e.valor.trim() !== '';
+            })
+            .map(e => ({
+              nombre: (e.concepto === "otro" ? e.otroConcepto : e.concepto).trim(),
+              valor: e.valor.trim()
+            }));
+        } else if (productData.caracteristicas && Array.isArray(productData.caracteristicas)) {
+          mappedData.caracteristicas = productData.caracteristicas
+            .filter(c => c.nombre && c.valor && c.nombre.trim() !== '' && c.valor.trim() !== '')
+            .map(c => ({ nombre: c.nombre.trim(), valor: c.valor.trim() }));
+        }
+        Object.keys(mappedData).forEach(key => {
+          if (mappedData[key] === undefined || mappedData[key] === null || (typeof mappedData[key] === 'number' && isNaN(mappedData[key]))) {
+            delete mappedData[key];
+          }
+        });
+        const response = await apiRequest.put(`${PRODUCTS_ENDPOINT}/${id}`, mappedData);
+        return response;
+      }
+    });
   },
 
   /**
    * Eliminar un producto
    */
   delete: async (id) => {
-    try {
-      if (!id) {
-        throw new Error('ID del producto es requerido');
+    return executeWithToast({
+      operation: 'delete',
+      entity: 'producto',
+      id,
+      loadingMessage: 'Eliminando producto...',
+      successMessage: 'Producto eliminado exitosamente',
+      promiseFn: async () => {
+        if (!id) {
+          throw new Error('ID del producto es requerido');
+        }
+        const response = await apiRequest.delete(`${PRODUCTS_ENDPOINT}/${id}`);
+        return response;
       }
-
-      const response = await apiRequest.delete(`${PRODUCTS_ENDPOINT}/${id}`);
-      return response;
-    } catch (error) {
-      console.error(`Error deleting product ${id}:`, error);
-      throw error;
-    }
+    });
   },
 
   /**
    * Actualizar stock de un producto
    */
   updateStock: async (id, stock) => {
-    try {
-      if (!id) {
-        throw new Error('ID del producto es requerido');
+    return executeWithToast({
+      operation: 'update',
+      entity: 'stock',
+      id,
+      loadingMessage: 'Actualizando stock...',
+      successMessage: 'Stock actualizado correctamente',
+      promiseFn: async () => {
+        if (!id) {
+          throw new Error('ID del producto es requerido');
+        }
+        const response = await apiRequest.patch(`${PRODUCTS_ENDPOINT}/${id}/stock`, {
+          stock: parseInt(stock)
+        });
+        return response;
       }
-
-      const response = await apiRequest.patch(`${PRODUCTS_ENDPOINT}/${id}/stock`, {
-        stock: parseInt(stock)
-      });
-      return response;
-    } catch (error) {
-      console.error(`Error updating product stock ${id}:`, error);
-      throw error;
-    }
+    });
   },
   getLowStock: async (limit = 10) => {
     try {

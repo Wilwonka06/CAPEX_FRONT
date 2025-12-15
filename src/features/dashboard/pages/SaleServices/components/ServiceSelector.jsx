@@ -12,6 +12,7 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [retrying, setRetrying] = useState(false);
   const [errors, setErrors] = useState({});
@@ -149,11 +150,16 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     }
 
     try {
+      setLoadingTimeSlots(true);
       // Obtener el horario efectivo del empleado para la fecha
       const scheduleResponse = await apiRequest.get(`/programaciones-recurrentes/horario-fecha?id_usuario=${employeeId}&fecha=${date}`);
 
       if (scheduleResponse && scheduleResponse.bloques_horarios) {
         const timeSlots = [];
+        const now = new Date();
+        const selectedDateObj = new Date(date);
+        const isToday = selectedDateObj.toDateString() === now.toDateString();
+        const currentTime = isToday ? now : null;
 
         // Generar slots de 30 minutos para cada bloque horario
         scheduleResponse.bloques_horarios.forEach(bloque => {
@@ -175,10 +181,26 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
             const slotEndMinute = slotEndMinutes % 60;
             const endTimeString = `${String(slotEndHour).padStart(2, '0')}:${String(slotEndMinute).padStart(2, '0')}`;
 
+            // Determinar si el slot está bloqueado (pasado o no disponible)
+            let isBlocked = false;
+            let blockedReason = '';
+
+            // Bloquear slots pasados si es hoy
+            if (isToday && currentTime) {
+              const slotTime = new Date(selectedDateObj);
+              slotTime.setHours(hour, minute, 0, 0);
+              if (slotTime < currentTime) {
+                isBlocked = true;
+                blockedReason = 'BLOQUEADO (hora pasada)';
+              }
+            }
+
             timeSlots.push({
               time: timeString,
               display: timeString,
-              available: true // Por ahora asumimos disponible, luego verificaremos
+              available: !isBlocked, // Disponible si no está bloqueado
+              blocked: isBlocked,
+              blockedReason: blockedReason
             });
           }
         });
@@ -186,6 +208,12 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
         // Filtrar slots disponibles (no ocupados por otros servicios)
         const availableSlots = [];
         for (const slot of timeSlots) {
+          // Saltar slots ya marcados como bloqueados (horas pasadas)
+          if (slot.blocked) {
+            availableSlots.push(slot);
+            continue;
+          }
+
           try {
             const availabilityResponse = await apiRequest.get(
               `/programaciones-recurrentes/disponibilidad?id_usuario=${employeeId}&fecha=${date}&inicio=${slot.time}&fin=${slot.time.replace(/(\d{2}):(\d{2})/, (match, h, m) => {
@@ -198,9 +226,19 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
 
             if (availabilityResponse.disponible) {
               availableSlots.push(slot);
+            } else {
+              // Marcar como bloqueado si no está disponible
+              availableSlots.push({
+                ...slot,
+                available: false,
+                blocked: true,
+                blockedReason: 'BLOQUEADO (no disponible)'
+              });
             }
           } catch (error) {
             console.warn(`Error checking availability for ${slot.time}:`, error);
+            // Si hay error, marcar como disponible para no bloquear innecesariamente
+            availableSlots.push(slot);
           }
         }
 
@@ -211,6 +249,8 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
     } catch (error) {
       console.error('Error loading available time slots:', error);
       setAvailableTimeSlots([]);
+    } finally {
+      setLoadingTimeSlots(false);
     }
   };
 
@@ -484,14 +524,19 @@ const ServiceSelector = ({ selectedServices, onServicesChange }) => {
               } focus:outline-none focus:ring-2 focus:ring-[#FACC15] transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed`}
               value={selectedTime}
               onChange={handleTimeChange}
-              disabled={!selectedEmployeeId}
+              disabled={!selectedEmployeeId || loadingTimeSlots}
             >
               <option value="">
-                {!selectedEmployeeId ? "Seleccione empleado primero" : "Seleccionar hora"}
+                {!selectedEmployeeId ? "Seleccione empleado primero" : loadingTimeSlots ? "Cargando horarios..." : "Seleccionar hora"}
               </option>
               {availableTimeSlots.map(slot => (
-                <option key={slot.time} value={slot.time}>
-                  {slot.display}
+                <option
+                  key={slot.time}
+                  value={slot.time}
+                  disabled={slot.blocked || !slot.available}
+                  className={slot.blocked ? 'bg-gray-100 text-gray-400' : ''}
+                >
+                  {slot.display} {slot.blocked ? `(${slot.blockedReason})` : ''}
                 </option>
               ))}
             </select>

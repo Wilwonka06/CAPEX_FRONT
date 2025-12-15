@@ -74,35 +74,30 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
     setErrorCancel(null);
     console.log("Intentando cancelar cita...");
 
-    const cancelPromise = (async () => {
+    try {
       await appointmentsService.cancel(
         cita.id_cita,
         "Cancelada por el usuario"
       );
       console.log("Cita cancelada en API");
-      if (onCancel) await onCancel();
+      
+      // Cerrar el modal inmediatamente para mejor UX
       onClose();
-      return true;
-    })();
-
-    toast.promise(cancelPromise, {
-      loading: "Cancelando cita...",
-      success: "Cita cancelada",
-      error: (err) => {
-        setErrorCancel("Error al cancelar la cita. Intenta de nuevo.");
-        console.error("Error al cancelar:", err);
-        return (
-          err.response?.data?.message ||
-          err.message ||
-          "Error al cancelar la cita"
-        );
-      },
-    });
-
-    try {
-      await cancelPromise;
+      
+      // Mostrar toast de éxito
+      toast.success("Cita cancelada");
+      
+      // Refrescar en segundo plano (sin bloquear)
+      if (onCancel) {
+        onCancel().catch(err => {
+          console.error('Error al refrescar citas:', err);
+        });
+      }
     } catch (err) {
-      // Error ya manejado por toast.promise
+      setErrorCancel("Error al cancelar la cita. Intenta de nuevo.");
+      console.error("Error al cancelar:", err);
+      const errorMessage = err.response?.data?.message || err.message || "Error al cancelar la cita";
+      toast.error(errorMessage);
     } finally {
       setLoadingCancel(false);
     }
@@ -115,9 +110,26 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm select-none font-inter">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Overlay de carga */}
+        {loadingCancel && (
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin h-12 w-12 border-4 border-[#FACC15] border-t-transparent rounded-full"></div>
+              <p className="text-gray-700 font-semibold text-lg">Cancelando cita...</p>
+              <p className="text-gray-500 text-sm">Por favor espera, esto puede tardar unos momentos</p>
+            </div>
+          </div>
+        )}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white rounded-t-2xl flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3"><div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><i className="bi bi-calendar-event text-lg"></i></div><h2 className="text-xl font-bold m-0">Detalles de la cita</h2></div>
-          <button className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition" onClick={onClose} aria-label="Cerrar">×</button>
+          <button 
+            className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed" 
+            onClick={onClose} 
+            disabled={loadingCancel}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
         </div>
 
         {/* Contenido scrolleable */}
@@ -268,8 +280,9 @@ const AppointmentDetailModal = ({ cita, onClose, onEdit, onCancel }) => {
             </button>
           )}
           <button 
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm" 
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-gray-800 text-sm font-semibold hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" 
             onClick={onClose}
+            disabled={loadingCancel}
           >
             <i className="bi bi-check-circle"></i>
             Cerrar

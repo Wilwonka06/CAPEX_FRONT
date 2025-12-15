@@ -927,8 +927,17 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
       }
 
       // Solo cerrar y guardar si todo fue exitoso
-      onSave();
+      // Extraer la cita del resultado (puede estar en result.data o result directamente)
+      const savedCita = result?.data || result;
+      
+      // Cerrar el modal inmediatamente para mejor UX
       onClose();
+      
+      // Refrescar en segundo plano (sin bloquear)
+      onSave(savedCita).catch(err => {
+        console.error('Error al refrescar citas:', err);
+        // El toast de éxito ya se mostró, así que solo logueamos el error
+      });
     } catch (error) {
       console.error('Error inesperado al procesar la cita:', error);
       toast.error(error.message || 'Ocurrió un error inesperado. Por favor, intenta nuevamente.');
@@ -940,6 +949,16 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm select-none font-inter">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl relative animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Overlay de carga */}
+        {loading && (
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin h-12 w-12 border-4 border-[#FACC15] border-t-transparent rounded-full"></div>
+              <p className="text-gray-700 font-semibold text-lg">Guardando cambios...</p>
+              <p className="text-gray-500 text-sm">Por favor espera, esto puede tardar unos momentos</p>
+            </div>
+          </div>
+        )}
         {/* Header fijo */}
         <div className="flex-none bg-gradient-to-r from-[#FACC15] to-[#F59E0B] text-white flex items-center justify-between px-6 py-3 shadow-lg">
           <div className="flex items-center gap-3">
@@ -949,8 +968,9 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
             <h2 className="text-xl font-bold m-0">{cita ? 'Editar' : 'Crear'} Cita</h2>
           </div>
           <button
-            className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200"
+            className="text-white/80 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onClose}
+            disabled={loading}
             aria-label="Cerrar"
           >
             ×
@@ -1149,8 +1169,9 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         <div className="flex-none bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3 rounded-b-2xl">
           <button
             type="button"
-            className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg border bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onClose}
+            disabled={loading}
           >
             <i className="bi bi-x-circle"></i>
             Cancelar

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useCart } from '../../components/CartContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { formatNumber } from '../../../../shared/utils/formatters';
+import { formatNumber, formatNumberInput, parseFormattedNumber } from '../../../../shared/utils/formatters';
+import { isNumberInputValid } from '../../../../shared/validations';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 // Imagen por defecto para productos sin imagen (similar a usuarios)
@@ -101,12 +102,11 @@ const Cart = () => {
                         -
                       </button>
                       <input
-                        type="number"
-                        min="1"
-                        max={item.stock ?? item.cantidad ?? 999}
-                        value={item.cantidad}
+                        type="text"
+                        value={formatNumber(item.cantidad)}
                         onChange={(e) => {
-                          const nuevaCantidad = parseInt(e.target.value) || 1;
+                          const formatted = formatNumberInput(e.target.value, 0);
+                          const nuevaCantidad = Math.max(1, parseFormattedNumber(formatted) || 1);
                           const stockDisponible = item.stock ?? item.cantidad ?? 999;
                           if (nuevaCantidad > stockDisponible) {
                             alert(`No puedes agregar más de ${stockDisponible} unidades. Stock disponible: ${stockDisponible}`);
@@ -115,6 +115,7 @@ const Cart = () => {
                             updateQuantity(item.id, nuevaCantidad);
                           }
                         }}
+                        onKeyDown={isNumberInputValid}
                         className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm font-semibold"
                       />
                       <button
@@ -182,12 +183,11 @@ const Cart = () => {
                       -
                     </button>
                     <input
-                      type="number"
-                      min="1"
-                      max={item.stock ?? item.cantidad ?? 999}
-                      value={item.cantidad}
+                      type="text"
+                      value={formatNumber(item.cantidad)}
                       onChange={(e) => {
-                        const nuevaCantidad = parseInt(e.target.value) || 1;
+                        const formatted = formatNumberInput(e.target.value, 0);
+                        const nuevaCantidad = Math.max(1, parseFormattedNumber(formatted) || 1);
                         const stockDisponible = item.stock ?? item.cantidad ?? 999;
                         if (nuevaCantidad > stockDisponible) {
                           alert(`No puedes agregar más de ${stockDisponible} unidades. Stock disponible: ${stockDisponible}`);
@@ -196,6 +196,7 @@ const Cart = () => {
                           updateQuantity(item.id, nuevaCantidad);
                         }
                       }}
+                      onKeyDown={isNumberInputValid}
                       className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm font-semibold"
                     />
                     <button

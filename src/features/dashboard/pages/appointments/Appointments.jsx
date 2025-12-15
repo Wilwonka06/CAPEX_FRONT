@@ -43,8 +43,8 @@ const Appointments = () => {
   const { setTitle } = useOutletContext();
   const navigate = useNavigate();
 
-  const handleSaveAppointment = (savedCita) => {
-    refreshAppointments();
+  const handleSaveAppointment = async (savedCita) => {
+    await refreshAppointments();
     if (savedCita && (savedCita.estado === 'En ejecución')) {
       navigate('/dashboard/ventas-servicios');
     }
@@ -96,8 +96,8 @@ const Appointments = () => {
   };
 
   // Refrescar citas tras crear/editar/cancelar
-  const refreshAppointments = () => {
-    loadAppointments();
+  const refreshAppointments = async () => {
+    await loadAppointments();
   };
 
   // Al hacer clic en un día vacío

@@ -63,47 +63,40 @@ export const formatNumber = (num, decimals = 0) => {
    * @param {number} decimals - Número de decimales (default: 0)
    * @returns {string} Valor formateado
    */
-  export const formatNumberInput = (value, decimals = 0) => {
-    if (!value) return '';
-    
-    // Permitir números, puntos y comas
-    let cleaned = value.toString().replace(/[^0-9.,]/g, '');
-    
-    // Si no hay nada, retornar vacío
-    if (!cleaned) return '';
-    
-    // Separar parte entera y decimal
-    const hasComa = cleaned.includes(',');
-    const hasPunto = cleaned.includes('.');
-    
-    // Si tiene coma, usar como separador decimal
-    if (hasComa) {
-      const parts = cleaned.split(',');
-      const integerPart = parts[0].replace(/\./g, ''); // Eliminar puntos de miles
-      const decimalPart = parts[1] ? parts[1].substring(0, decimals) : '';
-      
-      // Formatear parte entera con puntos
-      const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      
-      // Si hay decimales, agregar coma y decimales
-      if (decimals > 0 && decimalPart) {
-        return formattedInteger + ',' + decimalPart;
-      } else if (decimals > 0 && hasComa) {
-        return formattedInteger + ',';
-      }
-      return formattedInteger;
+export const formatNumberInput = (value, decimals = 0) => {
+  if (!value) return '';
+  
+  // Permitir números, puntos y comas
+  let cleaned = value.toString().replace(/[^0-9.,]/g, '');
+  
+  // Si no hay nada, retornar vacío
+  if (!cleaned) return '';
+  
+  // Detectar separador decimal: preferir coma, si no existe usar punto
+  const sep = cleaned.includes(',') ? ',' : (cleaned.includes('.') ? '.' : null);
+  if (sep) {
+    const parts = cleaned.split(sep);
+    const integerPart = parts[0].replace(/\./g, '');
+    const decimalPart = parts[1] ? parts[1].substring(0, decimals) : '';
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (decimals > 0 && decimalPart) {
+      return formattedInteger + ',' + decimalPart;
+    } else if (decimals > 0 && cleaned.endsWith(sep)) {
+      return formattedInteger + ',';
     }
-    
-    // Si solo tiene puntos (miles) o números
-    const numericValue = cleaned.replace(/\./g, '');
-    if (!numericValue) return '';
-    
-    // Formatear con puntos de miles
-    const formatted = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    
-    // Si se requieren decimales pero no hay coma, no agregar decimales automáticamente
-    return formatted;
-  };
+    return formattedInteger;
+  }
+  
+  // Si solo tiene puntos (miles) o números
+  const numericValue = cleaned.replace(/\./g, '');
+  if (!numericValue) return '';
+  
+  // Formatear con puntos de miles
+  const formatted = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  
+  // Si se requieren decimales pero no hay coma, no agregar decimales automáticamente
+  return formatted;
+};
   
   /**
    * Valida si un string representa un número válido
@@ -122,30 +115,30 @@ export const formatNumber = (num, decimals = 0) => {
    * @param {string|number} value - Valor formateado o número
    * @returns {number} Número parseado
    */
-  export const parseFormattedNumber = (value) => {
-    if (typeof value === 'number') return value;
-    if (!value) return 0;
-    
-    // Convertir a string y limpiar
-    let str = value.toString().trim();
-    if (!str) return 0;
-    
-    // Si tiene coma, separar parte entera y decimal
-    if (str.includes(',')) {
-      const parts = str.split(',');
-      const integerPart = parts[0].replace(/\./g, ''); // Eliminar puntos de miles
-      const decimalPart = parts[1] || '00';
-      // Combinar y parsear
-      const combined = integerPart + '.' + decimalPart;
-      const parsed = parseFloat(combined);
-      return isNaN(parsed) ? 0 : parsed;
-    }
-    
-    // Si solo tiene puntos (miles) o números, eliminar puntos y parsear
-    const cleaned = str.replace(/\./g, '');
-    const parsed = parseFloat(cleaned);
+export const parseFormattedNumber = (value) => {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  
+  // Convertir a string y limpiar
+  let str = value.toString().trim();
+  if (!str) return 0;
+  
+  // Normalizar: si hay coma, tratar como decimal; si no, usar punto como posible decimal
+  if (str.includes(',') || str.includes('.')) {
+    const sep = str.includes(',') ? ',' : '.';
+    const parts = str.split(sep);
+    const integerPart = parts[0].replace(/\./g, '');
+    const decimalPart = parts[1] || '00';
+    const combined = integerPart + '.' + decimalPart;
+    const parsed = parseFloat(combined);
     return isNaN(parsed) ? 0 : parsed;
-  };
+  }
+  
+  // Si solo tiene puntos (miles) o números, eliminar puntos y parsear
+  const cleaned = str.replace(/\./g, '');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
   
   /**
    * Formatea porcentaje sin decimales

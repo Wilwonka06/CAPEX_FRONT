@@ -1,467 +1,402 @@
-// Servicio para manejar citas en el módulo de Venta de Servicios
- import apiRequest from '../../../../../shared/config/apiConfig';
- import { normalizeText } from '../../../../../shared/normalizers';
+import apiRequest from '../../../../../shared/config/apiConfig';
+import { normalizeText } from '../../../../../shared/normalizers';
 
- const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
+const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
+const SALES_PRODUCTS_ENDPOINT = '/ventas-productos';
 
 /**
- * Obtiene todas las órdenes de servicio en estado "En proceso" para mostrar en venta de servicios
+ * Obtiene todas las órdenes de servicio (todos los estados)
  */
 export const getCitasEnEjecucion = async () => {
   try {
-    // Usar el endpoint correcto para obtener órdenes de servicio
-    // NOTA: Este endpoint podría estar filtrando solo "En ejecución"
-    // Si no devuelve servicios "Pagada", necesitamos obtener todos los estados
-    const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/orden-servicio/list`);
-    
-    console.log('📡 Respuesta completa del backend:', {
-      response: response,
+    console.log('🔄 Cargando todas las órdenes de servicio...');
+
+    // Intentar obtener todos los servicios directamente
+    const response = await apiRequest.get(SERVICE_DETAILS_ENDPOINT);
+
+    console.log('📡 Respuesta del backend:', {
       success: response.success,
       data: response.data,
-      dataType: typeof response.data,
-      isArray: Array.isArray(response.data),
-      dataKeys: response.data && typeof response.data === 'object' ? Object.keys(response.data) : null,
-      dataLength: response.data?.length || (Array.isArray(response.data) ? response.data.length : 0),
-      firstService: response.data?.[0] || (Array.isArray(response.data) ? response.data[0] : null),
-      estadosEncontrados: Array.isArray(response.data) 
-        ? [...new Set(response.data.map(s => s.estado).filter(Boolean))]
-        : []
+      length: response.data?.length || 0
     });
-    
-    // Manejar diferentes estructuras de respuesta
-    let serviceDetails = [];
-    
-    // Si response.data es un objeto con una propiedad que contiene el array
-    if (response.success && response.data) {
-      if (Array.isArray(response.data)) {
-        serviceDetails = response.data;
-      } else if (response.data.data && Array.isArray(response.data.data)) {
-        serviceDetails = response.data.data;
-      } else if (response.data.servicios && Array.isArray(response.data.servicios)) {
-        serviceDetails = response.data.servicios;
-      } else if (response.data.detalles && Array.isArray(response.data.detalles)) {
-        serviceDetails = response.data.detalles;
-      }
-    } else if (Array.isArray(response)) {
-      serviceDetails = response;
-    } else if (response.data && Array.isArray(response.data)) {
-      serviceDetails = response.data;
-    }
 
-    console.log('📦 ServiceDetails procesados:', {
-      total: serviceDetails.length,
-      estados: [...new Set(serviceDetails.map(s => s.estado).filter(Boolean))],
-      primerosEstados: serviceDetails.slice(0, 5).map(s => ({ 
-        id: s.id_detalle_servicio || s.id, 
-        estado: s.estado,
-        id_cita: s.id_cita
-      }))
-    });
-    
-    // Si no hay servicios, intentar obtener todos los servicios sin filtrar por estado
-    if (serviceDetails.length === 0) {
-      console.warn('⚠️ No se encontraron servicios en el endpoint /orden-servicio/list. Intentando obtener todos los servicios...');
-      
-      try {
-        // Intentar obtener todos los servicios directamente
-        const allServicesResponse = await apiRequest.get(SERVICE_DETAILS_ENDPOINT);
-        console.log('📡 Respuesta de todos los servicios:', {
-          success: allServicesResponse.success,
-          dataLength: allServicesResponse.data?.length || (Array.isArray(allServicesResponse.data) ? allServicesResponse.data.length : 0),
-          estados: Array.isArray(allServicesResponse.data) 
-            ? [...new Set(allServicesResponse.data.map(s => s.estado).filter(Boolean))]
-            : []
-        });
-        
-        if (allServicesResponse.success && allServicesResponse.data) {
-          if (Array.isArray(allServicesResponse.data)) {
-            serviceDetails = allServicesResponse.data;
-          } else if (allServicesResponse.data.data && Array.isArray(allServicesResponse.data.data)) {
-            serviceDetails = allServicesResponse.data.data;
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error al obtener todos los servicios:', error);
-      }
-    }
-
-    // Si no hay servicios después de intentar ambos endpoints, retornar array vacío
-    if (serviceDetails.length === 0) {
-      console.warn('⚠️ No se encontraron servicios en ningún endpoint. El backend podría estar filtrando por estado.');
+    if (!response.success || !response.data) {
+      console.warn('⚠️ No se encontraron servicios');
       return [];
     }
 
-    console.log('✅ Servicios obtenidos exitosamente:', {
-      total: serviceDetails.length,
-      estados: [...new Set(serviceDetails.map(s => s.estado).filter(Boolean))],
-      conEstadoPagada: serviceDetails.filter(s => s.estado === 'Pagada' || s.estado === 'Pagado').length
+    let serviceDetails = [];
+    if (Array.isArray(response.data)) {
+      serviceDetails = response.data;
+    } else if (response.data.data && Array.isArray(response.data.data)) {
+      serviceDetails = response.data.data;
+    }
+
+    console.log('✅ Servicios obtenidos:', serviceDetails.length);
+
+    // Agrupar servicios por cita/cliente antes de transformar
+    const groupedServices = {};
+    serviceDetails.forEach(service => {
+      const citaId = service.id_cita;
+      const clienteId = service.id_cliente;
+      const fecha = service.fecha_programada || 'sin_fecha';
+      
+      // Crear clave única para agrupar
+      const key = citaId 
+        ? `cita_${citaId}` 
+        : `cliente_${clienteId}_${fecha}`;
+      
+      if (!groupedServices[key]) {
+        groupedServices[key] = {
+          id_cita: citaId,
+          id_cliente: clienteId,
+          cliente: service.cliente || service.usuario,
+          fecha_programada: fecha,
+          servicios: []
+        };
+      }
+      
+      groupedServices[key].servicios.push(service);
     });
 
-    // Agrupar servicios por cita/cliente y transformar al formato esperado
-    const groupedServices = groupServicesByClient(serviceDetails);
-    
-    console.log('📋 Servicios agrupados antes de transformar:', groupedServices.map(g => ({
-      id_cita: g.id_cita,
-      estados: g.servicios?.map(s => s.estado),
-      servicios: g.servicios?.length
-    })));
-    
-    // Transformar al formato esperado por el componente SaleServices y filtrar nulls
-    const transformed = groupedServices
-      .map(transformarServiciosAVentaServicio)
-      .filter(item => item !== null);
-    
-    console.log('📋 Órdenes transformadas:', transformed.map(t => ({
-      id: t.id,
-      status: t.status,
-      statusType: typeof t.status,
-      statusLength: t.status?.length,
-      clientName: t.clientName
-    })));
-    
-    // Log específico para órdenes con estado "Pagado"
-    const pagadas = transformed.filter(t => t.status === 'Pagado' || t.status?.toLowerCase() === 'pagado');
-    if (pagadas.length > 0) {
-      console.log('💰 Órdenes pagadas encontradas:', pagadas.map(p => ({
-        id: p.id,
-        status: p.status,
-        statusNormalized: normalizeText(p.status || ''),
-        clientName: p.clientName
-      })));
-    }
-    
-    return transformed;
+    // Transformar grupos al formato esperado
+    const transformed = await Promise.all(Object.values(groupedServices).map(async (grupo) => {
+      const servicios = grupo.servicios || [];
+      if (servicios.length === 0) return null;
+
+      // Usar el primer servicio como referencia para datos comunes
+      const primerServicio = servicios[0];
+      const cliente = primerServicio.cliente || primerServicio.usuario || {};
+      const clienteNombre = cliente.nombre || cliente.Nombre || cliente.name || 'Cliente desconocido';
+
+      // Transformar todos los servicios del grupo
+      const serviciosTransformados = servicios.map(service => {
+        const servicioNombre = service.servicio?.nombre || service.servicio?.Nombre || service.servicio?.name || 'Servicio desconocido';
+        const empleadoNombre = service.empleado?.nombre || service.empleado?.Nombre || service.empleado?.name || 'Empleado desconocido';
+        const empleadoId = service.id_empleado || 
+                          service.empleado?.id_usuario || 
+                          service.empleado?.id || 
+                          null;
+        const servicioId = service.id_servicio || 
+                          service.servicio?.id_servicio || 
+                          service.servicio?.id || 
+                          null;
+
+        return {
+          id: service.id_detalle_servicio || service.id,
+          id_detalle_servicio: service.id_detalle_servicio || service.id, // Asegurar que se incluya el ID correcto
+          servicioId: servicioId,
+          name: servicioNombre,
+          quantity: service.cantidad || 1,
+          price: service.precio_unitario || 0,
+          subtotal: (service.precio_unitario || 0) * (service.cantidad || 1),
+          employee: {
+            id: empleadoId,
+            name: empleadoNombre
+          },
+          id_empleado: empleadoId,
+          hora_inicio: service.hora_inicio,
+          hora_finalizacion: service.hora_finalizacion,
+          duracion: service.duracion,
+          fecha_programada: service.fecha_programada,
+          id_cita: service.id_cita
+        };
+      });
+
+      // Cargar productos asociados a la cita si existe
+      let productos = [];
+      let totalProducts = 0;
+      const citaId = grupo.id_cita;
+      
+      if (citaId) {
+        try {
+          const ventasProductos = await apiRequest.get(`${SALES_PRODUCTS_ENDPOINT}/cita/${citaId}`);
+          if (ventasProductos.success && ventasProductos.data && ventasProductos.data.length > 0) {
+            // Obtener los detalles de la primera venta encontrada
+            const venta = ventasProductos.data[0];
+            if (venta.detalles && Array.isArray(venta.detalles)) {
+              productos = venta.detalles.map(detalle => ({
+                id: detalle.id_producto,
+                id_producto: detalle.id_producto,
+                name: detalle.producto?.nombre || 'Producto desconocido',
+                quantity: detalle.cantidad || 1,
+                price: parseFloat(detalle.precio_unitario || 0),
+                precio: parseFloat(detalle.precio_unitario || 0),
+                subtotal: parseFloat(detalle.subtotal || 0)
+              }));
+              totalProducts = productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
+            }
+          }
+        } catch (error) {
+          console.error('Error al cargar productos de la cita:', error);
+          // Continuar sin productos si hay error
+        }
+      }
+
+      // Calcular totales
+      const totalServices = serviciosTransformados.reduce((sum, s) => sum + (s.subtotal || 0), 0);
+      const totalGeneral = totalServices + totalProducts;
+
+      // Determinar estado (usar el más común o el primero)
+      const estados = servicios.map(s => s.estado).filter(e => e);
+      const estadoMasComun = estados.length > 0 
+        ? estados.reduce((a, b, _, arr) => arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b)
+        : 'En ejecución';
+
+      // Usar el ID del primer servicio como ID de la orden
+      const ordenId = serviciosTransformados[0].id;
+
+      return {
+        id: ordenId,
+        clientName: clienteNombre,
+        date: grupo.fecha_programada !== 'sin_fecha' ? grupo.fecha_programada : new Date().toLocaleDateString('es-ES'),
+        time: serviciosTransformados[0].hora_inicio?.substring(0, 5) || '08:00',
+        status: mapStatus(estadoMasComun),
+        servicios: serviciosTransformados,
+        productos: productos,
+        totalServices: totalServices,
+        totalProducts: totalProducts,
+        totalGeneral: totalGeneral,
+        citaId: grupo.id_cita
+      };
+    }));
+
+    // Filtrar nulls y retornar
+    return transformed.filter(item => item !== null);
   } catch (error) {
-    console.error('Error al obtener órdenes de servicio:', error);
-    console.error('Error details:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
-    });
-    
-    // Retornar array vacío en lugar de lanzar error para mejor UX
+    console.error('❌ Error al obtener servicios:', error);
     return [];
   }
 };
 
 /**
- * Obtiene una orden de servicio específica por ID
+ * Mapea estados del backend al frontend
  */
-export const getCitaById = async (serviceDetailId) => {
+const mapStatus = (backendStatus) => {
+  if (!backendStatus) return 'En ejecucion';
+
+  const statusMap = {
+    'En ejecución': 'En ejecucion',
+    'En proceso': 'En ejecucion',
+    'Pagada': 'Pagado',
+    'Pagado': 'Pagado',
+    'Cancelada por el usuario': 'Anulado',
+    'Anulado': 'Anulado'
+  };
+
+  return statusMap[backendStatus] || 'En ejecucion';
+};
+
+/**
+ * Obtiene una orden específica por ID
+ * Optimizado: usa la orden ya cargada si está disponible, solo carga productos si es necesario
+ */
+export const getCitaById = async (serviceDetailId, cachedOrder = null) => {
   try {
+    // Si tenemos la orden en caché y tiene todos los datos, usarla directamente
+    if (cachedOrder && cachedOrder.servicios && cachedOrder.servicios.length > 0) {
+      // Solo cargar productos si no están cargados
+      if (!cachedOrder.productos || cachedOrder.productos.length === 0) {
+        const citaId = cachedOrder.citaId;
+        if (citaId) {
+          try {
+            const ventasProductos = await apiRequest.get(`${SALES_PRODUCTS_ENDPOINT}/cita/${citaId}`);
+            if (ventasProductos.success && ventasProductos.data && ventasProductos.data.length > 0) {
+              const venta = ventasProductos.data[0];
+              if (venta.detalles && Array.isArray(venta.detalles)) {
+                const productos = venta.detalles.map(detalle => ({
+                  id: detalle.id_producto,
+                  id_producto: detalle.id_producto,
+                  name: detalle.producto?.nombre || 'Producto desconocido',
+                  quantity: detalle.cantidad || 1,
+                  price: parseFloat(detalle.precio_unitario || 0),
+                  precio: parseFloat(detalle.precio_unitario || 0),
+                  subtotal: parseFloat(detalle.subtotal || 0)
+                }));
+                const totalProducts = productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
+                return {
+                  ...cachedOrder,
+                  productos,
+                  totalProducts,
+                  totalGeneral: (cachedOrder.totalServices || 0) + totalProducts
+                };
+              }
+            }
+          } catch (error) {
+            // Continuar sin productos si hay error
+          }
+        }
+      }
+      return cachedOrder;
+    }
+
+    // Si no hay caché, obtener el servicio individual
     const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}`);
-    const serviceDetail = response.data || response;
-    
-    // Obtener todos los servicios relacionados con la misma cita/cliente
-    const relatedServices = await getServiceDetailsByClient(serviceDetail.id_cliente, serviceDetail.id_cita);
-    
-    // Agrupar servicios
-    const grouped = groupServicesByClient(relatedServices);
-    if (grouped.length > 0) {
-      return transformarServiciosAVentaServicio(grouped[0]);
+    const service = response.data || response;
+
+    // Obtener el id_cita
+    const citaId = service.id_cita ? (typeof service.id_cita === 'number' ? service.id_cita : parseInt(service.id_cita)) : null;
+
+    // Si hay cita, intentar obtener servicios relacionados usando el endpoint específico
+    // Si falla, usar solo el servicio individual (más rápido que cargar todos)
+    let servicios = [service];
+    if (citaId) {
+      try {
+        const citaResponse = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/cita/${citaId}`);
+        if (citaResponse.success && citaResponse.data) {
+          let serviciosArray = [];
+          if (Array.isArray(citaResponse.data)) {
+            serviciosArray = citaResponse.data;
+          } else if (citaResponse.data.data && Array.isArray(citaResponse.data.data)) {
+            serviciosArray = citaResponse.data.data;
+          }
+          if (serviciosArray.length > 0) {
+            servicios = serviciosArray;
+          }
+        }
+      } catch (error) {
+        // Si falla, usar solo el servicio individual (más rápido)
+      }
     }
-    
-    // Si no hay grupo, crear uno con el servicio individual
-    return transformarServiciosAVentaServicio({
-      id_cita: serviceDetail.id_cita,
-      id_cliente: serviceDetail.id_cliente,
-      cliente: serviceDetail.cliente || serviceDetail.usuario,
-      fecha_programada: serviceDetail.fecha_programada,
-      servicios: [serviceDetail]
+
+    // Extraer datos del cliente de múltiples fuentes posibles
+    const cliente = service.cliente || service.usuario || {};
+    const clienteNombre = cliente.nombre || cliente.Nombre || cliente.name || 'Cliente desconocido';
+
+    // Transformar todos los servicios
+    const serviciosTransformados = servicios.map(serv => {
+      const servicioNombre = serv.servicio?.nombre || serv.servicio?.Nombre || serv.servicio?.name || 'Servicio desconocido';
+      const empleadoNombre = serv.empleado?.nombre || serv.empleado?.Nombre || serv.empleado?.name || 'Empleado desconocido';
+      const empleadoId = serv.id_empleado || 
+                        serv.empleado?.id_usuario || 
+                        serv.empleado?.id || 
+                        null;
+      const servicioId = serv.id_servicio || 
+                        serv.servicio?.id_servicio || 
+                        serv.servicio?.id || 
+                        null;
+
+      return {
+        id: serv.id_detalle_servicio || serv.id,
+        id_detalle_servicio: serv.id_detalle_servicio || serv.id,
+        servicioId: servicioId,
+        name: servicioNombre,
+        quantity: serv.cantidad || 1,
+        price: serv.precio_unitario || 0,
+        subtotal: (serv.precio_unitario || 0) * (serv.cantidad || 1),
+        employee: {
+          id: empleadoId,
+          name: empleadoNombre
+        },
+        id_empleado: empleadoId,
+        startTime: serv.hora_inicio?.substring(0, 5),
+        endTime: serv.hora_finalizacion?.substring(0, 5),
+        hora_inicio: serv.hora_inicio,
+        hora_finalizacion: serv.hora_finalizacion,
+        duration: serv.duracion,
+        fecha_programada: serv.fecha_programada,
+        id_cita: serv.id_cita
+      };
     });
-  } catch (error) {
-    console.error('Error al obtener orden de servicio:', error);
-    throw new Error('Error al cargar la orden de servicio');
-  }
-};
 
-/**
- * Obtiene servicios relacionados por cliente y cita
- */
-const getServiceDetailsByClient = async (idCliente, idCita) => {
-  try {
-    let services = [];
+    // Cargar productos asociados a la cita si existe
+    let productos = [];
+    let totalProducts = 0;
     
-    // Si hay cita, buscar por cita
-    if (idCita) {
-      const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/cita/${idCita}`);
-      if (response.success && response.data) {
-        services = Array.isArray(response.data) ? response.data : [response.data];
-      }
-    } else {
-      // Si no hay cita, buscar todos los servicios del cliente en estado "En ejecución"
-      const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/status/En ejecución`);
-      if (response.success && response.data) {
-        services = Array.isArray(response.data) 
-          ? response.data.filter(s => s.id_cliente === idCliente)
-          : [];
+    if (citaId) {
+      try {
+        const ventasProductos = await apiRequest.get(`${SALES_PRODUCTS_ENDPOINT}/cita/${citaId}`);
+        if (ventasProductos.success && ventasProductos.data && ventasProductos.data.length > 0) {
+          // Obtener los detalles de la primera venta encontrada
+          const venta = ventasProductos.data[0];
+          if (venta.detalles && Array.isArray(venta.detalles)) {
+            productos = venta.detalles.map(detalle => ({
+              id: detalle.id_producto,
+              id_producto: detalle.id_producto,
+              name: detalle.producto?.nombre || 'Producto desconocido',
+              quantity: detalle.cantidad || 1,
+              price: parseFloat(detalle.precio_unitario || 0),
+              precio: parseFloat(detalle.precio_unitario || 0),
+              subtotal: parseFloat(detalle.subtotal || 0)
+            }));
+            totalProducts = productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar productos de la cita:', error);
+        // Continuar sin productos si hay error
       }
     }
-    
-    return services;
+
+    // Calcular totales
+    const totalServices = serviciosTransformados.reduce((sum, s) => sum + (s.subtotal || 0), 0);
+    const totalGeneral = totalServices + totalProducts;
+
+    // Determinar estado (usar el más común o el primero)
+    const estados = servicios.map(s => s.estado).filter(e => e);
+    const estadoMasComun = estados.length > 0 
+      ? estados.reduce((a, b, _, arr) => arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b)
+      : 'En ejecución';
+
+    // Obtener dinero proporcionado y devolución si están disponibles
+    const dineroProporcionado = service.dinero_proporcionado || service.dineroProporcionado || 0;
+    const devolucion = Math.max(0, dineroProporcionado - totalGeneral);
+
+    return {
+      id: serviciosTransformados[0].id,
+      clientName: clienteNombre,
+      date: service.fecha_programada || new Date().toLocaleDateString('es-ES'),
+      time: serviciosTransformados[0].hora_inicio?.substring(0, 5) || '08:00',
+      status: mapStatus(estadoMasComun),
+      servicios: serviciosTransformados,
+      productos: productos,
+      totalServices: totalServices,
+      totalProducts: totalProducts,
+      totalGeneral: totalGeneral,
+      citaId: citaId,
+      dineroProporcionado: dineroProporcionado,
+      devolucion: devolucion
+    };
   } catch (error) {
-    console.error('Error al obtener servicios relacionados:', error);
-    return [];
+    console.error('Error al obtener orden:', error);
+    throw new Error('Error al cargar la orden');
   }
 };
 
 /**
- * Busca órdenes de servicio por término de búsqueda
+ * Busca órdenes por término
  */
 export const buscarCitas = async (termino) => {
   try {
-    // Obtener todas las órdenes de servicio
-    const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/orden-servicio/list`);
-    
-    let serviceDetails = [];
-    if (response.success && response.data) {
-      serviceDetails = Array.isArray(response.data) ? response.data : [];
-    } else if (Array.isArray(response)) {
-      serviceDetails = response;
-    }
-    
-    // Filtrar por término de búsqueda
-    const filtered = serviceDetails.filter(detail => {
-      const searchTerm = termino.toLowerCase();
-      const clienteNombre = detail.cliente?.nombre || detail.usuario?.nombre || '';
-      const servicioNombre = detail.servicio?.nombre || '';
-      const empleadoNombre = detail.empleado?.nombre || '';
-      const id = detail.id_detalle_servicio?.toString() || '';
-      
-      return clienteNombre.toLowerCase().includes(searchTerm) ||
-             servicioNombre.toLowerCase().includes(searchTerm) ||
-             empleadoNombre.toLowerCase().includes(searchTerm) ||
-             id.includes(searchTerm);
-    });
-    
-    // Agrupar y transformar
-    const groupedServices = groupServicesByClient(filtered);
-    return groupedServices.map(transformarServiciosAVentaServicio);
+    const allServices = await getCitasEnEjecucion();
+    return allServices.filter(service =>
+      service.id.toString().includes(termino) ||
+      service.clientName.toLowerCase().includes(termino.toLowerCase())
+    );
   } catch (error) {
-    console.error('Error al buscar órdenes de servicio:', error);
-    throw new Error('Error al buscar órdenes de servicio');
+    console.error('Error al buscar:', error);
+    return [];
   }
 };
 
 /**
- * Inicia un servicio (cambia estado a "En ejecución")
- */
-export const iniciarServicio = async (serviceDetailId) => {
-  try {
-    const resultado = await apiRequest.patch(`${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}/iniciar`);
-    return resultado;
-  } catch (error) {
-    console.error('Error al iniciar servicio:', error);
-    throw new Error('Error al iniciar el servicio');
-  }
-};
-
-/**
- * Actualiza el estado de una orden de servicio
+ * Actualiza estado de una orden
  */
 export const actualizarEstadoCita = async (serviceDetailId, nuevoEstado) => {
   try {
-    // Mapear estados del frontend a estados del backend
     const estadoMap = {
       'Anulado': 'Cancelada por el usuario',
       'Pagado': 'Pagada',
-      'En ejecucion': 'En ejecución'  // Mapear estado interno del frontend al estado del backend
+      'En ejecucion': 'En ejecución'
     };
-    
-    const estadoBackend = estadoMap[nuevoEstado] || nuevoEstado;
-    
+
     const resultado = await apiRequest.patch(`${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}/status`, {
-      estado: estadoBackend
+      estado: estadoMap[nuevoEstado] || nuevoEstado
     });
+
     return resultado;
   } catch (error) {
-    console.error('Error al actualizar estado de orden de servicio:', error);
-    throw new Error('Error al actualizar el estado de la orden de servicio');
+    console.error('Error al actualizar estado:', error);
+    throw new Error('Error al actualizar estado');
   }
 };
-
-/**
- * Agrupa servicios por cliente/cita
- */
-const groupServicesByClient = (serviceDetails) => {
-  const grouped = {};
-  
-  serviceDetails.forEach(detail => {
-    const key = detail.id_cita 
-      ? `cita_${detail.id_cita}` 
-      : `cliente_${detail.id_cliente}_${detail.fecha_programada || 'sin_fecha'}`;
-    
-    if (!grouped[key]) {
-      grouped[key] = {
-        id_cita: detail.id_cita,
-        id_cliente: detail.id_cliente,
-        cliente: detail.cliente || detail.usuario,
-        fecha_programada: detail.fecha_programada,
-        servicios: []
-      };
-    }
-    
-    grouped[key].servicios.push(detail);
-  });
-  
-  return Object.values(grouped);
-};
-
-/**
- * Transforma servicios agrupados del backend al formato esperado por SaleServices
- */
-const transformarServiciosAVentaServicio = (grupo) => {
-  const servicios = grupo.servicios || [];
-  
-  if (servicios.length === 0) {
-    return null;
-  }
-  
-  // Usar el primer servicio como referencia para datos comunes
-  const primerServicio = servicios[0];
-  
-  // Calcular totales de servicios
-  const totalServices = servicios.reduce((sum, servicio) => {
-    const precio = parseFloat(servicio.precio_unitario || 0);
-    const cantidad = parseInt(servicio.cantidad || 1);
-    return sum + (precio * cantidad);
-  }, 0);
-
-  // Calcular totales de productos (si los hay en el futuro)
-  const totalProducts = 0; // Por ahora no hay productos en detalles de servicios
-  const totalGeneral = totalServices + totalProducts;
-
-  // Obtener fecha y hora del primer servicio
-  const fecha = primerServicio.fecha_programada || primerServicio.fecha_creacion || new Date().toISOString().split('T')[0];
-  const hora = primerServicio.hora_inicio || '08:00:00';
-
-  // Determinar estado (usar el más común o el primero)
-  const estados = servicios.map(s => s.estado).filter(e => e); // Filtrar estados nulos/undefined
-  if (estados.length === 0) {
-    estados.push('En ejecución'); // Estado por defecto si no hay estados
-  }
-  
-  console.log('🔍 Estados de servicios encontrados:', {
-    servicios: servicios.map(s => ({ id: s.id_detalle_servicio, estado: s.estado })),
-    estados: estados
-  });
-  
-  // Contar frecuencia de cada estado
-  const estadoCounts = {};
-  estados.forEach(e => {
-    estadoCounts[e] = (estadoCounts[e] || 0) + 1;
-  });
-  
-  // Obtener el estado más común
-  const estadoMasComun = Object.keys(estadoCounts).reduce((a, b) => 
-    estadoCounts[a] > estadoCounts[b] ? a : b
-  );
-  
-  // Mapear estado del backend al frontend
-  let estado = estadoMasComun;
-  
-  // Mapear todos los posibles estados del backend al frontend
-  if (estadoMasComun === 'En ejecución' || estadoMasComun === 'En proceso') {
-    estado = 'En ejecucion';
-  } else if (estadoMasComun === 'Pagada') {
-    estado = 'Pagado';
-  } else if (estadoMasComun === 'Cancelada por el usuario') {
-    estado = 'Anulado';
-  } else if (estadoMasComun === 'Finalizada') {
-    estado = 'Finalizada';
-  } else {
-    estado = 'En ejecucion';
-  }
-  
-  console.log('🔄 Mapeo de estado:', {
-    estadoMasComun,
-    estadoMapeado: estado,
-    estadoCounts,
-    estadosOriginales: estados
-  });
-
-  // Usar id_cita del grupo si está disponible, de lo contrario usar el primer servicio
-  const citaId = grupo.id_cita || primerServicio.id_cita;
-  // Si no hay id_cita, usar el primer id_detalle_servicio como fallback
-  const idFinal = citaId || primerServicio.id_detalle_servicio;
-
-  // Obtener datos del cliente del grupo o del primer servicio
-  const cliente = grupo.cliente || primerServicio.cliente || primerServicio.usuario || {};
-  
-  return {
-    id: idFinal,
-    clientName: cliente.nombre || 'Cliente no especificado',
-    nombre: cliente.nombre || 'Cliente no especificado',
-    documento: cliente.documento || '',
-    telefono: cliente.telefono || '',
-    correo: cliente.correo || cliente.email || '',
-    tipoDocumento: cliente.tipo_documento || 'CC',
-    tipo_documento: cliente.tipo_documento || 'CC',
-    status: estado, // Usar el estado ya mapeado correctamente
-    date: formatearFecha(fecha),
-    time: formatearHora(hora),
-    dineroProporcionado: 0, // Se calculará cuando se edite
-    devolucion: 0, // Se calculará cuando se edite
-    servicios: servicios.map(servicio => ({
-      id: servicio.id_detalle_servicio,
-      servicioId: servicio.id_servicio,
-      name: servicio.servicio?.nombre || 'Servicio',
-      quantity: parseInt(servicio.cantidad || 1),
-      price: parseFloat(servicio.precio_unitario || 0),
-      subtotal: parseFloat(servicio.precio_unitario || 0) * parseInt(servicio.cantidad || 1),
-      employee: {
-        id: servicio.id_empleado,
-        name: servicio.empleado?.nombre || 'Empleado no asignado'
-      },
-      hora_inicio: servicio.hora_inicio,
-      hora_finalizacion: servicio.hora_finalizacion,
-      duracion: servicio.duracion,
-      observaciones: servicio.observaciones
-    })),
-    productos: [], // Por ahora no hay productos
-    totalServices,
-    totalProducts,
-    totalGeneral,
-    // Información adicional
-    citaId: primerServicio.id_cita,
-    id_cliente: primerServicio.id_cliente,
-    observaciones: primerServicio.observaciones || '',
-    fechaCreacion: primerServicio.fecha_creacion,
-    // Datos del cliente para facilitar la edición
-    cliente: cliente,
-    usuario: cliente
-  };
-};
-
-/**
- * Formatea una fecha al formato DD/MM/YYYY
- */
-const formatearFecha = (fecha) => {
-  if (!fecha) return new Date().toLocaleDateString('es-ES');
-  
-  try {
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-ES');
-  } catch (error) {
-    return new Date().toLocaleDateString('es-ES');
-  }
-};
-
-/**
- * Formatea una hora al formato HH:MM AM/PM
- */
-const formatearHora = (hora) => {
-  if (!hora) return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  
-  try {
-    // Si la hora viene en formato HH:MM:SS, tomar solo HH:MM
-    const timeString = hora.includes(':') ? hora.split(':').slice(0, 2).join(':') : hora;
-    const [hours, minutes] = timeString.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes), 0);
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  } catch (error) {
-    return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  }
-};
-

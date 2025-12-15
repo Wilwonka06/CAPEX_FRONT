@@ -228,7 +228,7 @@ export function validateEmployeePassword(contrasena) {
   if (!contrasena.trim()) {
     errors.contrasena = 'La contraseña es obligatoria';
   } else if (!isValidPassword(contrasena)) {
-    errors.contrasena = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (@$!%?&)';
+    errors.contrasena = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (@$!%?&#)';
   }
   
   return errors;
@@ -686,19 +686,19 @@ export function truncateText(text, maxLength = 30) {
 
 // Previene que se ingrese la letra 'e', 'E', '+', '-' en campos numéricos
 export function isNumberInputValid(e) {
-  if (["e", "E", "+", "-", "."].includes(e.key)) {
+  if (["e", "E", "+", "-"].includes(e.key)) {
     e.preventDefault();
   }
 }
 
 // Solo números enteros positivos
 export function isValidNumber(value) {
-  return /^\d*$/.test(value);
+  return /^[\d.]*$/.test(value);
 }
 
 // Números decimales positivos (máximo un punto)
 export function isValidDecimal(value) {
-  return /^\d*(\.\d{0,2})?$/.test(value);
+  return /^\d*(?:[.,]\d{0,2})?$/.test(value);
 }
 
 // ===== VALIDACIONES DE ROLES =====
@@ -802,8 +802,8 @@ export function isValidCustomerName(name) {
 }
 
 export function isValidPassword(password) {
-  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (incluye *)
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%?&*])[A-Za-z\d@$!%?&*]{8,}$/;
+  // Al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (incluye * y #)
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%?&*#])[A-Za-z\d@$!%?&*#]{8,}$/;
   return regex.test(password);
 }
 
@@ -849,12 +849,35 @@ export function isPasswordMatch(password, confirmPassword) {
 // Validación completa de cliente
 export function validateCustomer(customerData, customers = [], excludeId = null, isSubmit = false) {
   const errors = {};
-  // Tipo de documento
-  if (!customerData.documentType) {
+  
+  // Tipo de documento - usar misma validación que usuarios
+  if (!customerData.documentType || !customerData.documentType.trim()) {
     errors.documentType = 'El tipo de documento es requerido.';
   }
-  // Nombres
-  // Validar nombre completo (en lugar de firstName y lastName)
+  
+  // Número de Documento - usar misma validación que usuarios (validateUserDocument)
+  if (customerData.documentType) {
+    const docError = validateUserDocument(customerData.documentType, customerData.documentNumber);
+    if (docError) {
+      errors.documentNumber = docError;
+    } else {
+      // Validar duplicados de documento (mismo tipo y número)
+      const duplicateDoc = customers.some(c => {
+        const cDocType = c.documentType || c.tipoDocumento || c.tipo_documento;
+        const cDocNum = c.documentNumber || c.documento;
+        return cDocType === customerData.documentType && 
+               cDocNum === customerData.documentNumber && 
+               (!excludeId || c.id !== excludeId);
+      });
+      if (duplicateDoc) {
+        errors.documentNumber = 'Ya existe un cliente con ese tipo y número de documento.';
+      }
+    }
+  } else if (!customerData.documentNumber) {
+    errors.documentNumber = 'El número de documento es requerido.';
+  }
+  
+  // Nombre - usar misma validación que usuarios
   if (!customerData.nombre || customerData.nombre.trim().length < 2) {
     errors.nombre = 'El nombre completo es requerido y debe tener al menos 2 caracteres.';
   } else {
@@ -864,30 +887,30 @@ export function validateCustomer(customerData, customers = [], excludeId = null,
       errors.nombre = 'Debe comenzar con una letra.';
     }
   }
-  // Número de Documento
-  if (!customerData.documentNumber || customerData.documentNumber.trim().length < 5) {
-    errors.documentNumber = 'El número de documento es requerido y debe tener al menos 5 caracteres.';
-  } else {
-    if (!isNumeric(customerData.documentNumber)) { // Usa isNumeric para el número de documento
-      errors.documentNumber = 'Solo se permiten números.';
-    }
-  }
-  // Email
+  
+  // Email - usar misma validación que usuarios
   if (!customerData.email) {
     errors.email = 'El correo electrónico es requerido.';
   } else if (!isValidEmail(customerData.email)) {
     errors.email = 'Correo electrónico inválido.';
-  } else if (customers.some(c => c.email === customerData.email && (!excludeId || c.id !== excludeId))) {
-    errors.email = 'El correo electrónico ya está registrado.';
+  } else {
+    // Validar duplicados de correo
+    const duplicateEmail = customers.some(c => {
+      const cEmail = c.email || c.correo;
+      return cEmail && cEmail.toLowerCase() === customerData.email.toLowerCase() && 
+             (!excludeId || c.id !== excludeId);
+    });
+    if (duplicateEmail) {
+      errors.email = 'El correo electrónico ya está registrado.';
+    }
   }
-  // Teléfono
-  if (!customerData.phone) {
-    errors.phone = 'El teléfono es requerido.';
-  } else if (!isNumericPhone(customerData.phone)) { // Usa isNumericPhone para el teléfono (acepta +)
-    errors.phone = 'Solo se permiten números y el símbolo + al inicio.';
-  } else if (customerData.phone.replace('+', '').length < 7) {
-    errors.phone = 'El teléfono debe tener al menos 7 dígitos.';
+  
+  // Teléfono - usar misma validación que usuarios (validateUserPhone)
+  const phoneError = validateUserPhone(customerData.phone);
+  if (phoneError) {
+    errors.phone = phoneError;
   }
+  
   // Los clientes no necesitan contraseñas - son solo datos de contacto
   return { isValid: Object.keys(errors).length === 0, errors };
 }
@@ -906,10 +929,20 @@ export function hasServiceOrderItems(servicios = [], productos = []) {
 
 // Valida dinero proporcionado para órdenes pagadas
 export function isValidMoneyProvided(dineroProporcionado, totalGeneral) {
-  if (dineroProporcionado === null || dineroProporcionado === undefined || isNaN(dineroProporcionado)) {
+  if (dineroProporcionado === null || dineroProporcionado === undefined) {
     return false;
   }
-  return parseFloat(dineroProporcionado) >= totalGeneral;
+  
+  // Convertir a número si es string
+  const dineroNum = typeof dineroProporcionado === 'number' 
+    ? dineroProporcionado 
+    : parseFloat(dineroProporcionado);
+  
+  if (isNaN(dineroNum) || dineroNum <= 0) {
+    return false;
+  }
+  
+  return dineroNum >= totalGeneral;
 }
 
 // Validación completa de orden de servicio

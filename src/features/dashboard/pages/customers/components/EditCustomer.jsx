@@ -1,7 +1,8 @@
 "use client"
 import { useState, useEffect } from "react"
 import customersService from "../API/customersService"
-import { validateCustomer, isNumberInputValid } from "../../../../../shared/validations"
+import { validateCustomer, isNumberInputValid, validateUserDocument } from "../../../../../shared/validations"
+import { DOC_TYPES_CODES, DOC_TYPE_LABELS } from "../../../../../shared/constants/documentTypes"
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
@@ -135,9 +136,11 @@ export default function EditCustomer({ isOpen, onClose, onSuccess, customer, cus
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
               >
                 <option value="">Seleccione...</option>
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="TI">Tarjeta de Identidad</option>
+                {DOC_TYPES_CODES.map(code => (
+                  <option key={code} value={code}>
+                    {DOC_TYPE_LABELS[code] || code}
+                  </option>
+                ))}
               </select>
                 {touched.documentType && errors.documentType && (
                   <p className="text-red-600 text-xs mt-1">{errors.documentType}</p>
@@ -152,12 +155,30 @@ export default function EditCustomer({ isOpen, onClose, onSuccess, customer, cus
                 name="documentNumber"
                 value={formData.documentNumber}
                   onChange={(e) => {
-                    const onlyDigits = e.target.value.replace(/[^\d]/g, '')
-                    handleInputChange({ target: { name: 'documentNumber', value: onlyDigits } })
+                    // Permitir números y letras según el tipo de documento
+                    let value = e.target.value;
+                    // Si es Pasaporte (PP), permitir alfanumérico
+                    if (formData.documentType === 'PP') {
+                      value = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                    } else {
+                      // Para otros tipos, solo números
+                      value = value.replace(/[^\d]/g, '');
+                    }
+                    handleInputChange({ target: { name: 'documentNumber', value } })
                   }}
-                  onBlur={handleBlur}
-                  onKeyDown={isNumberInputValid}
+                  onBlur={(e) => {
+                    handleBlur(e);
+                    // Validar documento cuando se pierde el foco
+                    if (formData.documentType && formData.documentNumber) {
+                      const docError = validateUserDocument(formData.documentType, formData.documentNumber);
+                      if (docError) {
+                        setErrors(prev => ({ ...prev, documentNumber: docError }));
+                      }
+                    }
+                  }}
+                  onKeyDown={formData.documentType === 'PP' ? undefined : isNumberInputValid}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-black text-sm bg-white"
+                  placeholder={formData.documentType === 'PP' ? 'Ej: AB123456' : 'Solo números'}
               />
                 {touched.documentNumber && errors.documentNumber && (
                   <p className="text-red-600 text-xs mt-1">{errors.documentNumber}</p>
