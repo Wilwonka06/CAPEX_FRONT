@@ -16,10 +16,10 @@ import { apiRequest } from '../../../../shared/config/apiConfig';
 import { validateUserDocument, isValidDocumentByType } from '../../../../shared/validations';
 import { DOC_TYPES_CODES, DOC_TYPE_LABELS } from '../../../../shared/constants/documentTypes';
 
-// Componente para seleccionar horas disponibles con verificación async
 const HorasDisponiblesSelect = ({ idx, servicio, profesionales, formData, listaServicios, onTimeChange, error }) => {
   const [horasDisponibles, setHorasDisponibles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [inputError, setInputError] = useState('');
 
   useEffect(() => {
     const cargarHoras = async () => {
@@ -142,21 +142,33 @@ const HorasDisponiblesSelect = ({ idx, servicio, profesionales, formData, listaS
     );
   }
 
+  const handleTimeInputChange = (value) => {
+    if (!value) {
+      setInputError('');
+      onTimeChange('');
+      return;
+    }
+    const disponible = horasDisponibles.some(h => h.hora === value && h.disponible);
+    if (disponible) {
+      setInputError('');
+      onTimeChange(value);
+    } else {
+      setInputError('Hora no disponible para este profesional en esta fecha');
+    }
+  };
+
   return (
     <>
-      <select
+      <input
+        type="time"
+        step="900"
         className={`w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] bg-white font-lato text-gray-700 transition-all duration-300 ${error ? 'border-red-500' : ''}`}
         value={servicio.inicio || ''}
-        onChange={e => onTimeChange(e.target.value)}
-      >
-        <option value="">Seleccionar hora</option>
-        {horasDisponibles.map(h => (
-          <option key={h.hora} value={h.hora} disabled={!h.disponible}>
-            {h.hora}{!h.disponible ? ' (No disponible)' : ''}
-          </option>
-        ))}
-      </select>
-      {error && <p className="text-red-500 text-sm mt-2 font-lato">{error}</p>}
+        onChange={e => handleTimeInputChange(e.target.value)}
+      />
+      {(error || inputError) && (
+        <p className="text-red-500 text-sm mt-2 font-lato">{error || inputError}</p>
+      )}
     </>
   );
 };
@@ -179,6 +191,8 @@ const ClientAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [services, setServices] = useState([]);
   const [professionals, setProfessionals] = useState([]);
+  const [availableProfessionals, setAvailableProfessionals] = useState([]);
+  const [availableProfessionalsReschedule, setAvailableProfessionalsReschedule] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     cliente: currentUser?.nombre || '',
@@ -380,6 +394,84 @@ const ClientAppointments = () => {
     setPhoneNumber(currentUser?.telefono || '');
   }, [currentUser]);
 
+  // Filtrar profesionales con programación para la fecha seleccionada
+  useEffect(() => {
+    const fetchAvailableForDate = async () => {
+      if (!Array.isArray(professionals) || professionals.length === 0) {
+        setAvailableProfessionals([]);
+        return;
+      }
+      if (!formData.fecha) {
+        setAvailableProfessionals(professionals);
+        return;
+      }
+      const resultados = [];
+      await Promise.allSettled(
+        professionals.map(async (p) => {
+          const id = p.id || p.id_usuario;
+          if (!id) return;
+          try {
+            const resp = await apiRequest.get(`/programaciones-recurrentes/horario-fecha?id_usuario=${id}&fecha=${formData.fecha}`);
+            const bloques = resp?.bloques_horarios || resp?.data?.bloques_horarios || [];
+            if (Array.isArray(bloques) && bloques.length > 0) {
+              resultados.push(p);
+            }
+          } catch (e) {
+            // Ignorar errores individuales
+          }
+        })
+      );
+      setAvailableProfessionals(resultados);
+    };
+    fetchAvailableForDate();
+  }, [formData.fecha, professionals]);
+
+  // Si cambia la fecha, limpiar profesionales no disponibles en servicios ya agregados
+  useEffect(() => {
+    if (!formData.fecha) return;
+    setFormData(prev => {
+      const idsDisponibles = new Set(availableProfessionals.map(p => p.id || p.id_usuario));
+      const serviciosActualizados = prev.servicios.map(s => {
+        if (s.id_empleado && !idsDisponibles.has(s.id_empleado)) {
+          return { ...s, profesional: '', id_empleado: null, inicio: '', fin: '' };
+        }
+        return s;
+      });
+      return { ...prev, servicios: serviciosActualizados };
+    });
+  }, [availableProfessionals]);
+
+  // Filtrar profesionales con programación para la fecha de reprogramación
+  useEffect(() => {
+    const date = rescheduleData?.fecha;
+    const fetchAvailableForReschedule = async () => {
+      if (!Array.isArray(professionals) || professionals.length === 0) {
+        setAvailableProfessionalsReschedule([]);
+        return;
+      }
+      if (!date) {
+        setAvailableProfessionalsReschedule(professionals);
+        return;
+      }
+      const resultados = [];
+      await Promise.allSettled(
+        professionals.map(async (p) => {
+          const id = p.id || p.id_usuario;
+          if (!id) return;
+          try {
+            const resp = await apiRequest.get(`/programaciones-recurrentes/horario-fecha?id_usuario=${id}&fecha=${date}`);
+            const bloques = resp?.bloques_horarios || resp?.data?.bloques_horarios || [];
+            if (Array.isArray(bloques) && bloques.length > 0) {
+              resultados.push(p);
+            }
+          } catch (e) {
+          }
+        })
+      );
+      setAvailableProfessionalsReschedule(resultados);
+    };
+    fetchAvailableForReschedule();
+  }, [rescheduleData?.fecha, professionals, showRescheduleModal]);
   // Filtrar citas por usuario loggeado
   const myAppointments = appointments.filter(a =>
     a.tipoDocumento === currentUser?.tipoDocumento &&
@@ -1443,7 +1535,7 @@ const ClientAppointments = () => {
                               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-[#FACC15] bg-white font-lato text-gray-700 transition-all duration-300"
                               value={serv.profesional}
                               onChange={e => {
-                                const selectedProfessional = professionals.find(p => p.name === e.target.value);
+                                const selectedProfessional = availableProfessionals.find(p => p.name === e.target.value);
                                 updateService(idx, 'profesional', e.target.value);
                                 if (selectedProfessional) {
                                   updateService(idx, 'id_empleado', selectedProfessional.id);
@@ -1452,7 +1544,7 @@ const ClientAppointments = () => {
                               required
                             >
                               <option value="">Seleccionar profesional</option>
-                              {professionals.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                              {availableProfessionals.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                             </select>
                             {errors[`servicio_${idx}_profesional`] && <p className="text-red-500 text-sm mt-2 font-lato">{errors[`servicio_${idx}_profesional`]}</p>}
                           </div>
@@ -1693,7 +1785,7 @@ const ClientAppointments = () => {
                     <div className="mb-3">
                       <label className="text-sm font-medium">Profesional <span className="text-red-500">*</span></label>
                       <select className="w-full border rounded px-2 py-1 mt-1" value={serv.profesional} onChange={e => {
-                        const selectedProfessional = professionals.find(p => p.name === e.target.value);
+                        const selectedProfessional = availableProfessionalsReschedule.find(p => p.name === e.target.value);
                         setRescheduleData(prev => { 
                           const servicios = [...prev.servicios]; 
                           servicios[idx].profesional = e.target.value;
@@ -1704,7 +1796,7 @@ const ClientAppointments = () => {
                         });
                       }} required>
                         <option value="">Seleccionar</option>
-                        {professionals.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                        {availableProfessionalsReschedule.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                       </select>
                       {errors[`servicio_${idx}_profesional`] && <p className="text-red-500 text-xs mt-1">{errors[`servicio_${idx}_profesional`]}</p>}
                     </div>
