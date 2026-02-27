@@ -2,71 +2,64 @@ import { API_ENDPOINTS } from '../../../../../shared/config/api';
 import BaseService from './BaseService';
 import DataMapper from './DataMapper';
 
+const isDev = import.meta.env.DEV;
+
 class RolesApiService extends BaseService {
   constructor() {
     super(API_ENDPOINTS.ROLES);
   }
 
-  // Obtener todos los roles
+  // ─────────────────────────────────────────────
+  // OBTENER TODOS LOS ROLES
+  // ─────────────────────────────────────────────
   async getAllRoles() {
     try {
       const data = await this.makeRequest(this.baseURL, {
         method: 'GET',
         headers: this.getHeaders(),
       });
-      
+
       if (data.success && data.data) {
         return DataMapper.mapRolesFromBackend(data.data);
       }
-      
+
       throw new Error(data.message || 'Error al obtener los roles');
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  // Obtener un rol por ID
+  // ─────────────────────────────────────────────
+  // OBTENER ROL POR ID
+  // ─────────────────────────────────────────────
   async getRoleById(id) {
     try {
-      const url = `${this.baseURL}/${id}`;
-      const data = await this.makeRequest(url, {
+      const data = await this.makeRequest(`${this.baseURL}/${id}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
 
       if (data.success && data.data) {
-        const role = data.data;
-        return DataMapper.mapRoleFromBackend(role);
+        return DataMapper.mapRoleFromBackend(data.data);
       }
-      
+
       throw new Error(data.message || 'Error al obtener el rol');
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  // Crear un nuevo rol
+  // ─────────────────────────────────────────────
+  // CREAR ROL
+  // ─────────────────────────────────────────────
   async createRole(roleData) {
     try {
-      console.log('🚀 CREATE ROLE - Input roleData:', roleData);
-      console.log('🚀 CREATE ROLE - roleData.privileges:', roleData.privileges);
-      
       const formattedRole = DataMapper.mapRoleToBackend(roleData);
-      
-      console.log('🚀 REQUEST BODY (formattedRole):', JSON.stringify(formattedRole, null, 2));
-      console.log('🚀 REQUEST BODY - permisos_privilegios:', formattedRole.permisos_privilegios);
-      
-      if (formattedRole.permisos_privilegios) {
-        formattedRole.permisos_privilegios.forEach((p, i) => {
-          console.log(`   Permiso ${i + 1}: ${p.nombre} con ${p.privilegios?.length || 0} privilegios`);
-          if (p.privilegios) {
-            p.privilegios.forEach((priv, j) => {
-              console.log(`     Privilegio ${j + 1}: ${priv.nombre} (id=${priv.id_privilegio})`);
-            });
-          }
-        });
+
+      if (isDev) {
+        console.log('[RolesApiService] createRole payload:', formattedRole);
       }
-      
+
       const data = await this.makeRequest(this.baseURL, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -76,47 +69,51 @@ class RolesApiService extends BaseService {
       if (data.success && data.data) {
         return DataMapper.mapRoleFromBackend(data.data);
       }
-      
+
       throw new Error(data.message || 'Error al crear el rol');
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  // Actualizar un rol existente
+  // ─────────────────────────────────────────────
+  // ACTUALIZAR ROL
+  // ─────────────────────────────────────────────
   async updateRole(id, roleData) {
     try {
-      console.log('🔧 Formateando rol para backend:', roleData);
       const formattedRole = DataMapper.mapRoleToBackend(roleData);
-      console.log('📦 Datos formateados para API:', formattedRole);
 
-      const url = `${this.baseURL}/${id}`;
-      const data = await this.makeRequest(url, {
+      if (isDev) {
+        console.log('[RolesApiService] updateRole payload:', formattedRole);
+      }
+
+      const data = await this.makeRequest(`${this.baseURL}/${id}`, {
         method: 'PUT',
         headers: this.getHeaders(),
         body: JSON.stringify(formattedRole),
       });
 
-      console.log('📨 Respuesta cruda de API:', data);
+      if (isDev) {
+        console.log('[RolesApiService] updateRole response:', data);
+      }
 
       if (data.success && data.data) {
-        const mappedRole = DataMapper.mapRoleFromBackend(data.data);
-        console.log('✅ Rol mapeado desde backend:', mappedRole);
-        return mappedRole;
+        return DataMapper.mapRoleFromBackend(data.data);
       }
 
       throw new Error(data.message || 'Error al actualizar el rol');
     } catch (error) {
-      console.error('❌ Error en updateRole:', error);
+      if (isDev) console.error('[RolesApiService] updateRole error:', error);
       throw this.handleError(error);
     }
   }
 
-  // Eliminar un rol
+  // ─────────────────────────────────────────────
+  // ELIMINAR ROL
+  // ─────────────────────────────────────────────
   async deleteRole(id) {
     try {
-      const url = `${this.baseURL}/${id}`;
-      const data = await this.makeRequest(url, {
+      const data = await this.makeRequest(`${this.baseURL}/${id}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
       });
@@ -124,22 +121,23 @@ class RolesApiService extends BaseService {
       if (data.success) {
         return { success: true, message: data.message || 'Rol eliminado exitosamente' };
       }
-      
+
       throw new Error(data.message || 'Error al eliminar el rol');
     } catch (error) {
       throw this.handleError(error);
     }
   }
 
-  // Cambiar el estado de un rol
+  // ─────────────────────────────────────────────
+  // CAMBIAR ESTADO DEL ROL
+  // ─────────────────────────────────────────────
   async changeRoleStatus(id, status) {
     try {
-      const url = `${this.baseURL}/${id}/status`;
       const statusData = {
-        estado: status === 'Activo' ? true : false
+        estado: status === 'Activo',
       };
-      
-      const data = await this.makeRequest(url, {
+
+      const data = await this.makeRequest(`${this.baseURL}/${id}/status`, {
         method: 'PATCH',
         headers: this.getHeaders(),
         body: JSON.stringify(statusData),
@@ -148,7 +146,7 @@ class RolesApiService extends BaseService {
       if (data.success && data.data) {
         return DataMapper.mapRoleFromBackend(data.data);
       }
-      
+
       throw new Error(data.message || 'Error al cambiar el estado del rol');
     } catch (error) {
       throw this.handleError(error);
