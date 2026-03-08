@@ -1,301 +1,221 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
-// Importar servicios API
 import { employeesService } from "./API/employeesService";
 
-// Importar componentes
 import EmployeesTable from "./components/EmployeesTable";
 import Paginator from "../../../../shared/Paginator";
 import AddEmployee from "./components/CreateEmployee";
 import EditEmployee from "./components/EditEmployee";
 import Search from "../../../../shared/Search";
 import ConfirmStatusChangeModal from '../../../../shared/components/ConfirmStatusChangeModal';
-import { filterBySearch } from '../../../../shared/utils/searchHelper';
 import { executeWithToast, showError } from '../../../../shared/utils/toastHelpers';
+
+const ITEMS_PER_PAGE = 5;
 
 const EmployeesPage = () => {
   const { setTitle } = useOutletContext();
   const navigate = useNavigate();
-  
-  // Estados principales
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [togglingId, setTogglingId] = useState(null);
-  
-  // Estados de vistas/modales
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editEmployee, setEditEmployee] = useState(null);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [pendingStatusChange, setPendingStatusChange] = useState(null);
-  const [newSchedulings, setNewSchedulings] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
 
-  // Cargar empleados y programaciones
-  const loadData = async () => {
+  // ── Estado principal ───────────────────────────────────────────────────────
+  const [employees,   setEmployees]   = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState("");
+  const [togglingId,  setTogglingId]  = useState(null);
+
+  // ── Paginación y búsqueda controladas por backend ─────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages,  setTotalPages]  = useState(1);
+  const [totalItems,  setTotalItems]  = useState(0);
+  const [searchTerm,  setSearchTerm]  = useState("");
+
+  // ── Modales ────────────────────────────────────────────────────────────────
+  const [showAddForm,       setShowAddForm]       = useState(false);
+  const [editEmployee,      setEditEmployee]      = useState(null);
+  const [showStatusModal,   setShowStatusModal]   = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
+  const [newSchedulings,    setNewSchedulings]    = useState([]);
+
+  // ── Carga de datos ─────────────────────────────────────────────────────────
+  // useCallback para poder llamarlo desde varios lugares sin crear funciones nuevas
+  const loadData = useCallback(async (page = 1, search = '') => {
     setLoading(true);
     setError("");
     try {
-      const employeesData = await employeesService.getAll();
-      setEmployees(Array.isArray(employeesData) ? employeesData : []);
+      const response = await employeesService.getAll({
+        page,
+        limit: ITEMS_PER_PAGE,
+        search,
+      });
+
+      // El backend ahora devuelve { success, data, pagination }
+      if (response?.success) {
+        setEmployees(response.data || []);
+        setTotalPages(response.pagination?.totalPages || 1);
+        setTotalItems(response.pagination?.total      || 0);
+      } else {
+        // Compatibilidad si el backend devuelve array directo (sin success)
+        const list = Array.isArray(response) ? response : [];
+        setEmployees(list);
+        setTotalPages(1);
+        setTotalItems(list.length);
+      }
     } catch (err) {
-      console.error("Error cargando datos:", err);
-      const errorMsg = err.code === 'ERR_NETWORK' || err.message?.includes('ERR_NAME_NOT_RESOLVED')
-        ? "No se puede conectar al servidor. Verifique su conexión a internet."
-        : "No se pudieron cargar los datos. Por favor, intente nuevamente.";
+      console.error("Error cargando empleados:", err);
+      const errorMsg =
+        err.code === 'ERR_NETWORK' || err.message?.includes('ERR_NAME_NOT_RESOLVED')
+          ? "No se puede conectar al servidor. Verifique su conexión a internet."
+          : "No se pudieron cargar los datos. Por favor, intente nuevamente.";
       setError(errorMsg);
-      showError(err);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
   }, []);
 
+  // Carga inicial
   useEffect(() => {
-    setTitle('Módulo de Empleados');
-    return () => setTitle('');
-  }, [setTitle]);
+    setTitle("Empleados");
+    loadData(1, "");
+    return () => setTitle("");
+  }, [setTitle, loadData]);
 
-  // Filtrar empleados usando la función helper de búsqueda universal
-  const filteredEmployees = filterBySearch(employees, searchTerm);
-
+  // Cuando cambia la búsqueda, volver a página 1
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, employees]);
+    loadData(1, searchTerm);
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalItems = filteredEmployees.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const pageEmployees = filteredEmployees.slice(startIndex, startIndex + itemsPerPage);
+  // Cuando cambia la página (sin cambio de búsqueda)
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    loadData(newPage, searchTerm);
+  };
 
-  // Handler para cambiar estado - muestra modal primero
-  const handleToggleStatus = (employeeId) => {
-    const current = employees.find(e => String(e.id) === String(employeeId));
-    
-    if (!current) {
-      showError("Empleado no encontrado");
-      return;
-    }
+  // ── Handlers de CRUD ───────────────────────────────────────────────────────
+  const handleAddEmployee = async (employeeData) => {
+    await executeWithToast({
+      promiseFn: () => employeesService.create(employeeData),
+      operation: "create",
+      entity: "empleado",
+      loadingMessage: "Creando empleado...",
+      successMessage: "Empleado creado exitosamente",
+      onSuccess: () => {
+        setShowAddForm(false);
+        loadData(currentPage, searchTerm);
+      },
+    });
+  };
 
-    setPendingStatusChange({ employeeId, current });
+  const handleEditEmployee = async (id, data) => {
+    await executeWithToast({
+      promiseFn: () => employeesService.update(id, data),
+      operation: "update",
+      entity: "empleado",
+      loadingMessage: "Actualizando empleado...",
+      successMessage: "Empleado actualizado exitosamente",
+      onSuccess: () => {
+        setEditEmployee(null);
+        loadData(currentPage, searchTerm);
+      },
+    });
+  };
+
+  const handleStatusChangeRequest = (employee) => {
+    setPendingStatusChange(employee);
     setShowStatusModal(true);
   };
 
-  // Handler para confirmar cambio de estado
   const handleConfirmStatusChange = async () => {
     if (!pendingStatusChange) return;
-
-    const { employeeId, current } = pendingStatusChange;
-    const nextEstado = current.estado === 'Activo' ? 'Inactivo' : 'Activo';
-    setTogglingId(employeeId);
-
-    // Actualización optimista
-    setEmployees(prevList => prevList.map(e =>
-      String(e.id) === String(employeeId) ? { ...e, estado: nextEstado } : e
-    ));
-
-    try {
-      await executeWithToast({
-        promiseFn: () => employeesService.toggleStatus(employeeId, nextEstado),
-        operation: 'update',
-        entity: 'empleado',
-        id: employeeId,
-        loadingMessage: 'Cambiando estado...',
-        successMessage: `Estado cambiado a ${nextEstado} exitosamente`,
-        onSuccess: () => {
-          setShowStatusModal(false);
-          setPendingStatusChange(null);
-        },
-        onError: () => {
-          // Revertir en caso de error
-          setEmployees(prevList => prevList.map(e =>
-            String(e.id) === String(employeeId) ? { ...e, estado: current.estado } : e
-          ));
-        },
-      });
-    } catch {
-      // Error ya manejado por executeWithToast
-    } finally {
-      setTogglingId(null);
-    }
+    setTogglingId(pendingStatusChange.id);
+    const newStatus = pendingStatusChange.estado === 'Activo' ? 'Inactivo' : 'Activo';
+    await executeWithToast({
+      promiseFn: () => employeesService.updateStatus(pendingStatusChange.id, newStatus),
+      operation: "update",
+      entity: "empleado",
+      loadingMessage: "Actualizando estado...",
+      successMessage: `Empleado ${newStatus === 'Activo' ? 'activado' : 'desactivado'} exitosamente`,
+      onSuccess: () => {
+        setShowStatusModal(false);
+        setPendingStatusChange(null);
+        loadData(currentPage, searchTerm);
+      },
+    });
+    setTogglingId(null);
   };
 
-  // Handler para agregar empleado
-  const handleAddEmployee = async (data) => {
-    try {
-      await executeWithToast({
-        promiseFn: async () => {
-          // Crear el empleado primero
-          const createdEmployee = await employeesService.create(data);
-          setEmployees(prev => [...prev, createdEmployee]);
-          return { employee: createdEmployee, schedulingsCount: 0 };
-        },
-        operation: 'create',
-        entity: 'empleado',
-        loadingMessage: 'Creando empleado...',
-        successMessage: 'Empleado creado exitosamente',
-        onSuccess: () => {
-          setShowAddForm(false);
-        },
-      });
-    } catch {
-      // Error ya manejado por executeWithToast
-    }
-  };
-
-  // Handler para editar empleado
-  const handleEditSave = async (data) => {
-    if (!data.id) {
-      showError("Error: ID de empleado no encontrado");
-      return;
-    }
-
-    try {
-      await executeWithToast({
-        promiseFn: async () => {
-          const updatedEmployee = await employeesService.update(data.id, data);
-          await loadData();
-          return updatedEmployee;
-        },
-        operation: 'update',
-        entity: 'empleado',
-        id: data.id,
-        loadingMessage: 'Actualizando empleado...',
-        successMessage: 'Empleado actualizado exitosamente',
-        onSuccess: () => {
-          setEditEmployee(null);
-        },
-      });
-    } catch {
-      // Error ya manejado por executeWithToast
-    }
-  };
-
-  // Handlers de navegación
-  const handleSearch = (e) => setSearchTerm(e.target.value);
-  const handleCancel = () => {
-    setShowAddForm(false);
-  };
-
-  // Render de error
-  const hasError = error && !loading;
-
-  if (hasError) {
+  // ── Render ─────────────────────────────────────────────────────────────────
+  if (showAddForm) {
     return (
-      <div className="min-h-screen p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-            <i className="bi bi-exclamation-triangle text-red-400 text-4xl"></i>
-            <h3 className="text-lg font-semibold text-red-800 mt-4">Error al cargar empleados</h3>
-            <p className="text-sm text-red-700 mt-2">{error}</p>
-            <button
-              onClick={loadData}
-              className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition"
-            >
-              Reintentar
-            </button>
-          </div>
-        </div>
-      </div>
+      <AddEmployee
+        onAdd={handleAddEmployee}
+        onCancel={() => setShowAddForm(false)}
+        newSchedulings={newSchedulings}
+        setNewSchedulings={setNewSchedulings}
+      />
+    );
+  }
+
+  if (editEmployee) {
+    return (
+      <EditEmployee
+        employee={editEmployee}
+        onEdit={handleEditEmployee}
+        onCancel={() => setEditEmployee(null)}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen font-inter">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6">
-            {/* Vista principal: Lista de empleados */}
-            {!showAddForm && !editEmployee && (
-              <>
-                {/* Barra de búsqueda y botón crear */}
-                <div className="flex items-center gap-4 mb-6">
-                  <Search
-                    searchTerm={searchTerm}
-                    handleSearch={handleSearch}
-                    placeholder="Buscar empleados por nombre, documento, teléfono o correo..."
-                  />
-                  <button
-                    className="bg-text-main hover:bg-primary-dark text-white text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center"
-                    onClick={() => setShowAddForm(true)}
-                  >
-                    <i className="bi bi-plus-circle mr-2"></i>
-                    Crear Empleado
-                  </button>
-                </div>
-
-                {/* Tabla de empleados */}
-                <EmployeesTable
-                  employees={pageEmployees}
-                  onToggleStatus={handleToggleStatus}
-                  togglingId={togglingId}
-                  onView={(emp) => navigate(`/dashboard/empleados/${emp.id || emp.id_usuario}`)}
-                  onEdit={(emp) => setEditEmployee(emp)}
-                  loading={loading}
-                />
-                <Paginator
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  itemsPerPage={itemsPerPage}
-                  totalItems={totalItems}
-                />
-              </>
-            )}
-
-            {/* Vista: Agregar empleado */}
-            {showAddForm && (
-              <div className="space-y-6">
-                <AddEmployee
-                  onCancel={handleCancel}
-                  onSave={handleAddEmployee}
-                  schedulings={newSchedulings}
-                  setSchedulings={setNewSchedulings}
-                  employees={employees}
-                  onEditScheduling={() => {}}
-                />
-              </div>
-            )}
-
-            {/* Vista: Editar empleado */}
-            {editEmployee && (
-              <div className="space-y-6">
-                <EditEmployee
-                  employee={editEmployee}
-                  employees={employees}
-                  onCancel={() => setEditEmployee(null)}
-                  onSave={handleEditSave}
-                />
-              </div>
-            )}
-          </div>
-        </div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <Search
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Buscar por nombre, correo o documento..."
+        />
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded-lg"
+        >
+          + Nuevo Empleado
+        </button>
       </div>
 
-      {/* Modal de confirmación de cambio de estado */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      <EmployeesTable
+        employees={employees}
+        loading={loading}
+        togglingId={togglingId}
+        onEdit={setEditEmployee}
+        onStatusChange={handleStatusChangeRequest}
+        onNavigate={(id) => navigate(`/dashboard/empleados/${id}/programaciones`)}
+      />
+
+      {/* [FIX #5] Paginator recibe datos reales del backend — no slice local */}
+      <Paginator
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        itemsPerPage={ITEMS_PER_PAGE}
+        totalItems={totalItems}
+        showInfo
+      />
+
       {showStatusModal && pendingStatusChange && (
         <ConfirmStatusChangeModal
           isOpen={showStatusModal}
-          onClose={() => {
-            if (!togglingId) {
-              setShowStatusModal(false);
-              setPendingStatusChange(null);
-            }
-          }}
+          entity={pendingStatusChange}
+          entityType="empleado"
           onConfirm={handleConfirmStatusChange}
-          isActivating={pendingStatusChange.current.estado === 'Inactivo'}
-          itemName={pendingStatusChange.current.nombre}
-          loading={togglingId === pendingStatusChange.employeeId}
+          onCancel={() => { setShowStatusModal(false); setPendingStatusChange(null); }}
         />
       )}
-
-      {/* Se redirige a la página dedicada de detalle */}
     </div>
   );
 };

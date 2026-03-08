@@ -1,168 +1,177 @@
 import apiRequest from '../../../../../shared/config/apiConfig';
-import { normalizeText } from '../../../../../shared/normalizers';
+import { mapStatusFromBackend, mapStatusToBackend } from '../../../../../shared/utils/entityMappers';
 
 const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
-const SALES_PRODUCTS_ENDPOINT = '/ventas-productos';
+const SALES_PRODUCTS_ENDPOINT  = '/ventas-productos';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers locales (no de dominio — no se mueven a entityMappers)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const formatearFecha = (fecha) => {
+  if (!fecha || fecha === 'sin_fecha') return new Date().toLocaleDateString('es-ES');
+  return fecha;
+};
+
+const formatearHora = (hora) => {
+  if (!hora) return '08:00';
+  return hora.substring(0, 5);
+};
 
 /**
- * Obtiene todas las órdenes de servicio (todos los estados)
+ * Agrupa un array de serviceDetails por cliente/cita.
+ * Devuelve un array de grupos { id_cita, cliente, fecha_programada, servicios[] }
+ */
+const groupServicesByClient = (serviceDetails) => {
+  const grouped = {};
+
+  serviceDetails.forEach((detail) => {
+    const key = detail.id_cita
+      ? `cita_${detail.id_cita}`
+      : `cliente_${detail.id_cliente || detail.id_usuario}_${detail.fecha_programada}`;
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        id_cita:          detail.id_cita || null,
+        id_cliente:       detail.id_cliente || detail.id_usuario,
+        cliente:          detail.cliente || detail.usuario || {},
+        fecha_programada: detail.fecha_programada || 'sin_fecha',
+        servicios:        [],
+      };
+    }
+    grouped[key].servicios.push(detail);
+  });
+
+  return Object.values(grouped);
+};
+
+/**
+ * Transforma un grupo (cliente + servicios) al formato de VentaServicio
+ * que usa el componente SaleServices.
+ */
+const transformarGrupoAVentaServicio = (grupo) => {
+  const servicios = grupo.servicios || [];
+  if (!servicios.length) return null;
+
+  const primerServicio = servicios[0];
+
+  // Datos del cliente
+  const cliente = grupo.cliente || primerServicio.cliente || primerServicio.usuario || {};
+  const clienteNombre = cliente.nombre || 'Cliente no especificado';
+
+  // Fecha / hora
+  const fecha = grupo.fecha_programada !== 'sin_fecha'
+    ? grupo.fecha_programada
+    : primerServicio.fecha_programada || new Date().toISOString().split('T')[0];
+  const hora  = primerServicio.hora_inicio || '08:00:00';
+
+  // Totales
+  const serviciosTransformados = servicios.map((s) => ({
+    id:        s.id_detalle_servicio,
+    servicioId: s.id_servicio,
+    name:      s.servicio?.nombre || 'Servicio',
+    quantity:  parseInt(s.cantidad || 1),
+    price:     parseFloat(s.precio_unitario || 0),
+    subtotal:  parseFloat(s.precio_unitario || 0) * parseInt(s.cantidad || 1),
+    employee:  { id: s.id_empleado, name: s.empleado?.nombre || 'Empleado no asignado' },
+    hora_inicio:       s.hora_inicio,
+    hora_finalizacion: s.hora_finalizacion || s.hora_fin,
+    duracion:          s.servicio?.duracion || s.duracion || 60,
+    estado:            s.estado,
+    id_cita:           s.id_cita,
+  }));
+
+  const totalServices = serviciosTransformados.reduce((sum, s) => sum + s.subtotal, 0);
+
+  // Estado más común (voto mayoritario)
+  const estados     = servicios.map((s) => s.estado).filter(Boolean);
+  const estadoCounts = estados.reduce((acc, e) => ({ ...acc, [e]: (acc[e] || 0) + 1 }), {});
+  const estadoMasComun = estados.length
+    ? Object.keys(estadoCounts).reduce((a, b) => estadoCounts[a] >= estadoCounts[b] ? a : b)
+    : 'En ejecución';
+
+  const dineroProporcionado = primerServicio.dinero_proporcionado || 0;
+  const devolucion = Math.max(0, dineroProporcionado - totalServices);
+
+  return {
+    id:            grupo.id_cita || primerServicio.id_detalle_servicio,
+    clientName:    clienteNombre,
+    nombre:        clienteNombre,
+    documento:     cliente.documento     || '',
+    telefono:      cliente.telefono      || '',
+    correo:        cliente.correo        || cliente.email || '',
+    tipoDocumento: cliente.tipo_documento || 'CC',
+    tipo_documento: cliente.tipo_documento || 'CC',
+    status:        mapStatusFromBackend(estadoMasComun),   // [FIX #7]
+    date:          formatearFecha(fecha),
+    time:          formatearHora(hora),
+    servicios:     serviciosTransformados,
+    productos:     [],
+    totalServices,
+    totalProducts: 0,
+    totalGeneral:  totalServices,
+    citaId:        grupo.id_cita || null,
+    dineroProporcionado,
+    devolucion,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API Pública
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Obtiene todas las citas/servicios en ejecución desde el backend
+ * y las transforma al formato VentaServicio.
  */
 export const getCitasEnEjecucion = async () => {
   try {
-    console.log('🔄 Cargando todas las órdenes de servicio...');
-
-    // Intentar obtener todos los servicios directamente
     const response = await apiRequest.get(SERVICE_DETAILS_ENDPOINT);
 
-    console.log('📡 Respuesta del backend:', {
-      success: response.success,
-      data: response.data,
-      length: response.data?.length || 0
-    });
-
-    if (!response.success || !response.data) {
-      console.warn('⚠️ No se encontraron servicios');
-      return [];
-    }
-
     let serviceDetails = [];
-    if (Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
       serviceDetails = response.data;
-    } else if (response.data.data && Array.isArray(response.data.data)) {
-      serviceDetails = response.data.data;
+    } else if (Array.isArray(response)) {
+      serviceDetails = response;
     }
 
-    console.log('✅ Servicios obtenidos:', serviceDetails.length);
+    const grupos = groupServicesByClient(serviceDetails);
+    const transformed = await Promise.all(
+      grupos.map(async (grupo) => {
+        const base = transformarGrupoAVentaServicio(grupo);
+        if (!base) return null;
 
-    // Agrupar servicios por cita/cliente antes de transformar
-    const groupedServices = {};
-    serviceDetails.forEach(service => {
-      const citaId = service.id_cita;
-      const clienteId = service.id_cliente;
-      const fecha = service.fecha_programada || 'sin_fecha';
-      
-      // Crear clave única para agrupar
-      const key = citaId 
-        ? `cita_${citaId}` 
-        : `cliente_${clienteId}_${fecha}`;
-      
-      if (!groupedServices[key]) {
-        groupedServices[key] = {
-          id_cita: citaId,
-          id_cliente: clienteId,
-          cliente: service.cliente || service.usuario,
-          fecha_programada: fecha,
-          servicios: []
-        };
-      }
-      
-      groupedServices[key].servicios.push(service);
-    });
-
-    // Transformar grupos al formato esperado
-    const transformed = await Promise.all(Object.values(groupedServices).map(async (grupo) => {
-      const servicios = grupo.servicios || [];
-      if (servicios.length === 0) return null;
-
-      // Usar el primer servicio como referencia para datos comunes
-      const primerServicio = servicios[0];
-      const cliente = primerServicio.cliente || primerServicio.usuario || {};
-      const clienteNombre = cliente.nombre || cliente.Nombre || cliente.name || 'Cliente desconocido';
-
-      // Transformar todos los servicios del grupo
-      const serviciosTransformados = servicios.map(service => {
-        const servicioNombre = service.servicio?.nombre || service.servicio?.Nombre || service.servicio?.name || 'Servicio desconocido';
-        const empleadoNombre = service.empleado?.nombre || service.empleado?.Nombre || service.empleado?.name || 'Empleado desconocido';
-        const empleadoId = service.id_empleado || 
-                          service.empleado?.id_usuario || 
-                          service.empleado?.id || 
-                          null;
-        const servicioId = service.id_servicio || 
-                          service.servicio?.id_servicio || 
-                          service.servicio?.id || 
-                          null;
-
-        return {
-          id: service.id_detalle_servicio || service.id,
-          id_detalle_servicio: service.id_detalle_servicio || service.id, // Asegurar que se incluya el ID correcto
-          servicioId: servicioId,
-          name: servicioNombre,
-          quantity: service.cantidad || 1,
-          price: service.precio_unitario || 0,
-          subtotal: (service.precio_unitario || 0) * (service.cantidad || 1),
-          employee: {
-            id: empleadoId,
-            name: empleadoNombre
-          },
-          id_empleado: empleadoId,
-          hora_inicio: service.hora_inicio,
-          hora_finalizacion: service.hora_finalizacion,
-          duracion: service.duracion,
-          fecha_programada: service.fecha_programada,
-          id_cita: service.id_cita
-        };
-      });
-
-      // Cargar productos asociados a la cita si existe
-      let productos = [];
-      let totalProducts = 0;
-      const citaId = grupo.id_cita;
-      
-      if (citaId) {
-        try {
-          const ventasProductos = await apiRequest.get(`${SALES_PRODUCTS_ENDPOINT}/cita/${citaId}`);
-          if (ventasProductos.success && ventasProductos.data && ventasProductos.data.length > 0) {
-            // Obtener los detalles de la primera venta encontrada
-            const venta = ventasProductos.data[0];
-            if (venta.detalles && Array.isArray(venta.detalles)) {
-              productos = venta.detalles.map(detalle => ({
-                id: detalle.id_producto,
-                id_producto: detalle.id_producto,
-                name: detalle.producto?.nombre || 'Producto desconocido',
-                quantity: detalle.cantidad || 1,
-                price: parseFloat(detalle.precio_unitario || 0),
-                precio: parseFloat(detalle.precio_unitario || 0),
-                subtotal: parseFloat(detalle.subtotal || 0)
-              }));
-              totalProducts = productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
+        // Cargar productos de la cita si existe id_cita
+        if (grupo.id_cita) {
+          try {
+            const ventasProductos = await apiRequest.get(
+              `${SALES_PRODUCTS_ENDPOINT}/cita/${grupo.id_cita}`
+            );
+            if (ventasProductos?.success && ventasProductos.data?.length > 0) {
+              const venta = ventasProductos.data[0];
+              if (Array.isArray(venta.detalles)) {
+                base.productos = venta.detalles.map((d) => ({
+                  id:         d.id_producto,
+                  id_producto: d.id_producto,
+                  name:       d.producto?.nombre || 'Producto',
+                  quantity:   parseInt(d.cantidad || 1),
+                  price:      parseFloat(d.precio_unitario || 0),
+                  subtotal:   parseFloat(d.precio_unitario || 0) * parseInt(d.cantidad || 1),
+                }));
+                base.totalProducts = base.productos.reduce((s, p) => s + p.subtotal, 0);
+                base.totalGeneral  = base.totalServices + base.totalProducts;
+              }
             }
+          } catch {
+            // No bloquear si no hay productos
           }
-        } catch (error) {
-          console.error('Error al cargar productos de la cita:', error);
-          // Continuar sin productos si hay error
         }
-      }
 
-      // Calcular totales
-      const totalServices = serviciosTransformados.reduce((sum, s) => sum + (s.subtotal || 0), 0);
-      const totalGeneral = totalServices + totalProducts;
+        return base;
+      })
+    );
 
-      // Determinar estado (usar el más común o el primero)
-      const estados = servicios.map(s => s.estado).filter(e => e);
-      const estadoMasComun = estados.length > 0 
-        ? estados.reduce((a, b, _, arr) => arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b)
-        : 'En ejecución';
-
-      // Usar el ID del primer servicio como ID de la orden
-      const ordenId = serviciosTransformados[0].id;
-
-      return {
-        id: ordenId,
-        clientName: clienteNombre,
-        date: grupo.fecha_programada !== 'sin_fecha' ? grupo.fecha_programada : new Date().toLocaleDateString('es-ES'),
-        time: serviciosTransformados[0].hora_inicio?.substring(0, 5) || '08:00',
-        status: mapStatus(estadoMasComun),
-        servicios: serviciosTransformados,
-        productos: productos,
-        totalServices: totalServices,
-        totalProducts: totalProducts,
-        totalGeneral: totalGeneral,
-        citaId: grupo.id_cita
-      };
-    }));
-
-    // Filtrar nulls y retornar
-    return transformed.filter(item => item !== null);
+    return transformed.filter(Boolean);
   } catch (error) {
     console.error('❌ Error al obtener servicios:', error);
     return [];
@@ -170,193 +179,80 @@ export const getCitasEnEjecucion = async () => {
 };
 
 /**
- * Mapea estados del backend al frontend
- */
-const mapStatus = (backendStatus) => {
-  if (!backendStatus) return 'En ejecucion';
-
-  const statusMap = {
-    'En ejecución': 'En ejecucion',
-    'En proceso': 'En ejecucion',
-    'Pagada': 'Pagado',
-    'Pagado': 'Pagado',
-    'Cancelada por el usuario': 'Anulado',
-    'Anulado': 'Anulado'
-  };
-
-  return statusMap[backendStatus] || 'En ejecucion';
-};
-
-/**
- * Obtiene una orden específica por ID
- * Optimizado: usa la orden ya cargada si está disponible, solo carga productos si es necesario
+ * Obtiene una orden específica por ID.
+ * Usa la orden ya cargada si está disponible en caché.
  */
 export const getCitaById = async (serviceDetailId, cachedOrder = null) => {
   try {
-    // Si tenemos la orden en caché y tiene todos los datos, usarla directamente
-    if (cachedOrder && cachedOrder.servicios && cachedOrder.servicios.length > 0) {
-      // Solo cargar productos si no están cargados
-      if (!cachedOrder.productos || cachedOrder.productos.length === 0) {
-        const citaId = cachedOrder.citaId;
-        if (citaId) {
-          try {
-            const ventasProductos = await apiRequest.get(`${SALES_PRODUCTS_ENDPOINT}/cita/${citaId}`);
-            if (ventasProductos.success && ventasProductos.data && ventasProductos.data.length > 0) {
-              const venta = ventasProductos.data[0];
-              if (venta.detalles && Array.isArray(venta.detalles)) {
-                const productos = venta.detalles.map(detalle => ({
-                  id: detalle.id_producto,
-                  id_producto: detalle.id_producto,
-                  name: detalle.producto?.nombre || 'Producto desconocido',
-                  quantity: detalle.cantidad || 1,
-                  price: parseFloat(detalle.precio_unitario || 0),
-                  precio: parseFloat(detalle.precio_unitario || 0),
-                  subtotal: parseFloat(detalle.subtotal || 0)
-                }));
-                const totalProducts = productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
-                return {
-                  ...cachedOrder,
-                  productos,
-                  totalProducts,
-                  totalGeneral: (cachedOrder.totalServices || 0) + totalProducts
-                };
-              }
+    if (cachedOrder?.servicios?.length > 0) {
+      if (!cachedOrder.productos?.length && cachedOrder.citaId) {
+        try {
+          const ventasProductos = await apiRequest.get(
+            `${SALES_PRODUCTS_ENDPOINT}/cita/${cachedOrder.citaId}`
+          );
+          if (ventasProductos?.success && ventasProductos.data?.length > 0) {
+            const venta = ventasProductos.data[0];
+            if (Array.isArray(venta.detalles)) {
+              cachedOrder.productos = venta.detalles.map((d) => ({
+                id:         d.id_producto,
+                id_producto: d.id_producto,
+                name:       d.producto?.nombre || 'Producto',
+                quantity:   parseInt(d.cantidad || 1),
+                price:      parseFloat(d.precio_unitario || 0),
+                subtotal:   parseFloat(d.precio_unitario || 0) * parseInt(d.cantidad || 1),
+              }));
             }
-          } catch (error) {
-            // Continuar sin productos si hay error
           }
+        } catch {
+          // Silencioso — la orden puede no tener productos
         }
       }
       return cachedOrder;
     }
 
-    // Si no hay caché, obtener el servicio individual
-    const response = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}`);
-    const service = response.data || response;
+    // Cargar desde el backend
+    const response = await apiRequest.get(
+      `${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}`
+    );
+    const service = response?.data || response;
+    if (!service) throw new Error('Orden no encontrada');
 
-    // Obtener el id_cita
-    const citaId = service.id_cita ? (typeof service.id_cita === 'number' ? service.id_cita : parseInt(service.id_cita)) : null;
-
-    // Si hay cita, intentar obtener servicios relacionados usando el endpoint específico
-    // Si falla, usar solo el servicio individual (más rápido que cargar todos)
-    let servicios = [service];
-    if (citaId) {
-      try {
-        const citaResponse = await apiRequest.get(`${SERVICE_DETAILS_ENDPOINT}/cita/${citaId}`);
-        if (citaResponse.success && citaResponse.data) {
-          let serviciosArray = [];
-          if (Array.isArray(citaResponse.data)) {
-            serviciosArray = citaResponse.data;
-          } else if (citaResponse.data.data && Array.isArray(citaResponse.data.data)) {
-            serviciosArray = citaResponse.data.data;
-          }
-          if (serviciosArray.length > 0) {
-            servicios = serviciosArray;
-          }
-        }
-      } catch (error) {
-        // Si falla, usar solo el servicio individual (más rápido)
-      }
-    }
-
-    // Extraer datos del cliente de múltiples fuentes posibles
     const cliente = service.cliente || service.usuario || {};
-    const clienteNombre = cliente.nombre || cliente.Nombre || cliente.name || 'Cliente desconocido';
+    const serviciosTransformados = [{
+      id:        service.id_detalle_servicio,
+      servicioId: service.id_servicio,
+      name:      service.servicio?.nombre || 'Servicio',
+      quantity:  parseInt(service.cantidad || 1),
+      price:     parseFloat(service.precio_unitario || 0),
+      subtotal:  parseFloat(service.precio_unitario || 0) * parseInt(service.cantidad || 1),
+      employee:  { id: service.id_empleado, name: service.empleado?.nombre || 'Empleado no asignado' },
+      hora_inicio:       service.hora_inicio,
+      hora_finalizacion: service.hora_finalizacion || service.hora_fin,
+      duracion:          service.servicio?.duracion || 60,
+      estado:            service.estado,
+    }];
 
-    // Transformar todos los servicios
-    const serviciosTransformados = servicios.map(serv => {
-      const servicioNombre = serv.servicio?.nombre || serv.servicio?.Nombre || serv.servicio?.name || 'Servicio desconocido';
-      const empleadoNombre = serv.empleado?.nombre || serv.empleado?.Nombre || serv.empleado?.name || 'Empleado desconocido';
-      const empleadoId = serv.id_empleado || 
-                        serv.empleado?.id_usuario || 
-                        serv.empleado?.id || 
-                        null;
-      const servicioId = serv.id_servicio || 
-                        serv.servicio?.id_servicio || 
-                        serv.servicio?.id || 
-                        null;
+    const totalServices       = serviciosTransformados.reduce((s, x) => s + x.subtotal, 0);
+    const dineroProporcionado = service.dinero_proporcionado || 0;
+    const devolucion          = Math.max(0, dineroProporcionado - totalServices);
 
-      return {
-        id: serv.id_detalle_servicio || serv.id,
-        id_detalle_servicio: serv.id_detalle_servicio || serv.id,
-        servicioId: servicioId,
-        name: servicioNombre,
-        quantity: serv.cantidad || 1,
-        price: serv.precio_unitario || 0,
-        subtotal: (serv.precio_unitario || 0) * (serv.cantidad || 1),
-        employee: {
-          id: empleadoId,
-          name: empleadoNombre
-        },
-        id_empleado: empleadoId,
-        startTime: serv.hora_inicio?.substring(0, 5),
-        endTime: serv.hora_finalizacion?.substring(0, 5),
-        hora_inicio: serv.hora_inicio,
-        hora_finalizacion: serv.hora_finalizacion,
-        duration: serv.duracion,
-        fecha_programada: serv.fecha_programada,
-        id_cita: serv.id_cita
-      };
-    });
-
-    // Cargar productos asociados a la cita si existe
-    let productos = [];
-    let totalProducts = 0;
-    
-    if (citaId) {
-      try {
-        const ventasProductos = await apiRequest.get(`${SALES_PRODUCTS_ENDPOINT}/cita/${citaId}`);
-        if (ventasProductos.success && ventasProductos.data && ventasProductos.data.length > 0) {
-          // Obtener los detalles de la primera venta encontrada
-          const venta = ventasProductos.data[0];
-          if (venta.detalles && Array.isArray(venta.detalles)) {
-            productos = venta.detalles.map(detalle => ({
-              id: detalle.id_producto,
-              id_producto: detalle.id_producto,
-              name: detalle.producto?.nombre || 'Producto desconocido',
-              quantity: detalle.cantidad || 1,
-              price: parseFloat(detalle.precio_unitario || 0),
-              precio: parseFloat(detalle.precio_unitario || 0),
-              subtotal: parseFloat(detalle.subtotal || 0)
-            }));
-            totalProducts = productos.reduce((sum, p) => sum + (p.subtotal || 0), 0);
-          }
-        }
-      } catch (error) {
-        console.error('Error al cargar productos de la cita:', error);
-        // Continuar sin productos si hay error
-      }
-    }
-
-    // Calcular totales
-    const totalServices = serviciosTransformados.reduce((sum, s) => sum + (s.subtotal || 0), 0);
-    const totalGeneral = totalServices + totalProducts;
-
-    // Determinar estado (usar el más común o el primero)
-    const estados = servicios.map(s => s.estado).filter(e => e);
-    const estadoMasComun = estados.length > 0 
-      ? estados.reduce((a, b, _, arr) => arr.filter(v => v === a).length >= arr.filter(v => v === b).length ? a : b)
-      : 'En ejecución';
-
-    // Obtener dinero proporcionado y devolución si están disponibles
-    const dineroProporcionado = service.dinero_proporcionado || service.dineroProporcionado || 0;
-    const devolucion = Math.max(0, dineroProporcionado - totalGeneral);
-
-    return {
-      id: serviciosTransformados[0].id,
-      clientName: clienteNombre,
-      date: service.fecha_programada || new Date().toLocaleDateString('es-ES'),
-      time: serviciosTransformados[0].hora_inicio?.substring(0, 5) || '08:00',
-      status: mapStatus(estadoMasComun),
-      servicios: serviciosTransformados,
-      productos: productos,
-      totalServices: totalServices,
-      totalProducts: totalProducts,
-      totalGeneral: totalGeneral,
-      citaId: citaId,
-      dineroProporcionado: dineroProporcionado,
-      devolucion: devolucion
+    const orden = {
+      id:            serviceDetailId,
+      clientName:    cliente.nombre || 'Cliente no especificado',
+      date:          service.fecha_programada || new Date().toLocaleDateString('es-ES'),
+      time:          formatearHora(service.hora_inicio),
+      status:        mapStatusFromBackend(service.estado),   // [FIX #7]
+      servicios:     serviciosTransformados,
+      productos:     [],
+      totalServices,
+      totalProducts: 0,
+      totalGeneral:  totalServices,
+      citaId:        service.id_cita || null,
+      dineroProporcionado,
+      devolucion,
     };
+
+    return orden;
   } catch (error) {
     console.error('Error al obtener orden:', error);
     throw new Error('Error al cargar la orden');
@@ -364,14 +260,15 @@ export const getCitaById = async (serviceDetailId, cachedOrder = null) => {
 };
 
 /**
- * Busca órdenes por término
+ * Busca órdenes que coincidan con un término.
  */
 export const buscarCitas = async (termino) => {
   try {
     const allServices = await getCitasEnEjecucion();
-    return allServices.filter(service =>
-      service.id.toString().includes(termino) ||
-      service.clientName.toLowerCase().includes(termino.toLowerCase())
+    return allServices.filter(
+      (s) =>
+        s.id?.toString().includes(termino) ||
+        s.clientName?.toLowerCase().includes(termino.toLowerCase())
     );
   } catch (error) {
     console.error('Error al buscar:', error);
@@ -380,23 +277,31 @@ export const buscarCitas = async (termino) => {
 };
 
 /**
- * Actualiza estado de una orden
+ * Actualiza el estado de una orden de servicio.
+ * [FIX #7] Usa mapStatusToBackend() en vez del objeto inline.
  */
 export const actualizarEstadoCita = async (serviceDetailId, nuevoEstado) => {
   try {
-    const estadoMap = {
-      'Anulado': 'Cancelada por el usuario',
-      'Pagado': 'Pagada',
-      'En ejecucion': 'En ejecución'
-    };
-
-    const resultado = await apiRequest.patch(`${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}/status`, {
-      estado: estadoMap[nuevoEstado] || nuevoEstado
-    });
-
-    return resultado;
+    return await apiRequest.patch(
+      `${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}/status`,
+      { estado: mapStatusToBackend(nuevoEstado) }   // [FIX #7]
+    );
   } catch (error) {
     console.error('Error al actualizar estado:', error);
     throw new Error('Error al actualizar estado');
+  }
+};
+
+/**
+ * Inicia un servicio (cambia estado a "En ejecución").
+ */
+export const iniciarServicio = async (serviceDetailId) => {
+  try {
+    return await apiRequest.patch(
+      `${SERVICE_DETAILS_ENDPOINT}/${serviceDetailId}/iniciar`
+    );
+  } catch (error) {
+    console.error('Error al iniciar servicio:', error);
+    throw new Error('Error al iniciar el servicio');
   }
 };

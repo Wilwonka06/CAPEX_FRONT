@@ -7,8 +7,8 @@ import { showError } from '../utils/toastUtils';
 const BASE_URL = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL
   : import.meta.env.DEV
-    ? 'http://localhost:3000/api'       // Fallback desarrollo
-    : 'https://capex-back.onrender.com/api'; // Fallback producción
+    ? 'http://localhost:3000/api'
+    : 'https://capex-back.onrender.com/api';
 
 if (import.meta.env.DEV) {
   console.log('🔵 API Config:', {
@@ -23,33 +23,24 @@ if (import.meta.env.DEV) {
 // ─────────────────────────────────────────────────────────────
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 90000,
+  // [FIX #6] Reducido de 90s a 15s — evita pantallas en blanco prolongadas
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  withCredentials: true, // Necesario para cookies HttpOnly
+  withCredentials: true, // Necesario para cookies HttpOnly — ÚNICO mecanismo de auth
 });
 
 // ─────────────────────────────────────────────────────────────
 // INTERCEPTOR DE REQUEST
 // ─────────────────────────────────────────────────────────────
+// configuradas por el backend en el login. No se necesita inyectar
 apiClient.interceptors.request.use(
   (config) => {
-    // Leer token del localStorage como fallback (las cookies HttpOnly son el método principal)
-    const token = (() => {
-      try { return localStorage.getItem('authToken'); } catch { return null; }
-    })();
-
-    if (token && !config.headers?.Authorization) {
-      config.headers = { ...(config.headers || {}), Authorization: `Bearer ${token}` };
-    }
-
-    // Log de requests solo en desarrollo
     if (import.meta.env.DEV) {
       console.log(`🔵 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     }
-
     return config;
   },
   (error) => {
@@ -69,7 +60,7 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Log de errores siempre (no solo en dev) pero sin datos sensibles
+    // Log de errores sin datos sensibles
     console.error('API Error:', {
       url: error.config?.url,
       method: error.config?.method,
@@ -82,15 +73,14 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Manejo global de errores comunes
     const status = error.response?.status;
     const message = error.response?.data?.message;
 
     if (status === 401) {
-      // Token expirado o inválido — limpiar sesión
-      try { localStorage.removeItem('authToken'); } catch {}
+      // [FIX #1] Solo limpiar datos del usuario (NO 'authToken' — no existe en localStorage)
+      // La cookie HttpOnly la limpia el backend en /auth/logout
+      try { localStorage.removeItem('currentUser'); } catch { /* noop */ }
       showError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-      // Redirigir al login sin recargar toda la app
       if (window.location.pathname !== '/iniciar-sesion') {
         window.location.href = '/iniciar-sesion';
       }
@@ -146,7 +136,7 @@ const apiRequest = {
 // ─────────────────────────────────────────────────────────────
 export const API_CONFIG = {
   BASE_URL,
-  TIMEOUT: 90000,
+  TIMEOUT: 15000,
 };
 
 export const API_ENDPOINTS = {
