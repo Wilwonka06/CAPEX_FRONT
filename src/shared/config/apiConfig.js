@@ -152,5 +152,5 @@ export const getAuthHeaders = () => ({
   'Accept': 'application/json',
 });
 
-export { apiClient, BASE_URL };
+export { apiClient, BASE_URL, apiRequest };
 export default apiRequest;
