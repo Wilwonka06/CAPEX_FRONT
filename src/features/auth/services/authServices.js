@@ -1,4 +1,4 @@
-import { apiRequest } from '../../shared/config/apiConfig';
+import { apiRequest } from '../../../shared/config/apiConfig';
 
 const isDev = import.meta.env.DEV;
 
