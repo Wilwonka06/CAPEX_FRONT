@@ -2,395 +2,217 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { apiRequest } from '../config/apiConfig';
 
-// Valor por defecto del contexto para evitar errores cuando no está disponible
+const isDev = import.meta.env.DEV;
+
 const defaultContextValue = {
-  currentUser: null,
-  loading: true,
-  login: async () => { },
-  logout: () => { },
-  logoutConfirmed: async () => { },
-  hasPrivilege: () => false,
-  getRoleRedirect: () => '/landing',
-  checkAuth: async () => null,
-  verifyAuth: async () => false,
-  setActiveRole: async () => {},
-  _isProviderActive: false, // Flag para identificar si el Provider está activo
+    currentUser: null,
+    loading: true,
+    login: async () => { },
+    logout: () => { },
+    logoutConfirmed: async () => { },
+    hasPrivilege: () => false,
+    getRoleRedirect: () => '/landing',
+    checkAuth: async () => null,
+    verifyAuth: async () => false,
+    setActiveRole: async () => { },
+    _isProviderActive: false,
 };
 
 const AuthContext = createContext(defaultContextValue);
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  // Verificar si el Provider está activo usando el flag
-  if (!context || context._isProviderActive === false) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  }
-  return context;
+    const context = useContext(AuthContext);
+    if (!context || context._isProviderActive === false) {
+        throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+    }
+    return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  // Inicializar con usuario del localStorage si existe (sincrónico)
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const user = localStorage.getItem('currentUser');
-      return user ? JSON.parse(user) : null;
-    } catch (error) {
-      console.error('Error al obtener usuario del localStorage:', error);
-      return null;
-    }
-  });
-  const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
-  const initialCheckDone = useRef(false);
-
-  
-
-  /**
-   * ✅ CORREGIDO: Verificar privilegios con nombres correctos
-   * Ahora maneja tanto nombres en inglés como español para retrocompatibilidad
-   */
-  const hasPrivilege = (module, action) => {
-    if (!currentUser) {
-      console.warn('⚠️ No hay usuario autenticado');
-      return false;
-    }
-
-    const roleName = typeof currentUser.rol === 'string'
-      ? currentUser.rol
-      : currentUser.rol?.nombre || '';
-    const rolesList = Array.isArray(currentUser.roles) ? currentUser.roles.map(r => (typeof r === 'string' ? r : r?.nombre || '')) : [];
-    const normalizedRoles = [roleName, ...rolesList].filter(Boolean).map(r => r.toLowerCase());
-    const isAdmin = normalizedRoles.includes('administrador') || normalizedRoles.includes('admin');
-    if (isAdmin) { return true; }
-
-    // Verificar si existen privilegios
-    if (!currentUser.privileges) {
-      console.warn('⚠️ Usuario no tiene privilegios definidos:', currentUser);
-      return false;
-    }
-
-    // ✅ MAPEO DE COMPATIBILIDAD para acciones
-    const actionMap = {
-      // Inglés -> Español
-      'Create': 'Crear',
-      'Read': 'Visualizar',
-      'Edit': 'Editar',
-      'Delete': 'Eliminar',
-      // Español (mantener)
-      'Crear': 'Crear',
-      'Visualizar': 'Visualizar',
-      'Editar': 'Editar',
-      'Eliminar': 'Eliminar',
-      'Crear novedades': 'Crear novedades'
-    };
-
-    // Obtener el nombre de la acción en español
-    const spanishAction = actionMap[action] || action;
-
-    // ✅ Alias y dependencias de módulos para resolver acceso indirecto
-    const moduleAliasMap = {
-      'Dashboard': ['Ventas', 'Compras', 'Empleados', 'Gestión de Servicios', 'Venta de Productos', 'Citas'],
-      'Productos': ['Venta de Productos', 'Compras'],
-      'Proveedores': ['Compras'],
-      'Categorías de Productos': ['Productos', 'Compras'],
-      'Servicios': ['Gestión de Servicios'],
-      'Categorías de Servicios': ['Gestión de Servicios'],
-      'Programación': ['Empleados', 'Gestión de Servicios'],
-      'Usuarios': ['Gestión de Usuarios'],
-      'Clientes': ['Ventas'],
-      'Pedidos': ['Ventas', 'Venta de Productos'],
-      'Ventas': ['Ventas'],
-      'Venta de Productos': ['Venta de Productos', 'Ventas'],
-      'Citas': ['Citas', 'Ventas']
-    };
-
-    // ✅ Usar el nombre del módulo directamente si existe
-    let modulePrivileges = currentUser.privileges?.[module];
-
-    // Si no existe, intentar resolver por alias/dependencias
-    if (!modulePrivileges) {
-      const aliases = moduleAliasMap[module] || [];
-      const resolvedKey = aliases.find(key => currentUser.privileges?.[key]);
-      if (resolvedKey) {
-        modulePrivileges = currentUser.privileges[resolvedKey];
-        console.log(`🔁 Resolviendo módulo "${module}" por alias/dependencia → "${resolvedKey}"`);
-      } else {
-        console.warn(`⚠️ Módulo "${module}" no encontrado en privilegios del usuario`);
-        return false;
-      }
-    }
-
-    // Verificar si tiene la acción específica (probar con ambos nombres)
-    const hasPrivilege = modulePrivileges[spanishAction] === true ||
-      modulePrivileges[action] === true;
-
-    return hasPrivilege;
-  };
-
-  // Función para obtener la ruta de redirección basada en el rol y permisos
-  const getRoleRedirect = (role, userData = null) => {
-    const roleName = typeof role === 'string'
-      ? role
-      : (role?.nombre || '');
-
-    const normalizedRole = roleName.toLowerCase();
-
-    // Obtener datos del usuario si están disponibles
-    const user = userData || currentUser;
-
-    // ⚠️ IMPORTANTE: Clientes y usuarios NUNCA deben acceder al dashboard
-    // Incluso si tienen algunos privilegios, deben ir al landing
-    if (normalizedRole === 'cliente' || normalizedRole === 'usuario') {
-      console.log('🚫 Cliente/Usuario detectado, redirigiendo a /landing (sin acceso administrativo)');
-      return '/landing';
-    }
-
-    // Para otros roles, verificar si tienen permisos administrativos
-    if (user && user.privileges) {
-      const administrativeModules = [
-        'Dashboard',
-        'Gestión de Usuarios',
-        'Gestión de Compras',
-        'Gestión de Servicios',
-        'Empleados',
-        'Programación',
-        'Productos',
-        'Compras',
-        'Proveedores',
-        'Categorías de Productos',
-        'Categorías de Servicios',
-        'Servicios',
-        'Ventas',
-        'Venta de Productos',
-        'Pedidos',
-        'Citas',
-        'Clientes'
-      ];
-
-      // Verificar si tiene acceso a algún módulo administrativo
-      const hasAdministrativeAccess = administrativeModules.some(module => {
-        const modulePrivileges = user.privileges[module];
-        return modulePrivileges && (
-          modulePrivileges.Visualizar === true ||
-          modulePrivileges['Visualizar'] === true ||
-          modulePrivileges.Read === true
-        );
-      });
-
-      if (hasAdministrativeAccess) {
-        return '/dashboard';
-      }
-    }
-
-    // Fallback: redirección basada en rol
-    const roleRedirects = {
-      'administrador': '/dashboard',
-      'empleado': '/dashboard/citas',
-      'cliente': '/landing',
-      'usuario': '/landing'
-    };
-
-    return roleRedirects[normalizedRole] || '/landing';
-  };
-
-  // Función para verificar si el token es válido
-  const verifyAuth = async () => {
-    try {
-      const response = await apiRequest.get('/auth/me');
-
-      if (response.success && response.data) {
-        setCurrentUser(response.data);
-
-        // Actualizar localStorage con datos frescos del usuario
+    const [currentUser, setCurrentUser] = useState(() => {
         try {
-          localStorage.setItem('currentUser', JSON.stringify(response.data));
-        } catch (error) {
-          console.error('⚠️ Error al actualizar usuario en localStorage:', error);
+            const user = localStorage.getItem('currentUser');
+            return user ? JSON.parse(user) : null;
+        } catch {
+            return null;
         }
+    });
+    const [loading, setLoading] = useState(true);
+    const [authChecked, setAuthChecked] = useState(false);
+    const initialCheckDone = useRef(false);
 
-        return true;
-      } else {
-        console.warn('⚠️ Respuesta inesperada del servidor:', response);
-        throw new Error('Token inválido');
-      }
-    } catch (error) {
-      console.error('❌ Error al verificar autenticación:', error);
+    // ─── hasPrivilege ────────────────────────────────────────────────────────
+    const hasPrivilege = (module, action) => {
+        if (!currentUser) return false;
 
-      setCurrentUser(null);
-      return false;
-    }
-  };
+        const roleName = typeof currentUser.rol === 'string'
+            ? currentUser.rol
+            : currentUser.rol?.nombre || '';
+        const rolesList = Array.isArray(currentUser.roles)
+            ? currentUser.roles.map(r => (typeof r === 'string' ? r : r?.nombre || ''))
+            : [];
 
-  // Función de login
-  const login = async (userData, previousPath = null) => {
-    try {
-      console.log('=== LOGIN INICIADO ===');
-      console.log('📝 Datos del usuario recibidos:', userData);
-      console.log('🔑 Privilegios del usuario:', userData.privileges);
-      console.log('📍 Página anterior:', previousPath);
+        const normalizedRole = roleName.toLowerCase();
+        const isAdmin = normalizedRole === 'administrador' || normalizedRole === 'admin'
+            || rolesList.some(r => r.toLowerCase() === 'administrador');
 
-      setCurrentUser(userData);
+        if (isAdmin) return true;
 
-      // Guardar usuario en localStorage para persistencia
-      try {
-        localStorage.setItem('currentUser', JSON.stringify(userData));
-        console.log('✅ Usuario guardado en localStorage');
-      } catch (error) {
-        console.error('⚠️ Error al guardar usuario en localStorage:', error);
-      }
+        const privileges = currentUser.privileges || {};
 
-      // Emitir evento de cambio
-      window.dispatchEvent(new Event('user-auth-changed'));
+        // Mapeo de acciones en inglés → español (retrocompatibilidad)
+        const ACTION_MAP = { Read: 'Visualizar', Create: 'Crear', Edit: 'Editar', Delete: 'Eliminar' };
+        const normalizedAction = ACTION_MAP[action] || action;
 
-      // Obtener nombre del rol
-      const roleName = typeof userData.rol === 'string'
-        ? userData.rol
-        : userData.rol?.nombre || '';
-      const normalizedRole = roleName.toLowerCase();
+        const modulePrivileges = privileges[module];
+        if (!modulePrivileges) return false;
 
-      // Determinar ruta de redirección
-      let redirectPath;
-
-      // Si es cliente/usuario y hay una página anterior válida, redirigir ahí
-      if ((normalizedRole === 'cliente' || normalizedRole === 'usuario') && previousPath) {
-        // Verificar que la página anterior no sea el dashboard ni rutas administrativas
-        const isAdminRoute = previousPath.startsWith('/dashboard') ||
-          previousPath.startsWith('/admin') ||
-          previousPath === '/iniciar-sesion' ||
-          previousPath === '/registrarse';
-
-        if (!isAdminRoute) {
-          console.log('🔄 Cliente: Redirigiendo a página anterior:', previousPath);
-          redirectPath = previousPath;
-        } else {
-          // Si la página anterior es administrativa, redirigir al landing
-          redirectPath = getRoleRedirect(userData.rol, userData);
-        }
-      } else {
-        // Para otros roles o si no hay página anterior, usar la lógica normal
-        redirectPath = getRoleRedirect(userData.rol, userData);
-      }
-
-      console.log('🔄 Redirección sugerida:', redirectPath);
-      // No realizar navegación directa aquí para evitar recargas completas.
-      // Devolver la ruta sugerida y permitir que el componente de UI navegue.
-      return redirectPath;
-    } catch (error) {
-      console.error('❌ Error en login:', error);
-      throw error;
-    }
-  };
-
-  // Función de logout (sin confirmación, para usar después del modal)
-  const logoutConfirmed = async () => {
-    try {
-      await apiRequest.post('/auth/logout');
-    } catch (error) {
-      console.warn('⚠️ Error al cerrar sesión en el backend:', error);
-    }
-
-    // Limpiar datos locales
-    localStorage.removeItem('currentUser');
-    try { localStorage.removeItem('authToken'); } catch { void 0 }
-    setCurrentUser(null);
-
-    // Emitir evento de cambio
-    window.dispatchEvent(new Event('user-auth-changed'));
-
-    // Redirigir al login
-    window.location.href = '/iniciar-sesion';
-  };
-
-  // Función de logout (mantener para compatibilidad, pero ahora solo retorna función)
-  const logout = () => {
-    // Esta función ahora solo retorna la función de logout confirmado
-    // El modal se manejará en el componente que llama
-    return logoutConfirmed;
-  };
-
-  // Función para verificar autenticación
-  const checkAuth = async () => {
-    try {
-      const isValid = await verifyAuth();
-      setLoading(false);
-      setAuthChecked(true);
-      return isValid ? currentUser : null;
-    } catch (error) {
-      console.error('❌ Error al verificar autenticación:', error);
-      setLoading(false);
-      setAuthChecked(true);
-      return null;
-    }
-  };
-
-  // Cambiar rol activo del usuario
-  const setActiveRole = async (idRol) => {
-    try {
-      const response = await apiRequest.put('/auth/active-role', { idRol });
-      if (response.success && response.data) {
-        localStorage.setItem('currentUser', JSON.stringify(response.data));
-        setCurrentUser(response.data);
-        window.dispatchEvent(new Event('user-auth-changed'));
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('❌ Error al cambiar rol activo:', error);
-      return false;
-    }
-  };
-
-  // Verificar autenticación al cargar (solo una vez y no en rutas públicas)
-  useEffect(() => {
-    if (initialCheckDone.current) return;
-    initialCheckDone.current = true;
-
-    const initAuth = async () => {
-      // Si ya hay un usuario en el estado inicial (localStorage)
-      if (currentUser) {
-        // ✅ OPTIMIZACIÓN: Permitir renderizado inmediato con datos cacheados
-        setLoading(false);
-        setAuthChecked(true);
-
-        // Verificar token en segundo plano (non-blocking)
-        verifyAuth().catch(() => {
-          // Si la verificación falla, limpiar usuario
-          localStorage.removeItem('currentUser');
-          setCurrentUser(null);
-        });
-      } else {
-        // Si no hay usuario, marcar como no cargando y verificado
-        setLoading(false);
-        setAuthChecked(true);
-      }
+        return modulePrivileges[normalizedAction] === true || modulePrivileges[action] === true;
     };
 
-    initAuth();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // ─── getRoleRedirect ─────────────────────────────────────────────────────
+    const getRoleRedirect = (role, userData) => {
+        const roleName = typeof role === 'string' ? role : role?.nombre || '';
+        const normalizedRole = roleName.toLowerCase();
 
+        if (normalizedRole === 'cliente' || normalizedRole === 'usuario') return '/landing';
 
-  const value = {
-    currentUser,
-    loading,
-    authChecked,
-    login,
-    logout,
-    logoutConfirmed,
-    hasPrivilege,
-    getRoleRedirect,
-    checkAuth,
-    verifyAuth,
-    setActiveRole,
-    _isProviderActive: true, // Flag para indicar que el Provider está activo
-  };
+        const user = userData || currentUser;
+        if (user?.privileges) {
+            const adminModules = [
+                'Dashboard', 'Gestión de Usuarios', 'Gestión de Compras', 'Gestión de Servicios',
+                'Empleados', 'Programación', 'Productos', 'Compras', 'Proveedores',
+                'Categorías de Productos', 'Categorías de Servicios', 'Servicios',
+                'Ventas', 'Venta de Productos', 'Pedidos', 'Citas', 'Clientes',
+            ];
+            const hasAdmin = adminModules.some(m => user.privileges[m]?.Visualizar === true);
+            if (hasAdmin) return '/dashboard';
+        }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+        const redirects = { administrador: '/dashboard', empleado: '/dashboard/citas', cliente: '/landing', usuario: '/landing' };
+        return redirects[normalizedRole] || '/landing';
+    };
+
+    // ─── verifyAuth ──────────────────────────────────────────────────────────
+    const verifyAuth = async () => {
+        try {
+            const response = await apiRequest.get('/auth/me');
+            if (response.success && response.data) {
+                setCurrentUser(response.data);
+                try { localStorage.setItem('currentUser', JSON.stringify(response.data)); } catch { /* ignorar */ }
+                return true;
+            }
+            throw new Error('Token inválido');
+        } catch (error) {
+            if (isDev) console.error('❌ Error al verificar autenticación:', error);
+            setCurrentUser(null);
+            return false;
+        }
+    };
+
+    // ─── checkAuth ───────────────────────────────────────────────────────────
+    const checkAuth = async () => {
+        try {
+            setLoading(true);
+            const response = await apiRequest.get('/auth/me');
+            if (response.success && response.data) {
+                setCurrentUser(response.data);
+                try { localStorage.setItem('currentUser', JSON.stringify(response.data)); } catch { /* ignorar */ }
+                setLoading(false);
+                setAuthChecked(true);
+                return response.data;
+            }
+            setLoading(false);
+            setAuthChecked(true);
+            return null;
+        } catch {
+            setLoading(false);
+            setAuthChecked(true);
+            return null;
+        }
+    };
+
+    // ─── login ───────────────────────────────────────────────────────────────
+    const login = async (userData, previousPath = null) => {
+        setCurrentUser(userData);
+        try { localStorage.setItem('currentUser', JSON.stringify(userData)); } catch { /* ignorar */ }
+        window.dispatchEvent(new Event('user-auth-changed'));
+
+        const roleName = typeof userData.rol === 'string' ? userData.rol : userData.rol?.nombre || '';
+        const normalizedRole = roleName.toLowerCase();
+
+        let redirectPath;
+        if ((normalizedRole === 'cliente' || normalizedRole === 'usuario') && previousPath) {
+            const isAdminRoute = previousPath.startsWith('/dashboard') || previousPath.startsWith('/admin')
+                || previousPath === '/iniciar-sesion' || previousPath === '/registrarse';
+            redirectPath = isAdminRoute ? getRoleRedirect(userData.rol, userData) : previousPath;
+        } else {
+            redirectPath = getRoleRedirect(userData.rol, userData);
+        }
+
+        return redirectPath;
+    };
+
+    // ─── logout ──────────────────────────────────────────────────────────────
+    const logout = () => {
+        setCurrentUser(null);
+        try { localStorage.removeItem('currentUser'); } catch { /* ignorar */ }
+        window.dispatchEvent(new Event('user-auth-changed'));
+    };
+
+    const logoutConfirmed = async () => {
+        try { await apiRequest.post('/auth/logout'); } catch { /* ignorar */ }
+        logout();
+    };
+
+    // ─── setActiveRole ───────────────────────────────────────────────────────
+    const setActiveRole = async (idRol) => {
+        try {
+            const response = await apiRequest.put('/auth/active-role', { idRol });
+            if (response.success && response.data) {
+                try { localStorage.setItem('currentUser', JSON.stringify(response.data)); } catch { /* ignorar */ }
+                setCurrentUser(response.data);
+                window.dispatchEvent(new Event('user-auth-changed'));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            if (isDev) console.error('❌ Error al cambiar rol activo:', error);
+            return false;
+        }
+    };
+
+    // ─── init ────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (initialCheckDone.current) return;
+        initialCheckDone.current = true;
+
+        if (currentUser) {
+            setLoading(false);
+            setAuthChecked(true);
+            verifyAuth().catch(() => {
+                localStorage.removeItem('currentUser');
+                setCurrentUser(null);
+            });
+        } else {
+            setLoading(false);
+            setAuthChecked(true);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const value = {
+        currentUser, loading, authChecked,
+        login, logout, logoutConfirmed,
+        hasPrivilege, getRoleRedirect,
+        checkAuth, verifyAuth, setActiveRole,
+        _isProviderActive: true,
+    };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
-AuthProvider.propTypes = {
-  children: PropTypes.node
-};
+AuthProvider.propTypes = { children: PropTypes.node };
