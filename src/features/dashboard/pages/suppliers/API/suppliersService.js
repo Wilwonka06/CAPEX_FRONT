@@ -1,6 +1,6 @@
 
 import apiRequest from '../../../../../shared/config/apiConfig';
-import { mapSupplierFromBackend, mapSupplierToBackend } from '../../../../../shared/utils/entityMappers';
+import { mapSupplierFromBackend, mapSupplierToBackend } from '../../../../../shared/utils/entityMapper';
 
 const SUPPLIERS_ENDPOINT = '/proveedores';
 
