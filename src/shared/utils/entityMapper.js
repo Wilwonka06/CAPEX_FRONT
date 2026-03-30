@@ -1,17 +1,3 @@
-/**
- * src/shared/utils/entityMappers.js
- *
- * [FIX #7] Mappers centralizados de entidades frontend ↔ backend.
- *
- * PROBLEMA ANTERIOR:
- *   Cada módulo (suppliersService, customersService, CitasService,
- *   ServiceOrderService) definía sus propias funciones de transformación
- *   inline, y el mismo estadoMap estaba duplicado en hasta 3 archivos.
- *
- * SOLUCIÓN:
- *   Un único archivo con todas las funciones de transformación.
- *   Los servicios importan desde aquí en vez de redefinirlas.
- */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROVEEDORES
