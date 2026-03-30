@@ -1,5 +1,5 @@
 import apiRequest from '../../../../../shared/config/apiConfig';
-import { mapUserToCustomer, mapCustomerToUser } from '../../../../../shared/utils/entityMappers';
+import { mapUserToCustomer, mapCustomerToUser } from '../../../../../shared/utils/entityMapper';
 
 const USERS_ENDPOINT = '/usuarios';
 const CUSTOMER_ROLE_NAME = 'Cliente';
