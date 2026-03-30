@@ -1,5 +1,5 @@
 import apiRequest from '../../../../../shared/config/apiConfig';
-import { mapStatusFromBackend, mapStatusToBackend } from '../../../../../shared/utils/entityMappers';
+import { mapStatusFromBackend, mapStatusToBackend } from '../../../../../shared/utils/entityMapper';
 
 const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
 const SALES_PRODUCTS_ENDPOINT  = '/ventas-productos';
