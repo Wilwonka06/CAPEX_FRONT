@@ -628,9 +628,6 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
 
     setErrors(newErrors);
 
-    // Debug: mostrar errores en consola
-    console.log("Errores detectados:", newErrors);
-    console.log("FormData:", formData);
 
     if (Object.values(newErrors).some(Boolean)) {
       Swal.fire(
@@ -659,7 +656,6 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
           formData.documento
         );
         clientId = clientResult;
-        console.log("Client ID obtenido:", clientId);
       } catch (error) {
         console.error("Error en findOrCreateClient:", error);
         const errorMessage =

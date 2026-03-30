@@ -91,14 +91,12 @@ export const appointmentsService = {
       // Validar que todos los servicios tengan IDs válidos
       const invalidServices = appointmentData.servicios.filter(s => !s.id_servicio || s.id_servicio <= 0);
       if (invalidServices.length > 0) {
-        console.error('Invalid services found:', invalidServices);
         throw new Error('Uno o más servicios no tienen ID válido');
       }
 
       // Validar que todos los empleados tengan IDs válidos
       const invalidEmployees = appointmentData.servicios.filter(s => !s.id_empleado || s.id_empleado <= 0);
       if (invalidEmployees.length > 0) {
-        console.error('Invalid employees found:', invalidEmployees);
         throw new Error('Uno o más empleados no tienen ID válido');
       }
 
@@ -123,7 +121,6 @@ export const appointmentsService = {
         ...(appointmentData.cliente && { cliente: appointmentData.cliente })
       };
 
-      console.log('API Service: Sending appointment data to backend:', JSON.stringify(cleanData, null, 2));
       const response = await apiRequest.post(APPOINTMENTS_ENDPOINT, cleanData);
 
       return response;
@@ -146,13 +143,11 @@ export const appointmentsService = {
       if (appointmentData.servicios && appointmentData.servicios.length > 0) {
         const invalidServices = appointmentData.servicios.filter(s => !s.id_servicio || s.id_servicio <= 0);
         if (invalidServices.length > 0) {
-          console.error('Invalid services found:', invalidServices);
           throw new Error('Uno o más servicios no tienen ID válido');
         }
 
         const invalidEmployees = appointmentData.servicios.filter(s => !s.id_empleado || s.id_empleado <= 0);
         if (invalidEmployees.length > 0) {
-          console.error('Invalid employees found:', invalidEmployees);
           throw new Error('Uno o más empleados no tienen ID válido');
         }
       }
@@ -176,7 +171,6 @@ export const appointmentsService = {
         })
       };
 
-      console.log('API Service: Updating appointment data:', JSON.stringify(cleanData, null, 2));
       const response = await apiRequest.put(`${APPOINTMENTS_ENDPOINT}/${id}`, cleanData);
       return response;
     } catch (error) {

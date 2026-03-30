@@ -51,8 +51,6 @@ const Services = () => {
         getServiceCategories().catch(() => [])
       ]);
 
-      console.log("[DEBUG] Servicios cargados:", servicesResponse);
-      console.log("[DEBUG] Categorías cargadas:", categoriesData);
 
       // Procesar servicios
       const servicesData = servicesResponse.success 

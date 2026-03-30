@@ -561,7 +561,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
         newErrors.servicios = 'Todos los servicios deben tener un profesional asignado';
       } else {
         const haySolapamiento = haySolapamientoServicios(formData.servicios);
-        console.log('Verificando solapamiento:', haySolapamiento, 'Servicios:', formData.servicios);
         if (haySolapamiento) {
           newErrors.servicios = 'No se puede asignar el mismo profesional a servicios que se solapan en el tiempo.';
         }
@@ -590,9 +589,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
     setErrors(newErrors);
 
-    // Debug: mostrar errores en consola
-    console.log('Errores detectados:', newErrors);
-    console.log('FormData:', formData);
 
     if (Object.values(newErrors).some(Boolean)) {
       Swal.fire('Error', 'Por favor corrige los errores en el formulario antes de guardar.', 'error');
@@ -603,7 +599,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
     try {
       // Buscar o crear cliente por documento
-      console.log('Iniciando búsqueda/creación de cliente para:', formData.cliente, formData.documento);
       let clientId;
       try {
         const clientResult = await findOrCreateClient(
@@ -613,7 +608,6 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
           formData.documento
         );
         clientId = clientResult;
-        console.log('Client ID obtenido:', clientId);
       } catch (error) {
         console.error('Error en findOrCreateClient:', error);
         const errorMessage = error.response?.data?.message || error.message || 'Error al buscar o crear el cliente';
