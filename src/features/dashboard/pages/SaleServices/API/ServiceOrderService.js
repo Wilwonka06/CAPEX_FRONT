@@ -5,7 +5,7 @@ import appointmentsService from '../../appointments/API/appointmentsService';
 import {
   normalizeOrderToBackend,
   mapStatusToBackend,
-} from '../../../../../shared/utils/entityMappers';
+} from '../../../../../shared/utils/entityMapper';
 
 const SERVICE_DETAILS_ENDPOINT = '/ventas/detalles-servicios';
 const SALES_PRODUCTS_ENDPOINT  = '/ventas-productos';
