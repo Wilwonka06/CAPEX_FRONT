@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getAppointments, addAppointment, updateAppointment } from '../../../../shared/services/AppointmentsDataService';
+import { getAppointments, createAppointment, updateAppointment } from '../../../../shared/services/AppointmentsDataService';
 import { getServices } from '../../../../shared/services/ServicesDataService';
 import { getProfessionals } from '../../../../shared/services/ProfessionalsDataService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
