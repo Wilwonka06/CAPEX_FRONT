@@ -4,7 +4,7 @@ import { isValidPassword } from '../../../shared/validations';
 import PasswordEye from '../../../shared/components/PasswordEye';
 import PasswordRequirements from '../../../shared/components/PasswordRequirements';
 import toast from 'react-hot-toast';
-import authService from '../services/authServices';
+import { authService } from '../services/authServices';
 
 const ResetPassword = () => {
   const location = useLocation();
