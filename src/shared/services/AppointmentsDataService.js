@@ -12,9 +12,18 @@ export const getAppointments = async (filters = {}) => {
     // Si hay un usuario logueado y es cliente, obtener solo sus citas
     if (currentUser?.id_usuario || currentUser?.id) {
       const userId = currentUser.id_usuario || currentUser.id;
-      response = await appointmentsService.getByUser(userId, filters);
+      const roleName = typeof currentUser.rol === 'string' 
+        ? currentUser.rol 
+        : currentUser.rol?.nombre || '';
+      
+      // Si es cliente, solo sus citas
+      if (roleName.toLowerCase() === 'cliente' || roleName.toLowerCase() === 'usuario') {
+        response = await appointmentsService.getByUser(userId, filters);
+      } else {
+        // Admin o empleado: todas las citas
+        response = await appointmentsService.getAll(filters);
+      }
     } else {
-      // Si no hay usuario o es admin/empleado, obtener todas
       response = await appointmentsService.getAll(filters);
     }
 
