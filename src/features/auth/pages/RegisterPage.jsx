@@ -304,14 +304,6 @@ const RegisterPage = () => {
                         />
                         <div className="flex gap-3">
                           <button
-                            onClick={handleBack}
-                            className="flex-1 bg-gray-200 text-[#6d3b3b] py-4 rounded-xl font-semibold hover:bg-gray-300 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                            disabled={loading}
-                          >
-                            <i className="bi bi-arrow-left"></i>
-                            Atrás
-                          </button>
-                          <button
                             type="submit"
                             className="flex-1 bg-gradient-to-r from-[#a0522d] to-[#7a3a1d] text-white py-4 rounded-xl font-semibold text-lg hover:from-[#8b4513] hover:to-[#654321] transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                             disabled={loading}
