@@ -1,8 +1,3 @@
-/**
- * Normaliza una cita del backend al formato del frontend
- * @param {Object} appointment - Cita del backend
- * @returns {Object} Cita normalizada para el frontend
- */
 export const normalizeAppointmentFromBackend = (appointment) => {
   if (!appointment) return null;
 
@@ -11,7 +6,7 @@ export const normalizeAppointmentFromBackend = (appointment) => {
     id_cita: appointment.id_cita || appointment.id,
     fecha: appointment.fecha_servicio || appointment.fecha,
     fecha_servicio: appointment.fecha_servicio || appointment.fecha,
-    hora_inicio: appointment.hora_inicio || appointment.horaInicio,
+    hora_inicio: appointment.hora_inicio || appointment.horaInicio || appointment.hora_entrada,
     hora_salida: appointment.hora_salida || appointment.horaSalida,
     estado: appointment.estado || 'Agendada',
     valor_total: parseFloat(appointment.valor_total || appointment.valorTotal || 0),
@@ -48,9 +43,6 @@ export const normalizeAppointmentFromBackend = (appointment) => {
 
 /**
  * Normaliza una cita del frontend al formato del backend
- * @param {Object} appointment - Cita del frontend
- * @param {Object} currentUser - Usuario actual (opcional)
- * @returns {Object} Cita normalizada para el backend
  */
 export const normalizeAppointmentToBackend = (appointment, currentUser = null) => {
   if (!appointment) return null;
