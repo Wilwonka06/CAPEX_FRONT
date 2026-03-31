@@ -1,4 +1,3 @@
-import apiRequest from '../config/apiConfig';
 import { employeesService, recurringSchedulingService } from '../../features/dashboard/pages/employees/API/employeesService';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,24 +31,26 @@ const getEmployeesWithSchedule = async () => {
         .filter(Boolean)
     );
 
-    return ids; // Set con IDs válidos
+    return ids;
 
   } catch (error) {
-    // [BUG 8 FIX] 401 = sesión expirada → relanzar para que getProfessionals lo maneje
+    // 401 = sesión expirada → relanzar para que getProfessionals lo maneje
     if (error?.response?.status === 401 || error?.status === 401) {
-      throw error; // El caller redirigirá al login
+      throw error;
     }
 
     // Otros errores (red, 500, etc.) → retornar null como señal de "fallo parcial"
-    console.error('⚠️ Error obteniendo programaciones recurrentes:', error.message || error);
+    if (import.meta.env.DEV) {
+      console.error('⚠️ Error obteniendo programaciones recurrentes:', error.message || error);
+    }
     return null;
   }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Exportación principal
+// Resultado con metadata para que el componente pueda mostrar feedback
 // ─────────────────────────────────────────────────────────────────────────────
-export const getProfessionals = async () => {
+export const getProfessionalsWithStatus = async () => {
   try {
     // 1. Empleados desde la API
     const employees = await employeesService.getAll();
@@ -60,46 +61,63 @@ export const getProfessionals = async () => {
     try {
       employeesWithSchedule = await getEmployeesWithSchedule();
     } catch (scheduleError) {
-      // [BUG 8 FIX] Si es 401, relanzar — la sesión expiró
       if (scheduleError?.response?.status === 401 || scheduleError?.status === 401) {
         throw scheduleError;
       }
-      // Cualquier otro error: dejar null (se manejará abajo)
       employeesWithSchedule = null;
     }
 
-    // 3. Filtrado:
-    //    - null  → fallo al obtener programaciones → mostrar NINGUNO (conservador: no exponer
-    //              empleados cuya disponibilidad no se pudo verificar)
-    //    - Set vacío → se cargó correctamente pero ningún empleado tiene programación activa
-    //    - Set con IDs → filtrar solo esos empleados
+    // 3. Determinar estado y filtrar
     if (employeesWithSchedule === null) {
-      // No se pudo verificar disponibilidad — retornar lista vacía con advertencia
-      console.warn(
-        '⚠️ No se pudo verificar la disponibilidad de los profesionales. ' +
-        'Se mostrará una lista vacía para evitar agendar con empleados sin horario.'
-      );
-      return [];
+      return {
+        professionals: [],
+        status: 'error',
+        message: 'No se pudo verificar la disponibilidad de los profesionales. Por favor, intenta de nuevo.'
+      };
     }
 
     if (employeesWithSchedule.size === 0) {
-      // Se obtuvo la lista pero ningún empleado tiene programación activa
-      return [];
+      return {
+        professionals: [],
+        status: 'empty',
+        message: 'No hay profesionales con horario disponible en este momento.'
+      };
     }
 
-    // Filtrar profesionales que tengan programación activa
     const professionals = allProfessionals.filter(p =>
       employeesWithSchedule.has(p.id)
     );
 
-    return professionals;
+    return {
+      professionals,
+      status: 'success',
+      message: null
+    };
 
   } catch (error) {
-    // Relanzar errores de autenticación para que el AuthContext los gestione
     if (error?.response?.status === 401 || error?.status === 401) {
       throw error;
     }
-    console.error('❌ Error obteniendo profesionales:', error.message || error);
-    return [];
+    if (import.meta.env.DEV) {
+      console.error('❌ Error obteniendo profesionales:', error.message || error);
+    }
+    return {
+      professionals: [],
+      status: 'error',
+      message: 'Error al cargar los profesionales. Por favor, intenta de nuevo.'
+    };
   }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exportación compatible con código existente (retorna solo el array)
+// ─────────────────────────────────────────────────────────────────────────────
+export const getProfessionals = async () => {
+  const result = await getProfessionalsWithStatus();
+  return result.professionals;
+};
+
+export default {
+  getProfessionals,
+  getProfessionalsWithStatus,
 };

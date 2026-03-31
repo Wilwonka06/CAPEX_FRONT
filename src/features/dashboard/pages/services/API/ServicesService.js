@@ -156,9 +156,9 @@ export const servicesService = {
         estado: serviceData.estado || 'Activo',
       };
 
-      console.log('API Service: Sending data to backend:', mappedData);
+      if (import.meta.env.DEV) console.log('API Service: Sending data to backend:', mappedData);
       const response = await apiRequest.post(SERVICES_ENDPOINT, mappedData);
-      console.log('API Service: Response received:', response);
+      if (import.meta.env.DEV) console.log('API Service: Response received:', response);
       return response;
     } catch (error) {
       console.error('Error creating service:', error);
@@ -179,7 +179,7 @@ export const servicesService = {
         throw new Error('ID del servicio es requerido');
       }
 
-      console.log('API Service: Updating service', id, 'with data:', serviceData);
+      if (import.meta.env.DEV) console.log('API Service: Updating service', id, 'with data:', serviceData);
 
       // Mapeo para el backend
       const mappedData = {
@@ -204,7 +204,7 @@ export const servicesService = {
         mappedData.estado = serviceData.estado;
       }
 
-      console.log('API Service: Sending update data:', mappedData);
+      if (import.meta.env.DEV) console.log('API Service: Sending update data:', mappedData);
       const response = await apiRequest.put(`${SERVICES_ENDPOINT}/${id}`, mappedData);
       return response;
     } catch (error) {
@@ -240,7 +240,7 @@ export const servicesService = {
    */
   changeStatus: async (id, status) => {
     try {
-      console.log('Front-end: changeStatus called with id:', id, 'status:', status);
+      if (import.meta.env.DEV) console.log('Front-end: changeStatus called with id:', id, 'status:', status);
       if (!id) {
         throw new Error('ID del servicio es requerido');
       }
@@ -249,7 +249,7 @@ export const servicesService = {
       }
 
       const response = await apiRequest.patch(`${SERVICES_ENDPOINT}/${id}/status`, { status });
-      console.log('Front-end: changeStatus response:', response);
+      if (import.meta.env.DEV) console.log('Front-end: changeStatus response:', response);
       return response;
     } catch (error) {
       console.error(`Error changing service status ${id}:`, error);

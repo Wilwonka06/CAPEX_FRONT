@@ -71,7 +71,7 @@ export const ordersService = {
         success: response.success,
         dataLength: response.data?.length,
         message: response.message,
-        fullResponse: response
+        // fullResponse omitido por seguridad
       });
 
       return response;
@@ -80,11 +80,11 @@ export const ordersService = {
         message: error.message,
         status: error?.response?.status,
         responseData: error?.response?.data,
-        fullError: error
+        // fullError omitido por seguridad
       });
 
       if (error?.response?.status === 404) {
-        console.log('ℹ️ No orders found for user (404), returning empty array');
+        if (import.meta.env.DEV) console.log('ℹ️ No orders found for user (404), returning empty array');
         return {
           success: true,
           data: [],
