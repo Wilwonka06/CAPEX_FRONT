@@ -2,7 +2,7 @@ import { apiRequest } from '../../../shared/config/apiConfig';
 
 const isDev = import.meta.env.DEV;
 
-const authService = {
+export default const authService = {
 
     async register(userData) {
         try {
@@ -93,5 +93,3 @@ const authService = {
         }
     },
 };
-
-export default authService;
