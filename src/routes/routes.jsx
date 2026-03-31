@@ -3,6 +3,7 @@ import RequireAuth from "../features/auth/components/RequireAuth";
 import RequirePrivilege from "../features/auth/components/RequirePrivilege";
 import RequireAdminAccess from "../features/auth/components/RequireAdminAccess";
 import NotFound from "../shared/components/NotFound";
+import EditProfile from "../shared/EditProfile";
 
 // Layouts
 import Layout from "../features/dashboard/layout";
@@ -37,7 +38,6 @@ import ProductDetailPageCliente from "../features/landing/pages/products/pages/P
 import ServicesPage from "../features/landing/pages/ServicesPage/ServicesPage";
 import Checkout from "../features/landing/pages/checkout/Checkout";
 import ThankYou from "../features/landing/pages/checkout/ThankYou";
-import EditProfile from "../features/landing/components/EditProfile";
 
 import LoginPage from "../features/auth/pages/LoginPage";
 import { ForgotPassword } from "../features/auth/pages/ForgotPassword";
