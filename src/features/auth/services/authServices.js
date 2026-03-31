@@ -2,7 +2,7 @@ import { apiRequest } from '../../../shared/config/apiConfig';
 
 const isDev = import.meta.env.DEV;
 
-export default const authService = {
+export const authService = {
 
     async register(userData) {
         try {
