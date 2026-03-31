@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidEmail } from '../../../shared/validations';
 import toast from 'react-hot-toast';
-import authService from '../services/authServices';
+import { authService } from '../services/authServices';
 
 export const ForgotPassword = () => {
   const [email, setEmail] = useState('');
