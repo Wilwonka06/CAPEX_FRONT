@@ -80,17 +80,20 @@ apiClient.interceptors.response.use(
 
     const status = error.response?.status;
     const message = error.response?.data?.message;
-
-    // En el interceptor de response, para el caso 401:
-
     if (status === 401) {
-      // Limpiar datos del usuario
-      try { localStorage.removeItem('currentUser'); } catch { /* noop */ }
+      // Rutas donde NO queremos redirección automática
+      const publicPaths = [
+        '/landing/citas',
+        '/landing/servicios',
+        '/landing/catalogo'
+      ];
       
-      // Evitar múltiples redirects
-      if (window.location.pathname !== '/iniciar-sesion') {
-        // Mostrar mensaje solo una vez
-        showError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+      const isPublicPage = publicPaths.some(path => 
+        window.location.pathname.startsWith(path)
+      );
+      
+      if (!isPublicPage) {
+        showError('Tu sesión ha expirado.');
         setTimeout(() => {
           window.location.href = '/iniciar-sesion';
         }, 1000);
