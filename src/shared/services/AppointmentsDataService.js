@@ -3,6 +3,38 @@ import { normalizeAppointmentFromBackend, normalizeAppointmentToBackend } from '
 
 const isDev = import.meta.env.DEV;
 
+export const getAppointments = async (filters = {}) => {
+  try {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    
+    let response;
+    
+    // Si hay un usuario logueado y es cliente, obtener solo sus citas
+    if (currentUser?.id_usuario || currentUser?.id) {
+      const userId = currentUser.id_usuario || currentUser.id;
+      response = await appointmentsService.getByUser(userId, filters);
+    } else {
+      // Si no hay usuario o es admin/empleado, obtener todas
+      response = await appointmentsService.getAll(filters);
+    }
+
+    // Normalizar respuesta
+    let appointments = [];
+    if (response?.success && response?.data) {
+      appointments = Array.isArray(response.data) 
+        ? response.data 
+        : (response.data.citas || []);
+    } else if (Array.isArray(response)) {
+      appointments = response;
+    }
+
+    return appointments.map(normalizeAppointmentFromBackend);
+  } catch (error) {
+    if (isDev) console.error('Error fetching appointments:', error);
+    return [];
+  }
+};
+
 export const createAppointment = async (newAppointment) => {
   try {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
