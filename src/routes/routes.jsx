@@ -42,7 +42,6 @@ import EditProfile from "../features/landing/components/EditProfile";
 import LoginPage from "../features/auth/pages/LoginPage";
 import { ForgotPassword } from "../features/auth/pages/ForgotPassword";
 import ResetPassword from "../features/auth/pages/ResetPassword";
-import EditProfilePage from "../shared/pages/EditProfilePage";
 import RegisterPage from "../features/auth/pages/RegisterPage";
 
 const router = createBrowserRouter([
@@ -77,13 +76,13 @@ const router = createBrowserRouter([
     path: "/edit-profile",
     element: <EditProfile />,
   },
-  {
-    path: "/perfil",
-    element: <EditProfilePage />,
+  { 
+    path: "/perfil", 
+    element: <EditProfile /> 
   },
-  {
-    path: "/dashboard/perfil",
-    element: <EditProfilePage />,
+  { 
+    path: "/dashboard/perfil", 
+    element: <EditProfile /> 
   },
   {
     path: "/landing",
