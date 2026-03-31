@@ -40,7 +40,7 @@ import ThankYou from "../features/landing/pages/checkout/ThankYou";
 import EditProfile from "../features/landing/components/EditProfile";
 
 import LoginPage from "../features/auth/pages/LoginPage";
-import ForgotPassword from "../features/auth/pages/ForgotPassword";
+import { ForgotPassword } from "../features/auth/pages/ForgotPassword";
 import ResetPassword from "../features/auth/pages/ResetPassword";
 import EditProfilePage from "../shared/pages/EditProfilePage";
 import RegisterPage from "../features/auth/pages/RegisterPage";
