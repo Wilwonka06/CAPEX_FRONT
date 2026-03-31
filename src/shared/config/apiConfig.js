@@ -81,29 +81,19 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message;
 
+    // En el interceptor de response, para el caso 401:
+
     if (status === 401) {
       // Limpiar datos del usuario
       try { localStorage.removeItem('currentUser'); } catch { /* noop */ }
       
-      // Emitir evento para que AuthContext lo maneje
-      window.dispatchEvent(new CustomEvent('auth-session-expired', { 
-        detail: { reason: 'token_expired' } 
-      }));
-
-      // Mostrar error solo una vez y redirigir sin hard reload
-      if (!isRedirecting && window.location.pathname !== '/iniciar-sesion') {
-        isRedirecting = true;
+      // Evitar múltiples redirects
+      if (window.location.pathname !== '/iniciar-sesion') {
+        // Mostrar mensaje solo una vez
         showError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-        
-        // Usar setTimeout para dar tiempo al toast de mostrarse
         setTimeout(() => {
-          // Usar history.pushState para evitar reload completo
-          window.history.pushState({}, '', '/iniciar-sesion');
-          window.dispatchEvent(new PopStateEvent('popstate'));
-          
-          // Reset flag después de un momento
-          setTimeout(() => { isRedirecting = false; }, 2000);
-        }, 500);
+          window.location.href = '/iniciar-sesion';
+        }, 1000);
       }
       
       return Promise.reject(error);
