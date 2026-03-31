@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import StepIndicator from '../components/StepIndicator';
 import FormField from '../components/FormField';
 import PasswordRequirements from '../../../shared/components/PasswordRequirements';
-import authService from '../services/authServices';
+import { authService } from '../services/authServices';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
