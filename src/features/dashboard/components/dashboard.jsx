@@ -146,104 +146,72 @@ const Dashboard = () => {
 
   // ===== CARGAR DATOS REALES =====
   const loadRealData = async () => {
-      setLoading(true);
-      try {
-        // Cargar ventas de productos reales (con límite alto para obtener todas)
-        try {
-          const salesResponse = await salesService.getAll({ limit: 100 });
-          if (salesResponse.success && salesResponse.data) {
-            // Transformar datos de ventas al formato esperado
-            const transformedSales = salesResponse.data.map(venta => ({
-              fecha: venta.fecha || venta.createdAt || new Date().toISOString().split('T')[0],
-              valor: venta.valor || venta.total || 0,
-              estado: venta.estado || 'Completada',
-              productos: venta.productos || [],
-              createdAt: venta.fecha || venta.createdAt,
-              total: venta.valor || venta.total || 0
-            }));
-            setSales(transformedSales);
-          }
-        } catch (error) {
-          console.error("Error loading sales:", error);
-          setErrors(prev => [...prev, `Ventas: ${error.message || 'Error interno del servidor'}`]);
-          setSales([]);
+    setLoading(true);
+    setErrors([]); // Limpiar errores previos
+    
+    try {
+      // Usar Promise.allSettled para que no falle todo si una API falla
+      const [salesResult, servicesResult, productsResult, ordersResult] = await Promise.allSettled([
+        salesService.getAll({ limit: 100 }),
+        apiRequest.get('/ventas/detalles-servicios'),
+        productsService.getAll({ limit: 100 }),
+        ordersService.getAll({ limit: 100 })
+      ]);
+      
+      // Procesar ventas (aunque falle, no bloquea el resto)
+      if (salesResult.status === 'fulfilled' && salesResult.value?.success) {
+        const transformedSales = salesResult.value.data.map(venta => ({
+          fecha: venta.fecha || venta.createdAt || new Date().toISOString().split('T')[0],
+          valor: venta.valor || venta.total || 0,
+          estado: venta.estado || 'Completada',
+          productos: venta.productos || [],
+          createdAt: venta.fecha || venta.createdAt,
+          total: venta.valor || venta.total || 0
+        }));
+        setSales(transformedSales);
+      } else {
+        setSales([]);
+        if (salesResult.status === 'rejected') {
+          setErrors(prev => [...prev, `Ventas: ${salesResult.reason?.message || 'Error'}`]);
         }
-
-        // Cargar servicios reales desde la API
-        try {
-          const servicesResponse = await apiRequest.get('/ventas/detalles-servicios');
-          let serviceDetails = [];
-          
-          if (servicesResponse.success && servicesResponse.data) {
-            serviceDetails = Array.isArray(servicesResponse.data) ? servicesResponse.data : [];
-          } else if (Array.isArray(servicesResponse)) {
-            serviceDetails = servicesResponse;
-          }
-
-          // Agrupar servicios por cita/cliente y transformar al formato esperado
-          const groupedServices = groupServicesByClient(serviceDetails);
-          const transformedServices = groupedServices
-            .map(transformServiceDetailToOrder)
-            .filter(service => service !== null);
-          
-          setServices(transformedServices);
-        } catch (error) {
-          console.error("Error loading services:", error);
-          setErrors(prev => [...prev, `Servicios: ${error.message || 'Error interno del servidor'}`]);
-          setServices([]);
-        }
-
-        // Cargar pedidos reales
-        try {
-          const ordersResponse = await ordersService.getAll({ limit: 50 });
-          if (ordersResponse.success) {
-            setRealOrders(ordersResponse.data || []);
-          }
-        } catch (error) {
-          console.error("Error loading orders:", error);
-          setErrors(prev => [...prev, `Pedidos: ${error.message || 'Error interno del servidor'}`]);
-          setRealOrders([]);
-        }
-
-        // Cargar productos para mapa de costos y calcular top rentables
-        try {
-          const productsResp = await productsService.getAll({ limit: 200 });
-          const productsArr = productsResp.success ? (productsResp.data || []) : [];
-          const costMap = {};
-          productsArr.forEach(p => { costMap[p.id] = parseFloat(p.costo || 0); });
-          const profitAgg = {};
-          sales.forEach((sale) => {
-            if (sale.estado === 'Cancelada' || sale.estado === 'Anulada') return;
-            (sale.productos || []).forEach(prod => {
-              const name = prod.nombre || prod.name;
-              const qty = parseInt(prod.cantidad || prod.quantity || 1);
-              const price = parseFloat(prod.precio || prod.price || 0);
-              const cost = costMap[prod.id_producto || prod.id] || 0;
-              const profit = (price - cost) * qty;
-              if (!profitAgg[name]) profitAgg[name] = { nombre: name, cantidad: 0, total: 0 };
-              profitAgg[name].cantidad += qty;
-              profitAgg[name].total += profit;
-            });
-          });
-          const list = Object.values(profitAgg).sort((a, b) => b.total - a.total).slice(0, 5);
-          while (list.length < 5) list.push({ nombre: '', cantidad: 0, total: 0 });
-          setTopProductosRentables(list);
-        } catch (error) {
-          console.error('Error calculating top rentable products:', error);
-        }
-
-        // Cargar alertas de stock bajo
-        try {
-          const lowResp = await productsService.getLowStock(5);
-          if (lowResp.success) setLowStock(lowResp.data || []);
-        } catch (error) {
-          console.error("Error loading low stock:", error);
-        }
-      } catch (error) {
-        console.error("Error loading real data for dashboard:", error);
-      } finally {
-        setLoading(false);
       }
+      
+      // Procesar servicios
+      if (servicesResult.status === 'fulfilled') {
+        const response = servicesResult.value;
+        let serviceDetails = [];
+        if (response.success && response.data) {
+          serviceDetails = Array.isArray(response.data) ? response.data : [response.data];
+        }
+        const grouped = groupServicesByClient(serviceDetails);
+        setServices(grouped);
+      } else {
+        setServices([]);
+      }
+      
+      // Procesar productos para stock bajo
+      if (productsResult.status === 'fulfilled') {
+        const productsArr = productsResult.value?.success 
+          ? (productsResult.value.data || []) 
+          : [];
+        const low = productsArr.filter(p => (p.stock || p.cantidad || 0) <= 5);
+        setLowStock(low);
+      }
+      
+      // Procesar pedidos
+      if (ordersResult.status === 'fulfilled' && ordersResult.value?.success) {
+        setRealOrders(ordersResult.value.data || []);
+      } else {
+        setRealOrders([]);
+      }
+      
+    } catch (error) {
+      console.error("Error general loading dashboard:", error);
+      setErrors(prev => [...prev, error.message]);
+    } finally {
+      // CRÍTICO: Siempre se ejecuta, garantiza que loading sea false
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
