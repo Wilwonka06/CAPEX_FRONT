@@ -4,7 +4,7 @@ import { isValidEmail } from '../../../shared/validations';
 import toast from 'react-hot-toast';
 import authService from '../services/authServices';
 
-const ForgotPassword = () => {
+export const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -246,5 +246,3 @@ const ForgotPassword = () => {
     </div>
   );
 };
-
-export default ForgotPassword; 
