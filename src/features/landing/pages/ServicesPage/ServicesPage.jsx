@@ -1,6 +1,5 @@
 import DetailServices from "./components/DetailServices";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import toast from "react-hot-toast";
 import { getAllServices } from "./api/servicesApi";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";

@@ -81,24 +81,38 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message;
     if (status === 401) {
-      // Rutas donde NO queremos redirección automática
+      // Rutas donde NO queremos redirección automática al login
       const publicPaths = [
+        '/',
+        '/landing',
         '/landing/citas',
+        '/landing/citas-cliente',
         '/landing/servicios',
-        '/landing/catalogo'
+        '/landing/catalogo',
+        '/landing/cart',
+        '/landing/pedidos',
+        '/landing/mis-pedidos',
+        '/landing/checkout',
+        '/landing/gracias',
+        '/landing/productos',
+        '/catalogo',
+        '/servicios',
       ];
-      
-      const isPublicPage = publicPaths.some(path => 
-        window.location.pathname.startsWith(path)
-      );
-      
-      if (!isPublicPage) {
+
+      const currentPath = window.location.pathname;
+      const isPublicPage =
+        currentPath === '/' ||
+        publicPaths.some(path => currentPath === path || currentPath.startsWith(path + '/'));
+
+      if (!isPublicPage && !isRedirecting) {
+        isRedirecting = true;
         showError('Tu sesión ha expirado.');
         setTimeout(() => {
+          isRedirecting = false;
           window.location.href = '/iniciar-sesion';
         }, 1000);
       }
-      
+
       return Promise.reject(error);
     }
 

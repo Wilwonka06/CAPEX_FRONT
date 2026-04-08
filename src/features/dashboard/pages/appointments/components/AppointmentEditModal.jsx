@@ -127,7 +127,7 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
                 const duracion = s.duracion || s.servicio?.duracion || 30;
 
                 return {
-                  id: s.id_detalle_servicio || Date.now() + Math.random(),
+                  id: s.id_detalle_servicio || crypto.randomUUID(),
                   servicioId: s.id_servicio || s.servicio?.id_servicio,
                   nombre: s.servicio?.nombre || s.nombre_servicio || 'Servicio',
                   profesional: nombreEmpleado,
@@ -491,19 +491,27 @@ const AppointmentEditModal = ({ cita, fecha, onClose, onSave }) => {
 
       // Generar contraseña temporal aleatoria
       const generateTempPassword = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-        let password = '';
-        // Asegurar al menos una mayúscula, una minúscula, un número y un carácter especial
-        password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
-        password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
-        password += '0123456789'[Math.floor(Math.random() * 10)];
-        password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
-        // Completar hasta 12 caracteres
-        for (let i = password.length; i < 12; i++) {
-          password += chars[Math.floor(Math.random() * chars.length)];
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const digits = '0123456789';
+        const special = '!@#$%^&*';
+        const all = upper + lower + digits + special;
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        const chars = [
+          upper[bytes[0] % upper.length],
+          lower[bytes[1] % lower.length],
+          digits[bytes[2] % digits.length],
+          special[bytes[3] % special.length],
+          ...Array.from({ length: 8 }, (_, i) => all[bytes[i + 4] % all.length]),
+        ];
+        const shuffleBytes = new Uint8Array(chars.length);
+        crypto.getRandomValues(shuffleBytes);
+        for (let i = chars.length - 1; i > 0; i--) {
+          const j = shuffleBytes[i] % (i + 1);
+          [chars[i], chars[j]] = [chars[j], chars[i]];
         }
-        // Mezclar caracteres
-        return password.split('').sort(() => Math.random() - 0.5).join('');
+        return chars.join('');
       };
 
       // Generar datos que cumplan con las validaciones del backend

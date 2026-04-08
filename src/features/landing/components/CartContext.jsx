@@ -17,6 +17,7 @@ export const CartProvider = ({ children }) => {
 
   // Inicializar carrito desde localStorage
   useEffect(() => {
+    let timeoutId;
     try {
       const storedCart = getStoredCart();
       setCart(storedCart);
@@ -25,10 +26,11 @@ export const CartProvider = ({ children }) => {
       setCart([]);
     } finally {
       // Pequeño delay para mostrar el loading si es necesario
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         setIsInitializing(false);
       }, 100);
     }
+    return () => clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {

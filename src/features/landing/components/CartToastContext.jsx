@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import CartToast from './CartToast';
 
 const CartToastContext = createContext();
@@ -9,10 +9,13 @@ export const CartToastProvider = ({ children }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastProduct, setToastProduct] = useState(null);
 
+  const timeoutRef = useRef(null);
+
   const showCartToast = useCallback((product) => {
     setToastProduct(product);
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 2500);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setShowToast(false), 2500);
   }, []);
 
   return (

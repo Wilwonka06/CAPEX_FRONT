@@ -166,16 +166,27 @@ const EditServiceOrder = ({ isOpen, onClose, onEdited, order, services }) => {
 
       // Si no se encontró, crear nuevo usuario/cliente
       const generateTempPassword = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-        let password = '';
-        password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
-        password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
-        password += '0123456789'[Math.floor(Math.random() * 10)];
-        password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
-        for (let i = password.length; i < 12; i++) {
-          password += chars[Math.floor(Math.random() * chars.length)];
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const digits = '0123456789';
+        const special = '!@#$%^&*';
+        const all = upper + lower + digits + special;
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        const chars = [
+          upper[bytes[0] % upper.length],
+          lower[bytes[1] % lower.length],
+          digits[bytes[2] % digits.length],
+          special[bytes[3] % special.length],
+          ...Array.from({ length: 8 }, (_, i) => all[bytes[i + 4] % all.length]),
+        ];
+        const shuffleBytes = new Uint8Array(chars.length);
+        crypto.getRandomValues(shuffleBytes);
+        for (let i = chars.length - 1; i > 0; i--) {
+          const j = shuffleBytes[i] % (i + 1);
+          [chars[i], chars[j]] = [chars[j], chars[i]];
         }
-        return password.split('').sort(() => Math.random() - 0.5).join('');
+        return chars.join('');
       };
 
       const cleanName = clientName.trim();

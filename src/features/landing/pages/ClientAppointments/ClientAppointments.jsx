@@ -93,16 +93,16 @@ const HorasDisponiblesSelect = ({ idx, servicio, profesionales, formData, listaS
 
             // Verificar disponibilidad con programación recurrente
             if (disponible) {
-             try {
-              const availabilityResponse = await apiRequest.get(
-                `/programaciones-recurrentes/disponibilidad?...`,
-                { skipGlobalErrorHandling: true } // Evitar redirección automática
-              );
-              disponible = availabilityResponse?.disponible === true;
-            } catch (error) {
-              if (error?.response?.status === 401) {
-                // Usuario no autenticado - asumir no disponible o mostrar mensaje
-                disponible = false;
+              try {
+                const availabilityResponse = await apiRequest.get(
+                  `/programaciones-recurrentes/disponibilidad?...`,
+                  { skipGlobalErrorHandling: true }
+                );
+                disponible = availabilityResponse?.disponible === true;
+              } catch (error) {
+                if (error?.response?.status === 401) {
+                  disponible = false;
+                }
               }
             }
 

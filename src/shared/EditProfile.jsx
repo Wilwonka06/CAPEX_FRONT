@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isValidPassword } from '../../../shared/validations';
-import { authService } from '../../auth/services/authServices';
-import { useAuth } from '../../../shared/contexts/AuthContext';
+import { isValidPassword } from './validations';
+import { authService } from '../features/auth/services/authServices';
+import { useAuth } from './contexts/AuthContext';
 
 const tiposDocumento = ['Cédula', 'Pasaporte', 'RUT', 'DNI'];
 
