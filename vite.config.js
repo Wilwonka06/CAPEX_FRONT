@@ -41,7 +41,28 @@ export default defineConfig(({ command }) => ({
     chunkSizeWarningLimit: 1000,
     minify: 'esbuild',
   },
-  server: {},
+  server: {
+    port: 5173,
+    // Limitar conexiones simultáneas para evitar ERR_INSUFFICIENT_RESOURCES
+    hmr: true,
+    fs: { strict: false },
+  },
+  // Pre-empaquetar dependencias pesadas en dev para reducir módulos ES sueltos
+  optimizeDeps: {
+    include: [
+      'react', 'react-dom', 'react-router-dom',
+      'axios',
+      'chart.js', 'react-chartjs-2', 'recharts',
+      '@headlessui/react', '@heroicons/react', 'lucide-react', 'react-icons',
+      'sweetalert2', 'react-hot-toast',
+      '@fullcalendar/core', '@fullcalendar/react',
+      '@fullcalendar/daygrid', '@fullcalendar/timegrid',
+      '@fullcalendar/interaction', '@fullcalendar/resource-daygrid',
+      'jspdf', 'xlsx',
+    ],
+    // Forzar re-optimización si los chunks cambian
+    force: false,
+  },
   test: {
     globals: true,
     environment: 'jsdom',
