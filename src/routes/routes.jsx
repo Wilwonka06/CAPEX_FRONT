@@ -27,6 +27,7 @@ import Servicios from "../features/dashboard/pages/services/services";
 import Users from "../features/dashboard/pages/users/users";
 import VentasProductos from "../features/dashboard/pages/SaleProducts/SalesProducts";
 import Scheduling from "../features/dashboard/pages/scheduling/scheduling";
+import ShippingZones from "../features/dashboard/pages/shipping/ShippingZones";
 
 // Pages Landing
 import Cart from "../features/landing/pages/cart/Cart";
@@ -277,6 +278,14 @@ const router = createBrowserRouter([
             element: (
               <RequirePrivilege module="Programación" action="Visualizar">
                 <Scheduling />
+              </RequirePrivilege>
+            ),
+          },
+          {
+            path: "shipping-zones",
+            element: (
+              <RequirePrivilege module="Pedidos" action="Visualizar">
+                <ShippingZones />
               </RequirePrivilege>
             ),
           },

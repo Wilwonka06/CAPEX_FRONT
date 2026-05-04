@@ -5,7 +5,7 @@ import { isValidDocumentByType } from '@/shared/validations';
 import usersService from '@/features/dashboard/pages/users/API/usersService';
 import { employeesService, recurringSchedulingService } from '@/features/dashboard/pages/employees/API/employeesService';
 import ServiceSelection from './ServiceSelection';
-import ProductSelector from './ProductSelector';
+import ProductSelector from '../../SaleServices/components/ProductSelector';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { toBackendDocCode } from '../../../../../shared/constants/documentTypes';

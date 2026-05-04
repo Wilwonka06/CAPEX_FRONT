@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../components/CartContext';
 import ordersService from '../../pages/orders/API/OrdersService';
+import shippingZonesService from '../../../dashboard/pages/shipping/API/shippingZonesService';
 import { useAuth } from '../../../../shared/contexts/AuthContext';
 import OrderProgressIndicator from './components/OrderProgressIndicator';
 import { formatNumber } from '../../../../shared/utils/formatters';
 import { isNumberInputValid } from '../../../../shared/validations';
-
-const empresasEnvio = [
-  { nombre: 'INTER rapidísimo', precio: { 'Bogotá': 13500, 'Medellín': 15000, 'default': 18000 } },
-  { nombre: 'CO-ORDINADORA', precio: { 'Bogotá': 20500, 'Medellín': 22000, 'default': 25000 } },
-];
+import toast from 'react-hot-toast';
 
 const Checkout = () => {
   const { cart, clearCart } = useCart();
@@ -21,41 +18,59 @@ const Checkout = () => {
   const [form, setForm] = useState({
     documentType: 'CC',
     documento: '', nombre: '', telefono: '', email: '',
-    empresa: '', direccion: '', apto: '', ciudad: '', pais: 'Colombia',
+    direccion: '', apto: '', ciudad: '', pais: 'Colombia',
   });
 
-  // Estados para edición de información del cliente
+  // Estados
+  const [shippingZones, setShippingZones] = useState([]);
+  const [selectedZoneId, setSelectedZoneId] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [envio, setEnvio] = useState('CO-ORDINADORA');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Cargar zonas de envío
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const response = await shippingZonesService.getAll({ includeInactive: false });
+        if (response.success) {
+          setShippingZones(response.data || []);
+          if (response.data?.length > 0) {
+            setSelectedZoneId(response.data[0].id_shipping_zone.toString());
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching shipping zones:', err);
+      }
+    };
+    fetchZones();
+  }, []);
+
   // Autocompletar con datos del usuario autenticado
   useEffect(() => {
     if (user) {
-      console.log('Usuario en checkout:', user);
       setForm(f => ({
         ...f,
         documentType: user.tipo_documento || 'CC',
         documento: user.numero_documento || user.documento || '',
         nombre: user.nombre || '',
-        telefono: user.telefono || '',
+        telefono: (user.telefono || '').replace('+', ''),
         email: user.correo || '',
         direccion: user.direccion || '',
-        ciudad: '',
+        ciudad: f.ciudad || '',
         pais: 'Colombia',
       }));
-    } else {
-      console.log('No hay usuario en checkout');
     }
   }, [user]);
 
-  // Calcular precio de envío
-  const envioSeleccionado = empresasEnvio.find(e => e.nombre === envio);
-  const precioEnvio = envioSeleccionado
-    ? envioSeleccionado.precio[form.ciudad] || envioSeleccionado.precio['default']
-    : 0;
+  // Calcular precio de envío dinámicamente
+  const selectedZone = useMemo(() => 
+    shippingZones.find(z => z.id_shipping_zone.toString() === selectedZoneId),
+    [shippingZones, selectedZoneId]
+  );
+  
+  const precioEnvio = selectedZone ? parseFloat(selectedZone.precio) : 0;
 
   // Calcular subtotal
   const subtotal = cart.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
@@ -64,15 +79,18 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
   
-    // ✅ Validación mejorada del usuario
     if (!user || !user.id_usuario) {
       setError('Debes iniciar sesión para realizar un pedido.');
-      console.error('❌ Usuario no autenticado o sin ID:', user);
       return;
     }
   
     if (!form.direccion || !form.ciudad) {
       setError('Por favor completa todos los campos obligatorios.');
+      return;
+    }
+
+    if (!selectedZoneId) {
+      setError('Por favor selecciona una zona de envío.');
       return;
     }
   
@@ -83,14 +101,11 @@ const Checkout = () => {
   
     setLoading(true);
     setError('');
-    setCurrentStep(1);
   
     try {
-      // Paso 1: Validando datos
       setCurrentStep(1);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
   
-      // Paso 2: Creando pedido
       setCurrentStep(2);
       
       const orderData = {
@@ -100,6 +115,8 @@ const Checkout = () => {
         ciudad: form.ciudad,
         direccion_entrega: form.direccion,
         apto: form.apto,
+        costo_envio: precioEnvio,
+        id_shipping_zone: Number(selectedZoneId),
         productos: cart.map(p => ({
           id_producto: p.id,
           cantidad: p.cantidad,
@@ -107,25 +124,13 @@ const Checkout = () => {
         }))
       };
   
-      console.log('📦 Datos del pedido:', orderData);
-  
       const response = await ordersService.create(orderData);
   
-      // Paso 3: Procesando pago
       setCurrentStep(3);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
   
-      // Verificar que la respuesta sea exitosa
       if (!response || !response.success) {
-        const errorMsg = response?.message || 'Error al crear el pedido';
-        console.error('❌ Error en respuesta del servidor:', response);
-        throw new Error(errorMsg);
-      }
-
-      // Verificar que haya datos del pedido
-      if (!response.data) {
-        console.error('❌ No se recibieron datos del pedido:', response);
-        throw new Error('No se recibieron datos del pedido creado');
+        throw new Error(response?.message || 'Error al crear el pedido');
       }
 
       setCurrentStep(4);
@@ -133,150 +138,162 @@ const Checkout = () => {
       
       clearCart();
       
-      // ✅ Pasar el pedido creado a través del state de navegación
-      console.log('✅ Navegando a página de agradecimiento con pedido:', response.data);
       navigate('/landing/gracias', {
         state: {
           order: response.data,
           justCreated: true
         },
-        replace: true // Usar replace para evitar que el usuario vuelva atrás
+        replace: true
       });
     } catch (error) {
       console.error('❌ Error creating order:', error);
       setError(error.message || 'Error al procesar el pedido. Inténtalo de nuevo.');
       setCurrentStep(1);
-      // NO redirigir al home en caso de error, dejar que el usuario vea el error
     } finally {
       setLoading(false);
     }
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 py-10 px-2 flex flex-col items-center">
-      <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8">
-        {/* Formulario */}
-        <form className="flex-1 bg-white rounded-2xl shadow-lg p-8" onSubmit={handleSubmit}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-[#1E1E1E]">Información del cliente</h2>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 flex flex-col items-center font-inter">
+      <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-10">
+        
+        {/* Formulario Izquierda */}
+        <form className="flex-1 bg-white rounded-3xl shadow-xl p-8 md:p-10 border border-gray-100" onSubmit={handleSubmit}>
+          <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
+            <h2 className="text-2xl font-black text-gray-800">Finalizar Compra</h2>
             <button
               type="button"
               onClick={() => setIsEditing(!isEditing)}
-              className="px-4 py-2 bg-[#FACC15] hover:bg-yellow-400 text-[#1E1E1E] rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-xl font-bold transition-all text-sm"
             >
-              {isEditing ? 'Cancelar edición' : 'Editar información'}
+              <i className={`bi ${isEditing ? 'bi-x-lg' : 'bi-pencil-square'}`}></i>
+              {isEditing ? 'Cancelar Edición' : 'Editar Datos'}
             </button>
           </div>
 
-          {isEditing ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-yellow-800">
-                <strong>Modo edición:</strong> Puedes actualizar tu información personal.
-                Los cambios se guardarán automáticamente al procesar el pedido.
-              </p>
+          <div className="space-y-8">
+            {/* Sección 1: Datos Personales */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="bg-[#FACC15] w-6 h-6 rounded-full flex items-center justify-center text-gray-900 text-xs font-bold">1</div>
+                <h3 className="font-bold text-gray-700">Información Personal</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1">
+                   <label className="text-xs font-bold text-gray-500 uppercase ml-1">Tipo Documento</label>
+                   <select
+                    className={`w-full border rounded-xl px-4 py-3 bg-gray-50 outline-none transition-all ${isEditing ? 'focus:ring-2 focus:ring-[#FACC15] border-gray-200' : 'cursor-not-allowed border-transparent opacity-70'}`}
+                    value={form.documentType}
+                    onChange={e => setForm(f => ({ ...f, documentType: e.target.value }))}
+                    disabled={!isEditing}
+                  >
+                    <option value="CC">Cédula de Ciudadanía</option>
+                    <option value="CE">Cédula de Extranjería</option>
+                    <option value="NIT">NIT</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                   <label className="text-xs font-bold text-gray-500 uppercase ml-1">N° Documento</label>
+                   <input
+                    className={`w-full border rounded-xl px-4 py-3 bg-gray-50 outline-none transition-all ${isEditing ? 'focus:ring-2 focus:ring-[#FACC15] border-gray-200' : 'cursor-not-allowed border-transparent opacity-70'}`}
+                    value={form.documento}
+                    onChange={e => setForm(f => ({ ...f, documento: e.target.value.replace(/[^\d]/g, '') }))}
+                    readOnly={!isEditing}
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                   <label className="text-xs font-bold text-gray-500 uppercase ml-1">Nombre Completo</label>
+                   <input
+                    className={`w-full border rounded-xl px-4 py-3 bg-gray-50 outline-none transition-all ${isEditing ? 'focus:ring-2 focus:ring-[#FACC15] border-gray-200' : 'cursor-not-allowed border-transparent opacity-70'}`}
+                    value={form.nombre}
+                    onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                    readOnly={!isEditing}
+                    required
+                  />
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>Nota:</strong> Los datos se cargan automáticamente desde tu cuenta.
-                Si necesitas actualizar tu información, haz clic en "Editar información".
-              </p>
-            </div>
-          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Sección 2: Entrega */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de documento</label>
-              <select
-                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
-                value={form.documentType}
-                onChange={e => setForm(f => ({ ...f, documentType: e.target.value }))}
-                disabled={!isEditing}
-              >
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="TI">Tarjeta de Identidad</option>
-                <option value="NIT">NIT</option>
-              </select>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="bg-[#FACC15] w-6 h-6 rounded-full flex items-center justify-center text-gray-900 text-xs font-bold">2</div>
+                <h3 className="font-bold text-gray-700">Dirección de Entrega</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="md:col-span-2 space-y-1">
+                   <label className="text-xs font-bold text-gray-500 uppercase ml-1">Dirección Exacta</label>
+                   <input 
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15] outline-none" 
+                    placeholder="Ej: Calle 10 # 5-20" 
+                    value={form.direccion} 
+                    onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} 
+                    required 
+                  />
+                </div>
+                <div className="space-y-1">
+                   <label className="text-xs font-bold text-gray-500 uppercase ml-1">Ciudad</label>
+                   <input 
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15] outline-none" 
+                    placeholder="Ej: Medellín" 
+                    value={form.ciudad} 
+                    onChange={e => setForm(f => ({ ...f, ciudad: e.target.value }))} 
+                    required 
+                  />
+                </div>
+                <div className="space-y-1">
+                   <label className="text-xs font-bold text-gray-500 uppercase ml-1">Apartamento/Interior</label>
+                   <input 
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15] outline-none" 
+                    placeholder="Opcional..." 
+                    value={form.apto} 
+                    onChange={e => setForm(f => ({ ...f, apto: e.target.value }))} 
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Sección 3: Método Envío */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Número de documento*</label>
-              <input
-                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
-                placeholder="Número identificación*"
-                value={form.documento}
-                onChange={e => {
-                  const raw = e.target.value
-                  const isPassport = form.documentType === 'PP' || form.documentType === 'Pasaporte'
-                  const sanitized = isPassport ? raw.replace(/[^A-Za-z0-9]/g, '') : raw.replace(/[^\d]/g, '')
-                  setForm(f => ({ ...f, documento: sanitized }))
-                }}
-                onKeyDown={isNumberInputValid}
-                readOnly={!isEditing}
-                required
-              />
+              <div className="flex items-center gap-2 mb-4">
+                <div className="bg-[#FACC15] w-6 h-6 rounded-full flex items-center justify-center text-gray-900 text-xs font-bold">3</div>
+                <h3 className="font-bold text-gray-700">Zona de Envío (Domicilio)</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {shippingZones.length > 0 ? (
+                  shippingZones.map(zone => (
+                    <label 
+                      key={zone.id_shipping_zone} 
+                      className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedZoneId === zone.id_shipping_zone.toString() ? 'border-[#FACC15] bg-yellow-50/30' : 'border-gray-100 hover:border-gray-200 bg-gray-50/50'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="radio" 
+                          name="shipping_zone" 
+                          className="w-5 h-5 text-yellow-500 focus:ring-yellow-500 border-gray-300"
+                          value={zone.id_shipping_zone} 
+                          checked={selectedZoneId === zone.id_shipping_zone.toString()} 
+                          onChange={(e) => setSelectedZoneId(e.target.value)} 
+                        />
+                        <span className="font-bold text-gray-700 uppercase text-sm tracking-wide">{zone.nombre}</span>
+                      </div>
+                      <span className="font-black text-gray-900">{formatNumber(zone.precio)} COP</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-gray-400 italic text-sm text-center py-4 bg-gray-50 rounded-2xl">Cargando opciones de envío...</p>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo*</label>
-              <input
-                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
-                placeholder="Nombre*"
-                value={form.nombre}
-                onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-                readOnly={!isEditing}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono*</label>
-              <input
-                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
-                placeholder="Teléfono*"
-                value={form.telefono}
-                onChange={e => {
-                  const onlyDigits = e.target.value.replace(/[^\d]/g, '')
-                  setForm(f => ({ ...f, telefono: onlyDigits }))
-                }}
-                onKeyDown={isNumberInputValid}
-                readOnly={!isEditing}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección de correo*</label>
-              <input
-                type="email"
-                className={`border rounded-lg px-3 py-3 w-full ${isEditing ? 'bg-white focus:ring-2 focus:ring-[#FACC15]' : 'bg-gray-100 cursor-not-allowed'}`}
-                placeholder="Dirección de correo*"
-                value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                readOnly={!isEditing}
-                required
-              />
-            </div>
-          </div>
-          <h2 className="text-xl font-bold mb-4 text-[#1E1E1E] mt-6">Dirección de Entrega</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <input className="border rounded-lg px-3 py-3 md:col-span-2 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Dirección de entrega*" value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Apt. (opcional)" value={form.apto} onChange={e => setForm(f => ({ ...f, apto: e.target.value }))} />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="Ciudad*" value={form.ciudad} onChange={e => setForm(f => ({ ...f, ciudad: e.target.value }))} required />
-            <input className="border rounded-lg px-3 py-3 bg-gray-50 focus:ring-2 focus:ring-[#FACC15]" placeholder="País*" value={form.pais} onChange={e => setForm(f => ({ ...f, pais: e.target.value }))} required />
-          </div>
-          <h2 className="text-xl font-bold mb-4 text-[#1E1E1E] mt-6">Método de envío</h2>
-          <div className="mb-6">
-            {empresasEnvio.map(e => (
-              <label key={e.nombre} className="flex items-center gap-2 mb-2 cursor-pointer">
-                <input type="radio" name="envio" value={e.nombre} checked={envio === e.nombre} onChange={() => setEnvio(e.nombre)} />
-                <span className="font-semibold">{e.nombre}</span>
-                <span className="text-xs text-gray-500">${formatNumber(e.precio[form.ciudad] || e.precio['default'])} (COP)</span>
-              </label>
-            ))}
           </div>
           
-          {error && <div className="text-red-600 mb-4">{error}</div>}
+          {error && <div className="mt-6 p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 font-medium text-sm flex items-center gap-2"><i className="bi bi-exclamation-triangle-fill"></i>{error}</div>}
           
           {loading && (
-            <div className="mb-6">
+            <div className="mt-8">
               <OrderProgressIndicator currentStep={currentStep} />
             </div>
           )}
@@ -284,35 +301,64 @@ const Checkout = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#FACC15] hover:bg-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed text-[#1E1E1E] font-bold py-3 rounded-full text-lg transition mt-4 shadow-lg"
+            className="w-full bg-gradient-to-r from-[#FACC15] to-[#F59E0B] hover:shadow-lg hover:shadow-yellow-500/30 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-gray-900 font-black py-4 rounded-2xl text-xl transition-all mt-8 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3"
           >
-            {loading ? 'Procesando pedido...' : 'Continuar con el pago'}
+            {loading ? (
+              <>
+                <span className="animate-spin h-6 w-6 border-4 border-gray-900 border-t-transparent rounded-full"></span>
+                Procesando...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-lock-fill"></i>
+                Pagar Ahora ({formatNumber(total)} COP)
+              </>
+            )}
           </button>
         </form>
         
-        {/* Resumen */}
-        <div className="w-full md:w-80 bg-white rounded-2xl shadow-lg p-6 h-fit">
-          <h2 className="text-lg font-bold mb-4 text-[#1E1E1E]">Monto a pagar</h2>
-          <div className="mb-2 divide-y divide-gray-100">
-            {cart.map(item => (
-              <div key={item.id} className="flex justify-between text-sm py-2">
-                <span>{item.nombre}</span>
-                <span>${formatNumber(item.precio * item.cantidad)}</span>
+        {/* Resumen Derecha */}
+        <div className="w-full lg:w-96 space-y-6">
+          <div className="bg-gray-800 text-white rounded-3xl shadow-xl p-8 sticky top-10">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <i className="bi bi-cart3 text-yellow-400"></i>
+              Resumen del Pedido
+            </h2>
+            
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 mb-6 custom-scrollbar">
+              {cart.map(item => (
+                <div key={item.id} className="flex gap-4">
+                   <div className="w-16 h-16 rounded-xl bg-white/10 flex-shrink-0 overflow-hidden border border-white/5">
+                      <img src={item.url_foto || item.foto} alt={item.nombre} className="w-full h-full object-cover" />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">{item.nombre}</p>
+                      <p className="text-gray-400 text-xs">Cant: {item.cantidad}</p>
+                      <p className="text-yellow-400 font-bold text-sm mt-1">{formatNumber(item.precio * item.cantidad)} COP</p>
+                   </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3 border-t border-white/10 pt-6">
+              <div className="flex justify-between text-gray-400 text-sm">
+                <span>Subtotal</span>
+                <span className="text-white font-medium">{formatNumber(subtotal)}</span>
               </div>
-            ))}
-          </div>
-          <div className="flex justify-between text-sm mb-1 mt-4">
-            <span>Subtotal</span>
-            <span>${formatNumber(subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-sm mb-1">
-            <span>Envío</span>
-            <span>${formatNumber(precioEnvio)}</span>
-          </div>
-          <div className="border-t border-gray-200 my-2"></div>
-          <div className="flex justify-between text-lg font-bold">
-            <span>Total</span>
-            <span className="text-[#FACC15]">${formatNumber(total)}</span>
+              <div className="flex justify-between text-gray-400 text-sm">
+                <span>Costo de Envío</span>
+                <span className="text-white font-medium">{formatNumber(precioEnvio)}</span>
+              </div>
+              <div className="flex justify-between text-xl font-black pt-4 border-t border-white/5 mt-2">
+                <span className="text-white">Total</span>
+                <span className="text-[#FACC15]">{formatNumber(total)}</span>
+              </div>
+            </div>
+
+            <div className="mt-8 bg-white/5 p-4 rounded-2xl flex items-center gap-3">
+               <i className="bi bi-shield-check text-green-400 text-2xl"></i>
+               <p className="text-[10px] text-gray-400 leading-tight">Tu compra está protegida con seguridad SSL de 256 bits. Los datos de pago no se guardan en nuestros servidores.</p>
+            </div>
           </div>
         </div>
       </div>

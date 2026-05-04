@@ -8,7 +8,7 @@ import {
   recurringSchedulingService,
 } from "@/features/dashboard/pages/employees/API/employeesService";
 import ServiceSelection from "./ServiceSelection";
-import ProductSelector from "./ProductSelector";
+import ProductSelector from "../../SaleServices/components/ProductSelector";
 import PhoneInput from "react-phone-input-2";
 import { toBackendDocCode } from "../../../../../shared/constants/documentTypes";
 

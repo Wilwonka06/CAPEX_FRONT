@@ -72,6 +72,7 @@ const Sidebar = () => {
           { name: 'Clientes', icon: 'bi-person', path: '/dashboard/clientes', module: 'Clientes' },
           { name: 'Agendamiento de Citas', icon: 'bi-calendar-event', path: '/dashboard/citas', module: 'Citas' },
           { name: 'Pedidos de Productos', icon: 'bi-clipboard-check', path: '/dashboard/pedidos', module: 'Pedidos' },
+          { name: 'Zonas de Envío', icon: 'bi-geo-fill', path: '/dashboard/shipping-zones', module: 'Pedidos' },
           { name: 'Venta de Productos', icon: 'bi-bag-check', path: '/dashboard/ventas-productos', module: 'Venta de Productos' },
           { name: 'Ventas', icon: 'bi-bag-check', path: '/dashboard/ventas-servicios', module: 'Ventas' }
         ]
