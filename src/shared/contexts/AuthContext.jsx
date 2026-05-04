@@ -156,7 +156,10 @@ export const AuthProvider = ({ children }) => {
     // ─── logout ──────────────────────────────────────────────────────────────
     const logout = () => {
         setCurrentUser(null);
-        try { localStorage.removeItem('currentUser'); } catch { /* ignorar */ }
+        try { 
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('authToken');
+        } catch { /* ignorar */ }
         window.dispatchEvent(new Event('user-auth-changed'));
     };
 

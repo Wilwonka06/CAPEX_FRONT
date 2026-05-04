@@ -41,6 +41,14 @@ const apiClient = axios.create({
 // ─────────────────────────────────────────────────────────────
 apiClient.interceptors.request.use(
   (config) => {
+    // Obtener el token de localStorage
+    const token = localStorage.getItem('authToken');
+    
+    // Si el token existe, agregarlo a los headers
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     if (import.meta.env.DEV) {
       console.log(`🔵 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     }
