@@ -77,10 +77,11 @@ export default function CreatePurchaseModal({ isOpen, onClose, onCreate }) {
         setLoadingProducts(true);
         const response = await productsService.getAll({ limit: 100 });
         if (response.success) {
-          // Filtrar productos que NO sean de categoría "Extensión natural"
-          const filteredProducts = (response.data || []).filter(product =>
-            product.categoria !== 'Extensión natural'
-          );
+          // Filtrar productos que NO sean de categoría "Extensión natural" o "Extensiones de cabello natural"
+          const filteredProducts = (response.data || []).filter(product => {
+            const catName = (product.categoria?.nombre || product.categoria || '').toLowerCase();
+            return catName !== 'extensión natural' && catName !== 'extensiones de cabello natural';
+          });
           setProductsList(filteredProducts);
         }
       } catch (error) {
