@@ -8,6 +8,7 @@ import {
   recurringSchedulingService,
 } from "@/features/dashboard/pages/employees/API/employeesService";
 import ServiceSelection from "./ServiceSelection";
+import ProductSelector from "./ProductSelector";
 import PhoneInput from "react-phone-input-2";
 import { toBackendDocCode } from "../../../../../shared/constants/documentTypes";
 
@@ -57,6 +58,7 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
   const [errors, setErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
   const [numero, setNumero] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState([]);
   const dataLoadedRef = useRef(false);
 
   // Formulario principal
@@ -778,6 +780,11 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
             formData.notas.trim() && { motivo: formData.notas.trim() }),
         },
         servicios: serviciosData,
+        productos: selectedProducts.map(p => ({
+          id_producto: p.id,
+          cantidad: p.quantity,
+          precio_unitario: p.price
+        }))
       };
 
       console.log("=== DATOS DE LA CITA A ENVIAR ===");
@@ -1248,16 +1255,26 @@ const AppointmentCreateModal = ({ fecha, onClose, onSave }) => {
                   className="w-full px-2 py-1 border rounded-md bg-gray-100"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Valor total
-                </label>
-                <input
-                  type="text"
-                  value={formatPrice(resumen.total)}
-                  readOnly
-                  className="w-full px-2 py-1 border rounded-md bg-gray-100"
-                />
+            </div>
+
+            {/* Selección de Productos */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i className="bi bi-box-seam text-primary"></i>
+                Productos Adicionales
+              </h3>
+              <ProductSelector
+                selectedProducts={selectedProducts}
+                onProductsChange={setSelectedProducts}
+              />
+            </div>
+
+            <div className="mt-6 p-4 bg-primary/5 rounded-xl border border-primary/10">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">TOTAL GENERAL (Servicios + Productos):</span>
+                <span className="text-xl font-bold text-primary">
+                  {formatPrice(resumen.total + selectedProducts.reduce((acc, p) => acc + (p.subtotal || 0), 0))}
+                </span>
               </div>
             </div>
           </form>

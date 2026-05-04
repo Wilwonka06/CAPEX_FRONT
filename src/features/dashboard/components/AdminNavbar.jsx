@@ -105,6 +105,7 @@ const AdminNavbar = ({ title }) => {
           setIsLoggingOut(true);
           try {
             await logoutConfirmed();
+            navigate("/"); // Redirige a la página principal tras limpiar la sesión
           } catch (error) {
             console.error("Error al cerrar sesión:", error);
             setIsLoggingOut(false);
